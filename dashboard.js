@@ -1,3 +1,34 @@
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('🚀 Iniciando Dashboard Conecta...');
+    
+    try {
+        // Inicializar tema
+        initTheme();
+        
+        // Verificar autenticação
+        const user = await authManager.requireAuth();
+        if (!user) return; // Já redirecionou para login
+        
+        console.log('✅ Usuário autenticado:', user.email);
+        
+        // Configurar listeners de evento
+        setupEventListeners();
+        
+        // Carregar dados iniciais
+        await Promise.all([
+            loadPosts(),
+            loadDashboardStats(),
+            loadTrendingTopics(),
+            loadOnlineFriends()
+        ]);
+        
+        console.log('🎉 Dashboard pronto!');
+        
+    } catch (error) {
+        console.error('❌ Erro na inicialização:', error);
+        showError('Erro de inicialização', error.message);
+    }
+});
 // ============================================
 // DASHBOARD CONECTA - SCRIPT PRINCIPAL
 // ============================================
@@ -20,40 +51,6 @@ const AppState = {
     unreadNotifications: 0,
     pendingRequests: 0
 };
-
-// ===== INICIALIZAÇÃO =====
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('🚀 Iniciando Dashboard Conecta...');
-    
-    // Configurar tema
-    initTheme();
-    
-    // Configurar listeners de evento
-    setupEventListeners();
-    
-    // Aguardar Firebase estar pronto
-    waitForFirebase();
-});
-
-function waitForFirebase() {
-    const maxAttempts = 30;
-    let attempts = 0;
-    
-    const checkFirebase = setInterval(() => {
-        attempts++;
-        
-        if (window.firebaseApp && window.firebaseApp.isReady) {
-            clearInterval(checkFirebase);
-            console.log('✅ Firebase pronto após', attempts, 'tentativas');
-            AppState.isFirebaseReady = true;
-            initDashboard();
-        } else if (attempts >= maxAttempts) {
-            clearInterval(checkFirebase);
-            console.error('❌ Firebase não carregou após', maxAttempts, 'tentativas');
-            showError('Erro de conexão', 'Não foi possível conectar ao servidor. Verifique sua internet.');
-        }
-    }, 500);
-}
 
 async function initDashboard() {
     try {
@@ -138,56 +135,39 @@ async function ensureUserProfile(user) {
 
 async function loadUserData() {
     try {
-        const userDoc = await window.firebaseApp.getDoc(
-            window.firebaseApp.doc('users', AppState.currentUser.uid)
-        );
+        // Usar perfil do AuthManager
+        AppState.userProfile = authManager.userProfile;
         
-        if (userDoc.exists()) {
-            AppState.userProfile = userDoc.data();
+        if (!AppState.userProfile.name || AppState.userProfile.name === 'usuario') {
+            AppState.userProfile.name = authManager.currentUser.displayName || 
+                                      authManager.currentUser.email.split('@')[0] || 
+                                      'Usuário';
             
-            // Garantir que o nome não seja vazio
-            if (!AppState.userProfile.name || AppState.userProfile.name.trim() === '') {
-                AppState.userProfile.name = AppState.currentUser.displayName || 
-                                           AppState.currentUser.email.split('@')[0] || 
-                                           'Usuário';
-                
-                await window.firebaseApp.updateDoc(
-                    window.firebaseApp.doc('users', AppState.currentUser.uid),
-                    { name: AppState.userProfile.name }
-                );
-            }
-            
-            console.log('👤 Perfil carregado:', AppState.userProfile.name);
-            
-        } else {
-            throw new Error('Perfil não encontrado');
+            await authManager.updateProfile({ name: AppState.userProfile.name });
         }
         
-    } catch (error) {
-        console.error('❌ Erro ao carregar perfil:', error);
+        console.log('👤 Perfil carregado:', AppState.userProfile.name);
         
-        // Criar perfil mínimo
+    } catch (error) {
+        console.error('❌ Erro ao carregar dados do usuário:', error);
         AppState.userProfile = {
-            uid: AppState.currentUser.uid,
-            name: AppState.currentUser.displayName || 
-                  AppState.currentUser.email.split('@')[0] || 
+            uid: authManager.currentUser.uid,
+            name: authManager.currentUser.displayName || 
+                  authManager.currentUser.email.split('@')[0] || 
                   'Usuário',
-            email: AppState.currentUser.email,
-            photoURL: AppState.currentUser.photoURL || null
+            email: authManager.currentUser.email
         };
     }
 }
 
 function updateUserUI() {
-    const user = AppState.userProfile;
+    const user = AppState.userProfile || authManager.userProfile;
     
-    // Atualizar título de boas-vindas
     const welcomeTitle = document.getElementById('welcomeTitle');
     if (welcomeTitle) {
         welcomeTitle.textContent = `Bem-vindo(a), ${user?.name || 'Usuário'}!`;
     }
     
-    // Atualizar avatar
     const avatar = document.getElementById('userAvatar');
     if (avatar) {
         if (user?.photoURL) {
@@ -811,8 +791,7 @@ function showPollModal() {
 // ===== LOGOUT =====
 async function logout() {
     try {
-        await window.firebaseApp.signOut();
-        window.location.href = 'index.html';
+        await authManager.logout();
     } catch (error) {
         console.error('❌ Erro ao sair:', error);
         showToast('error', 'Erro ao sair da conta');
@@ -1124,4 +1103,5 @@ window.showComments = showComments;
 window.sharePost = sharePost;
 window.showImageModal = showImageModal;
 window.showPollModal = showPollModal;
+
 window.logout = logout;
