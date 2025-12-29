@@ -859,3 +859,252 @@
         }
         
         function viewPost(postId) {
+            // TODO: Implementar visualização de post
+            showToast('info', 'Visualização de post em desenvolvimento');
+        }
+        
+        async function joinCommunity(event, communityId) {
+            event.stopPropagation();
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            
+            try {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                btn.disabled = true;
+                
+                // Simular join (seria implementado com Firebase)
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                btn.textContent = 'Entrou';
+                btn.classList.add('joined');
+                btn.disabled = true;
+                
+                showToast('success', 'Você entrou na comunidade!');
+                
+            } catch (error) {
+                console.error('❌ Erro ao entrar na comunidade:', error);
+                btn.textContent = originalText;
+                btn.disabled = false;
+                showToast('error', 'Erro ao entrar na comunidade');
+            }
+        }
+        
+        // ===== DADOS DE EXEMPLO =====
+        
+        function getSamplePeople() {
+            return [
+                {
+                    type: 'person',
+                    id: '1',
+                    title: 'Ana Silva',
+                    description: 'Desenvolvedora Full Stack apaixonada por tecnologia',
+                    image: null,
+                    stats: { friends: 245, posts: 42 }
+                },
+                {
+                    type: 'person',
+                    id: '2',
+                    title: 'Carlos Santos',
+                    description: 'Fotógrafo profissional e viajante',
+                    image: null,
+                    stats: { friends: 189, posts: 156 }
+                },
+                {
+                    type: 'person',
+                    id: '3',
+                    title: 'Mariana Costa',
+                    description: 'Designer UI/UX e ilustradora digital',
+                    image: null,
+                    stats: { friends: 312, posts: 87 }
+                },
+                {
+                    type: 'person',
+                    id: '4',
+                    title: 'João Pereira',
+                    description: 'Professor de música e compositor',
+                    image: null,
+                    stats: { friends: 178, posts: 64 }
+                }
+            ];
+        }
+        
+        function getSampleCommunities() {
+            return [
+                {
+                    type: 'community',
+                    id: '1',
+                    title: 'Desenvolvedores Brasil',
+                    description: 'Comunidade de desenvolvedores brasileiros compartilhando conhecimento',
+                    category: 'Tecnologia',
+                    members: 1250,
+                    posts: 456
+                },
+                {
+                    type: 'community',
+                    id: '2',
+                    title: 'Fotografia Digital',
+                    description: 'Amantes da fotografia compartilhando dicas e trabalhos',
+                    category: 'Arte',
+                    members: 890,
+                    posts: 1230
+                },
+                {
+                    type: 'community',
+                    id: '3',
+                    title: 'Música Independente',
+                    description: 'Apoio a artistas independentes e descoberta de novas músicas',
+                    category: 'Música',
+                    members: 2100,
+                    posts: 890
+                },
+                {
+                    type: 'community',
+                    id: '4',
+                    title: 'Esportes Radicais',
+                    description: 'Comunidade para amantes de aventura e esportes radicais',
+                    category: 'Esportes',
+                    members: 560,
+                    posts: 345
+                }
+            ];
+        }
+        
+        function getSamplePosts() {
+            return [
+                {
+                    type: 'post',
+                    id: '1',
+                    title: 'Dicas de Programação',
+                    description: 'Compartilhando algumas dicas úteis para desenvolvedores iniciantes...',
+                    category: 'Tecnologia',
+                    stats: { likes: 245, comments: 42 }
+                },
+                {
+                    type: 'post',
+                    id: '2',
+                    title: 'Paisagem Incrível',
+                    description: 'Fotografia de uma paisagem deslumbrante durante o pôr do sol...',
+                    category: 'Arte',
+                    stats: { likes: 189, comments: 28 }
+                }
+            ];
+        }
+        
+        // ===== UTILITÁRIOS =====
+        
+        let searchTimeout;
+        function debounceSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                loadExploreContent();
+            }, 500);
+        }
+        
+        function shuffleArray(array) {
+            const shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+        
+        function waitForFirebase() {
+            return new Promise((resolve) => {
+                if (window.firebaseApp && window.firebaseApp.isReady) {
+                    resolve();
+                    return;
+                }
+                
+                const checkInterval = setInterval(() => {
+                    if (window.firebaseApp && window.firebaseApp.isReady) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+        
+        function initTheme() {
+            const savedTheme = localStorage.getItem('conecta-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+        
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('conecta-theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+        
+        function updateThemeIcon(theme) {
+            const icon = document.querySelector('#themeToggle i');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+        
+        function getColorFromName(name) {
+            if (!name) return '#4A90E2';
+            const colors = ['#4A90E2', '#50C878', '#FF6B6B', '#FFA500', '#9B59B6', '#1ABC9C', '#E74C3C', '#3498DB'];
+            const charCode = name.charCodeAt(0) || 0;
+            return colors[charCode % colors.length];
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function showToast(type, message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'error' ? '#f56565' : type === 'success' ? '#48bb78' : '#4A90E2'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                animation: slideInRight 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            `;
+            
+            toast.innerHTML = `
+                <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideInRight 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        // Exportar funções
+        window.joinCommunity = joinCommunity;
+        window.viewProfile = viewProfile;
+    </script>
+</body>
+</html>
