@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Permissions-Policy" content="interest-cohort=()">
+    <title>Dashboard - Conecta</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Emoji Picker -->
+    <script src="https://cdn.jsdelivr.net/npm/@emoji-mart/data"></script>
+    <script src="https://cdn.jsdelivr.net/npm/emoji-mart@latest/dist/browser.js"></script>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="dashboard.css">
+    
+    <!-- Firebase SDK -->
+    <script type="module" src="firebase-config.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="dashboard-container">
+            <div class="header-content">
+                <!-- Logo -->
+                <a href="dashboard.html" class="logo">
+                    <i class="fas fa-users logo-icon"></i>
+                    <span class="logo-text">Conecta</span>
+                </a>
+                
+                <!-- Search -->
+                <div class="header-search">
+                    <input type="text" placeholder="Pesquisar pessoas, posts..." class="search-input" id="searchInput">
+                </div>
+                
+                <!-- Actions -->
+                <div class="header-actions">
+                    <!-- Theme Toggle -->
+                    <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    
+                    <!-- Notifications -->
+                    <div class="notification-btn" id="notificationBtn" role="button" aria-label="Notificações">
+                        <i class="far fa-bell"></i>
+                        <span class="notification-badge" id="notificationCount" style="display: none;">0</span>
+                    </div>
+                    
+                    <!-- User Menu -->
+                    <div class="user-menu">
+                        <div class="user-avatar" id="userAvatar" role="button" aria-label="Menu do usuário">
+                            U
+                        </div>
+                        <div class="user-dropdown" id="userDropdown">
+                            <a href="#" class="user-dropdown-item" id="profileLink">
+                                <i class="fas fa-user-circle"></i>
+                                <span>Meu Perfil</span>
+                            </a>
+                            <a href="#" class="user-dropdown-item" id="editProfileLink">
+                                <i class="fas fa-edit"></i>
+                                <span>Editar Perfil</span>
+                            </a>
+                            <a href="#" class="user-dropdown-item" id="settingsLink">
+                                <i class="fas fa-cog"></i>
+                                <span>Configurações</span>
+                            </a>
+                            <div class="user-dropdown-divider"></div>
+                            <a href="#" class="user-dropdown-item" id="logoutLink">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Sair</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-container dashboard-main">
+        <!-- Left Sidebar -->
+        <aside class="sidebar">
+            <!-- Navigation -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <i class="fas fa-compass"></i>
+                    <span>Navegação</span>
+                </div>
+                <a href="dashboard.html" class="nav-item active">
+                    <i class="fas fa-home"></i>
+                    <span>Início</span>
+                </a>
+                <a href="explorar.html" class="nav-item">
+                    <i class="fas fa-compass"></i>
+                    <span>Explorar</span>
+                </a>
+                <a href="comunidades.html" class="nav-item">
+                    <i class="fas fa-users"></i>
+                    <span>Comunidades</span>
+                </a>
+                <a href="#" class="nav-item" id="messagesLink">
+                    <i class="fas fa-envelope"></i>
+                    <span>Mensagens</span>
+                    <span class="badge" id="messagesBadge">0</span>
+                </a>
+                <a href="#" class="nav-item" id="storiesLink">
+                    <i class="fas fa-circle-play"></i>
+                    <span>Histórias</span>
+                    <span class="badge" id="storiesBadge">0</span>
+                </a>
+                <a href="perfil.html" class="nav-item">
+                    <i class="fas fa-user"></i>
+                    <span>Perfil</span>
+                </a>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <i class="fas fa-bolt"></i>
+                    <span>Ações Rápidas</span>
+                </div>
+                
+                <div class="quick-actions-grid">
+                    <button class="quick-action-btn" id="quickPostBtn" data-tooltip="Criar nova postagem">
+                        <div class="quick-action-icon">
+                            <i class="fas fa-edit"></i>
+                        </div>
+                        <span class="quick-action-text">Novo Post</span>
+                    </button>
+                    
+                    <button class="quick-action-btn" id="quickPhotoBtn" data-tooltip="Postar foto">
+                        <div class="quick-action-icon">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <span class="quick-action-text">Foto</span>
+                    </button>
+                    
+                    <button class="quick-action-btn" id="quickEventBtn" data-tooltip="Criar evento">
+                        <div class="quick-action-icon">
+                            <i class="fas fa-calendar-plus"></i>
+                        </div>
+                        <span class="quick-action-text">Evento</span>
+                    </button>
+                    
+                    <button class="quick-action-btn" id="quickStoryBtn" data-tooltip="Criar história">
+                        <div class="quick-action-icon">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <span class="quick-action-text">História</span>
+                    </button>
+                </div>
+                
+                <!-- Quick Stats -->
+                <div class="quick-stats">
+                    <div class="quick-stat">
+                        <div class="quick-stat-icon">
+                            <i class="fas fa-fire"></i>
+                        </div>
+                        <div class="quick-stat-content">
+                            <div class="quick-stat-value" id="postsTodayCount">0</div>
+                            <div class="quick-stat-label">Posts hoje</div>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-stat">
+                        <div class="quick-stat-icon">
+                            <i class="fas fa-heart"></i>
+                        </div>
+                        <div class="quick-stat-content">
+                            <div class="quick-stat-value" id="likesCount">0</div>
+                            <div class="quick-stat-label">Curtidas</div>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-stat">
+                        <div class="quick-stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="quick-stat-content">
+                            <div class="quick-stat-value" id="friendsCount">0</div>
+                            <div class="quick-stat-label">Amigos</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Friends Online -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <i class="fas fa-user-friends"></i>
+                    <span>Amigos Online</span>
+                    <span class="badge" id="onlineFriendsCount">0</span>
+                </div>
+                <div id="onlineFriendsList">
+                    <!-- Friends will be loaded here -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Feed -->
+        <div class="feed">
+            <!-- Welcome Card -->
+            <div class="welcome-card">
+                <h2 class="welcome-title" id="welcomeTitle">Bem-vindo ao Conecta!</h2>
+                <p class="welcome-subtitle">Conecte-se com pessoas, compartilhe momentos e descubra conversas significativas.</p>
+                <div class="welcome-stats">
+                    <div class="stat">
+                        <i class="fas fa-users"></i>
+                        <span><span id="onlineUsersCount">0</span> online</span>
+                    </div>
+                    <div class="stat">
+                        <i class="fas fa-comment"></i>
+                        <span><span id="totalPostsCount">0</span> posts hoje</span>
+                    </div>
+                    <div class="stat">
+                        <i class="fas fa-heart"></i>
+                        <span><span id="totalLikesCount">0</span> curtidas</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Create Post -->
+            <div class="create-post">
+                <div class="post-input-container">
+                    <textarea 
+                        class="post-textarea" 
+                        id="postText"
+                        placeholder="No que você está pensando? Compartilhe algo significativo..."
+                        rows="3"
+                        maxlength="1000"></textarea>
+                    
+                    <!-- Image Preview -->
+                    <div class="image-preview" id="imagePreview" style="display: none;">
+                        <img id="previewImage" src="" alt="Preview">
+                        <button type="button" class="remove-image" id="removeImageBtn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Privacy Selector -->
+                <div class="privacy-selector">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-lock" style="color: var(--text-light);"></i>
+                        <select id="postPrivacy" class="privacy-select">
+                            <option value="friends">Apenas Amigos</option>
+                            <option value="public">Público</option>
+                            <option value="private">Privado (Apenas Eu)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="post-actions">
+                    <div class="post-tools">
+                        <button class="tool-btn" id="addImageBtn" title="Adicionar imagem">
+                            <i class="fas fa-image"></i>
+                        </button>
+                        <button class="tool-btn" id="addEmojiBtn" title="Adicionar emoji">
+                            <i class="far fa-smile"></i>
+                        </button>
+                        <button class="tool-btn" id="addHashtagBtn" title="Adicionar hashtag">
+                            <i class="fas fa-hashtag"></i>
+                        </button>
+                        <button class="tool-btn" id="addPollBtn" title="Criar enquete">
+                            <i class="fas fa-chart-bar"></i>
+                        </button>
+                    </div>
+                    <div class="post-submit">
+                        <span class="char-count" id="charCount">0/1000</span>
+                        <button class="btn btn-primary" id="publishBtn">
+                            <span class="btn-text">Publicar</span>
+                            <div class="loading-spinner" style="display: none;"></div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Posts Container -->
+            <div id="postsContainer">
+                <!-- Posts will be loaded here -->
+                <div class="post-skeleton">
+                    <div class="skeleton-header">
+                        <div class="skeleton-avatar"></div>
+                        <div style="flex: 1;">
+                            <div class="skeleton-line short"></div>
+                            <div class="skeleton-line medium"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-content">
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line"></div>
+                        <div class="skeleton-line" style="width: 80%;"></div>
+                    </div>
+                    <div class="skeleton-actions">
+                        <div class="skeleton-action"></div>
+                        <div class="skeleton-action"></div>
+                        <div class="skeleton-action"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Load More -->
+            <div id="loadMoreContainer" style="display: none;">
+                <button class="btn" id="loadMoreBtn" style="width: 100%;">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Carregar mais posts</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <aside class="sidebar right-sidebar">
+            <!-- Trending Topics -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <i class="fas fa-fire"></i>
+                    <span>Em Alta</span>
+                </div>
+                <div id="trendingTopics">
+                    <!-- Trending topics will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Suggested Friends -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Sugestões de Amigos</span>
+                </div>
+                <div id="suggestedFriends">
+                    <!-- Suggested friends will be loaded here -->
+                </div>
+            </div>
+            
+            <!-- Recent Activity -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <i class="fas fa-history"></i>
+                    <span>Atividade Recente</span>
+                </div>
+                <div id="recentActivity">
+                    <!-- Recent activity will be loaded here -->
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <!-- Quick Actions Button (Mobile) -->
+    <button class="action-button" id="actionButton">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- JavaScript -->
+    <script src="dashboard.js"></script>
+</body>
+</html>

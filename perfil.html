@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil - Conecta</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="dashboard.css">
+    
+    <style>
+        /* Estilos específicos do perfil */
+        .profile-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cover-photo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+        }
+        
+        .profile-info {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 4px solid white;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 3rem;
+            font-weight: 600;
+            overflow: hidden;
+        }
+        
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .profile-details {
+            flex: 1;
+        }
+        
+        .profile-name {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .profile-bio {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+            max-width: 600px;
+        }
+        
+        .profile-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1.5rem;
+        }
+        
+        .profile-stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .profile-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .profile-tabs {
+            display: flex;
+            gap: 4px;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 2rem;
+            overflow-x: auto;
+        }
+        
+        .profile-tab {
+            padding: 1rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--text-light);
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s ease;
+        }
+        
+        .profile-tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        
+        .profile-tab:hover:not(.active) {
+            color: var(--text-color);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .post-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .post-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .post-media {
+            height: 200px;
+            overflow: hidden;
+        }
+        
+        .post-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        
+        .post-card:hover .post-media img {
+            transform: scale(1.05);
+        }
+        
+        .post-content {
+            padding: 1rem;
+        }
+        
+        .post-text {
+            margin-bottom: 1rem;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .friend-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .friend-card:hover {
+            transform: translateY(-4px);
+        }
+        
+        .friend-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 1rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .friend-name {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .friend-status {
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+        
+        .photos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        
+        .photo-item {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .photo-item:hover img {
+            transform: scale(1.1);
+        }
+        
+        /* Modal de edição */
+        .edit-section {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .profile-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .profile-stats {
+                justify-content: center;
+            }
+            
+            .profile-actions {
+                justify-content: center;
+            }
+            
+            .posts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="dashboard-container">
+            <div class="header-content">
+                <a href="dashboard.html" class="logo">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Voltar</span>
+                </a>
+                
+                <div class="header-actions">
+                    <button class="theme-toggle" id="themeToggle">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    
+                    <div class="user-menu">
+                        <div class="user-avatar" id="userAvatar">
+                            U
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-container" style="padding: 2rem 0;">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="cover-photo" id="coverPhoto"></div>
+            
+            <div class="profile-info">
+                <div class="profile-avatar" id="profileAvatar">
+                    <!-- Avatar será carregado por JS -->
+                </div>
+                
+                <div class="profile-details">
+                    <h1 class="profile-name" id="profileName">Carregando...</h1>
+                    <p class="profile-bio" id="profileBio">Bio não definida</p>
+                    
+                    <div class="profile-stats">
+                        <div class="profile-stat">
+                            <span class="stat-value" id="postsCount">0</span>
+                            <span class="stat-label">Posts</span>
+                        </div>
+                        <div class="profile-stat">
+                            <span class="stat-value" id="friendsCount">0</span>
+                            <span class="stat-label">Amigos</span>
+                        </div>
+                        <div class="profile-stat">
+                            <span class="stat-value" id="likesCount">0</span>
+                            <span class="stat-label">Curtidas</span>
+                        </div>
+                    </div>
+                    
+                    <div class="profile-actions">
+                        <button class="btn btn-primary" id="editProfileBtn">
+                            <i class="fas fa-edit"></i> Editar Perfil
+                        </button>
+                        <button class="btn btn-outline" id="addFriendBtn">
+                            <i class="fas fa-user-plus"></i> Adicionar Amigo
+                        </button>
+                        <button class="btn btn-outline" id="messageBtn">
+                            <i class="fas fa-envelope"></i> Mensagem
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profile Tabs -->
+        <div class="profile-tabs">
+            <button class="profile-tab active" data-tab="posts">Posts</button>
+            <button class="profile-tab" data-tab="friends">Amigos</button>
+            <button class="profile-tab" data-tab="photos">Fotos</button>
+            <button class="profile-tab" data-tab="about">Sobre</button>
+        </div>
+        
+        <!-- Tab Contents -->
+        <div class="tab-content active" id="postsTab">
+            <div class="posts-grid" id="profilePosts">
+                <!-- Posts serão carregados aqui -->
+            </div>
+        </div>
+        
+        <div class="tab-content" id="friendsTab">
+            <div class="posts-grid" id="profileFriends">
+                <!-- Amigos serão carregados aqui -->
+            </div>
+        </div>
+        
+        <div class="tab-content" id="photosTab">
+            <div class="photos-grid" id="profilePhotos">
+                <!-- Fotos serão carregadas aqui -->
+            </div>
+        </div>
+        
+        <div class="tab-content" id="aboutTab">
+            <div class="edit-section">
+                <h3 style="margin-bottom: 1.5rem;">Informações do Perfil</h3>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Localização</label>
+                        <p id="profileLocation">Não informada</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Website</label>
+                        <p id="profileWebsite">Não informado</p>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Biografia</label>
+                    <p id="profileBioText">Nenhuma biografia definida</p>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Data de Cadastro</label>
+                    <p id="joinDate">Carregando...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Edit Profile Section (hidden by default) -->
+        <div class="edit-section" id="editProfileSection" style="display: none;">
+            <h3 style="margin-bottom: 1.5rem;">Editar Perfil</h3>
+            
+            <div class="form-group">
+                <label class="form-label">Foto de Perfil</label>
+                <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                    <div class="profile-avatar" id="currentAvatar" style="width: 80px; height: 80px;">
+                        <!-- Avatar atual -->
+                    </div>
+                    <button class="btn btn-outline" id="changeAvatarBtn">
+                        <i class="fas fa-camera"></i> Alterar Foto
+                    </button>
+                    <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Capa do Perfil</label>
+                <div style="margin-bottom: 1rem;">
+                    <button class="btn btn-outline" id="changeCoverBtn">
+                        <i class="fas fa-image"></i> Alterar Capa
+                    </button>
+                    <input type="file" id="coverInput" accept="image/*" style="display: none;">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Nome</label>
+                    <input type="text" class="form-input" id="editName" placeholder="Seu nome">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Localização</label>
+                    <input type="text" class="form-input" id="editLocation" placeholder="Sua cidade">
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Website</label>
+                    <input type="url" class="form-input" id="editWebsite" placeholder="https://seusite.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Privacidade</label>
+                    <select class="form-select" id="editPrivacy">
+                        <option value="public">Público</option>
+                        <option value="friends">Apenas Amigos</option>
+                        <option value="private">Privado</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Biografia</label>
+                <textarea class="form-textarea" id="editBio" rows="4" placeholder="Conte um pouco sobre você..."></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" class="checkbox-input" id="editNotifications">
+                    <span>Receber notificações</span>
+                </label>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                <button class="btn btn-outline" id="cancelEditBtn">Cancelar</button>
+                <button class="btn btn-primary" id="saveProfileBtn">
+                    <i class="fas fa-save"></i> Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Visualização de Foto -->
+    <div class="modal-overlay" id="photoModal">
+        <div class="modal" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Foto</h3>
+                <button class="modal-close" id="closePhotoModal">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 0;">
+                <img id="modalPhoto" src="" alt="Foto" style="width: 100%; max-height: 70vh; object-fit: contain;">
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module" src="firebase-config.js"></script>
+    
+    <script>
+        // ===== PERFIL DO USUÁRIO =====
+        
+        const ProfileState = {
+            currentUser: null,
+            userProfile: null,
+            profileUserId: null,
+            isOwnProfile: false,
+            posts: [],
+            friends: [],
+            photos: []
+        };
+        
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Carregando página de perfil...');
+            
+            // Inicializar tema
+            initTheme();
+            
+            // Configurar eventos
+            setupEventListeners();
+            
+            // Carregar dados do perfil
+            await loadProfileData();
+            
+            // Carregar conteúdo inicial
+            loadTabContent('posts');
+        });
+        
+        async function loadProfileData() {
+            try {
+                // Verificar Firebase
+                await waitForFirebase();
+                
+                // Verificar autenticação
+                const user = window.firebaseApp.currentUser();
+                if (!user) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+                
+                ProfileState.currentUser = user;
+                
+                // Obter ID do perfil da URL ou usar usuário atual
+                const urlParams = new URLSearchParams(window.location.search);
+                ProfileState.profileUserId = urlParams.get('id') || user.uid;
+                ProfileState.isOwnProfile = ProfileState.profileUserId === user.uid;
+                
+                // Carregar dados do perfil
+                await loadProfileInfo();
+                
+                // Atualizar UI
+                updateProfileUI();
+                
+                // Carregar estatísticas
+                await loadProfileStats();
+                
+                // Configurar botões baseado no tipo de perfil
+                setupProfileButtons();
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar perfil:', error);
+                showError('Erro ao carregar perfil');
+            }
+        }
+        
+        async function loadProfileInfo() {
+            try {
+                const userDoc = await window.firebaseApp.getDoc(
+                    window.firebaseApp.doc('users', ProfileState.profileUserId)
+                );
+                
+                if (userDoc.exists()) {
+                    ProfileState.userProfile = userDoc.data();
+                    console.log('👤 Perfil carregado:', ProfileState.userProfile.name);
+                } else {
+                    throw new Error('Perfil não encontrado');
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar informações:', error);
+                
+                // Usar dados básicos
+                ProfileState.userProfile = {
+                    name: 'Usuário',
+                    bio: 'Bio não disponível',
+                    location: '',
+                    website: '',
+                    photoURL: null,
+                    createdAt: new Date()
+                };
+            }
+        }
+        
+        function updateProfileUI() {
+            const user = ProfileState.userProfile;
+            
+            // Nome
+            document.getElementById('profileName').textContent = user.name;
+            document.getElementById('editName').value = user.name || '';
+            
+            // Bio
+            const bio = user.bio || 'Nenhuma biografia definida';
+            document.getElementById('profileBio').textContent = bio;
+            document.getElementById('profileBioText').textContent = bio;
+            document.getElementById('editBio').value = bio || '';
+            
+            // Localização
+            document.getElementById('profileLocation').textContent = user.location || 'Não informada';
+            document.getElementById('editLocation').value = user.location || '';
+            
+            // Website
+            document.getElementById('profileWebsite').textContent = user.website || 'Não informado';
+            document.getElementById('editWebsite').value = user.website || '';
+            
+            // Data de cadastro
+            if (user.createdAt) {
+                const joinDate = user.createdAt.toDate ? user.createdAt.toDate() : new Date(user.createdAt);
+                document.getElementById('joinDate').textContent = joinDate.toLocaleDateString('pt-BR');
+            }
+            
+            // Avatar
+            const avatarElement = document.getElementById('profileAvatar');
+            const currentAvatar = document.getElementById('currentAvatar');
+            
+            if (user.photoURL) {
+                avatarElement.innerHTML = `<img src="${user.photoURL}" alt="${user.name}">`;
+                currentAvatar.innerHTML = `<img src="${user.photoURL}" alt="${user.name}">`;
+            } else {
+                const initial = user.name ? user.name.charAt(0).toUpperCase() : 'U';
+                const color = getColorFromName(user.name);
+                
+                avatarElement.style.backgroundColor = color;
+                avatarElement.textContent = initial;
+                
+                currentAvatar.style.backgroundColor = color;
+                currentAvatar.textContent = initial;
+            }
+            
+            // Privacidade
+            const privacySelect = document.getElementById('editPrivacy');
+            if (privacySelect) {
+                privacySelect.value = user.privacy || 'friends';
+            }
+            
+            // Notificações
+            const notificationsCheck = document.getElementById('editNotifications');
+            if (notificationsCheck) {
+                notificationsCheck.checked = user.notifications !== false;
+            }
+            
+            // Título da página
+            document.title = `${user.name} - Conecta`;
+        }
+        
+        async function loadProfileStats() {
+            try {
+                // Contar posts do usuário
+                const postsQuery = window.firebaseApp.query(
+                    window.firebaseApp.collection('posts'),
+                    window.firebaseApp.where('authorId', '==', ProfileState.profileUserId),
+                    window.firebaseApp.limit(1000) // Limite alto para contar
+                );
+                
+                const postsSnapshot = await window.firebaseApp.getDocs(postsQuery);
+                const postsCount = postsSnapshot.size;
+                
+                // Contar curtidas totais
+                let totalLikes = 0;
+                postsSnapshot.forEach(doc => {
+                    totalLikes += doc.data().likes || 0;
+                });
+                
+                // Contar amigos (simplificado)
+                const friendsCount = ProfileState.userProfile.friends?.length || 0;
+                
+                // Atualizar UI
+                document.getElementById('postsCount').textContent = postsCount;
+                document.getElementById('likesCount').textContent = totalLikes;
+                document.getElementById('friendsCount').textContent = friendsCount;
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar estatísticas:', error);
+            }
+        }
+        
+        function setupProfileButtons() {
+            const editProfileBtn = document.getElementById('editProfileBtn');
+            const addFriendBtn = document.getElementById('addFriendBtn');
+            const messageBtn = document.getElementById('messageBtn');
+            
+            if (ProfileState.isOwnProfile) {
+                // É o próprio perfil
+                if (editProfileBtn) {
+                    editProfileBtn.style.display = 'flex';
+                    editProfileBtn.onclick = toggleEditMode;
+                }
+                
+                if (addFriendBtn) {
+                    addFriendBtn.style.display = 'none';
+                }
+                
+                if (messageBtn) {
+                    messageBtn.style.display = 'none';
+                }
+                
+            } else {
+                // É perfil de outra pessoa
+                if (editProfileBtn) {
+                    editProfileBtn.style.display = 'none';
+                }
+                
+                if (addFriendBtn) {
+                    addFriendBtn.style.display = 'flex';
+                    addFriendBtn.onclick = sendFriendRequest;
+                    
+                    // Verificar se já é amigo ou tem solicitação pendente
+                    checkFriendshipStatus();
+                }
+                
+                if (messageBtn) {
+                    messageBtn.style.display = 'flex';
+                    messageBtn.onclick = sendMessage;
+                }
+            }
+        }
+        
+        async function checkFriendshipStatus() {
+            try {
+                // Verificar se já são amigos
+                const currentUserDoc = await window.firebaseApp.getDoc(
+                    window.firebaseApp.doc('users', ProfileState.currentUser.uid)
+                );
+                
+                if (currentUserDoc.exists()) {
+                    const currentUser = currentUserDoc.data();
+                    const isFriend = currentUser.friends?.includes(ProfileState.profileUserId);
+                    const hasRequest = currentUser.friendRequests?.some(req => req.userId === ProfileState.profileUserId);
+                    
+                    const btn = document.getElementById('addFriendBtn');
+                    if (btn) {
+                        if (isFriend) {
+                            btn.innerHTML = '<i class="fas fa-user-check"></i> Amigos';
+                            btn.disabled = true;
+                        } else if (hasRequest) {
+                            btn.innerHTML = '<i class="fas fa-clock"></i> Solicitação Enviada';
+                            btn.disabled = true;
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao verificar status:', error);
+            }
+        }
+        
+        // ===== FUNÇÕES DAS ABAS =====
+        
+        function setupEventListeners() {
+            // Tabs
+            document.querySelectorAll('.profile-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.dataset.tab;
+                    switchTab(tabId);
+                });
+            });
+            
+            // Botão de editar perfil
+            const editProfileBtn = document.getElementById('editProfileBtn');
+            if (editProfileBtn) {
+                editProfileBtn.addEventListener('click', toggleEditMode);
+            }
+            
+            // Botão de cancelar edição
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            if (cancelEditBtn) {
+                cancelEditBtn.addEventListener('click', cancelEdit);
+            }
+            
+            // Botão de salvar perfil
+            const saveProfileBtn = document.getElementById('saveProfileBtn');
+            if (saveProfileBtn) {
+                saveProfileBtn.addEventListener('click', saveProfile);
+            }
+            
+            // Upload de avatar
+            const changeAvatarBtn = document.getElementById('changeAvatarBtn');
+            const avatarInput = document.getElementById('avatarInput');
+            
+            if (changeAvatarBtn && avatarInput) {
+                changeAvatarBtn.addEventListener('click', () => avatarInput.click());
+                avatarInput.addEventListener('change', handleAvatarUpload);
+            }
+            
+            // Upload de capa
+            const changeCoverBtn = document.getElementById('changeCoverBtn');
+            const coverInput = document.getElementById('coverInput');
+            
+            if (changeCoverBtn && coverInput) {
+                changeCoverBtn.addEventListener('click', () => coverInput.click());
+                coverInput.addEventListener('change', handleCoverUpload);
+            }
+            
+            // Tema
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', toggleTheme);
+            }
+            
+            // Modal de foto
+            const closePhotoModal = document.getElementById('closePhotoModal');
+            const photoModal = document.getElementById('photoModal');
+            
+            if (closePhotoModal) {
+                closePhotoModal.addEventListener('click', () => {
+                    photoModal.classList.remove('show');
+                });
+            }
+            
+            if (photoModal) {
+                photoModal.addEventListener('click', (e) => {
+                    if (e.target === photoModal) {
+                        photoModal.classList.remove('show');
+                    }
+                });
+            }
+        }
+        
+        function switchTab(tabId) {
+            // Atualizar tabs ativas
+            document.querySelectorAll('.profile-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabId);
+            });
+            
+            // Mostrar conteúdo da tab
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `${tabId}Tab`);
+            });
+            
+            // Carregar conteúdo da tab
+            loadTabContent(tabId);
+        }
+        
+        async function loadTabContent(tabId) {
+            try {
+                switch(tabId) {
+                    case 'posts':
+                        await loadProfilePosts();
+                        break;
+                    case 'friends':
+                        await loadProfileFriends();
+                        break;
+                    case 'photos':
+                        await loadProfilePhotos();
+                        break;
+                    case 'about':
+                        // Já carregado
+                        break;
+                }
+            } catch (error) {
+                console.error(`❌ Erro ao carregar ${tabId}:`, error);
+                showToast('error', `Erro ao carregar ${tabId}`);
+            }
+        }
+        
+        async function loadProfilePosts() {
+            try {
+                const container = document.getElementById('profilePosts');
+                if (!container) return;
+                
+                container.innerHTML = '<p style="text-align: center; padding: 2rem;">Carregando posts...</p>';
+                
+                // Buscar posts do usuário
+                const postsQuery = window.firebaseApp.query(
+                    window.firebaseApp.collection('posts'),
+                    window.firebaseApp.where('authorId', '==', ProfileState.profileUserId),
+                    window.firebaseApp.orderBy('createdAt', 'desc'),
+                    window.firebaseApp.limit(12)
+                );
+                
+                const snapshot = await window.firebaseApp.getDocs(postsQuery);
+                
+                if (snapshot.empty) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 3rem;">
+                            <i class="fas fa-comment-slash" style="font-size: 3rem; color: var(--text-light);"></i>
+                            <h3 style="margin: 1rem 0;">Nenhum post ainda</h3>
+                            ${ProfileState.isOwnProfile ? 
+                                '<p style="color: var(--text-light);">Comece a compartilhar suas ideias!</p>' :
+                                '<p style="color: var(--text-light);">Este usuário ainda não fez nenhum post</p>'
+                            }
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Renderizar posts
+                container.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const post = { id: doc.id, ...doc.data() };
+                    const postElement = createProfilePostCard(post);
+                    container.appendChild(postElement);
+                });
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar posts:', error);
+                const container = document.getElementById('profilePosts');
+                if (container) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 3rem; color: var(--error-color);">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Erro ao carregar posts</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        function createProfilePostCard(post) {
+            const card = document.createElement('div');
+            card.className = 'post-card';
+            
+            // Formatar data
+            const postDate = post.createdAt?.toDate ? post.createdAt.toDate() : new Date(post.createdAt);
+            const timeAgo = getTimeAgo(postDate);
+            
+            // Truncar conteúdo
+            const content = post.content || '';
+            const truncatedContent = content.length > 150 ? content.substring(0, 150) + '...' : content;
+            
+            card.innerHTML = `
+                ${post.hasMedia ? `
+                    <div class="post-media">
+                        <img src="${post.mediaBase64 || ''}" alt="Post image" onclick="viewPhoto('${post.mediaBase64 || ''}')">
+                    </div>
+                ` : ''}
+                
+                <div class="post-content">
+                    <div class="post-text">${formatPostContent(truncatedContent)}</div>
+                    <div class="post-meta">
+                        <span><i class="far fa-clock"></i> ${timeAgo}</span>
+                        <span><i class="fas fa-heart"></i> ${post.likes || 0}</span>
+                    </div>
+                </div>
+            `;
+            
+            return card;
+        }
+        
+        async function loadProfileFriends() {
+            try {
+                const container = document.getElementById('profileFriends');
+                if (!container) return;
+                
+                container.innerHTML = '<p style="text-align: center; padding: 2rem;">Carregando amigos...</p>';
+                
+                // Buscar amigos do usuário
+                const friends = ProfileState.userProfile.friends || [];
+                
+                if (friends.length === 0) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 3rem;">
+                            <i class="fas fa-user-friends" style="font-size: 3rem; color: var(--text-light);"></i>
+                            <h3 style="margin: 1rem 0;">Nenhum amigo ainda</h3>
+                            ${ProfileState.isOwnProfile ? 
+                                '<p style="color: var(--text-light);">Adicione amigos para começar a conectar!</p>' :
+                                '<p style="color: var(--text-light);">Este usuário ainda não tem amigos</p>'
+                            }
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Carregar informações dos amigos
+                container.innerHTML = '';
+                const friendsToShow = friends.slice(0, 12); // Limitar a 12 amigos
+                
+                for (const friendId of friendsToShow) {
+                    try {
+                        const friendDoc = await window.firebaseApp.getDoc(
+                            window.firebaseApp.doc('users', friendId)
+                        );
+                        
+                        if (friendDoc.exists()) {
+                            const friend = friendDoc.data();
+                            const friendCard = createFriendCard(friend);
+                            container.appendChild(friendCard);
+                        }
+                    } catch (error) {
+                        console.error(`❌ Erro ao carregar amigo ${friendId}:`, error);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar amigos:', error);
+                const container = document.getElementById('profileFriends');
+                if (container) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 3rem; color: var(--error-color);">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Erro ao carregar amigos</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        function createFriendCard(friend) {
+            const card = document.createElement('div');
+            card.className = 'friend-card';
+            
+            const initial = friend.name ? friend.name.charAt(0).toUpperCase() : 'U';
+            const color = getColorFromName(friend.name);
+            
+            card.innerHTML = `
+                <div class="friend-avatar" style="background-color: ${color}">
+                    ${initial}
+                </div>
+                <div class="friend-name">${escapeHtml(friend.name)}</div>
+                <div class="friend-status">${friend.bio ? escapeHtml(friend.bio.substring(0, 50)) + '...' : 'Sem bio'}</div>
+                <button class="btn btn-outline" style="margin-top: 1rem; width: 100%;" onclick="viewProfile('${friend.uid}')">
+                    Ver Perfil
+                </button>
+            `;
+            
+            return card;
+        }
+        
+        async function loadProfilePhotos() {
+            try {
+                const container = document.getElementById('profilePhotos');
+                if (!container) return;
+                
+                container.innerHTML = '<p style="text-align: center; padding: 2rem;">Carregando fotos...</p>';
+                
+                // Buscar posts com mídia do usuário
+                const postsQuery = window.firebaseApp.query(
+                    window.firebaseApp.collection('posts'),
+                    window.firebaseApp.where('authorId', '==', ProfileState.profileUserId),
+                    window.firebaseApp.where('hasMedia', '==', true),
+                    window.firebaseApp.where('mediaType', '==', 'image'),
+                    window.firebaseApp.orderBy('createdAt', 'desc'),
+                    window.firebaseApp.limit(24)
+                );
+                
+                const snapshot = await window.firebaseApp.getDocs(postsQuery);
+                
+                if (snapshot.empty) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 3rem;">
+                            <i class="fas fa-images" style="font-size: 3rem; color: var(--text-light);"></i>
+                            <h3 style="margin: 1rem 0;">Nenhuma foto ainda</h3>
+                            ${ProfileState.isOwnProfile ? 
+                                '<p style="color: var(--text-light);">Compartilhe suas fotos para começar o álbum!</p>' :
+                                '<p style="color: var(--text-light);">Este usuário ainda não compartilhou fotos</p>'
+                            }
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Renderizar fotos
+                container.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const post = doc.data();
+                    if (post.mediaBase64) {
+                        const photoItem = createPhotoItem(post.mediaBase64);
+                        container.appendChild(photoItem);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar fotos:', error);
+                const container = document.getElementById('profilePhotos');
+                if (container) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 3rem; color: var(--error-color);">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <p>Erro ao carregar fotos</p>
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        function createPhotoItem(imageUrl) {
+            const item = document.createElement('div');
+            item.className = 'photo-item';
+            
+            item.innerHTML = `<img src="${imageUrl}" alt="Foto" onclick="viewPhoto('${imageUrl}')">`;
+            
+            return item;
+        }
+        
+        // ===== EDIÇÃO DO PERFIL =====
+        
+        function toggleEditMode() {
+            const editSection = document.getElementById('editProfileSection');
+            const aboutTab = document.getElementById('aboutTab');
+            
+            if (editSection.style.display === 'none') {
+                editSection.style.display = 'block';
+                aboutTab.style.display = 'none';
+            } else {
+                editSection.style.display = 'none';
+                aboutTab.style.display = 'block';
+            }
+        }
+        
+        function cancelEdit() {
+            const editSection = document.getElementById('editProfileSection');
+            const aboutTab = document.getElementById('aboutTab');
+            
+            editSection.style.display = 'none';
+            aboutTab.style.display = 'block';
+            
+            // Restaurar valores originais
+            updateProfileUI();
+        }
+        
+        async function saveProfile() {
+            const name = document.getElementById('editName').value.trim();
+            const bio = document.getElementById('editBio').value.trim();
+            const location = document.getElementById('editLocation').value.trim();
+            const website = document.getElementById('editWebsite').value.trim();
+            const privacy = document.getElementById('editPrivacy').value;
+            const notifications = document.getElementById('editNotifications').checked;
+            
+            if (!name) {
+                showError('O nome é obrigatório');
+                return;
+            }
+            
+            try {
+                const btn = document.getElementById('saveProfileBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+                btn.disabled = true;
+                
+                // Atualizar no Firestore
+                await window.firebaseApp.updateDoc(
+                    window.firebaseApp.doc('users', ProfileState.currentUser.uid),
+                    {
+                        name: name,
+                        bio: bio,
+                        location: location,
+                        website: website,
+                        privacy: privacy,
+                        notifications: notifications,
+                        updatedAt: window.firebaseApp.serverTimestamp()
+                    }
+                );
+                
+                // Atualizar no Auth
+                await window.firebaseApp.updateProfile(ProfileState.currentUser, {
+                    displayName: name
+                });
+                
+                // Recarregar dados
+                await loadProfileInfo();
+                updateProfileUI();
+                
+                // Sair do modo edição
+                toggleEditMode();
+                
+                showToast('success', 'Perfil atualizado com sucesso!');
+                
+            } catch (error) {
+                console.error('❌ Erro ao salvar perfil:', error);
+                showError('Erro ao salvar perfil: ' + error.message);
+            } finally {
+                const btn = document.getElementById('saveProfileBtn');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        async function handleAvatarUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validar imagem
+            if (!file.type.startsWith('image/')) {
+                showError('Selecione um arquivo de imagem');
+                return;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) { // 5MB
+                showError('A imagem deve ser menor que 5MB');
+                return;
+            }
+            
+            try {
+                // Converter para base64
+                const reader = new FileReader();
+                const imageUrl = await new Promise((resolve, reject) => {
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                
+                // Atualizar avatar localmente
+                const avatarElement = document.getElementById('profileAvatar');
+                const currentAvatar = document.getElementById('currentAvatar');
+                
+                avatarElement.innerHTML = `<img src="${imageUrl}" alt="Avatar">`;
+                currentAvatar.innerHTML = `<img src="${imageUrl}" alt="Avatar">`;
+                
+                // Salvar no Firebase (simplificado - usando base64)
+                await window.firebaseApp.updateDoc(
+                    window.firebaseApp.doc('users', ProfileState.currentUser.uid),
+                    {
+                        photoURL: imageUrl,
+                        updatedAt: window.firebaseApp.serverTimestamp()
+                    }
+                );
+                
+                showToast('success', 'Foto de perfil atualizada!');
+                
+            } catch (error) {
+                console.error('❌ Erro ao fazer upload:', error);
+                showError('Erro ao atualizar foto');
+            }
+        }
+        
+        async function handleCoverUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Validar imagem
+            if (!file.type.startsWith('image/')) {
+                showError('Selecione um arquivo de imagem');
+                return;
+            }
+            
+            if (file.size > 10 * 1024 * 1024) { // 10MB
+                showError('A imagem deve ser menor que 10MB');
+                return;
+            }
+            
+            try {
+                // Converter para base64
+                const reader = new FileReader();
+                const imageUrl = await new Promise((resolve, reject) => {
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+                
+                // Atualizar capa localmente
+                const coverPhoto = document.getElementById('coverPhoto');
+                coverPhoto.style.backgroundImage = `url(${imageUrl})`;
+                
+                // TODO: Salvar no Firebase Storage
+                showToast('success', 'Capa do perfil atualizada!');
+                
+            } catch (error) {
+                console.error('❌ Erro ao fazer upload:', error);
+                showError('Erro ao atualizar capa');
+            }
+        }
+        
+        // ===== FUNÇÕES DE INTERAÇÃO =====
+        
+        async function sendFriendRequest() {
+            try {
+                const targetUserId = ProfileState.profileUserId;
+                
+                // Verificar se já é amigo
+                const userDoc = await window.firebaseApp.getDoc(
+                    window.firebaseApp.doc('users', ProfileState.currentUser.uid)
+                );
+                
+                if (userDoc.exists()) {
+                    const user = userDoc.data();
+                    if (user.friends?.includes(targetUserId)) {
+                        showToast('info', 'Vocês já são amigos!');
+                        return;
+                    }
+                }
+                
+                // Adicionar à lista de solicitações do usuário alvo
+                await window.firebaseApp.updateDoc(
+                    window.firebaseApp.doc('users', targetUserId),
+                    {
+                        friendRequests: window.firebaseApp.arrayUnion({
+                            userId: ProfileState.currentUser.uid,
+                            userName: ProfileState.currentUser.displayName || ProfileState.currentUser.email,
+                            timestamp: window.firebaseApp.serverTimestamp()
+                        })
+                    }
+                );
+                
+                // Atualizar botão
+                const btn = document.getElementById('addFriendBtn');
+                btn.innerHTML = '<i class="fas fa-clock"></i> Solicitação Enviada';
+                btn.disabled = true;
+                
+                showToast('success', 'Solicitação de amizade enviada!');
+                
+            } catch (error) {
+                console.error('❌ Erro ao enviar solicitação:', error);
+                showError('Erro ao enviar solicitação de amizade');
+            }
+        }
+        
+        async function sendMessage() {
+            // TODO: Implementar sistema de mensagens
+            showToast('info', 'Sistema de mensagens em desenvolvimento');
+        }
+        
+        // ===== FUNÇÕES UTILITÁRIAS =====
+        
+        function viewPhoto(imageUrl) {
+            const modal = document.getElementById('photoModal');
+            const modalPhoto = document.getElementById('modalPhoto');
+            
+            modalPhoto.src = imageUrl;
+            modal.classList.add('show');
+        }
+        
+        function viewProfile(userId) {
+            window.location.href = `perfil.html?id=${userId}`;
+        }
+        
+        function waitForFirebase() {
+            return new Promise((resolve) => {
+                if (window.firebaseApp && window.firebaseApp.isReady) {
+                    resolve();
+                    return;
+                }
+                
+                const checkInterval = setInterval(() => {
+                    if (window.firebaseApp && window.firebaseApp.isReady) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+        
+        // Funções importadas do dashboard.js
+        function initTheme() {
+            const savedTheme = localStorage.getItem('conecta-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+        
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('conecta-theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+        
+        function updateThemeIcon(theme) {
+            const icon = document.querySelector('#themeToggle i');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+        
+        function getColorFromName(name) {
+            if (!name) return '#4A90E2';
+            const colors = ['#4A90E2', '#50C878', '#FF6B6B', '#FFA500', '#9B59B6', '#1ABC9C', '#E74C3C', '#3498DB'];
+            const charCode = name.charCodeAt(0) || 0;
+            return colors[charCode % colors.length];
+        }
+        
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            if (seconds < 60) return 'agora mesmo';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes} min atrás`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h atrás`;
+            const days = Math.floor(hours / 24);
+            if (days < 7) return `${days}d atrás`;
+            return date.toLocaleDateString('pt-BR');
+        }
+        
+        function formatPostContent(content) {
+            let formatted = escapeHtml(content).replace(/\n/g, '<br>');
+            formatted = formatted.replace(/#(\w+)/g, '<span class="hashtag">#$1</span>');
+            formatted = formatted.replace(/@(\w+)/g, '<span class="mention">@$1</span>');
+            formatted = formatted.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank">$1</a>');
+            return formatted;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function showError(message) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Ops...',
+                text: message,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#4A90E2'
+            });
+        }
+        
+        function showToast(type, message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'error' ? '#f56565' : type === 'success' ? '#48bb78' : '#4A90E2'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                animation: slideInRight 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            `;
+            
+            toast.innerHTML = `
+                <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Animação
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideInRight 0.3s ease reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+        
+        // Exportar funções para uso global
+        window.viewPhoto = viewPhoto;
+        window.viewProfile = viewProfile;
+    </script>
+</body>
+</html>
