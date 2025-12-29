@@ -1,4 +1,4 @@
-// auth.js - Sistema de Autenticação Centralizado (VERSÃO FINAL CORRIGIDA)
+// auth.js — AuthManager (VERSÃO ESTÁVEL, SEM LOOP)
 
 class AuthManager {
     static instance = null;
@@ -13,16 +13,14 @@ class AuthManager {
     constructor() {
         this.currentUser = null;
         this.userProfile = null;
+
         this.isInitialized = false;
+        this.listenerRegistered = false;
+
         this.authListeners = [];
 
-        this.firebase = null;
-        this.db = null;
         this.auth = null;
-
-        // Referências Firebase (ESM)
-        this.onAuthStateChanged = null;
-        this.firestoreFns = {};
+        this.db = null;
     }
 
     async init() {
@@ -30,61 +28,22 @@ class AuthManager {
 
         console.log('🔐 Inicializando AuthManager...');
 
-        try {
-            await this.waitForFirebase();
+        await this.waitForFirebase();
 
-            // Firebase Auth
-            const {
-                getAuth,
-                onAuthStateChanged,
-                signOut
-            } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js');
+        this.auth = window.firebaseApp.auth;
+        this.db   = window.firebaseApp.db;
 
-            // Firestore
-            const {
-                getFirestore,
-                doc,
-                getDoc,
-                setDoc,
-                updateDoc,
-                serverTimestamp
-            } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+        this.setupAuthListener();
 
-            this.firebase = window.firebaseApp.app;
-            this.auth = getAuth(this.firebase);
-            this.db = getFirestore(this.firebase);
-
-            this.onAuthStateChanged = onAuthStateChanged;
-            this.signOut = signOut;
-
-            this.firestoreFns = {
-                doc,
-                getDoc,
-                setDoc,
-                updateDoc,
-                serverTimestamp
-            };
-
-            this.setupAuthListener();
-
-            this.isInitialized = true;
-            console.log('✅ AuthManager inicializado com sucesso');
-
-        } catch (error) {
-            console.error('❌ Erro ao inicializar AuthManager:', error);
-            throw error;
-        }
+        this.isInitialized = true;
+        console.log('✅ AuthManager pronto');
     }
 
     async waitForFirebase() {
-        return new Promise((resolve, reject) => {
-            if (window.firebaseApp?.isReady) {
-                resolve();
-                return;
-            }
+        if (window.firebaseApp?.isReady) return;
 
+        return new Promise((resolve, reject) => {
             let attempts = 0;
-            const maxAttempts = 30;
 
             const interval = setInterval(() => {
                 attempts++;
@@ -92,19 +51,24 @@ class AuthManager {
                 if (window.firebaseApp?.isReady) {
                     clearInterval(interval);
                     resolve();
-                } else if (attempts >= maxAttempts) {
-                    clearInterval(interval);
-                    reject(new Error('Firebase não carregou após 15 segundos'));
                 }
-            }, 500);
+
+                if (attempts > 30) {
+                    clearInterval(interval);
+                    reject(new Error('Firebase não inicializou'));
+                }
+            }, 300);
         });
     }
 
     setupAuthListener() {
-        this.onAuthStateChanged(this.auth, async (user) => {
+        if (this.listenerRegistered) return;
+        this.listenerRegistered = true;
+
+        window.firebaseApp.onAuthStateChanged(async (user) => {
             console.log(
-                '👤 Estado de autenticação:',
-                user ? 'Logado' : 'Deslogado'
+                '👤 Auth state:',
+                user ? user.email : 'deslogado'
             );
 
             if (user) {
@@ -119,40 +83,28 @@ class AuthManager {
         });
     }
 
-    async loadUserProfile(userId) {
-        const { doc, getDoc, setDoc, serverTimestamp } = this.firestoreFns;
+    async loadUserProfile(uid) {
+        const { doc, getDoc, serverTimestamp, setDoc } = window.firebaseApp;
 
-        try {
-            const userRef = doc(this.db, 'users', userId);
-            const snap = await getDoc(userRef);
+        const ref = doc('users', uid);
+        const snap = await getDoc(ref);
 
-            if (snap.exists()) {
-                this.userProfile = snap.data();
-                console.log('📋 Perfil carregado:', this.userProfile.name);
-            } else {
-                this.userProfile = {
-                    uid: userId,
-                    name:
-                        this.currentUser.displayName ||
-                        this.currentUser.email?.split('@')[0] ||
-                        'Usuário',
-                    email: this.currentUser.email,
-                    photoURL: this.currentUser.photoURL || null,
-                    createdAt: serverTimestamp(),
-                    lastLogin: serverTimestamp()
-                };
-
-                await setDoc(userRef, this.userProfile);
-                console.log('📋 Perfil criado:', this.userProfile.name);
-            }
-        } catch (error) {
-            console.error('❌ Erro ao carregar perfil:', error);
-            this.userProfile = {
-                uid: userId,
-                name: 'Usuário',
-                email: this.currentUser?.email || ''
-            };
+        if (snap.exists()) {
+            this.userProfile = snap.data();
+            return;
         }
+
+        this.userProfile = {
+            uid,
+            name: this.currentUser.displayName ||
+                  this.currentUser.email.split('@')[0],
+            email: this.currentUser.email,
+            photoURL: this.currentUser.photoURL || null,
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp()
+        };
+
+        await setDoc(ref, this.userProfile);
     }
 
     addAuthListener(callback) {
@@ -163,31 +115,29 @@ class AuthManager {
         }
     }
 
-    removeAuthListener(callback) {
-        this.authListeners = this.authListeners.filter(cb => cb !== callback);
-    }
-
     notifyAuthListeners(user) {
         this.authListeners.forEach(cb => {
             try {
                 cb(user, this.userProfile);
             } catch (e) {
-                console.error('❌ Erro em listener de auth:', e);
+                console.error('Auth listener erro:', e);
             }
         });
     }
 
     async checkAuth() {
-        await this.init();
+        if (!this.isInitialized) {
+            await this.init();
+        }
         return this.currentUser;
     }
 
-    async requireAuth(redirectUrl = 'index.html') {
+    async requireAuth(redirect = 'index.html') {
         const user = await this.checkAuth();
 
         if (!user) {
-            console.warn('⚠️ Usuário não autenticado. Redirecionando...');
-            window.location.href = redirectUrl;
+            console.warn('⚠️ Usuário não autenticado');
+            window.location.href = redirect;
             return null;
         }
 
@@ -195,54 +145,22 @@ class AuthManager {
     }
 
     async logout() {
-        try {
-            await this.signOut(this.auth);
-            this.currentUser = null;
-            this.userProfile = null;
-            window.location.href = 'index.html';
-        } catch (error) {
-            console.error('❌ Erro ao efetuar logout:', error);
-            throw error;
-        }
-    }
-
-    async updateProfile(data) {
-        const { doc, updateDoc, serverTimestamp } = this.firestoreFns;
-
-        if (!this.currentUser) {
-            throw new Error('Usuário não autenticado');
-        }
-
-        try {
-            const ref = doc(this.db, 'users', this.currentUser.uid);
-            await updateDoc(ref, {
-                ...data,
-                updatedAt: serverTimestamp()
-            });
-
-            await this.loadUserProfile(this.currentUser.uid);
-        } catch (error) {
-            console.error('❌ Erro ao atualizar perfil:', error);
-            throw error;
-        }
-    }
-
-    getFirestore() {
-        return this.db;
+        await window.firebaseApp.signOut();
+        window.location.href = 'index.html';
     }
 
     getAuth() {
         return this.auth;
     }
+
+    getFirestore() {
+        return this.db;
+    }
 }
 
-// Instância global
 window.authManager = AuthManager.getInstance();
 
-// Inicialização automática
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('📱 DOM carregado. Inicializando AuthManager...');
-    window.authManager.init().catch(err => {
-        console.error('❌ Falha ao iniciar AuthManager:', err);
-    });
+    window.authManager.init()
+        .catch(err => console.error('AuthManager erro:', err));
 });
