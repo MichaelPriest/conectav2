@@ -5,11 +5,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Inicializar tema
         initTheme();
         
-        // Verificar autenticação
-        const user = await authManager.requireAuth();
+        // Verificar autenticação usando AuthManager
+        const user = await window.authManager.requireAuth();
         if (!user) return; // Já redirecionou para login
         
         console.log('✅ Usuário autenticado:', user.email);
+        
+        // Obter referências do Firebase do AuthManager
+        if (!window.authManager.db || !window.authManager.auth) {
+            throw new Error('Firebase não está configurado corretamente');
+        }
         
         // Configurar listeners de evento
         setupEventListeners();
@@ -56,37 +61,34 @@ async function initDashboard() {
     try {
         console.log('🔄 Inicializando dashboard...');
         
-        if (!window.firebaseApp || !window.firebaseApp.isReady) {
-            throw new Error('Firebase não está configurado');
+        // Verificar autenticação
+        const user = await window.authManager.requireAuth();
+        if (!user) return;
+        
+        console.log('👤 Usuário autenticado:', user.email);
+        
+        // Usar o AuthManager para obter dados do usuário
+        AppState.currentUser = user;
+        AppState.userProfile = window.authManager.userProfile;
+        
+        if (!AppState.userProfile) {
+            await window.authManager.loadUserProfile(user.uid);
+            AppState.userProfile = window.authManager.userProfile;
         }
         
-        // Verificar autenticação
-        window.firebaseApp.onAuthStateChanged(async (user) => {
-            if (user) {
-                AppState.currentUser = user;
-                console.log('👤 Usuário autenticado:', user.email);
-                
-                await ensureUserProfile(user);
-                await loadUserData();
-                updateUserUI();
-                
-                // Carregar dados iniciais
-                await Promise.all([
-                    loadPosts(),
-                    loadDashboardStats(),
-                    loadTrendingTopics(),
-                    loadOnlineFriends(),
-                    loadNotifications(),
-                    loadFriendRequests()
-                ]);
-                
-                console.log('🎉 Dashboard inicializado com sucesso!');
-                
-            } else {
-                console.log('⚠️ Usuário não autenticado, redirecionando...');
-                window.location.href = 'index.html';
-            }
-        });
+        updateUserUI();
+        
+        // Carregar dados iniciais
+        await Promise.all([
+            loadPosts(),
+            loadDashboardStats(),
+            loadTrendingTopics(),
+            loadOnlineFriends(),
+            loadNotifications(),
+            loadFriendRequests()
+        ]);
+        
+        console.log('🎉 Dashboard inicializado com sucesso!');
         
     } catch (error) {
         console.error('❌ Erro na inicialização:', error);
