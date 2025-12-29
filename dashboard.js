@@ -1,269 +1,349 @@
-// dashboard.js — Dashboard Conecta (VERSÃO FINAL ESTÁVEL)
+// dashboard.js - CORREÇÃO DA INICIALIZAÇÃO
 
-// ============================================
-// ESTADO GLOBAL DA APLICAÇÃO
-// ============================================
-const AppState = {
-    currentUser: null,
-    userProfile: null,
-
-    posts: [],
-    lastPost: null,
-    isLoading: false,
-    hasMorePosts: true,
-
-    selectedImage: null,
-    imageFile: null,
-
-    currentCommentsPost: null,
-
-    notifications: [],
-    friendRequests: [],
-    unreadNotifications: 0,
-    pendingRequests: 0
-};
-
-// ============================================
-// BOOTSTRAP DO DASHBOARD (ÚNICO PONTO DE ENTRADA)
-// ============================================
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('🚀 Inicializando Dashboard Conecta...');
-
+    console.log('🚀 Iniciando Dashboard Conecta...');
+    
     try {
+        // Inicializar tema primeiro
         initTheme();
-
-        // 🔐 Autenticação centralizada
+        
+        // Verificar autenticação usando AuthManager
+        console.log('🔐 Verificando autenticação...');
+        
+        // Aguardar o AuthManager estar pronto
+        if (!window.authManager) {
+            window.authManager = AuthManager.getInstance();
+        }
+        
+        // Inicializar AuthManager
+        await window.authManager.init();
+        
+        // Verificar autenticação
         const user = await window.authManager.requireAuth();
-        if (!user) return;
-
+        if (!user) return; // Já redirecionou para login
+        
+        console.log('✅ Usuário autenticado:', user.email);
+        
+        // Carregar perfil do usuário
+        if (!window.authManager.userProfile) {
+            await window.authManager.loadUserProfile(user.uid);
+        }
+        
+        // Atualizar estado da aplicação
         AppState.currentUser = user;
         AppState.userProfile = window.authManager.userProfile;
-
+        
+        console.log('👤 Perfil carregado:', AppState.userProfile?.name);
+        
+        // Atualizar UI do usuário
         updateUserUI();
+        
+        // Configurar listeners de evento
         setupEventListeners();
-
+        
+        // Carregar dados iniciais
         await Promise.all([
             loadPosts(),
             loadDashboardStats(),
             loadTrendingTopics(),
-            loadOnlineFriends(),
-            loadNotifications(),
-            loadFriendRequests()
+            loadOnlineFriends()
         ]);
-
-        console.log('🎉 Dashboard carregado com sucesso');
-
+        
+        console.log('🎉 Dashboard pronto!');
+        
     } catch (error) {
         console.error('❌ Erro na inicialização:', error);
         showError('Erro de inicialização', error.message);
     }
 });
 
-// ============================================
-// UI DO USUÁRIO
-// ============================================
-function updateUserUI() {
-    const user = AppState.userProfile;
-
-    const welcome = document.getElementById('welcomeTitle');
-    if (welcome) {
-        welcome.textContent = `Bem-vindo(a), ${user?.name || 'Usuário'}!`;
-    }
-
-    const avatar = document.getElementById('userAvatar');
-    if (!avatar) return;
-
-    if (user?.photoURL) {
-        avatar.style.backgroundImage = `url(${user.photoURL})`;
-        avatar.textContent = '';
-    } else {
-        avatar.textContent = (user?.name || 'U')[0].toUpperCase();
-        avatar.style.backgroundColor = getColorFromName(user?.name);
+// ===== AUTENTICAÇÃO E PERFIL =====
+async function ensureUserProfile(user) {
+    try {
+        // Usar window.firebaseApp em vez de importar novamente
+        const userRef = window.firebaseApp.doc('users', user.uid);
+        const userDoc = await window.firebaseApp.getDoc(userRef);
+        
+        if (!userDoc.exists()) {
+            const userName = user.displayName || user.email.split('@')[0] || 'Usuário';
+            const userData = {
+                uid: user.uid,
+                name: userName,
+                email: user.email,
+                photoURL: user.photoURL || null,
+                createdAt: window.firebaseApp.serverTimestamp(),
+                lastLogin: window.firebaseApp.serverTimestamp(),
+                bio: '',
+                location: '',
+                website: '',
+                friends: [],
+                friendRequests: [],
+                notifications: true,
+                privacy: 'friends',
+                theme: 'light'
+            };
+            
+            await window.firebaseApp.setDoc(userRef, userData);
+            console.log('✅ Perfil criado para:', userName);
+        } else {
+            // Atualizar último login
+            await window.firebaseApp.updateDoc(userRef, {
+                lastLogin: window.firebaseApp.serverTimestamp()
+            });
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao garantir perfil:', error);
     }
 }
 
-// ============================================
-// POSTS
-// ============================================
+// ===== SISTEMA DE POSTS =====
 async function loadPosts() {
     if (AppState.isLoading) return;
+    
     AppState.isLoading = true;
-
     const container = document.getElementById('postsContainer');
-    if (!container) return;
-
+    
+    if (!container) {
+        AppState.isLoading = false;
+        console.error('❌ Container de posts não encontrado');
+        return;
+    }
+    
     try {
+        console.log('🔄 Carregando posts...');
+        
+        // Mostrar skeleton loading
         showPostsSkeleton(container);
-
-        const q = window.firebaseApp.query(
-            window.firebaseApp.collection('posts'),
+        
+        // Verificar se Firebase está pronto
+        if (!window.firebaseApp?.isReady) {
+            throw new Error('Firebase não está pronto');
+        }
+        
+        // Carregar posts do Firebase
+        const postsCollection = window.firebaseApp.collection('posts');
+        const postsQuery = window.firebaseApp.query(
+            postsCollection,
             window.firebaseApp.orderBy('createdAt', 'desc'),
             window.firebaseApp.limit(10)
         );
-
-        const snap = await window.firebaseApp.getDocs(q);
+        
+        const snapshot = await window.firebaseApp.getDocs(postsQuery);
+        
+        // Limpar container
         container.innerHTML = '';
-
-        if (snap.empty) {
+        
+        if (snapshot.empty) {
             showNoPostsMessage(container);
             AppState.hasMorePosts = false;
             return;
         }
-
-        snap.forEach(docSnap => {
-            const post = { id: docSnap.id, ...docSnap.data() };
-            container.appendChild(createPostElement(post));
+        
+        // Processar posts
+        let postsArray = [];
+        snapshot.forEach(doc => {
+            const postData = doc.data();
+            const post = { 
+                id: doc.id, 
+                ...postData,
+                // Garantir campos obrigatórios
+                content: postData.content || '',
+                authorName: postData.authorName || 'Usuário',
+                authorId: postData.authorId || '',
+                createdAt: postData.createdAt?.toDate() || new Date(),
+                likes: postData.likes || 0,
+                comments: postData.comments || 0,
+                privacy: postData.privacy || 'friends'
+            };
+            postsArray.push(post);
         });
-
-    } catch (err) {
-        console.error('❌ Erro ao carregar posts:', err);
-        showErrorMessage(container, 'Erro ao carregar posts');
+        
+        // Ordenar por data (redundante, mas seguro)
+        postsArray.sort((a, b) => b.createdAt - a.createdAt);
+        
+        // Renderizar posts
+        postsArray.forEach(post => {
+            const postElement = createPostElement(post);
+            if (postElement) {
+                container.appendChild(postElement);
+            }
+        });
+        
+        // Atualizar estado
+        if (postsArray.length > 0) {
+            AppState.lastPost = postsArray[postsArray.length - 1];
+            AppState.hasMorePosts = snapshot.size >= 10;
+            updateLoadMoreButton();
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar posts:', error);
+        showErrorMessage(container, 'Erro ao carregar posts: ' + error.message);
     } finally {
         AppState.isLoading = false;
     }
 }
 
-function createPostElement(post) {
-    const div = document.createElement('div');
-    div.className = 'post';
-    div.dataset.postId = post.id;
-
-    const date = post.createdAt?.toDate?.() || new Date();
-    const liked = (post.likesBy || []).includes(AppState.currentUser.uid);
-
-    div.innerHTML = `
-        <div class="post-header">
-            <div class="post-avatar" style="background:${getColorFromName(post.authorName)}">
-                ${(post.authorName || 'U')[0]}
-            </div>
-            <div>
-                <strong>${escapeHtml(post.authorName || 'Usuário')}</strong>
-                <div class="post-time">${getTimeAgo(date)}</div>
-            </div>
-        </div>
-
-        <div class="post-content">${formatPostContent(post.content)}</div>
-
-        <div class="post-actions-footer">
-            <button class="post-action-btn ${liked ? 'liked' : ''}"
-                onclick="toggleLike('${post.id}')">
-                ❤️ ${post.likes || 0}
-            </button>
-            <button class="post-action-btn"
-                onclick="showComments('${post.id}')">
-                💬 ${post.comments || 0}
-            </button>
-        </div>
-    `;
-
-    return div;
-}
-
-// ============================================
-// INTERAÇÕES
-// ============================================
-async function toggleLike(postId) {
-    const ref = window.firebaseApp.doc('posts', postId);
-    const snap = await window.firebaseApp.getDoc(ref);
-    if (!snap.exists()) return;
-
-    const post = snap.data();
-    const liked = (post.likesBy || []).includes(AppState.currentUser.uid);
-
-    await window.firebaseApp.updateDoc(ref, {
-        likes: window.firebaseApp.increment(liked ? -1 : 1),
-        likesBy: liked
-            ? window.firebaseApp.arrayRemove(AppState.currentUser.uid)
-            : window.firebaseApp.arrayUnion(AppState.currentUser.uid)
+// ===== CONFIGURAR EDITOR DE POST =====
+function setupPostEditor() {
+    const textarea = document.getElementById('postText');
+    const charCount = document.getElementById('charCount');
+    const publishBtn = document.getElementById('publishBtn');
+    
+    if (!textarea || !charCount || !publishBtn) {
+        console.error('❌ Elementos do editor não encontrados');
+        return;
+    }
+    
+    console.log('✏️ Configurando editor de posts...');
+    
+    // Atualizar contador de caracteres
+    textarea.addEventListener('input', () => {
+        const length = textarea.value.length;
+        charCount.textContent = `${length}/1000`;
+        
+        if (length > 900) {
+            charCount.style.color = 'var(--error-color)';
+        } else if (length > 750) {
+            charCount.style.color = 'var(--warning-color)';
+        } else {
+            charCount.style.color = 'var(--text-light)';
+        }
+        
+        publishBtn.disabled = length === 0 || length > 1000;
     });
-
-    loadPosts();
-}
-
-function showComments(postId) {
-    console.log('Comentários do post:', postId);
-}
-
-// ============================================
-// DASHBOARD / STATS
-// ============================================
-async function loadDashboardStats() {
-    try {
-        document.getElementById('postsTodayCount').textContent = '—';
-        document.getElementById('totalPostsCount').textContent = '—';
-    } catch {}
-}
-
-async function loadTrendingTopics() {}
-async function loadOnlineFriends() {}
-async function loadNotifications() {}
-async function loadFriendRequests() {}
-
-// ============================================
-// EVENTOS / MENU
-// ============================================
-function setupEventListeners() {
-    const logoutLink = document.getElementById('logoutLink');
-    if (logoutLink) {
-        logoutLink.addEventListener('click', e => {
-            e.preventDefault();
-            window.authManager.logout();
+    
+    // Botão de publicar
+    publishBtn.addEventListener('click', publishPost);
+    
+    // Botão de adicionar imagem
+    const addImageBtn = document.getElementById('addImageBtn');
+    if (addImageBtn) {
+        addImageBtn.addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*,video/*';
+            input.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) handleMediaSelect(file);
+            });
+            input.click();
         });
     }
+    
+    // Botão de remover imagem
+    const removeImageBtn = document.getElementById('removeImageBtn');
+    if (removeImageBtn) {
+        removeImageBtn.addEventListener('click', removeMedia);
+    }
+    
+    // Botão de adicionar emoji
+    const addEmojiBtn = document.getElementById('addEmojiBtn');
+    if (addEmojiBtn) {
+        addEmojiBtn.addEventListener('click', showEmojiPicker);
+    }
+    
+    // Botão de adicionar hashtag
+    const addHashtagBtn = document.getElementById('addHashtagBtn');
+    if (addHashtagBtn) {
+        addHashtagBtn.addEventListener('click', () => {
+            insertAtCursor(textarea, ' #');
+        });
+    }
+    
+    // Botão de criar enquete
+    const addPollBtn = document.getElementById('addPollBtn');
+    if (addPollBtn) {
+        addPollBtn.addEventListener('click', showPollModal);
+    }
+    
+    // Atalho Ctrl+Enter para publicar
+    textarea.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            publishPost();
+        }
+    });
 }
 
-// ============================================
-// TEMA
-// ============================================
-function initTheme() {
-    const theme = localStorage.getItem('conecta-theme') || 'light';
-    document.documentElement.setAttribute('data-theme', theme);
+// ===== PUBLICAR POST =====
+async function publishPost() {
+    const textarea = document.getElementById('postText');
+    const content = textarea.value.trim();
+    const btn = document.getElementById('publishBtn');
+    const privacySelect = document.getElementById('postPrivacy');
+    const privacy = privacySelect ? privacySelect.value : 'friends';
+    
+    if (!content && !AppState.imageFile) {
+        showToast('error', 'Digite algo ou adicione uma mídia');
+        return;
+    }
+    
+    // Verificar se o usuário está autenticado
+    if (!AppState.currentUser) {
+        showToast('error', 'Você precisa estar autenticado para publicar');
+        return;
+    }
+    
+    btn.classList.add('loading');
+    btn.disabled = true;
+    
+    try {
+        let mediaUrl = null;
+        let mediaType = null;
+        
+        if (AppState.imageFile) {
+            const file = AppState.imageFile;
+            
+            // Detectar tipo de mídia
+            if (file.type.startsWith('image/')) {
+                mediaType = 'image';
+                // Converter para base64 (versão simplificada para desenvolvimento)
+                mediaUrl = await fileToBase64(file);
+            } else if (file.type.startsWith('video/')) {
+                mediaType = 'video';
+                mediaUrl = await fileToBase64(file);
+            }
+        }
+        
+        const postData = {
+            content: content,
+            authorId: AppState.currentUser.uid,
+            authorName: AppState.userProfile?.name || 'Usuário',
+            authorPhoto: AppState.userProfile?.photoURL || null,
+            createdAt: window.firebaseApp.serverTimestamp(),
+            likes: 0,
+            comments: 0,
+            shares: 0,
+            hashtags: extractHashtags(content),
+            likesBy: [],
+            hasMedia: !!mediaUrl,
+            mediaType: mediaType,
+            mediaBase64: mediaUrl,
+            privacy: privacy,
+            visibleTo: [AppState.currentUser.uid]
+        };
+        
+        await window.firebaseApp.addDoc(
+            window.firebaseApp.collection('posts'),
+            postData
+        );
+        
+        resetPostForm();
+        showToast('success', 'Post publicado com sucesso!');
+        
+        // Recarregar posts após 1 segundo
+        setTimeout(() => {
+            loadPosts();
+            loadDashboardStats();
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Erro ao publicar:', error);
+        showToast('error', 'Erro ao publicar: ' + error.message);
+    } finally {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+    }
 }
-
-// ============================================
-// UTILITÁRIOS
-// ============================================
-function escapeHtml(text = '') {
-    const d = document.createElement('div');
-    d.textContent = text;
-    return d.innerHTML;
-}
-
-function formatPostContent(text = '') {
-    return escapeHtml(text).replace(/\n/g, '<br>');
-}
-
-function getTimeAgo(date) {
-    const diff = (Date.now() - date) / 1000;
-    if (diff < 60) return 'agora';
-    if (diff < 3600) return `${Math.floor(diff / 60)} min`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
-    return date.toLocaleDateString('pt-BR');
-}
-
-function getColorFromName(name = '') {
-    const colors = ['#4A90E2', '#50C878', '#FF6B6B', '#9B59B6'];
-    return colors[(name.charCodeAt(0) || 0) % colors.length];
-}
-
-function showPostsSkeleton(container) {
-    container.innerHTML = '<div class="post">Carregando...</div>';
-}
-
-function showNoPostsMessage(container) {
-    container.innerHTML = '<div class="post">Nenhum post ainda</div>';
-}
-
-function showErrorMessage(container, msg) {
-    container.innerHTML = `<div class="post error">${msg}</div>`;
-}
-
-function showError(title, msg) {
-    alert(`${title}\n${msg}`);
-}
-
-// ============================================
-// EXPORTS GLOBAIS
-// ============================================
-window.toggleLike = toggleLike;
-window.showComments = showComments;
