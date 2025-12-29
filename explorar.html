@@ -381,45 +381,32 @@
             loadTrendingCommunities();
         });
         
-        async function loadUserData() {
-            try {
-                await waitForFirebase();
-                
-                const user = window.firebaseApp.currentUser();
-                if (!user) {
-                    window.location.href = 'index.html';
-                    return;
-                }
-                
-                ExploreState.currentUser = user;
-                
-                // Carregar perfil
-                const userDoc = await window.firebaseApp.getDoc(
-                    window.firebaseApp.doc('users', user.uid)
-                );
-                
-                if (userDoc.exists()) {
-                    ExploreState.userProfile = userDoc.data();
-                    
-                    // Atualizar avatar
-                    const avatar = document.getElementById('userAvatar');
-                    if (avatar) {
-                        if (ExploreState.userProfile.photoURL) {
-                            avatar.style.backgroundImage = `url(${ExploreState.userProfile.photoURL})`;
-                            avatar.style.backgroundSize = 'cover';
-                            avatar.textContent = '';
-                        } else if (ExploreState.userProfile.name) {
-                            avatar.textContent = ExploreState.userProfile.name.charAt(0).toUpperCase();
-                            avatar.style.backgroundColor = getColorFromName(ExploreState.userProfile.name);
-                        }
-                    }
-                }
-                
-            } catch (error) {
-                console.error('❌ Erro ao carregar usuário:', error);
-            }
-        }
-        
+		async function loadUserData() {
+			try {
+				// Verificar autenticação
+				const user = await authManager.requireAuth();
+				if (!user) return;
+				
+				ExploreState.currentUser = user;
+				ExploreState.userProfile = authManager.userProfile;
+				
+				// Atualizar avatar
+				const avatar = document.getElementById('userAvatar');
+				if (avatar) {
+					if (ExploreState.userProfile?.photoURL) {
+						avatar.style.backgroundImage = `url(${ExploreState.userProfile.photoURL})`;
+						avatar.style.backgroundSize = 'cover';
+						avatar.textContent = '';
+					} else if (ExploreState.userProfile?.name) {
+						avatar.textContent = ExploreState.userProfile.name.charAt(0).toUpperCase();
+						avatar.style.backgroundColor = getColorFromName(ExploreState.userProfile.name);
+					}
+				}
+				
+			} catch (error) {
+				console.error('❌ Erro ao carregar usuário:', error);
+			}
+		}  
         function setupEventListeners() {
             // Filtros
             document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -1008,22 +995,6 @@
                 [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
             }
             return shuffled;
-        }
-        
-        function waitForFirebase() {
-            return new Promise((resolve) => {
-                if (window.firebaseApp && window.firebaseApp.isReady) {
-                    resolve();
-                    return;
-                }
-                
-                const checkInterval = setInterval(() => {
-                    if (window.firebaseApp && window.firebaseApp.isReady) {
-                        clearInterval(checkInterval);
-                        resolve();
-                    }
-                }, 100);
-            });
         }
         
         function initTheme() {
