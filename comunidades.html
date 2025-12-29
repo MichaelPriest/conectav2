@@ -13,7 +13,7 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="dashboard.css">
-    
+    <script src="auth.js"></script>
     <style>
         /* Estilos específicos das comunidades */
         .communities-header {
@@ -532,45 +532,33 @@
             loadTabContent('explore');
         });
         
-        async function loadUserData() {
-            try {
-                await waitForFirebase();
-                
-                const user = window.firebaseApp.currentUser();
-                if (!user) {
-                    window.location.href = 'index.html';
-                    return;
-                }
-                
-                CommunitiesState.currentUser = user;
-                
-                // Carregar perfil
-                const userDoc = await window.firebaseApp.getDoc(
-                    window.firebaseApp.doc('users', user.uid)
-                );
-                
-                if (userDoc.exists()) {
-                    CommunitiesState.userProfile = userDoc.data();
-                    
-                    // Atualizar avatar
-                    const avatar = document.getElementById('userAvatar');
-                    if (avatar) {
-                        if (CommunitiesState.userProfile.photoURL) {
-                            avatar.style.backgroundImage = `url(${CommunitiesState.userProfile.photoURL})`;
-                            avatar.style.backgroundSize = 'cover';
-                            avatar.textContent = '';
-                        } else if (CommunitiesState.userProfile.name) {
-                            avatar.textContent = CommunitiesState.userProfile.name.charAt(0).toUpperCase();
-                            avatar.style.backgroundColor = getColorFromName(CommunitiesState.userProfile.name);
-                        }
-                    }
-                }
-                
-            } catch (error) {
-                console.error('❌ Erro ao carregar usuário:', error);
-            }
-        }
-        
+		async function loadUserData() {
+			try {
+				// Verificar autenticação
+				const user = await authManager.requireAuth();
+				if (!user) return;
+				
+				CommunitiesState.currentUser = user;
+				CommunitiesState.userProfile = authManager.userProfile;
+				
+				// Atualizar avatar
+				const avatar = document.getElementById('userAvatar');
+				if (avatar) {
+					if (CommunitiesState.userProfile?.photoURL) {
+						avatar.style.backgroundImage = `url(${CommunitiesState.userProfile.photoURL})`;
+						avatar.style.backgroundSize = 'cover';
+						avatar.textContent = '';
+					} else if (CommunitiesState.userProfile?.name) {
+						avatar.textContent = CommunitiesState.userProfile.name.charAt(0).toUpperCase();
+						avatar.style.backgroundColor = getColorFromName(CommunitiesState.userProfile.name);
+					}
+				}
+				
+			} catch (error) {
+				console.error('❌ Erro ao carregar usuário:', error);
+			}
+		}
+		
         function setupEventListeners() {
             // Tabs
             document.querySelectorAll('.community-tab').forEach(tab => {
@@ -1191,22 +1179,6 @@
         }
         
         // ===== UTILITÁRIOS =====
-        
-        function waitForFirebase() {
-            return new Promise((resolve) => {
-                if (window.firebaseApp && window.firebaseApp.isReady) {
-                    resolve();
-                    return;
-                }
-                
-                const checkInterval = setInterval(() => {
-                    if (window.firebaseApp && window.firebaseApp.isReady) {
-                        clearInterval(checkInterval);
-                        resolve();
-                    }
-                }, 100);
-            });
-        }
         
         function initTheme() {
             const savedTheme = localStorage.getItem('conecta-theme') || 'light';

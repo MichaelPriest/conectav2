@@ -668,22 +668,20 @@
             });
         }
         
-        function checkAuthState() {
-            // Aguardar Firebase estar pronto
-            const checkFirebase = setInterval(() => {
-                if (window.firebaseApp && window.firebaseApp.isReady) {
-                    clearInterval(checkFirebase);
-                    
-                    // Verificar se já está autenticado
-                    window.firebaseApp.onAuthStateChanged((user) => {
-                        if (user) {
-                            console.log('✅ Usuário já autenticado, redirecionando...');
-                            window.location.href = 'dashboard.html';
-                        }
-                    });
-                }
-            }, 500);
-        }
+		// ===== ATUALIZE no index.html =====
+		function checkAuthState() {
+			// Usar AuthManager para verificar autenticação
+			authManager.init().then(() => {
+				authManager.addAuthListener((user) => {
+					if (user) {
+						console.log('✅ Usuário já autenticado, redirecionando...');
+						window.location.href = 'dashboard.html';
+					}
+				});
+			}).catch(error => {
+				console.error('❌ Erro ao verificar autenticação:', error);
+			});
+		}
         
         // ===== FUNÇÕES DE AUTENTICAÇÃO =====
         
