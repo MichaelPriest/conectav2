@@ -550,42 +550,36 @@
             loadTabContent('posts');
         });
         
-        async function loadProfileData() {
-            try {
-                // Verificar Firebase
-                await waitForFirebase();
-                
-                // Verificar autenticação
-                const user = window.firebaseApp.currentUser();
-                if (!user) {
-                    window.location.href = 'index.html';
-                    return;
-                }
-                
-                ProfileState.currentUser = user;
-                
-                // Obter ID do perfil da URL ou usar usuário atual
-                const urlParams = new URLSearchParams(window.location.search);
-                ProfileState.profileUserId = urlParams.get('id') || user.uid;
-                ProfileState.isOwnProfile = ProfileState.profileUserId === user.uid;
-                
-                // Carregar dados do perfil
-                await loadProfileInfo();
-                
-                // Atualizar UI
-                updateProfileUI();
-                
-                // Carregar estatísticas
-                await loadProfileStats();
-                
-                // Configurar botões baseado no tipo de perfil
-                setupProfileButtons();
-                
-            } catch (error) {
-                console.error('❌ Erro ao carregar perfil:', error);
-                showError('Erro ao carregar perfil');
-            }
-        }
+		async function loadProfileData() {
+			try {
+				// Verificar autenticação
+				const user = await authManager.requireAuth();
+				if (!user) return;
+				
+				ProfileState.currentUser = user;
+				
+				// Obter ID do perfil da URL ou usar usuário atual
+				const urlParams = new URLSearchParams(window.location.search);
+				ProfileState.profileUserId = urlParams.get('id') || user.uid;
+				ProfileState.isOwnProfile = ProfileState.profileUserId === user.uid;
+				
+				// Carregar dados do perfil
+				await loadProfileInfo();
+				
+				// Atualizar UI
+				updateProfileUI();
+				
+				// Carregar estatísticas
+				await loadProfileStats();
+				
+				// Configurar botões baseado no tipo de perfil
+				setupProfileButtons();
+				
+			} catch (error) {
+				console.error('❌ Erro ao carregar perfil:', error);
+				showError('Erro ao carregar perfil');
+			}
+		}
         
         async function loadProfileInfo() {
             try {
@@ -1346,21 +1340,9 @@
             window.location.href = `perfil.html?id=${userId}`;
         }
         
-        function waitForFirebase() {
-            return new Promise((resolve) => {
-                if (window.firebaseApp && window.firebaseApp.isReady) {
-                    resolve();
-                    return;
-                }
-                
-                const checkInterval = setInterval(() => {
-                    if (window.firebaseApp && window.firebaseApp.isReady) {
-                        clearInterval(checkInterval);
-                        resolve();
-                    }
-                }, 100);
-            });
-        }
+		async function waitForAuth() {
+			return authManager.checkAuth();
+		}
         
         // Funções importadas do dashboard.js
         function initTheme() {
