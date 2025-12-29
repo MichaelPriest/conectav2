@@ -1,0 +1,1671 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Permissions-Policy" content="interest-cohort=()">
+    <title>Comunidade - Conecta</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="dashboard.css">
+    <style>
+        /* Estilos específicos da página de comunidade */
+        .community-hero {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: var(--border-radius-lg);
+            padding: 3rem 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .community-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(0,0,0,0.1), rgba(255,255,255,0.1));
+            z-index: 1;
+        }
+        
+        .community-hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .community-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .community-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 20px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: var(--primary-color);
+            border: 4px solid white;
+            box-shadow: var(--shadow-lg);
+            flex-shrink: 0;
+        }
+        
+        .community-info {
+            flex: 1;
+        }
+        
+        .community-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .community-description {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+        
+        .community-stats {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .community-stat {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.75rem 1.25rem;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .community-stat i {
+            font-size: 1.25rem;
+        }
+        
+        .community-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+        }
+        
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            border: 2px solid white;
+            background: transparent;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .action-btn:hover {
+            background: white;
+            color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+        
+        .action-btn.primary {
+            background: white;
+            color: var(--primary-color);
+        }
+        
+        .action-btn.primary:hover {
+            background: var(--primary-dark);
+            border-color: var(--primary-dark);
+            color: white;
+        }
+        
+        .community-tabs {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: 0;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+        
+        .tab-nav {
+            display: flex;
+            border-bottom: 2px solid var(--border-color);
+            padding: 0 1.5rem;
+        }
+        
+        .tab-btn {
+            padding: 1.25rem 1.5rem;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-light);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn:hover {
+            color: var(--text-color);
+        }
+        
+        .tab-btn.active {
+            color: var(--primary-color);
+        }
+        
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--primary-color);
+            border-radius: 3px 3px 0 0;
+        }
+        
+        .tab-content {
+            padding: 2rem;
+        }
+        
+        .tab-pane {
+            display: none;
+        }
+        
+        .tab-pane.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .members-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .member-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-color);
+        }
+        
+        .member-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .member-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .member-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .member-info h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1.1rem;
+        }
+        
+        .member-info p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .member-role {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: var(--primary-light);
+            color: var(--primary-color);
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        
+        .member-role.admin {
+            background: var(--error-light);
+            color: var(--error-color);
+        }
+        
+        .member-role.moderator {
+            background: var(--warning-light);
+            color: var(--warning-color);
+        }
+        
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        
+        .event-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+        
+        .event-card:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow);
+        }
+        
+        .event-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .event-date {
+            width: 70px;
+            height: 70px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: var(--border-radius);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        
+        .event-date .day {
+            font-size: 1.5rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        
+        .event-date .month {
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+        
+        .event-info h4 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.2rem;
+        }
+        
+        .event-meta {
+            display: flex;
+            gap: 1rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .event-meta i {
+            margin-right: 0.5rem;
+        }
+        
+        .discussions-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .discussion-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+        
+        .discussion-card:hover {
+            background: var(--bg-color);
+        }
+        
+        .discussion-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .discussion-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+        
+        .discussion-info h4 {
+            margin: 0 0 0.25rem 0;
+            font-size: 1.1rem;
+        }
+        
+        .discussion-info p {
+            margin: 0;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .discussion-content {
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+        
+        .discussion-stats {
+            display: flex;
+            gap: 1.5rem;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
+        
+        .discussion-stats i {
+            margin-right: 0.5rem;
+        }
+        
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .media-item {
+            position: relative;
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            aspect-ratio: 1;
+            cursor: pointer;
+        }
+        
+        .media-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+        
+        .media-item:hover img {
+            transform: scale(1.1);
+        }
+        
+        .media-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding: 1rem;
+            color: white;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .media-item:hover .media-overlay {
+            opacity: 1;
+        }
+        
+        .about-section {
+            background: var(--card-bg);
+            border-radius: var(--border-radius-lg);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .about-section h3 {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .about-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .about-item h4 {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-color);
+        }
+        
+        .about-item p {
+            margin: 0;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+        
+        .rules-list {
+            list-style: none;
+            padding: 0;
+            margin: 1.5rem 0;
+        }
+        
+        .rules-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        .rules-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .rules-list i {
+            color: var(--success-color);
+        }
+        
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .community-header {
+                flex-direction: column;
+                text-align: center;
+                align-items: center;
+            }
+            
+            .community-avatar {
+                width: 100px;
+                height: 100px;
+            }
+            
+            .community-title {
+                font-size: 2rem;
+            }
+            
+            .tab-nav {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding: 0;
+            }
+            
+            .tab-btn {
+                padding: 1rem;
+                white-space: nowrap;
+            }
+            
+            .members-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+            
+            .about-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Animações */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="dashboard-container">
+            <div class="header-content">
+                <!-- Logo -->
+                <a href="dashboard.html" class="logo">
+                    <i class="fas fa-users logo-icon"></i>
+                    <span class="logo-text">Conecta</span>
+                </a>
+                
+                <!-- Search -->
+                <div class="header-search">
+                    <input type="text" placeholder="Pesquisar na comunidade..." class="search-input" id="communitySearch">
+                </div>
+                
+                <!-- Actions -->
+                <div class="header-actions">
+                    <!-- Theme Toggle -->
+                    <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    
+                    <!-- Notifications -->
+                    <div class="notification-btn" id="notificationBtn" role="button" aria-label="Notificações">
+                        <i class="far fa-bell"></i>
+                        <span class="notification-badge" id="notificationCount" style="display: none;">0</span>
+                    </div>
+                    
+                    <!-- User Menu -->
+                    <div class="user-menu">
+                        <div class="user-avatar" id="userAvatar" role="button" aria-label="Menu do usuário">
+                            U
+                        </div>
+                        <div class="user-dropdown" id="userDropdown">
+                            <a href="dashboard.html" class="user-dropdown-item">
+                                <i class="fas fa-home"></i>
+                                <span>Início</span>
+                            </a>
+                            <a href="comunidades.html" class="user-dropdown-item">
+                                <i class="fas fa-users"></i>
+                                <span>Comunidades</span>
+                            </a>
+                            <a href="perfil.html" class="user-dropdown-item">
+                                <i class="fas fa-user"></i>
+                                <span>Meu Perfil</span>
+                            </a>
+                            <div class="user-dropdown-divider"></div>
+                            <a href="#" class="user-dropdown-item" id="logoutLink">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Sair</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-container dashboard-main">
+        <!-- Community Hero -->
+        <section class="community-hero">
+            <div class="community-hero-content">
+                <div class="community-header">
+                    <div class="community-avatar" id="communityAvatar">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="community-info">
+                        <h1 class="community-title" id="communityTitle">Desenvolvedores Web</h1>
+                        <p class="community-description" id="communityDescription">
+                            Comunidade para desenvolvedores web de todos os níveis compartilharem conhecimento, 
+                            projetos e experiências. Discussões sobre frontend, backend, frameworks e melhores práticas.
+                        </p>
+                        <div class="community-stats">
+                            <div class="community-stat">
+                                <i class="fas fa-users"></i>
+                                <span id="membersCount">1.2K membros</span>
+                            </div>
+                            <div class="community-stat">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span id="eventsCount">12 eventos</span>
+                            </div>
+                            <div class="community-stat">
+                                <i class="fas fa-comments"></i>
+                                <span id="postsCount">345 discussões</span>
+                            </div>
+                            <div class="community-stat">
+                                <i class="fas fa-star"></i>
+                                <span id="communityRating">4.8 ★</span>
+                            </div>
+                        </div>
+                        <div class="community-actions">
+                            <button class="action-btn primary" id="joinCommunityBtn">
+                                <i class="fas fa-user-plus"></i>
+                                <span>Participar da Comunidade</span>
+                            </button>
+                            <button class="action-btn" id="shareCommunityBtn">
+                                <i class="fas fa-share-alt"></i>
+                                <span>Compartilhar</span>
+                            </button>
+                            <button class="action-btn" id="communityNotificationsBtn">
+                                <i class="far fa-bell"></i>
+                                <span>Notificações</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content Area -->
+        <div class="dashboard-content">
+            <!-- Left Column -->
+            <div class="content-left">
+                <!-- Community Tabs -->
+                <div class="community-tabs">
+                    <nav class="tab-nav">
+                        <button class="tab-btn active" data-tab="discussions">
+                            <i class="fas fa-comments"></i>
+                            Discussões
+                        </button>
+                        <button class="tab-btn" data-tab="members">
+                            <i class="fas fa-users"></i>
+                            Membros
+                        </button>
+                        <button class="tab-btn" data-tab="events">
+                            <i class="fas fa-calendar-alt"></i>
+                            Eventos
+                        </button>
+                        <button class="tab-btn" data-tab="media">
+                            <i class="fas fa-images"></i>
+                            Mídia
+                        </button>
+                        <button class="tab-btn" data-tab="about">
+                            <i class="fas fa-info-circle"></i>
+                            Sobre
+                        </button>
+                    </nav>
+
+                    <div class="tab-content">
+                        <!-- Discussions Tab -->
+                        <div class="tab-pane active" id="discussionsTab">
+                            <div class="tab-header">
+                                <h3>Discussões Recentes</h3>
+                                <button class="btn btn-primary" id="newDiscussionBtn">
+                                    <i class="fas fa-plus"></i>
+                                    Nova Discussão
+                                </button>
+                            </div>
+                            
+                            <div class="discussions-list" id="discussionsList">
+                                <!-- Discussions will be loaded here -->
+                            </div>
+                        </div>
+
+                        <!-- Members Tab -->
+                        <div class="tab-pane" id="membersTab">
+                            <div class="tab-header">
+                                <h3>Membros da Comunidade</h3>
+                                <input type="text" class="form-input" placeholder="Buscar membros..." id="searchMembers">
+                            </div>
+                            
+                            <div class="members-grid" id="membersGrid">
+                                <!-- Members will be loaded here -->
+                            </div>
+                        </div>
+
+                        <!-- Events Tab -->
+                        <div class="tab-pane" id="eventsTab">
+                            <div class="tab-header">
+                                <h3>Próximos Eventos</h3>
+                                <button class="btn btn-primary" id="newEventBtn">
+                                    <i class="fas fa-plus"></i>
+                                    Criar Evento
+                                </button>
+                            </div>
+                            
+                            <div class="events-list" id="eventsList">
+                                <!-- Events will be loaded here -->
+                            </div>
+                        </div>
+
+                        <!-- Media Tab -->
+                        <div class="tab-pane" id="mediaTab">
+                            <div class="tab-header">
+                                <h3>Galeria de Mídia</h3>
+                                <button class="btn btn-primary" id="uploadMediaBtn">
+                                    <i class="fas fa-upload"></i>
+                                    Enviar Mídia
+                                </button>
+                            </div>
+                            
+                            <div class="media-grid" id="mediaGrid">
+                                <!-- Media will be loaded here -->
+                            </div>
+                        </div>
+
+                        <!-- About Tab -->
+                        <div class="tab-pane" id="aboutTab">
+                            <div class="about-section">
+                                <h3>Sobre a Comunidade</h3>
+                                <div class="about-grid">
+                                    <div class="about-item">
+                                        <h4><i class="fas fa-info-circle"></i> Descrição</h4>
+                                        <p id="communityFullDescription">
+                                            Comunidade dedicada a desenvolvedores web de todos os níveis. 
+                                            Aqui compartilhamos conhecimento, projetos, experiências e 
+                                            nos ajudamos mutuamente. Foco em tecnologias modernas, boas 
+                                            práticas e crescimento profissional.
+                                        </p>
+                                    </div>
+                                    <div class="about-item">
+                                        <h4><i class="fas fa-calendar-alt"></i> Criada em</h4>
+                                        <p id="communityCreatedAt">15 de Março, 2023</p>
+                                    </div>
+                                    <div class="about-item">
+                                        <h4><i class="fas fa-user-shield"></i> Administradores</h4>
+                                        <p id="communityAdmins">3 administradores</p>
+                                    </div>
+                                    <div class="about-item">
+                                        <h4><i class="fas fa-globe"></i> Visibilidade</h4>
+                                        <p id="communityVisibility">Pública - Qualquer um pode participar</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="about-section">
+                                <h3>Regras da Comunidade</h3>
+                                <ul class="rules-list" id="communityRules">
+                                    <!-- Rules will be loaded here -->
+                                </ul>
+                            </div>
+
+                            <div class="about-section">
+                                <h3>Tags e Interesses</h3>
+                                <div class="tags-container" id="communityTags">
+                                    <!-- Tags will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="content-right">
+                <!-- Community Info Card -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Informações</span>
+                    </div>
+                    <div class="community-details">
+                        <div class="detail-item">
+                            <i class="fas fa-user-friends"></i>
+                            <span>Categoria: <strong id="communityCategory">Tecnologia</strong></span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-lock"></i>
+                            <span>Privacidade: <strong id="communityPrivacy">Pública</strong></span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>Localização: <strong id="communityLocation">Online</strong></span>
+                        </div>
+                        <div class="detail-item">
+                            <i class="fas fa-language"></i>
+                            <span>Idioma: <strong id="communityLanguage">Português</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Community Admins -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title">
+                        <i class="fas fa-user-shield"></i>
+                        <span>Administradores</span>
+                    </div>
+                    <div class="admins-list" id="adminsList">
+                        <!-- Admins will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title">
+                        <i class="fas fa-history"></i>
+                        <span>Atividade Recente</span>
+                    </div>
+                    <div class="activity-list" id="communityActivity">
+                        <!-- Activity will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Related Communities -->
+                <div class="sidebar-section">
+                    <div class="sidebar-title">
+                        <i class="fas fa-users"></i>
+                        <span>Comunidades Relacionadas</span>
+                    </div>
+                    <div class="related-communities" id="relatedCommunities">
+                        <!-- Related communities will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- JavaScript -->
+    <script type="module" src="firebase-config.js"></script>
+    <script type="module" src="auth.js"></script>
+    <script>
+        // ===== COMUNIDADE DETALHES - SCRIPT PRINCIPAL =====
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 Carregando página de comunidade...');
+            
+            try {
+                // Inicializar tema
+                initTheme();
+                
+                // Verificar autenticação
+                const user = await window.authManager?.requireAuth();
+                if (!user) return;
+                
+                // Obter ID da comunidade da URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const communityId = urlParams.get('id') || 'default';
+                
+                console.log(`👥 Carregando comunidade: ${communityId}`);
+                
+                // Configurar listeners
+                setupEventListeners();
+                
+                // Carregar dados da comunidade
+                await loadCommunityData(communityId);
+                
+                // Carregar conteúdo inicial
+                await loadTabContent('discussions');
+                
+                console.log('🎉 Comunidade carregada com sucesso!');
+                
+            } catch (error) {
+                console.error('❌ Erro na inicialização:', error);
+                showError('Erro ao carregar comunidade', error.message);
+            }
+        });
+
+        // Estado da Comunidade
+        const CommunityState = {
+            currentCommunity: null,
+            isMember: false,
+            isAdmin: false,
+            currentTab: 'discussions',
+            discussions: [],
+            members: [],
+            events: [],
+            media: [],
+            admins: []
+        };
+
+        // ===== CARREGAR DADOS DA COMUNIDADE =====
+        async function loadCommunityData(communityId) {
+            try {
+                console.log(`📥 Carregando dados da comunidade ${communityId}...`);
+                
+                // Simular dados de exemplo (substituir por Firebase depois)
+                const communityData = getMockCommunityData(communityId);
+                
+                // Atualizar estado
+                CommunityState.currentCommunity = communityData;
+                CommunityState.isMember = communityData.isMember || false;
+                CommunityState.isAdmin = communityData.isAdmin || false;
+                
+                // Atualizar UI
+                updateCommunityUI(communityData);
+                updateCommunityStatus();
+                
+                // Carregar dados relacionados
+                await Promise.all([
+                    loadCommunityDiscussions(communityId),
+                    loadCommunityMembers(communityId),
+                    loadCommunityEvents(communityId),
+                    loadCommunityMedia(communityId),
+                    loadCommunityAdmins(communityId),
+                    loadCommunityActivity(communityId)
+                ]);
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar dados da comunidade:', error);
+                throw error;
+            }
+        }
+
+        function getMockCommunityData(id) {
+            // Dados de exemplo - substituir por Firebase
+            return {
+                id: id,
+                name: "Desenvolvedores Web",
+                description: "Comunidade para desenvolvedores web compartilharem conhecimento e experiências",
+                fullDescription: "Comunidade dedicada a desenvolvedores web de todos os níveis. Aqui compartilhamos conhecimento, projetos, experiências e nos ajudamos mutuamente.",
+                category: "Tecnologia",
+                privacy: "Pública",
+                location: "Online",
+                language: "Português",
+                membersCount: 1250,
+                eventsCount: 12,
+                postsCount: 345,
+                rating: 4.8,
+                createdAt: "15 de Março, 2023",
+                adminsCount: 3,
+                isMember: true,
+                isAdmin: false,
+                rules: [
+                    "Respeite todos os membros",
+                    "Não faça spam",
+                    "Compartilhe conteúdo relevante",
+                    "Seja construtivo nas críticas",
+                    "Ajude outros desenvolvedores"
+                ],
+                tags: ["JavaScript", "React", "Node.js", "CSS", "HTML", "Web Development"]
+            };
+        }
+
+        function updateCommunityUI(community) {
+            // Atualizar elementos principais
+            document.getElementById('communityTitle').textContent = community.name;
+            document.getElementById('communityDescription').textContent = community.description;
+            document.getElementById('communityFullDescription').textContent = community.fullDescription;
+            document.getElementById('membersCount').textContent = `${community.membersCount.toLocaleString()} membros`;
+            document.getElementById('eventsCount').textContent = `${community.eventsCount} eventos`;
+            document.getElementById('postsCount').textContent = `${community.postsCount} discussões`;
+            document.getElementById('communityRating').textContent = `${community.rating} ★`;
+            
+            document.getElementById('communityCategory').textContent = community.category;
+            document.getElementById('communityPrivacy').textContent = community.privacy;
+            document.getElementById('communityLocation').textContent = community.location;
+            document.getElementById('communityLanguage').textContent = community.language;
+            document.getElementById('communityCreatedAt').textContent = community.createdAt;
+            document.getElementById('communityAdmins').textContent = `${community.adminsCount} administradores`;
+            document.getElementById('communityVisibility').textContent = `${community.privacy} - ${community.privacy === 'Pública' ? 'Qualquer um pode participar' : 'Somente por convite'}`;
+            
+            // Atualizar regras
+            const rulesList = document.getElementById('communityRules');
+            if (rulesList && community.rules) {
+                rulesList.innerHTML = community.rules.map(rule => 
+                    `<li><i class="fas fa-check-circle"></i> ${rule}</li>`
+                ).join('');
+            }
+            
+            // Atualizar tags
+            const tagsContainer = document.getElementById('communityTags');
+            if (tagsContainer && community.tags) {
+                tagsContainer.innerHTML = community.tags.map(tag => 
+                    `<span class="tag">${tag}</span>`
+                ).join('');
+            }
+        }
+
+        function updateCommunityStatus() {
+            const joinBtn = document.getElementById('joinCommunityBtn');
+            if (!joinBtn) return;
+            
+            if (CommunityState.isMember) {
+                joinBtn.innerHTML = '<i class="fas fa-check"></i><span>Participando</span>';
+                joinBtn.classList.add('joined');
+                joinBtn.onclick = leaveCommunity;
+            } else {
+                joinBtn.innerHTML = '<i class="fas fa-user-plus"></i><span>Participar da Comunidade</span>';
+                joinBtn.classList.remove('joined');
+                joinBtn.onclick = joinCommunity;
+            }
+        }
+
+        // ===== FUNÇÕES DE MEMBROS =====
+        async function joinCommunity() {
+            try {
+                console.log('🤝 Entrando na comunidade...');
+                
+                // Simular requisição
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                CommunityState.isMember = true;
+                updateCommunityStatus();
+                
+                showToast('success', 'Você agora é membro desta comunidade!');
+                
+                // Atualizar contador de membros
+                if (CommunityState.currentCommunity) {
+                    CommunityState.currentCommunity.membersCount++;
+                    document.getElementById('membersCount').textContent = 
+                        `${CommunityState.currentCommunity.membersCount.toLocaleString()} membros`;
+                }
+                
+            } catch (error) {
+                console.error('❌ Erro ao entrar na comunidade:', error);
+                showToast('error', 'Erro ao entrar na comunidade');
+            }
+        }
+
+        async function leaveCommunity() {
+            const confirmed = await Swal.fire({
+                title: 'Sair da comunidade?',
+                text: 'Você deixará de receber atualizações e perderá acesso a conteúdos exclusivos.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sim, sair',
+                cancelButtonText: 'Cancelar'
+            });
+            
+            if (confirmed.isConfirmed) {
+                try {
+                    console.log('🚪 Saindo da comunidade...');
+                    
+                    // Simular requisição
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    CommunityState.isMember = false;
+                    updateCommunityStatus();
+                    
+                    showToast('info', 'Você saiu da comunidade');
+                    
+                    // Atualizar contador de membros
+                    if (CommunityState.currentCommunity) {
+                        CommunityState.currentCommunity.membersCount--;
+                        document.getElementById('membersCount').textContent = 
+                            `${CommunityState.currentCommunity.membersCount.toLocaleString()} membros`;
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ Erro ao sair da comunidade:', error);
+                    showToast('error', 'Erro ao sair da comunidade');
+                }
+            }
+        }
+
+        // ===== SISTEMA DE TABS =====
+        function setupTabs() {
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabId = btn.dataset.tab;
+                    
+                    // Atualizar botões ativos
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    
+                    // Atualizar painéis ativos
+                    tabPanes.forEach(pane => pane.classList.remove('active'));
+                    document.getElementById(`${tabId}Tab`).classList.add('active');
+                    
+                    // Carregar conteúdo da aba
+                    loadTabContent(tabId);
+                });
+            });
+        }
+
+        async function loadTabContent(tabId) {
+            try {
+                console.log(`📋 Carregando conteúdo da aba: ${tabId}`);
+                
+                switch(tabId) {
+                    case 'discussions':
+                        await loadCommunityDiscussions(CommunityState.currentCommunity?.id);
+                        break;
+                    case 'members':
+                        await loadCommunityMembers(CommunityState.currentCommunity?.id);
+                        break;
+                    case 'events':
+                        await loadCommunityEvents(CommunityState.currentCommunity?.id);
+                        break;
+                    case 'media':
+                        await loadCommunityMedia(CommunityState.currentCommunity?.id);
+                        break;
+                    case 'about':
+                        // Conteúdo já carregado
+                        break;
+                }
+            } catch (error) {
+                console.error(`❌ Erro ao carregar aba ${tabId}:`, error);
+                showToast('error', `Erro ao carregar ${tabId}`);
+            }
+        }
+
+        // ===== CARREGAR CONTEÚDO DAS ABAS =====
+        async function loadCommunityDiscussions(communityId) {
+            try {
+                const container = document.getElementById('discussionsList');
+                if (!container) return;
+                
+                // Simular carregamento
+                container.innerHTML = `
+                    <div class="discussion-skeleton">
+                        <div class="skeleton-header">
+                            <div class="skeleton-avatar"></div>
+                            <div style="flex: 1;">
+                                <div class="skeleton-line short"></div>
+                                <div class="skeleton-line medium"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-content">
+                            <div class="skeleton-line"></div>
+                            <div class="skeleton-line" style="width: 80%;"></div>
+                        </div>
+                    </div>
+                `;
+                
+                // Simular dados
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Dados de exemplo
+                const discussions = [
+                    {
+                        id: 1,
+                        title: "Melhores práticas para React em 2024",
+                        author: "Carlos Silva",
+                        content: "Quais são as melhores práticas e padrões que vocês estão usando em projetos React atualmente?",
+                        replies: 42,
+                        views: 210,
+                        timeAgo: "2 horas atrás"
+                    },
+                    {
+                        id: 2,
+                        title: "Node.js vs Deno vs Bun",
+                        author: "Ana Santos",
+                        content: "Qual runtime vocês preferem para backend JavaScript e por quê?",
+                        replies: 28,
+                        views: 150,
+                        timeAgo: "1 dia atrás"
+                    },
+                    {
+                        id: 3,
+                        title: "Dicas para otimização de performance em SPAs",
+                        author: "Pedro Costa",
+                        content: "Compartilhe suas dicas para melhorar performance em Single Page Applications",
+                        replies: 35,
+                        views: 180,
+                        timeAgo: "3 dias atrás"
+                    }
+                ];
+                
+                // Renderizar discussões
+                container.innerHTML = discussions.map(discussion => `
+                    <div class="discussion-card" onclick="openDiscussion(${discussion.id})">
+                        <div class="discussion-header">
+                            <div class="discussion-avatar" style="background-color: ${getColorFromName(discussion.author)}">
+                                ${discussion.author.charAt(0)}
+                            </div>
+                            <div class="discussion-info">
+                                <h4>${discussion.title}</h4>
+                                <p>Por ${discussion.author} • ${discussion.timeAgo}</p>
+                            </div>
+                        </div>
+                        <div class="discussion-content">
+                            ${discussion.content}
+                        </div>
+                        <div class="discussion-stats">
+                            <span><i class="far fa-comment"></i> ${discussion.replies} respostas</span>
+                            <span><i class="far fa-eye"></i> ${discussion.views} visualizações</span>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar discussões:', error);
+                document.getElementById('discussionsList').innerHTML = 
+                    '<p class="error-message">Erro ao carregar discussões</p>';
+            }
+        }
+
+        async function loadCommunityMembers(communityId) {
+            try {
+                const container = document.getElementById('membersGrid');
+                if (!container) return;
+                
+                // Simular dados
+                const members = [
+                    { id: 1, name: "Carlos Silva", role: "Admin", joined: "Membro desde Jan 2023" },
+                    { id: 2, name: "Ana Santos", role: "Moderador", joined: "Membro desde Fev 2023" },
+                    { id: 3, name: "Pedro Costa", role: "Membro", joined: "Membro desde Mar 2023" },
+                    { id: 4, name: "Maria Oliveira", role: "Membro", joined: "Membro desde Abr 2023" },
+                    { id: 5, name: "João Pereira", role: "Membro", joined: "Membro desde Mai 2023" },
+                    { id: 6, name: "Juliana Rodrigues", role: "Membro", joined: "Membro desde Jun 2023" }
+                ];
+                
+                // Renderizar membros
+                container.innerHTML = members.map(member => `
+                    <div class="member-card">
+                        <div class="member-header">
+                            <div class="member-avatar" style="background-color: ${getColorFromName(member.name)}">
+                                ${member.name.charAt(0)}
+                            </div>
+                            <div class="member-info">
+                                <h4>${member.name}</h4>
+                                <p>${member.joined}</p>
+                                <span class="member-role ${member.role.toLowerCase()}">${member.role}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar membros:', error);
+            }
+        }
+
+        async function loadCommunityEvents(communityId) {
+            try {
+                const container = document.getElementById('eventsList');
+                if (!container) return;
+                
+                // Simular dados
+                const events = [
+                    {
+                        id: 1,
+                        title: "Workshop: Next.js 14",
+                        date: "25 Jan",
+                        month: "Jan",
+                        time: "19:00 - 21:00",
+                        location: "Online (Zoom)",
+                        description: "Workshop prático sobre as novas features do Next.js 14"
+                    },
+                    {
+                        id: 2,
+                        title: "Meetup Presencial SP",
+                        date: "15 Fev",
+                        month: "Fev",
+                        time: "18:30 - 21:00",
+                        location: "São Paulo, SP",
+                        description: "Encontro presencial para networking e talks"
+                    }
+                ];
+                
+                // Renderizar eventos
+                container.innerHTML = events.map(event => `
+                    <div class="event-card" onclick="openEvent(${event.id})">
+                        <div class="event-header">
+                            <div class="event-date">
+                                <div class="day">${event.date}</div>
+                                <div class="month">${event.month}</div>
+                            </div>
+                            <div class="event-info">
+                                <h4>${event.title}</h4>
+                                <div class="event-meta">
+                                    <span><i class="far fa-clock"></i> ${event.time}</span>
+                                    <span><i class="fas fa-map-marker-alt"></i> ${event.location}</span>
+                                </div>
+                                <p>${event.description}</p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar eventos:', error);
+            }
+        }
+
+        async function loadCommunityMedia(communityId) {
+            try {
+                const container = document.getElementById('mediaGrid');
+                if (!container) return;
+                
+                // URLs de imagens placeholder
+                const mediaItems = [
+                    { id: 1, url: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=400&h=400&fit=crop" },
+                    { id: 2, url: "https://images.unsplash.com/photo-1551650975-87deedd944c3?w-400&h=400&fit=crop" },
+                    { id: 3, url: "https://images.unsplash.com/photo-1547658719-da2b51169166?w=400&h=400&fit=crop" },
+                    { id: 4, url: "https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=400&h=400&fit=crop" },
+                    { id: 5, url: "https://images.unsplash.com/photo-1522542550221-31fd19575a2d?w=400&h=400&fit=crop" },
+                    { id: 6, url: "https://images.unsplash.com/photo-1517697471339-4aa32003c11a?w=400&h=400&fit=crop" }
+                ];
+                
+                // Renderizar mídia
+                container.innerHTML = mediaItems.map(item => `
+                    <div class="media-item" onclick="openMedia(${item.id})">
+                        <img src="${item.url}" alt="Mídia da comunidade" loading="lazy">
+                        <div class="media-overlay">
+                            <i class="fas fa-expand"></i>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar mídia:', error);
+            }
+        }
+
+        async function loadCommunityAdmins(communityId) {
+            try {
+                const container = document.getElementById('adminsList');
+                if (!container) return;
+                
+                // Simular dados
+                const admins = [
+                    { name: "Carlos Silva", role: "Fundador" },
+                    { name: "Ana Santos", role: "Moderadora" },
+                    { name: "Roberto Lima", role: "Administrador" }
+                ];
+                
+                // Renderizar admins
+                container.innerHTML = admins.map(admin => `
+                    <div class="admin-item">
+                        <div class="admin-avatar" style="background-color: ${getColorFromName(admin.name)}">
+                            ${admin.name.charAt(0)}
+                        </div>
+                        <div class="admin-info">
+                            <strong>${admin.name}</strong>
+                            <span>${admin.role}</span>
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar administradores:', error);
+            }
+        }
+
+        async function loadCommunityActivity(communityId) {
+            try {
+                const container = document.getElementById('communityActivity');
+                if (!container) return;
+                
+                // Simular dados
+                const activities = [
+                    { user: "João", action: "postou uma nova discussão", time: "há 1 hora" },
+                    { user: "Maria", action: "juntou-se à comunidade", time: "há 3 horas" },
+                    { user: "Pedro", action: "compartilhou uma foto", time: "há 5 horas" },
+                    { user: "Ana", action: "criou um evento", time: "há 1 dia" }
+                ];
+                
+                // Renderizar atividades
+                container.innerHTML = activities.map(activity => `
+                    <div class="activity-item">
+                        <strong>${activity.user}</strong> ${activity.action}
+                        <span class="activity-time">${activity.time}</span>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('❌ Erro ao carregar atividades:', error);
+            }
+        }
+
+        // ===== FUNÇÕES DE INTERAÇÃO =====
+        function openDiscussion(discussionId) {
+            showToast('info', `Abrindo discussão ${discussionId}...`);
+            // Implementar navegação para página de discussão
+        }
+
+        function openEvent(eventId) {
+            showToast('info', `Abrindo evento ${eventId}...`);
+            // Implementar navegação para página de evento
+        }
+
+        function openMedia(mediaId) {
+            // Implementar modal de visualização de mídia
+            Swal.fire({
+                imageUrl: `https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&fit=crop`,
+                imageAlt: 'Imagem da comunidade',
+                showConfirmButton: false,
+                showCloseButton: true,
+                background: 'var(--card-bg)'
+            });
+        }
+
+        function shareCommunity() {
+            const shareData = {
+                title: CommunityState.currentCommunity?.name || 'Comunidade Conecta',
+                text: `Confira a comunidade "${CommunityState.currentCommunity?.name}" no Conecta!`,
+                url: window.location.href
+            };
+            
+            if (navigator.share) {
+                navigator.share(shareData);
+            } else {
+                // Fallback para copiar link
+                navigator.clipboard.writeText(window.location.href);
+                showToast('success', 'Link copiado para a área de transferência!');
+            }
+        }
+
+        // ===== TEMA =====
+        function initTheme() {
+            const savedTheme = localStorage.getItem('conecta-theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            
+            const themeToggle = document.getElementById('themeToggle');
+            if (themeToggle) {
+                const icon = themeToggle.querySelector('i');
+                icon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+                themeToggle.onclick = toggleTheme;
+            }
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('conecta-theme', newTheme);
+            
+            const icon = document.querySelector('#themeToggle i');
+            if (icon) {
+                icon.className = newTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            }
+        }
+
+        // ===== CONFIGURAÇÃO DE EVENTOS =====
+        function setupEventListeners() {
+            // Configurar tabs
+            setupTabs();
+            
+            // Botões principais
+            document.getElementById('shareCommunityBtn')?.addEventListener('click', shareCommunity);
+            document.getElementById('communityNotificationsBtn')?.addEventListener('click', toggleCommunityNotifications);
+            
+            // Botões de ação
+            document.getElementById('newDiscussionBtn')?.addEventListener('click', createNewDiscussion);
+            document.getElementById('newEventBtn')?.addEventListener('click', createNewEvent);
+            document.getElementById('uploadMediaBtn')?.addEventListener('click', uploadMedia);
+            
+            // Busca
+            document.getElementById('searchMembers')?.addEventListener('input', searchMembers);
+            document.getElementById('communitySearch')?.addEventListener('input', searchCommunityContent);
+            
+            // Menu do usuário
+            setupUserMenu();
+        }
+
+        function createNewDiscussion() {
+            Swal.fire({
+                title: 'Nova Discussão',
+                html: `
+                    <input type="text" id="discussionTitle" class="swal2-input" placeholder="Título da discussão">
+                    <textarea id="discussionContent" class="swal2-textarea" placeholder="Conteúdo da discussão" rows="4"></textarea>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Criar',
+                cancelButtonText: 'Cancelar',
+                preConfirm: () => {
+                    const title = document.getElementById('discussionTitle').value;
+                    const content = document.getElementById('discussionContent').value;
+                    
+                    if (!title || !content) {
+                        Swal.showValidationMessage('Preencha todos os campos');
+                        return false;
+                    }
+                    
+                    return { title, content };
+                }
+            }).then(result => {
+                if (result.isConfirmed) {
+                    showToast('success', 'Discussão criada com sucesso!');
+                    // Recarregar discussões
+                    loadCommunityDiscussions(CommunityState.currentCommunity?.id);
+                }
+            });
+        }
+
+        function createNewEvent() {
+            showToast('info', 'Criador de eventos em desenvolvimento');
+        }
+
+        function uploadMedia() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*,video/*';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    showToast('success', 'Mídia enviada com sucesso!');
+                    // Recarregar mídia
+                    loadCommunityMedia(CommunityState.currentCommunity?.id);
+                }
+            };
+            input.click();
+        }
+
+        function toggleCommunityNotifications() {
+            showToast('info', 'Configurações de notificações em desenvolvimento');
+        }
+
+        function searchMembers(event) {
+            const searchTerm = event.target.value.toLowerCase();
+            // Implementar busca de membros
+            console.log('Buscando membros:', searchTerm);
+        }
+
+        function searchCommunityContent(event) {
+            const searchTerm = event.target.value.toLowerCase();
+            // Implementar busca geral
+            console.log('Buscando conteúdo:', searchTerm);
+        }
+
+        function setupUserMenu() {
+            const avatar = document.getElementById('userAvatar');
+            const dropdown = document.getElementById('userDropdown');
+            
+            if (avatar && dropdown) {
+                avatar.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('show');
+                });
+                
+                document.addEventListener('click', () => {
+                    dropdown.classList.remove('show');
+                });
+            }
+            
+            // Logout
+            document.getElementById('logoutLink')?.addEventListener('click', async (e) => {
+                e.preventDefault();
+                try {
+                    await window.authManager?.logout();
+                } catch (error) {
+                    console.error('❌ Erro ao sair:', error);
+                    showToast('error', 'Erro ao sair da conta');
+                }
+            });
+        }
+
+        // ===== UTILITÁRIOS =====
+        function getColorFromName(name) {
+            if (!name) return '#4A90E2';
+            
+            const colors = [
+                '#4A90E2', '#50C878', '#FF6B6B', '#FFA500', 
+                '#9B59B6', '#1ABC9C', '#E74C3C', '#3498DB'
+            ];
+            
+            const charCode = name.charCodeAt(0) || 0;
+            return colors[charCode % colors.length];
+        }
+
+        function showToast(type, message, duration = 3000) {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `
+                <i class="fas fa-${getToastIcon(type)}"></i>
+                <span>${message}</span>
+            `;
+            
+            // Adicionar estilos
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: ${type === 'success' ? '#48bb78' : type === 'error' ? '#f56565' : '#4A90E2'};
+                color: white;
+                padding: 12px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10000;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                animation: slideInRight 0.3s ease;
+            `;
+            
+            document.body.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideOutRight 0.3s ease forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+            
+            // Adicionar animações CSS
+            if (!document.getElementById('toast-animations')) {
+                const style = document.createElement('style');
+                style.id = 'toast-animations';
+                style.textContent = `
+                    @keyframes slideInRight {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                    @keyframes slideOutRight {
+                        from { transform: translateX(0); opacity: 1; }
+                        to { transform: translateX(100%); opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+
+        function getToastIcon(type) {
+            switch(type) {
+                case 'success': return 'check-circle';
+                case 'error': return 'exclamation-circle';
+                case 'info': return 'info-circle';
+                default: return 'info-circle';
+            }
+        }
+
+        function showError(title, message) {
+            Swal.fire({
+                icon: 'error',
+                title: title,
+                text: message,
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#4A90E2'
+            });
+        }
+
+        // Exportar funções para uso global
+        window.openDiscussion = openDiscussion;
+        window.openEvent = openEvent;
+        window.openMedia = openMedia;
+        window.shareCommunity = shareCommunity;
+    </script>
+</body>
+</html>
