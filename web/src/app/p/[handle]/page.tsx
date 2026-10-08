@@ -6,11 +6,12 @@ import {ArrowLeft,Clock,ExternalLink,MapPin,MessageCircle,Shield,UserCheck,UserP
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {MusicEmbed} from '@/components/music-embed';
 import {ProfileTimeline} from '@/components/profile-timeline';
+import {MySpacePanel} from '@/components/myspace-panel';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import type {UserProfile} from '@/lib/types';
 
 type Connection={id:string;requester_id:string;addressee_id:string;status:string};
-type Details={headline:string;city:string;website:string|null;music_url:string|null;interests:string[];favorite_emoji:string;cover_theme:string};
+type Details={headline:string;city:string;website:string|null;music_url:string|null;interests:string[];favorite_emoji:string;cover_theme:string;mood_text:string;layout_style:string};
 
 export default function PublicProfile(){
  const auth=useAuthProfile();
@@ -31,7 +32,7 @@ export default function PublicProfile(){
      setPerson(p as UserProfile|null);
      if(p){
        const [d,n,relation,block]=await Promise.all([
-         db.from('profile_details').select('headline,city,website,music_url,interests,favorite_emoji,cover_theme').eq('user_id',p.id).maybeSingle(),
+         db.from('profile_details').select('headline,city,website,music_url,interests,favorite_emoji,cover_theme,mood_text,layout_style').eq('user_id',p.id).maybeSingle(),
          db.from('posts').select('id',{count:'exact',head:true}).eq('author_id',p.id),
          db.from('friendships').select('id,requester_id,addressee_id,status')
            .or('and(requester_id.eq.'+auth.user!.id+',addressee_id.eq.'+p.id+'),and(requester_id.eq.'+p.id+',addressee_id.eq.'+auth.user!.id+')').maybeSingle(),
@@ -96,7 +97,7 @@ export default function PublicProfile(){
      return link.protocol==='https:'?link:null;
    }catch{return null;}
  })();
- return <GuardedPage {...auth}><main className="section-page conecta-profile-page">
+ return <GuardedPage {...auth}><main className={"section-page conecta-profile-page profile-layout-"+(details?.layout_style||"classic")}>
    <Link className="rail-link" href="/explorar"><ArrowLeft size={16}/> Voltar a explorar</Link>
    {error&&<p className="form-error" role="alert">{error}</p>}
    {loading?<div className="centered-loading">Carregando perfil...</div>:!person?
@@ -125,7 +126,9 @@ export default function PublicProfile(){
            </div>
          </section>
        }
+       {!blocked&&!blockedBy&&details?.mood_text&&<section className="panel conecta-myspace-status"><strong>Status ✦</strong><p>{details.mood_text}</p></section>}
        {!blocked&&!blockedBy&&details?.music_url&&<section className="panel" style={{marginTop:18}}><MusicEmbed url={details.music_url}/></section>}
+       {!blocked&&!blockedBy&&auth.user&&<MySpacePanel profileId={person.id} viewerId={auth.user.id} isSelf={own}/>}
        {!blocked&&!blockedBy&&auth.user&&<ProfileTimeline profileId={person.id} viewerId={auth.user.id} isSelf={own}/>}
        <p className="small-note" style={{marginTop:18}}>O Conecta exibe somente informações adicionadas voluntariamente. Dados pessoais sensíveis não devem aparecer no perfil.</p>
      </>}

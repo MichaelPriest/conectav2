@@ -8,12 +8,14 @@ import {optimizeImage} from '@/lib/media';
 import {EmojiButton} from '@/components/emoji-button';
 import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
 import {ProfileTimeline} from '@/components/profile-timeline';
+import {MySpacePanel} from '@/components/myspace-panel';
+import {LanguageSelect} from '@/lib/i18n';
 
 type Details={
  headline:string;city:string;website:string;music_url:string;interests:string[];
- favorite_emoji:string;cover_theme:'violet'|'aqua'|'pink'|'sunset'|'midnight'
+ favorite_emoji:string;cover_theme:'violet'|'aqua'|'pink'|'sunset'|'midnight';mood_text:string;layout_style:'classic'|'myspace'|'minimal'
 };
-const empty:Details={headline:'',city:'',website:'',music_url:'',interests:[],favorite_emoji:'💜',cover_theme:'violet'};
+const empty:Details={headline:'',city:'',website:'',music_url:'',interests:[],favorite_emoji:'💜',cover_theme:'violet',mood_text:'',layout_style:'classic'};
 const themes:Details['cover_theme'][]=['violet','aqua','pink','sunset','midnight'];
 
 export default function Profile(){
@@ -32,7 +34,7 @@ export default function Profile(){
    const [p,f,d]=await Promise.all([
      db.from('posts').select('id',{count:'exact',head:true}).eq('author_id',auth.user.id),
      db.from('friendships').select('id',{count:'exact',head:true}).eq('status','accepted').or('requester_id.eq.'+auth.user.id+',addressee_id.eq.'+auth.user.id),
-     db.from('profile_details').select('headline,city,website,music_url,interests,favorite_emoji,cover_theme').eq('user_id',auth.user.id).maybeSingle()
+     db.from('profile_details').select('headline,city,website,music_url,interests,favorite_emoji,cover_theme,mood_text,layout_style').eq('user_id',auth.user.id).maybeSingle()
    ]);
    if(!p.error)setPosts(p.count||0);
    if(!f.error)setFriends(f.count||0);
@@ -104,7 +106,7 @@ export default function Profile(){
      setError((err instanceof Error?err.message:'Erro ao salvar.')+' Se alguns dados foram salvos, atualize a página antes de tentar novamente.');
    }finally{setSaving(false);}
  }
- return <GuardedPage {...auth}><main className="section-page conecta-profile-page">
+ return <GuardedPage {...auth}><main className={"section-page conecta-profile-page profile-layout-"+details.layout_style}>
    <div className="page-heading"><div><span className="section-eyebrow">SEU ESPAÇO NO CONECTA</span><h1>Meu perfil <span className="wave">✳</span></h1><p>Personalize a sua história e escolha o que compartilhar.</p></div></div>
    <div className={'conecta-profile-cover cover-'+details.cover_theme}>
      <div className="conecta-profile-bio">
@@ -130,6 +132,13 @@ export default function Profile(){
        </div>
        <label className="field-label">Interesses (até 12, separados por vírgula)<input className="form-input" maxLength={480} value={interestsInput} onChange={e=>setInterestsInput(e.target.value)} placeholder="Música, fotografia, games..."/></label>
        <label className="field-label">Sua música ou playlist (Spotify, YouTube, SoundCloud ou Apple Music)<input className="form-input" maxLength={512} value={details.music_url||''} onChange={e=>setDetails(v=>({...v,music_url:e.target.value}))} placeholder="https://open.spotify.com/track/..."/></label>
+       <label className="field-label">Status do momento<input className="form-input" maxLength={140} value={details.mood_text}
+         onChange={e=>setDetails(v=>({...v,mood_text:e.target.value}))} placeholder="🎵 Ouvindo minha música favorita..."/></label>
+       <label className="field-label">Estilo do meu espaço<select className="form-input" value={details.layout_style}
+         onChange={e=>setDetails(v=>({...v,layout_style:e.target.value as Details['layout_style']}))}>
+         <option value="classic">Clássico</option><option value="myspace">MySpace retrô</option><option value="minimal">Minimalista</option>
+       </select></label>
+       <LanguageSelect/>
        <label className="field-label">Cor da capa<select className="form-input" value={details.cover_theme} onChange={e=>setDetails(v=>({...v,cover_theme:e.target.value as Details['cover_theme']}))}>{themes.map(t=><option key={t} value={t}>{t==='violet'?'Violeta':t==='aqua'?'Água':t==='pink'?'Rosa':t==='sunset'?'Pôr do sol':'Noite'}</option>)}</select></label>
        <div className="conecta-profile-emoji"><span>Emoji de assinatura: <strong>{details.favorite_emoji}</strong></span><EmojiButton label="Escolher emoji de assinatura" onSelect={emoji=>setDetails(v=>({...v,favorite_emoji:emoji}))}/></div>
        {error&&<p className="form-error" role="alert">{error}</p>}{notice&&<p className="form-success" role="status">{notice}</p>}
@@ -144,6 +153,8 @@ export default function Profile(){
        <section className="panel"><h2>Seu espaço, sua privacidade</h2><p className="small-note">Cidade, interesses e música, quando preenchidos, serão visíveis para outros usuários. Não informe endereço residencial ou dados pessoais sensíveis.</p></section>
      </div>
    </div>
+   {details.mood_text&&<section className="panel conecta-myspace-status"><strong>Meu status ✦</strong><p>{details.mood_text}</p></section>}
+   {auth.user&&<MySpacePanel profileId={auth.user.id} viewerId={auth.user.id} isSelf/>}
    {auth.user&&<ProfileTimeline profileId={auth.user.id} viewerId={auth.user.id} isSelf/>}
  </main></GuardedPage>;
 }

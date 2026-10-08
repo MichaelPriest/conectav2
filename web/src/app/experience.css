@@ -250,3 +250,25 @@
 .conecta-auth-lang{display:flex;justify-content:flex-end;margin-bottom:12px}
 [dir="rtl"] .conecta-auth-panel,[dir="rtl"] .concept-app{direction:rtl}
 [dir="rtl"] .conecta-auth-form input{direction:auto;text-align:start}
+
+.conecta-myspace-panel{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin:18px 0}
+.conecta-myspace-friends{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.conecta-myspace-friends a{display:flex;flex-direction:column;gap:6px;align-items:center;min-width:0;color:var(--ink);font-size:11px;text-align:center}
+.conecta-myspace-friends strong{overflow:hidden;max-width:100%;text-overflow:ellipsis;white-space:nowrap}
+.conecta-myspace-manage{margin-top:17px}.conecta-myspace-manage summary{cursor:pointer;color:#7352be;font-size:12px}
+.conecta-myspace-manage>div{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.conecta-myspace-manage .btn{font-size:11px;padding:7px}
+.conecta-guestbook-form{display:grid;gap:9px}.conecta-guestbook-list{display:grid;gap:10px;margin-top:15px}
+.conecta-guestbook-entry{display:flex;gap:10px;padding:11px;background:#f7f5ff;border-radius:11px}
+.conecta-guestbook-entry>div{flex:1;min-width:0}.conecta-guestbook-entry strong{font-size:12px}
+.conecta-guestbook-entry small{display:block;color:var(--muted);font-size:10px}
+.conecta-guestbook-entry p{font-size:12px;white-space:pre-wrap;margin:6px 0 0}
+.conecta-guestbook-entry>button{align-self:start;border:0;background:none;color:#8165c2}
+.conecta-myspace-status{background:#f4ecff;border:1px solid #d5c2ff;margin:15px 0}
+.profile-layout-myspace .conecta-profile-cover{border-radius:8px;border:5px double #fff;background:linear-gradient(130deg,#7939b8,#fd78bd,#48a5e8)}
+.profile-layout-myspace .conecta-myspace-panel .panel{border:2px solid #c29de8;background:linear-gradient(130deg,#fcf5ff,#f8f6ff)}
+.profile-layout-minimal .conecta-profile-cover{background:linear-gradient(130deg,#33465e,#64738e)}
+.conecta-connections-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.conecta-connection-card{display:grid;gap:10px;justify-items:start;padding:18px}
+.conecta-connection-card h3{margin:0}.conecta-connection-card small{color:var(--muted)}.conecta-connection-card p{font-size:12px;color:var(--muted)}
+@media(max-width:850px){.conecta-myspace-panel{grid-template-columns:1fr}}
