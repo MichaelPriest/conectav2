@@ -25,6 +25,7 @@ export type FeedPost = {
 export type PostComment = {
   id: string;
   post_id: string;
+  parent_id: string | null;
   author_id: string;
   body: string;
   created_at: string;
