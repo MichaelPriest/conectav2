@@ -76,8 +76,8 @@ function AuthForm() {
       <div className="conecta-auth-panel">
         <div className="conecta-auth-mobile-brand"><ConceptBrand/></div><div className="conecta-auth-lang"><LanguageSelect compact/></div>
         <div className="conecta-auth-kicker"><span className="conecta-auth-kicker-icon"><Heart size={16}/></span> Seu lugar é aqui</div>
-        <h2>{mode==='login'?'{t('welcomeBack')}':'{t('joinUs')}'}</h2>
-        <p className="conecta-auth-description">{mode==='login'?'{t('welcomeSubtitle')}':'{t('signupSubtitle')}'}</p>
+        <h2>{mode==='login'?t('welcomeBack'):t('joinUs')}</h2>
+        <p className="conecta-auth-description">{mode==='login'?t('welcomeSubtitle'):t('signupSubtitle')}</p>
         <div className="conecta-auth-tabs" role="group" aria-label="Escolha entrar ou criar conta">
           <button type="button" className={mode==='login'?'selected':''} aria-pressed={mode==='login'} onClick={()=>selectMode('login')}>{t('login')}</button>
           <button type="button" className={mode==='signup'?'selected':''} aria-pressed={mode==='signup'} onClick={()=>selectMode('signup')}>{t('signup')}</button>
