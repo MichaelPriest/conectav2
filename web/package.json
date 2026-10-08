@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test:profile": "node --test tests/profile-details.test.cjs",
-    "test:human": "node --test tests/human-browser.test.cjs tests/liveness-challenge.test.cjs"
+    "test:human": "node --test tests/human-browser.test.cjs tests/liveness-challenge.test.cjs",
+    "test:cin": "node --test tests/cin-qr.test.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

@@ -44,5 +44,7 @@ jobs:
         run: npm run test:profile
       - name: Verify bundled Human browser library
         run: npm run test:human
+      - name: Verify offline CIN signature parser
+        run: npm run test:cin
       - name: Build Next.js
         run: npm run build
