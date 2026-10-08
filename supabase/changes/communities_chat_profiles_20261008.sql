@@ -114,3 +114,20 @@ using(bucket_id='social-media' and(
  or exists(select 1 from public.post_media m where m.storage_path=name)
  or exists(select 1 from public.profiles p where p.avatar_path=name)
 ));
+
+-- Applied after initial community/chat changes: prevent friendship invitations across blocks.
+drop policy if exists "requester sends friend request" on public.friendships;
+create policy "requester sends friend request" on public.friendships for insert to authenticated
+ with check(requester_id=(select auth.uid()) and status='pending'
+  and not exists(select 1 from public.user_blocks b where
+    (b.blocker_id=requester_id and b.blocked_id=addressee_id)
+    or(b.blocker_id=addressee_id and b.blocked_id=requester_id))
+ );
+drop policy if exists "recipient responds to request" on public.friendships;
+create policy "recipient responds to request" on public.friendships for update to authenticated
+ using(addressee_id=(select auth.uid()) and status='pending')
+ with check(addressee_id=(select auth.uid()) and status in('accepted','declined')
+  and not exists(select 1 from public.user_blocks b where
+    (b.blocker_id=requester_id and b.blocked_id=addressee_id)
+    or(b.blocker_id=addressee_id and b.blocked_id=requester_id))
+ );

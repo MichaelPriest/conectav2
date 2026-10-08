@@ -88,7 +88,13 @@ export default function PublicProfile(){
  const own=auth.user?.id===person?.id;
  const buttonText=!connection?'Adicionar amizade':connection.status==='accepted'?'Amigos':connection.status==='pending'
    ?(connection.addressee_id===auth.user?.id?'Aceitar amizade':'Solicitação enviada'):'Solicitar amizade';
- const website=details?.website?.startsWith('https://')?details.website:null;
+ const website=(()=>{
+   try{
+     if(!details?.website)return null;
+     const link=new URL(details.website);
+     return link.protocol==='https:'?link:null;
+   }catch{return null;}
+ })();
  return <GuardedPage {...auth}><main className="section-page conecta-profile-page">
    <Link className="rail-link" href="/explorar"><ArrowLeft size={16}/> Voltar a explorar</Link>
    {error&&<p className="form-error" role="alert">{error}</p>}
@@ -105,7 +111,7 @@ export default function PublicProfile(){
          <section className="conecta-public-profile-panel panel">
            <p>{person.bio||'Esta pessoa ainda não escreveu uma biografia.'}</p>
            {details?.city&&<p className="small-note"><MapPin size={15} style={{verticalAlign:'middle'}}/> {details.city}</p>}
-           {website&&<a href={website} rel="noreferrer noopener" target="_blank" className="rail-link">{new URL(website).hostname} <ExternalLink size={15}/></a>}
+           {website&&<a href={website.toString()} rel="noreferrer noopener" target="_blank" className="rail-link">{website.hostname} <ExternalLink size={15}/></a>}
            {details?.interests?.length? <div className="conecta-profile-tags">{details.interests.map(i=><span key={i}>{i}</span>)}</div>:null}
            <div className="detail-buttons" style={{marginTop:18}}>
              {own?<Link href="/perfil" className="btn btn-primary">Editar perfil</Link>:

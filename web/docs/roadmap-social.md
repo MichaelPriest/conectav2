@@ -30,3 +30,8 @@ Não inventar perfis, comentários, curtidas, contadores, notícias ou moderador
 - Embed de Spotify, vídeos musicais do YouTube com domínio de privacidade, SoundCloud e Apple Music, mediante URL validada.
 - Links são incorporados no site apenas após clique explícito do usuário; reproduções estão sujeitas aos termos e limitações do provedor.
 - A integração não fornece streaming independente, download ou importação de bibliotecas protegidas por direitos autorais.
+
+## Estado de produção e validação
+- A Vercel continua com builds automáticos desabilitados por economia de cota. Utilizar Render em ambiente separado para homologação, sem afetar MedSync.
+- **Nenhum teste real multiusuário com adolescentes foi executado.** ECA Digital requer aferição etária/controles de responsáveis antes de liberação geral. Não alegar conformidade implementada.
+- A conta Supabase atual pode precisar ativar proteção contra senhas vazadas em Authentication > Settings, segundo auditoria.
