@@ -39,7 +39,7 @@ export function HumanCameraCheck(){
       if(!video)throw new Error('Câmera não pronta.');
       video.srcObject=stream;
       await video.play();
-      const {Human}=await import('@vladmandic/human');
+      const {Human}=await import('@vladmandic/human/dist/human.esm.js');
       const human=new Human({
         backend:'webgl',
         modelBasePath:'https://vladmandic.github.io/human-models/models/',
