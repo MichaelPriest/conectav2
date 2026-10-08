@@ -303,3 +303,17 @@
  .conecta-discreet-ad-desktop{display:block}
  .conecta-discreet-ad-mobile{display:none}
 }
+
+
+/* QR verification preflight: minimal interface, no upload of document images. */
+.conecta-cin-panel{margin-top:20px}
+.conecta-cin-video-wrap{max-width:480px;aspect-ratio:4/3}
+.conecta-cin-frame{position:absolute;inset:16% 19%;border:2px dashed #f3f0ffb5;border-radius:14px;pointer-events:none}
+.conecta-cin-actions .btn{font-size:12px;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.conecta-cin-file{position:relative}
+.conecta-cin-file input{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.conecta-cin-file:has(input:disabled){opacity:.5;pointer-events:none}
+.conecta-cin-result{display:flex;align-items:flex-start;gap:12px;border-radius:13px;padding:15px;margin:14px 0;border:1px solid #e0daee;background:#f8f6ff;font-size:12px;line-height:1.6}
+.conecta-cin-result.checked{border-color:#b7dbc9;background:#f0fbf5}
+.conecta-cin-result.caution{border-color:#ecd4af;background:#fff9ed}
+.conecta-cin-result p{margin:5px 0}.conecta-cin-result strong{color:#34304b}
