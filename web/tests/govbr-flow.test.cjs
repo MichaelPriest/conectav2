@@ -57,14 +57,14 @@ test('native browser download uses SSR cookie auth with server-side getUser vali
 
 test('attempt counter migration rejects identity changes and uses valid SQL syntax',()=>{
  const sql=fs.readFileSync(path.join(__dirname,'../../supabase/migrations/20261008_fix_conecta_identity_challenge_attempt_counter.sql'),'utf8');
- assert.doesNotMatch(sql,/pg_catalog\\.current_user/);
- assert.match(sql,/NEW\\.attempt_count\\s*:=\\s*OLD\\.attempt_count\\s*\\+\\s*1/);
- assert.match(sql,/OLD\\.user_id IS DISTINCT FROM auth\\.uid\\(\\)/);
- assert.match(sql,/OLD\\.attempt_count >= 5/);
+ assert.doesNotMatch(sql,/pg_catalog\.current_user/);
+ assert.match(sql,/NEW\.attempt_count\s*:=\s*OLD\.attempt_count\s*\+\s*1/);
+ assert.match(sql,/OLD\.user_id IS DISTINCT FROM auth\.uid\(\)/);
+ assert.match(sql,/OLD\.attempt_count >= 5/);
  assert.match(sql,/SECURITY DEFINER/);
- assert.match(sql,/to_jsonb\\(NEW\\).*attempt_count/);
+ assert.match(sql,/to_jsonb\(NEW\).*attempt_count/);
  const route=fs.readFileSync(path.join(__dirname,'../src/app/api/identity/govbr/inspect/route.ts'),'utf8');
- assert.match(route,/if\\(attemptError\\)/);
- assert.match(route,/if\\(!attempt\\)/);
+ assert.match(route,/if\(attemptError\)/);
+ assert.match(route,/if\(!attempt\)/);
  assert.doesNotMatch(route,/Limite de tentativas ou concorrencia/);
 });
