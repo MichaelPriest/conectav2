@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Save, UserRound, Heart, FileText, Users, ExternalLink } from 'lucide-react';
+import { Save, UserRound, Heart, FileText, Users, ExternalLink, ShieldCheck, Camera } from 'lucide-react';
 import { GuardedPage, useAuthProfile } from '@/components/app-shell';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 
@@ -54,6 +54,11 @@ export default function Perfil() {
       <section className="profile-header">
         <span className="avatar avatar-gradient">{auth.profile?.display_name?.[0]?.toUpperCase()||'C'}</span>
         <div><h2>{auth.profile?.display_name}</h2><p>@{auth.profile?.handle}</p><div className="stat-line"><span><strong>{posts}</strong> publicações</span><span><strong>{friends}</strong> amizades</span></div></div>
+      </section>
+      <section className="panel" style={{marginBottom:22}}>
+        <div className="feed-title"><h2><ShieldCheck size={20} color="#825bec" style={{verticalAlign:'middle'}}/> Conecta ID — Segurança e identidade</h2></div>
+        <p className="muted">Verificação por câmera, prova de vida e documento quando necessário. O resultado é validado por um serviço especializado, sem armazenar selfies no Conecta.</p>
+        <Link href="/verificar-identidade" className="btn btn-outline"><Camera size={18}/> Conhecer a verificação</Link>
       </section>
       <section className="panel profile-form">
         <div className="feed-title"><h2>Editar informações</h2><Link href={'/p/'+(auth.profile?.handle||'')} className="rail-link">Ver perfil público <ExternalLink size={15}/></Link></div>
