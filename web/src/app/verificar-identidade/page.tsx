@@ -6,6 +6,7 @@ import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {HumanCameraCheck} from '@/components/human-camera-check';
 import {CinQrScanner} from '@/components/cin-qr-scanner';
+import {GovBrSignatureFlow} from '@/components/govbr-signature-flow';
 
 type Result={
   configured?:boolean;
@@ -122,5 +123,5 @@ export default function IdentityPage(){
       </button>
       <p className="fineprint" style={{textAlign:'left'}}>O leitor QR Code e o Human abaixo são apenas ferramentas experimentais. Nenhuma conclusão local libera acesso adulto ou altera o cadastro de idade.</p>
     </section>
-  <CinQrScanner/><HumanCameraCheck/></main></GuardedPage>;
+  <GovBrSignatureFlow/><CinQrScanner/><HumanCameraCheck/></main></GuardedPage>;
 }

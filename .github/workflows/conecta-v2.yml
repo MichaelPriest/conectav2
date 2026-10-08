@@ -46,5 +46,7 @@ jobs:
         run: npm run test:human
       - name: Verify offline CIN signature parser
         run: npm run test:cin
+      - name: Gov.br signed PDF challenge tests
+        run: npm run test:govbr
       - name: Build Next.js
         run: npm run build

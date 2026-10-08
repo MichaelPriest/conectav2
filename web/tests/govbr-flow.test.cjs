@@ -1,0 +1,40 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const test=require('node:test');
+const ts=require('typescript');
+const vm=require('node:vm');
+const src=fs.readFileSync(path.join(__dirname,'../src/lib/govbr-challenge.ts'),'utf8');
+test('generated PDF stores challenge in its subject, not personal data',async()=>{
+ const {PDFDocument}=require('pdf-lib');
+ const source=src.replace(/^import 'server-only';\s*/m,'');
+ const transpiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+ const exported={};
+ const requireShim=name=>name==='pdf-lib'?require('pdf-lib'):name==='node:crypto'?require('node:crypto'):require(name);
+ vm.runInNewContext(transpiled,{exports:exported,require:requireShim,Buffer,Date,Uint8Array},{filename:'govbr-challenge.ts'});
+ const id='123e4567-e89b-12d3-a456-426614174000';
+ const nonce=exported.newNonce();
+ assert.match(nonce,/^[0-9A-F]{48}$/);
+ const bytes=await exported.generateStatementPdf(id,nonce,'2026-10-09T22:00:00Z');
+ const doc=await PDFDocument.load(bytes,{updateMetadata:false});
+ assert.equal(doc.getSubject(),exported.challengeMarker(id,nonce));
+ assert.equal(doc.getPageCount(),1);
+ assert.equal(typeof doc.getTitle(),'string');
+ assert.ok(bytes.length<100000);
+});
+test('inspection never writes identity approval fields or persists uploaded PDF',()=>{
+ const upload=fs.readFileSync(path.join(__dirname,'../src/app/api/identity/govbr/inspect/route.ts'),'utf8');
+ assert.doesNotMatch(upload,/identity_verifications|age_band|guardian_status|\.storage\.from\(/);
+ assert.match(upload,/identityVerified:false,ageVerified:false/);
+ const app=fs.readFileSync(path.join(__dirname,'../src/components/govbr-signature-flow.tsx'),'utf8');
+ assert.match(app,/https:\/\/assinador.iti.br/);
+ assert.match(app,/https:\/\/validar.iti.gov.br/);
+});
+test('signature parser checks signed ranges, CMS and refuses missing signature',()=>{
+ const parser=fs.readFileSync(path.join(__dirname,'../src/lib/govbr-pdf-inspect.ts'),'utf8');
+ assert.match(parser,/openssl/);
+ assert.match(parser,/-noverify/);
+ assert.match(parser,/c\+d!==pdf.length/);
+ assert.match(parser,/challenge_mismatch/);
+});
