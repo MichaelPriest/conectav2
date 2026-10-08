@@ -41,8 +41,8 @@ export function MySpacePanel({profileId,viewerId,isSelf=false}:{profileId:string
    if(e)setError(e.message);else await load();
    setBusy(false);
  }
- async function addRecado(e:FormEvent){
-   e.preventDefault();if(!connected||isSelf||!message.trim()||busy)return;
+ async function addRecado(event:FormEvent){
+   event.preventDefault();if(!connected||isSelf||!message.trim()||busy)return;
    setBusy(true);setError('');
    const {error:e}=await supabaseBrowser().from('profile_guestbook').insert({profile_id:profileId,author_id:viewerId,body:message.trim()});
    if(e)setError(e.message);else{setMessage('');await load();}
