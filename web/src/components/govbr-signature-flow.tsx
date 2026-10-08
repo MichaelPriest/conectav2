@@ -1,5 +1,5 @@
 'use client';
-import {useCallback,useEffect,useState} from 'react';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import {Download,FileSignature,Upload,ShieldAlert,ExternalLink,RefreshCw} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 
@@ -15,6 +15,13 @@ export function GovBrSignatureFlow(){
  const [info,setInfo]=useState('');
  const [result,setResult]=useState<Inspection|null>(null);
  const [file,setFile]=useState<File|null>(null);
+ const [downloadUrl,setDownloadUrl]=useState<string|null>(null);
+ const urlRef=useRef<string|null>(null);
+ const clearUrl=useCallback(()=>{
+  if(urlRef.current){URL.revokeObjectURL(urlRef.current);urlRef.current=null;}
+  setDownloadUrl(null);
+ },[]);
+ useEffect(()=>()=>{if(urlRef.current)URL.revokeObjectURL(urlRef.current);},[]);
  const getToken=useCallback(async()=>{
   const {data}=await supabaseBrowser().auth.getSession();
   return data.session?.access_token||null;
@@ -30,29 +37,36 @@ export function GovBrSignatureFlow(){
  },[getToken]);
  useEffect(()=>{void reload();},[reload]);
 
- async function create(){
+ async function requestPdf(method:'POST'|'GET'){
   if(busy)return;
-  setBusy(true);setError('');setInfo('Gerando sua declaracao individual...');
+  setBusy(true);setError('');setInfo('Preparando sua declaracao individual...');
+  clearUrl();
   try{
    const token=await getToken();
-   if(!token)throw new Error('Faca login novamente.');
-   const response=await fetch('/api/identity/govbr/challenge',{
-    method:'POST',headers:{Authorization:'Bearer '+token}
+   if(!token)throw new Error('Sessao expirada. Entre na sua conta novamente.');
+   const endpoint='/api/identity/govbr/challenge'+(method==='GET'?'?download=1':'');
+   const response=await fetch(endpoint,{
+    method,headers:{Authorization:'Bearer '+token},cache:'no-store'
    });
    if(!response.ok){
-    const data=await response.json() as {error?:string};
-    throw new Error(data.error||'Nao foi possivel gerar o PDF.');
+    const data=await response.json().catch(()=>({error:''})) as {error?:string};
+    throw new Error(data.error||'O servidor nao conseguiu preparar o PDF (HTTP '+response.status+').');
    }
+   if(!response.headers.get('content-type')?.includes('application/pdf'))
+    throw new Error('O servidor nao retornou um PDF valido.');
    const blob=await response.blob();
-   const blobUrl=URL.createObjectURL(blob);
-   const anchor=document.createElement('a');
-   anchor.href=blobUrl;anchor.download='conecta-id-declaracao.pdf';
-   document.body.append(anchor);anchor.click();anchor.remove();
-   setTimeout(()=>URL.revokeObjectURL(blobUrl),60000);
-   setInfo('Declaracao baixada. Assine esse PDF no portal oficial e devolva o arquivo assinado.');
+   if(blob.size<100||blob.size>1024*1024*2||!blob.type.includes('pdf'))
+    throw new Error('O arquivo recebido nao parece ser um PDF valido.');
+   const header=await blob.slice(0,5).text();
+   if(header!=='%PDF-')throw new Error('O arquivo retornado nao possui assinatura de formato PDF.');
+   const href=URL.createObjectURL(blob);
+   urlRef.current=href;setDownloadUrl(href);
+   setInfo('PDF preparado. Toque em "Salvar PDF" ou "Abrir PDF" abaixo. O arquivo nao foi enviado ao gov.br.');
    await reload();
-  }catch(err){setError(err instanceof Error?err.message:'Erro ao gerar a declaracao.');}
-  finally{setBusy(false);}
+  }catch(err){
+   setInfo('');
+   setError(err instanceof Error?err.message:'Nao foi possivel gerar o PDF.');
+  }finally{setBusy(false);}
  }
  async function inspect(){
   if(!challenge||!file||busy)return;
@@ -84,8 +98,23 @@ export function GovBrSignatureFlow(){
   <div className="stack" style={{gap:15,marginTop:18}}>
    <div><strong>1. Gere uma declaracao individual com codigo unico</strong>
     <p className="small-note">O codigo vale por 24 horas. Por seguranca, ha limite de 3 declaracoes por dia.</p>
-    <button className="btn btn-outline" type="button" onClick={()=>void create()} disabled={busy}>
-     <Download size={17}/> {busy?'Processando...':'Baixar declaracao em PDF'}</button>
+    <div className="row" style={{gap:10,flexWrap:'wrap'}}>
+      <button className="btn btn-outline" type="button" onClick={()=>void requestPdf('POST')} disabled={busy}>
+       <Download size={17}/> {busy?'Gerando PDF...':'Gerar declaracao em PDF'}</button>
+      {challenge?.status==='issued'&&Date.parse(challenge.expires_at)>Date.now()&&
+       <button className="btn btn-outline" type="button" onClick={()=>void requestPdf('GET')} disabled={busy}>
+        <RefreshCw size={17}/> Recuperar ultima declaracao</button>}
+    </div>
+    {downloadUrl&&<div className="row" role="group" aria-label="Opcoes para baixar a declaracao"
+      style={{gap:10,flexWrap:'wrap',marginTop:12}}>
+      <a className="btn btn-primary" href={downloadUrl} download="conecta-id-declaracao.pdf">
+       <Download size={17}/> Salvar PDF</a>
+      <a className="btn btn-outline" href={downloadUrl} target="_blank" rel="noopener noreferrer">
+       <ExternalLink size={17}/> Abrir PDF</a>
+    </div>}
+    <p className="small-note">No celular, toque em "Salvar PDF" depois da geracao.
+      Se o navegador nao baixar automaticamente, utilize "Abrir PDF" e escolha salvar ou compartilhar.
+      A ultima declaracao pode ser recuperada enquanto estiver valida.</p>
    </div>
    <div><strong>2. Assine o PDF no servico oficial</strong>
     <p className="small-note">Entre no gov.br Prata ou Ouro e assine o arquivo baixado.
