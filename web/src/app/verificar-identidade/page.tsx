@@ -1,7 +1,7 @@
 'use client';
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
-import {ArrowLeft,Camera,CheckCircle2,ExternalLink,FileCheck2,ShieldCheck,Users,RefreshCw,LockKeyhole} from 'lucide-react';
+import {ArrowLeft,Camera,CheckCircle2,ExternalLink,ShieldCheck,RefreshCw,LockKeyhole,Smartphone,Info} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {HumanCameraCheck} from '@/components/human-camera-check';
@@ -80,33 +80,47 @@ export default function IdentityPage(){
   return <GuardedPage {...auth}><main className="section-page" style={{maxWidth:850}}>
     <Link href="/perfil" className="rail-link"><ArrowLeft size={16}/> Voltar ao perfil</Link>
     <div className="page-heading" style={{marginTop:24}}><div>
-      <span className="section-eyebrow">CONECTA ID · IDENTIDADE SEGURA</span>
-      <h1>Confirme sua identidade <span className="wave">✳</span></h1>
-      <p>Verificação facial com prova de vida, como nos serviços financeiros.</p>
+      <span className="section-eyebrow">CONECTA ID · VALIDAÇÃO DOCUMENTAL</span>
+      <h1>Identidade e idade <span className="wave">✳</span></h1>
+      <p>Confira sua CIN no aplicativo oficial gratuito e use as ferramentas experimentais do Conecta sem compartilhar documentos.</p>
     </div></div>
-    <section className="panel" style={{marginBottom:20}}>
-      <div className="row"><ShieldCheck size={29} color="#8057f6"/><div>
-        <h2 style={{marginBottom:5}}>Seu rosto e seus documentos ficam com o provedor especializado.</h2>
-        <p className="muted">O Conecta não salva selfies, imagens de documentos ou dados biométricos no Supabase. A verificação é iniciada em uma página segura do fornecedor.</p>
-      </div></div>
-      <div className="tiles-grid" style={{marginTop:23}}>
-        <article className="tile-card"><Camera size={23} color="#845cef"/><h3>1. Câmera e prova de vida</h3><p>O provedor verifica que uma pessoa está presente, conforme a modalidade contratada.</p></article>
-        <article className="tile-card"><FileCheck2 size={23} color="#845cef"/><h3>2. Documento, se necessário</h3><p>Documento oficial e comparação facial quando exigidos para identidade e idade.</p></article>
-        <article className="tile-card"><Users size={23} color="#845cef"/><h3>3. Proteção de adolescentes</h3><p>Para usuários de até 16 anos, o vínculo com responsável precisa ser confirmado separadamente.</p></article>
+    <section className="panel conecta-id-official" style={{marginBottom:20}}>
+      <div className="feed-title"><h2><ShieldCheck size={22} color="#5e7cbd" style={{verticalAlign:'middle'}}/> Validação oficial gratuita da CIN</h2>
+        <span className="small-note">Ministério da Justiça e Segurança Pública</span></div>
+      <p>O governo oferece a <strong>leitura detalhada oficial</strong> da CIN no aplicativo
+        Carteira de Identidade Nacional. Ele consulta a validade atual do documento
+        e exige internet e autenticação gov.br.</p>
+      <ol style={{paddingLeft:21,lineHeight:1.8}}>
+        <li>Instale o aplicativo oficial abaixo no celular.</li>
+        <li>Escolha <strong>Leitura Detalhada (completa)</strong> e entre com sua conta gov.br.</li>
+        <li>Escaneie o QR Code no verso da CIN física e compare os dados apresentados.</li>
+      </ol>
+      <div className="row" style={{gap:10,flexWrap:'wrap',marginTop:15}}>
+        <a className="btn btn-primary" href="https://play.google.com/store/apps/details?id=com.identidadenacional"
+          target="_blank" rel="noopener noreferrer"><Smartphone size={17}/> Aplicativo Android <ExternalLink size={14}/></a>
+        <a className="btn btn-outline" href="https://apps.apple.com/br/app/carteira-identidade-nacional/id1642584147"
+          target="_blank" rel="noopener noreferrer"><Smartphone size={17}/> Aplicativo iPhone <ExternalLink size={14}/></a>
+        <a className="btn btn-outline"
+          href="https://www.gov.br/pt-br/servicos/verificar-validade-de-qr-code-da-carteira-de-identidade-nacional"
+          target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/> Instruções oficiais</a>
       </div>
+      <p className="small-note" style={{marginTop:14}}><Info size={15} style={{verticalAlign:'middle'}}/>
+        A consulta é gratuita para o cidadão, mas <strong>o governo não envia o resultado ao Conecta</strong>.
+        Esta etapa, mesmo concluída no aplicativo oficial, não gera selo de identidade nem
+        comprovação de maioridade dentro da nossa rede. Nunca informe sua senha gov.br ao Conecta.</p>
     </section>
     <section className="panel">
-      <div className="feed-title"><h2>Status da verificação</h2><button className="btn btn-outline" type="button" onClick={refresh} disabled={busy}><RefreshCw size={16}/> Atualizar</button></div>
+      <div className="feed-title"><h2>Status da verificação integrada ao Conecta</h2><button className="btn btn-outline" type="button" onClick={refresh} disabled={busy}><RefreshCw size={16}/> Atualizar</button></div>
       <p><strong>{labels[result?.status||'']||'Consultando...'}</strong></p>
       {result?.status==='approved'&&<p className="form-success"><CheckCircle2 size={17} style={{verticalAlign:'middle'}}/> Identidade confirmada. A aferição de idade é um procedimento separado.</p>}
       {result?.age_band==='unknown'&&<p className="small-note">Faixa etária: ainda não certificada pelo provedor.</p>}
       {result?.guardian_status==='pending'&&<p className="small-note">A vinculação de responsável, se aplicável, ainda depende de verificação.</p>}
-      {!available&&result&&<p className="form-error"><LockKeyhole size={15} style={{verticalAlign:'middle'}}/> O serviço biométrico ainda não está contratado e configurado. Nenhuma verificação será simulada.</p>}
+      {!available&&result&&<p className="form-error"><LockKeyhole size={15} style={{verticalAlign:'middle'}}/> O Conecta ainda não tem integração autorizada que receba uma aprovação oficial de identidade ou idade. A consulta gratuita acima é externa e não atualiza este status.</p>}
       {error&&<p className="form-error" role="alert">{error}</p>}
       <button className="btn btn-primary btn-lg" type="button" disabled={busy||!available||result?.status==='approved'} onClick={begin}>
         <Camera size={18}/> {busy?'Verificando...':'Iniciar verificação pela câmera'} <ExternalLink size={16}/>
       </button>
-      <p className="fineprint" style={{textAlign:'left'}}>Aprovar uma selfie não libera automaticamente recursos restritos por idade. As validações e autorizações legais precisam estar concluídas.</p>
+      <p className="fineprint" style={{textAlign:'left'}}>O leitor QR Code e o Human abaixo são apenas ferramentas experimentais. Nenhuma conclusão local libera acesso adulto ou altera o cadastro de idade.</p>
     </section>
   <CinQrScanner/><HumanCameraCheck/></main></GuardedPage>;
 }
