@@ -37,7 +37,6 @@ export default function Comunidades() {
     if(communityResult.error||membershipResult.error)setError(communityResult.error?.message||membershipResult.error?.message||'Falha ao carregar.');
     else {setItems((communityResult.data||[]) as Community[]);setJoined(new Set((membershipResult.data||[]).map(x=>x.community_id)));}
     const rows=(communityResult.data||[]) as Community[];
-    const db=supabaseBrowser();
     const assets=rows.flatMap(item=>[item.cover_path?{id:item.id,kind:'cover',path:item.cover_path}:null,
       item.avatar_path?{id:item.id,kind:'avatar',path:item.avatar_path}:null].filter((asset):asset is {id:string;kind:string;path:string}=>!!asset));
     if(assets.length){
