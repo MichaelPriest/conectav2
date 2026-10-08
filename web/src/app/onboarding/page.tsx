@@ -35,7 +35,7 @@ export default function OnboardingPage() {
           .select('declared_band').eq('user_id',user.id).maybeSingle();
         if(ageError)throw ageError;
         if(profile && age?.declared_band){
-          router.replace(age.declared_band==='18_plus'?'/verificar-identidade':'/verificar-identidade');
+          router.replace('/verificar-identidade');
           return;
         }
         setExistingProfile(Boolean(profile));
@@ -71,7 +71,7 @@ export default function OnboardingPage() {
         setExistingProfile(true);
       }
       // Database RLS allows exactly one immutable age-band statement per user.
-      // This never changes identity_verifications or produces a trusted 18+ decision.
+      // The signup declaration never produces a trusted 18+ decision.
       const {error:ageError}=await db.from('registration_age_declarations')
         .insert({user_id:user.id,declared_band:band});
       if(ageError){
