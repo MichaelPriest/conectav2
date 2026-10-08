@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Bell, Bookmark, Compass, Home, LogOut, Menu, MessageCircle, Moon, Plus, Search, Settings, Sun, Users, X } from 'lucide-react';
+import { Bell, Bookmark, Compass, Clapperboard, Home, LogOut, Menu, MessageCircle, Moon, Plus, Search, Settings, Sun, Users, X } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/lib/types';
 import { supabaseBrowser } from '@/lib/supabase/browser';
@@ -12,6 +12,7 @@ import { ConceptBrand } from '@/components/concept-brand';
 const navItems = [
   { label: 'Início', href: '/feed', icon: Home },
   { label: 'Explorar', href: '/explorar', icon: Compass },
+  { label: 'Reels', href: '/reels', icon: Clapperboard },
   { label: 'Comunidades', href: '/comunidades', icon: Users },
   { label: 'Notificações', href: '/notificacoes', icon: Bell },
   { label: 'Mensagens', href: '/mensagens', icon: MessageCircle },

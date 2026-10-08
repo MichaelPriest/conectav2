@@ -73,6 +73,7 @@ export default function Explorar() {
       </div>
       <div className="filter-pills" role="group" aria-label="Tipo de conteúdo">
         {(['Tudo','Pessoas','Comunidades','Vídeos'] as Filter[]).map(f=><button className={'filter-pill '+(filter===f?'active':'')} type="button" key={f} onClick={()=>setFilter(f)}>{f}</button>)}
+        <Link href="/reels" className="filter-pill"><Video size={16} style={{verticalAlign:'middle'}}/> Abrir Reels</Link>
       </div>
       {error&&<p className="form-error" role="alert">{error}</p>}
       {loading&&<div className="centered-loading">Carregando descoberta...</div>}
