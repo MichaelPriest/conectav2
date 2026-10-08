@@ -6,6 +6,7 @@ import { ArrowUpRight, Plus, Search, Users, X } from 'lucide-react';
 import { GuardedPage, useAuthProfile } from '@/components/app-shell';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import {optimizeImage} from '@/lib/media';
+import {communityVisual} from '@/lib/community-visuals';
 
 type Community={id:string;owner_id:string|null;slug:string;name:string;description:string;created_at:string;cover_path:string|null;avatar_path:string|null;is_official:boolean};
 
@@ -95,7 +96,7 @@ export default function Comunidades() {
       {error&&<p className="form-error" role="alert">{error}</p>}
       {loading?<div className="centered-loading">Carregando comunidades...</div>:filtered.length>0?
         <div className="tiles-grid concept-directory-grid">{filtered.map(c=><article className="tile-card concept-directory-card" key={c.id}>
-          <div className="concept-group-cover conecta-directory-cover" style={covers[c.id]?{backgroundImage:'linear-gradient(0deg,#10173b4a,#ffffff16),url('+JSON.stringify(covers[c.id])+')',backgroundSize:'cover',backgroundPosition:'center'}:undefined}><span className="tile-avatar">{avatars[c.id]?<img src={avatars[c.id]} alt="" className="conecta-directory-avatar"/>:<Users size={24}/>}</span></div>
+          <div className="concept-group-cover conecta-directory-cover" style={covers[c.id]?{backgroundImage:'linear-gradient(0deg,#10173b4a,#ffffff16),url('+JSON.stringify(covers[c.id])+')',backgroundSize:'cover',backgroundPosition:'center'}: {background:communityVisual(c.slug).gradient}}><span className="tile-avatar">{avatars[c.id]?<img src={avatars[c.id]} alt="" className="conecta-directory-avatar"/>:<span className="conecta-community-emoji">{communityVisual(c.slug).emoji}</span>}</span></div>
           <h3>{c.name} {c.is_official&&<span className="conecta-official-mark" title="Comunidade inicial do Conecta">✦</span>}</h3><p>{c.description||'Uma comunidade para trocar ideias.'}</p>
           <span className="tile-meta">{joined.has(c.id)?'✓ Você participa':c.owner_id===auth.user?.id?'Criada por você':'Aberta para participar'}</span>
           <Link href={'/comunidades/'+c.slug} className="btn btn-outline">Ver comunidade <ArrowUpRight size={16}/></Link>

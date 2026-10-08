@@ -11,6 +11,7 @@ import {PollDraft,validatePoll} from '@/components/poll-draft';
 import {attachPoll} from '@/lib/create-poll';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {optimizeImage} from '@/lib/media';
+import {communityVisual} from '@/lib/community-visuals';
 import type {FeedPost} from '@/lib/types';
 import {hydratePostMedia} from '@/lib/post-media';
 
@@ -169,8 +170,10 @@ export default function CommunityDetail(){
    <Link href="/comunidades" className="rail-link"><ArrowLeft size={16}/> Voltar às comunidades</Link>
    {loading?<div className="centered-loading">Carregando comunidade...</div>:!community?<div className="empty-state card"><h3>Comunidade não encontrada</h3></div>:<>
     <div className="conecta-community-hero">
-      <div className="conecta-community-cover" style={coverUrl?{backgroundImage:'linear-gradient(0deg,#171534aa,#ffffff0c),url('+JSON.stringify(coverUrl)+')'}:undefined}/>
-      <div className="conecta-community-identity"><div className="conecta-community-icon">{avatarUrl?<img src={avatarUrl} alt={'Logo de '+community.name}/>:<Users size={33}/>}</div>
+      <div className="conecta-community-cover" style={coverUrl?{backgroundImage:'linear-gradient(0deg,#171534aa,#ffffff0c),url('+JSON.stringify(coverUrl)+')'}:{background:communityVisual(community.slug).gradient}}>
+        {!coverUrl&&<span className="conecta-community-cover-emoji" aria-hidden="true">{communityVisual(community.slug).emoji}</span>}
+      </div>
+      <div className="conecta-community-identity"><div className="conecta-community-icon">{avatarUrl?<img src={avatarUrl} alt={'Logo de '+community.name}/>:<span className="conecta-community-emoji">{communityVisual(community.slug).emoji}</span>}</div>
         <div><span className="section-eyebrow">{community.is_official?'COMUNIDADE OFICIAL':'COMUNIDADE CONECTA'}</span><h1>{community.name}</h1><p>{community.description}</p>
         <span className="small-note">{count} {count===1?'membro':'membros'} · Desde {new Date(community.created_at).toLocaleDateString('pt-BR')}</span></div>
       </div>

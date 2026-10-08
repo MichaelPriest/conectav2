@@ -230,3 +230,8 @@
 .conecta-reel-details h3{font-size:19px;overflow-wrap:anywhere}.conecta-reel-details p{color:var(--muted);font-size:12px}
 .conecta-reel-details .row{gap:22px;color:#775dd2}.conecta-reel-details .row span{display:flex;align-items:center;gap:6px}
 @media(max-width:690px){.conecta-reel{grid-template-columns:1fr}.conecta-reel-video{height:min(65vh,540px);aspect-ratio:auto}.conecta-reel-details{padding:16px}.conecta-reel-details h3{font-size:15px}}
+
+.conecta-directory-cover .tile-avatar{background:#ffffffb8;box-shadow:0 6px 15px #25145425}
+.conecta-community-emoji{font-size:25px;line-height:1}.conecta-community-icon .conecta-community-emoji{font-size:38px}
+.conecta-community-cover{position:relative;display:grid;place-items:center;isolation:isolate}
+.conecta-community-cover-emoji{font-size:clamp(62px,10vw,110px);filter:drop-shadow(0 10px 14px #25204b35);opacity:.85;transform:rotate(-10deg)}
