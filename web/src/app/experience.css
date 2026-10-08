@@ -272,3 +272,15 @@
 .conecta-connection-card{display:grid;gap:10px;justify-items:start;padding:18px}
 .conecta-connection-card h3{margin:0}.conecta-connection-card small{color:var(--muted)}.conecta-connection-card p{font-size:12px;color:var(--muted)}
 @media(max-width:850px){.conecta-myspace-panel{grid-template-columns:1fr}}
+
+.conecta-moderation-layout{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,.85fr);gap:18px}
+.conecta-moderation-layout>.panel{height:fit-content}
+.conecta-moderation-item{display:flex;gap:10px;padding:15px 0;border-bottom:1px solid #ebe7f3}
+.conecta-moderation-item>div{flex:1;min-width:0}.conecta-moderation-item strong{font-size:13px}
+.conecta-moderation-item small{display:block;color:var(--muted);font-size:11px}
+.conecta-moderation-item p{white-space:pre-wrap;font-size:13px;overflow-wrap:anywhere}
+.conecta-moderation-report{border-bottom:1px solid #eee;padding:11px 0;font-size:12px}
+.conecta-moderation-members{max-height:320px;overflow:auto}
+.conecta-moderation-members>div{display:flex;align-items:center;gap:10px;padding:9px 0}
+.conecta-moderation-members>div a{flex:1;font-size:12px}
+@media(max-width:900px){.conecta-moderation-layout{grid-template-columns:1fr}}

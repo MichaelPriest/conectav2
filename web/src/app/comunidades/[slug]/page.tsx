@@ -40,6 +40,7 @@ export default function CommunityDetail(){
  const previews=useMemo(()=>files.map(f=>({file:f,url:URL.createObjectURL(f)})),[files]);
  useEffect(()=>()=>previews.forEach(p=>URL.revokeObjectURL(p.url)),[previews]);
  const isOwner=community?.owner_id===auth.user?.id&&Boolean(auth.user);
+ const [canModerate,setCanModerate]=useState(false);
 
  const fetchPosts=useCallback(async(id:string,from=0,append=false)=>{
    const db=supabaseBrowser();
@@ -63,6 +64,8 @@ export default function CommunityDetail(){
    if(e){setError(e.message);setLoading(false);return;}
    setCommunity(data as Community|null);
    if(data){
+     const {data:role}=await db.from('community_staff').select('role').eq('community_id',data.id).eq('user_id',auth.user.id).maybeSingle();
+     setCanModerate(data.owner_id===auth.user.id||Boolean(role));
      setDescription(data.description);setRules(data.rules||'');
      const [membership,total,...urls]=await Promise.all([
        db.from('community_members').select('user_id').eq('community_id',data.id).eq('user_id',auth.user.id).maybeSingle(),
@@ -181,6 +184,7 @@ export default function CommunityDetail(){
       <div className="conecta-community-buttons"><button type="button" className={'btn '+(member?'btn-outline':'btn-primary')} onClick={toggleMembership} disabled={busy}>
         {member?<Check size={18}/>:<UserPlus size={18}/>} {member?'Participando · Sair':'Participar da comunidade'}</button>
         {isOwner&&<button type="button" className="btn btn-outline" onClick={()=>setEditing(v=>!v)}><Edit3 size={17}/> Editar comunidade</button>}
+        {canModerate&&<Link className="btn btn-outline" href={'/comunidades/'+community.slug+'/moderar'}><ShieldCheck size={17}/> Administrar / Moderação</Link>}
       </div>
     </div>
     {error&&<p className="form-error" role="alert">{error}</p>}
