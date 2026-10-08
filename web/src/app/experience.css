@@ -1,0 +1,69 @@
+
+/* Aplicativo real — mesmo design system da arte conceitual */
+.concept-app{--ink:#172245;--muted:#8992b1;--brand:#8057f6;--line:#eff0f8;--bg:#f8f9ff;--panel:#fff;--shadow:0 13px 37px #3940660d}
+.concept-app .sidebar{width:250px;padding:25px 15px 18px;border-right:1px solid #eef0f8}
+.concept-app.app-layout{grid-template-columns:250px minmax(0,1fr)}
+.concept-app .sidebar-top{padding:0 13px 38px}
+.concept-app .sidebar-top .concept-brand{font-size:25px}.concept-app .sidebar-top .concept-brand-symbol{width:39px;height:39px;font-size:29px}.concept-app .sidebar-top .concept-brand-symbol:before{border-width:7px}.concept-app .sidebar-top .concept-brand-dot{top:17px}
+.concept-app .sidebar-section-label{font-size:10px;letter-spacing:.12em;color:#b3b9d0;margin:0 0 4px;padding:0 16px 10px}
+.concept-app .nav-links{gap:3px;margin-bottom:23px}
+.concept-app .nav-link{font-size:13px;padding:12px 15px;gap:13px;border-radius:10px;font-weight:650;color:#717c9f}
+.concept-app .nav-link svg{stroke-width:1.9}.concept-app .nav-link:hover{background:#f5f2ff;color:#8057f6}
+.concept-app .nav-active{background:#f0ecff;color:#754cf5}
+.concept-nav-count{margin-left:auto;background:#fa6e9c;color:white;border-radius:50%;width:20px;height:20px;display:grid;place-items:center;font-size:10px;font-weight:800}
+.concept-sidebar-note{margin:7px 5px 17px;background:linear-gradient(135deg,#f1eafe,#e8f9ff);border-radius:15px;padding:16px}
+.concept-sidebar-note-icon{width:34px;height:34px;border-radius:10px;background:#fff8;color:#845df6;display:grid;place-items:center;margin-bottom:9px}
+.concept-sidebar-note strong{font-size:12px;color:#233459;display:block}.concept-sidebar-note p{font-size:11px;color:#858ca9;margin:5px 0 10px}.concept-sidebar-note a{font-size:11px;color:#825af1;font-weight:800}
+.concept-app .sidebar-bottom{gap:5px}.concept-app .avatar{width:39px;height:39px;font-size:16px}.concept-app .avatar-sm{width:32px;height:32px;font-size:13px}
+.concept-app .desktop-topbar{background:#fff;height:67px;padding:0 30px;border-bottom:1px solid #f1f1f8}.concept-app .topbar-search{background:#f7f7fd;max-width:525px;height:40px;min-height:40px}.concept-app .topbar-search input{font-size:12px}.concept-app .topbar-actions{gap:11px}.concept-app .topbar-account{color:#273354}.concept-account-handle{color:#a2a9c4;font-weight:500}
+.concept-notifications-link{position:relative}.concept-notification-dot{position:absolute;top:5px;right:5px;width:9px;height:9px;border-radius:50%;background:#fc7296;border:2px solid #fff}
+.concept-app .page-columns{max-width:1140px;grid-template-columns:minmax(0,650px) minmax(255px,305px);gap:25px;padding:32px 25px 70px}
+.concept-feed-heading{margin-bottom:20px;align-items:center}.concept-feed-heading h1{font-size:28px;letter-spacing:-.055em;margin:3px 0 4px}.concept-feed-heading p{font-size:12px}.concept-feed-heading .section-eyebrow{color:#9d94bd;font-size:9px;letter-spacing:.13em}.concept-feed-sparkle{display:grid;place-items:center;width:44px;height:44px;border-radius:13px;color:#855af7;background:#eae4ff;font-size:24px}
+.concept-app .card{box-shadow:0 9px 29px #40477f0a;border-color:#f0eff9;border-radius:17px}
+.concept-composer{padding:18px 20px 13px;margin-bottom:23px}
+.concept-app .concept-composer .composer-top{margin-bottom:12px}.concept-app .concept-composer .avatar{height:37px;width:37px}
+.concept-composer-heading{display:grid;gap:0}.concept-composer-heading strong{font-size:12px}.concept-composer-heading>span{font-size:11px;color:#a2a8be}
+.concept-composer textarea{min-height:64px;max-height:330px;background:#f8f8ff;border:1px solid #f2f1fb;padding:13px;border-radius:10px;font-size:12px;line-height:1.55}
+.concept-composer-toolbar{border-top:1px solid #f0eff8;padding-top:13px;margin-top:13px;flex-wrap:wrap}
+.concept-composer-tools{gap:12px;display:flex;flex-wrap:wrap}
+.concept-composer-tools button{border:0;background:transparent;display:flex;gap:6px;align-items:center;color:#7481a2;font-size:11px;font-weight:700;padding:6px 0;border-radius:6px}
+.concept-composer-tools button:hover{color:#7c59ec}.concept-composer-tools button:first-of-type svg{color:#8666ef}.concept-composer-tools button:nth-of-type(2) svg{color:#3bb3ad}.concept-composer-tools button:nth-of-type(3) svg{color:#f47797}
+.concept-composer-submit{display:flex;align-items:center;gap:8px}.concept-composer-submit select{min-width:80px;border:0;background:#f6f5fc;border-radius:8px;color:#616f99;font-size:11px;height:35px;padding:6px 7px}.concept-composer-submit .btn{height:35px;font-size:11px;border-radius:8px;padding:8px 12px}
+.concept-attachment{margin:8px 0;border-radius:11px;overflow:hidden;background:#f8f9ff}.concept-attachment>img,.concept-attachment>video{max-height:300px;width:100%;object-fit:contain;display:block}.concept-attachment .selected-file{margin-top:0}
+.concept-feed-title{margin-top:6px;margin-bottom:13px}.concept-feed-title h2{font-size:15px}.concept-feed-title span{font-size:11px}
+.concept-app .post-card{border-color:#f1eefb;padding:19px 20px 13px;border-radius:16px;box-shadow:0 9px 29px #40477f0a}
+.concept-app .post-head .avatar{width:35px;height:35px;font-size:14px}.concept-app .post-meta strong{font-size:13px}.concept-app .post-meta span{font-size:10px}
+.concept-app .post-body{margin-top:13px}.concept-app .post-body p{font-size:12px;line-height:1.65;margin-bottom:11px}
+.concept-app .post-media{border-radius:11px}.concept-app .post-media img{max-height:600px}
+.concept-app .post-stats{padding:12px 0 10px;font-size:11px}.concept-app .post-actions{margin-top:5px}.concept-app .post-actions button{font-size:11px;gap:6px}
+.concept-app .post-actions button:first-child svg{color:#fa6c91}
+.concept-rail{display:grid;gap:15px;position:sticky;top:88px}
+.concept-promo{height:205px;position:relative;overflow:hidden;border-radius:16px;background:linear-gradient(132deg,#cef6ff 0%,#f8d6e9 78%,#ffe3cb 100%)}
+.concept-promo-text{position:relative;z-index:2;padding:19px 17px;width:87%}.concept-promo-eyebrow{font-size:9px;font-weight:800;display:flex;align-items:center;gap:4px;color:#657fa0;margin-bottom:6px}
+.concept-promo h2{margin:0 0 8px;font-size:18px;line-height:1.2;letter-spacing:-.04em;color:#193052}.concept-promo p{max-width:155px;font-size:11px;line-height:1.4;color:#54728b}
+.concept-promo-photo{position:absolute;right:-16px;bottom:-26px;width:75%;height:145px;transform:rotate(-6deg);border-radius:60% 28% 0 0;border:5px solid #fff5;background:linear-gradient(0deg,#50438033,transparent),url('https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=550&q=80') center/cover}
+.concept-promo-heart{position:absolute;top:22px;right:21px;font-size:27px;color:#f55b90;transform:rotate(-18deg);z-index:3}
+.concept-community-list{padding:17px 15px 12px}.concept-rail-heading{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:14px}
+.concept-rail-heading h2{font-size:13px;line-height:1.3;margin:0}.concept-rail-heading>a{font-size:10px;color:#855deb;display:inline-flex;align-items:center;white-space:nowrap;gap:3px;font-weight:800}
+.concept-community-items{display:grid;gap:11px}.concept-community-item{display:flex;align-items:center;gap:9px}
+.concept-community-icon{width:39px;height:39px;border-radius:9px;display:grid;place-items:center;flex:none}
+.concept-community-copy{flex:1;min-width:0;display:grid;gap:2px}.concept-community-copy strong{font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.concept-community-copy>span{font-size:9px;color:#9fa5be;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.concept-join{background:#f3efff;border-radius:7px;padding:7px 9px;color:#865bea;font-weight:800;font-size:10px;white-space:nowrap}.concept-join:hover{background:#e6dfff}
+.concept-community-empty{display:grid;justify-items:start;gap:7px}.concept-community-empty strong{font-size:12px}.concept-community-empty p{font-size:11px;color:#9fa4bf}.concept-community-empty .btn{font-size:10px;padding:8px}
+.concept-rail-bottom{display:flex;gap:6px;align-items:center;justify-content:center;color:#9c9db9;font-size:11px}
+.concept-empty-feed{padding:35px 24px}.concept-empty-feed p{max-width:385px;margin:auto auto 18px}.concept-empty-illustration{display:grid;place-items:center;width:85px;height:85px;border-radius:28px;background:linear-gradient(135deg,#f6d7ed,#d6e4ff,#e9dafa);margin:auto;color:#8360ef}
+.concept-app .section-page{max-width:1110px}.concept-app .section-page h1{font-size:28px}.concept-app .filter-pill{font-size:11px}.concept-app .tile-card{border-radius:16px}
+:root[data-theme=dark] .concept-app{--ink:#eef0fe;--muted:#bdc1da;--line:#383c57;--bg:#181c2d;--panel:#242941}
+:root[data-theme=dark] .concept-app .sidebar,:root[data-theme=dark] .concept-app .desktop-topbar{background:#242941;border-color:#383c57}
+:root[data-theme=dark] .concept-app .nav-active{background:#393356;color:#c7b4ff}
+:root[data-theme=dark] .concept-app .concept-brand{color:#fff}
+:root[data-theme=dark] .concept-app .concept-sidebar-note{background:linear-gradient(135deg,#40345e,#254058)}
+:root[data-theme=dark] .concept-app .concept-sidebar-note strong{color:#f2ecff}
+:root[data-theme=dark] .concept-app .topbar-account{color:#eee}
+:root[data-theme=dark] .concept-app .concept-composer textarea{background:#222842;border-color:#393c58}
+:root[data-theme=dark] .concept-app .concept-composer-tools button{color:#c1c2d6}
+:root[data-theme=dark] .concept-app .concept-community-list{background:#242941}
+@media(min-width:1500px){.concept-app .page-columns{max-width:1170px;grid-template-columns:minmax(0,690px) minmax(265px,315px)}}
+@media(max-width:1190px){.concept-app .page-columns{grid-template-columns:minmax(0,720px);max-width:770px}.concept-rail{display:none}}
+@media(max-width:780px){.concept-app.app-layout{display:block}.concept-app .sidebar{width:265px}.concept-app .mobile-header .concept-brand{font-size:21px}.concept-app .mobile-header .concept-brand-symbol{width:32px;height:32px;font-size:25px}.concept-app .mobile-header .concept-brand-symbol:before{border-width:6px}.concept-app .mobile-header .concept-brand-dot{top:15px;width:8px;height:8px}.concept-app .mobile-bottom-nav{height:69px;align-items:center;padding:4px 0 calc(4px + env(safe-area-inset-bottom))}.concept-app .mobile-bottom-nav>a{display:grid;justify-items:center;gap:2px;font-size:9px;padding:4px 3px;min-width:50px}.concept-app .mobile-bottom-nav>a svg{width:21px;height:21px}.concept-app .mobile-bottom-nav .concept-mobile-create svg{color:#fff;background:#8558f5;width:21px;height:21px;box-sizing:content-box;padding:10px;border-radius:12px;margin-top:-14px;box-shadow:0 4px 13px #8062ef50}.concept-app .page-columns{padding:21px 14px 105px}.concept-app .sidebar-top{padding-bottom:33px}}
+@media(max-width:500px){.concept-composer{padding:15px}.concept-feed-heading h1{font-size:25px}.concept-composer-toolbar{display:grid;gap:11px}.concept-composer-tools{justify-content:space-between}.concept-composer-submit{justify-content:space-between}.concept-composer-submit select{flex:1}.concept-composer-submit .btn{min-width:118px}.concept-app .post-card{padding:15px 14px 9px}}
