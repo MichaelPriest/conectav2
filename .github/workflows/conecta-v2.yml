@@ -40,5 +40,7 @@ jobs:
         run: npm install --no-audit --no-fund --no-package-lock
       - name: Check TypeScript
         run: npm run typecheck
+      - name: Regression tests for nullable profile details
+        run: npm run test:profile
       - name: Build Next.js
         run: npm run build

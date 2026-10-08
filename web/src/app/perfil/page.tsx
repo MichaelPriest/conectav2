@@ -10,12 +10,11 @@ import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
 import {ProfileTimeline} from '@/components/profile-timeline';
 import {MySpacePanel} from '@/components/myspace-panel';
 import {LanguageSelect} from '@/lib/i18n';
+import {normalizeProfileDetails,prepareProfileDetails,DEFAULT_PROFILE_DETAILS} from '@/lib/profile-details';
+import type {ProfileDetails} from '@/lib/profile-details';
 
-type Details={
- headline:string;city:string;website:string;music_url:string;interests:string[];
- favorite_emoji:string;cover_theme:'violet'|'aqua'|'pink'|'sunset'|'midnight';mood_text:string;layout_style:'classic'|'myspace'|'minimal'
-};
-const empty:Details={headline:'',city:'',website:'',music_url:'',interests:[],favorite_emoji:'💜',cover_theme:'violet',mood_text:'',layout_style:'classic'};
+type Details=ProfileDetails;
+const empty=DEFAULT_PROFILE_DETAILS;
 const themes:Details['cover_theme'][]=['violet','aqua','pink','sunset','midnight'];
 
 export default function Profile(){
@@ -40,7 +39,7 @@ export default function Profile(){
    if(!f.error)setFriends(f.count||0);
    if(d.error)setError(d.error.message);
    else if(d.data){
-     const v={...empty,...d.data} as Details;
+     const v=normalizeProfileDetails(d.data);
      setDetails(v);setInterestsInput(v.interests.join(', '));
    }
    if(auth.profile?.avatar_path){
@@ -63,14 +62,21 @@ export default function Profile(){
  async function submit(event:FormEvent){
    event.preventDefault();if(!auth.user||saving)return;
    setSaving(true);setError('');setNotice('');
-   const username=handle.trim().toLowerCase().replace(/^@/,'');
-   if(!/^[a-z0-9_]{3,30}$/.test(username)){setError('Usuário inválido. Use de 3 a 30 letras, números ou _.');setSaving(false);return;}
-   if(details.music_url&&!parseMusicUrl(details.music_url)){setError('Use um link de Spotify, YouTube, SoundCloud ou Apple Music.');setSaving(false);return;}
-   if(details.website){try{const url=new URL(details.website);if(url.protocol!=='https:')throw Error();}catch{setError('Seu site precisa ser uma URL HTTPS válida.');setSaving(false);return;}}
-   const interests=[...new Set(interestsInput.split(',').map(v=>v.trim()).filter(Boolean))].slice(0,12);
-   if(interests.some(v=>v.length>32)){setError('Cada interesse deve ter até 32 caracteres.');setSaving(false);return;}
    const db=supabaseBrowser();let uploaded:string|null=null;
+   let detailsSaved=false;
    try {
+     const username=(handle||'').trim().toLowerCase().replace(/^@/,'');
+     if(!/^[a-z0-9_]{3,30}$/.test(username))throw new Error('Usuário inválido. Use de 3 a 30 letras, números ou _.');
+     const payload=prepareProfileDetails(details,interestsInput);
+     if(payload.music_url&&!parseMusicUrl(payload.music_url)){
+       throw new Error('Use um link de Spotify, YouTube, SoundCloud ou Apple Music.');
+     }
+     if(payload.website){
+       try{
+         const url=new URL(payload.website);
+         if(url.protocol!=='https:')throw new Error('Protocolo inválido');
+       }catch{throw new Error('Seu site precisa ser uma URL HTTPS válida.');}
+     }
      if(avatarFile){
        if(!['image/jpeg','image/png','image/webp'].includes(avatarFile.type)||avatarFile.size>8*1024*1024)throw new Error('Foto de perfil: JPG, PNG ou WebP, até 8 MB.');
        const optimized=await optimizeImage(avatarFile);
@@ -79,31 +85,33 @@ export default function Profile(){
        const {error:e}=await db.storage.from('social-media').upload(uploaded,optimized,{contentType:optimized.type});
        if(e)throw e;
      }
+     // Validate the complete form first and save optional settings before changing
+     // the visible profile. This prevents the original partial-save error.
+     const {error:detailError}=await db.from('profile_details').upsert({
+       user_id:auth.user.id,...payload,updated_at:new Date().toISOString()
+     },{onConflict:'user_id'});
+     if(detailError)throw detailError;
+     detailsSaved=true;
      const {data:updated,error:profileError}=await db.from('profiles').update({
-       display_name:name.trim(),handle:username,bio:bio.trim(),updated_at:new Date().toISOString(),
+       display_name:(name||'').trim(),handle:username,bio:(bio||'').trim(),updated_at:new Date().toISOString(),
        ...(uploaded?{avatar_path:uploaded}:{})
      }).eq('id',auth.user.id).select('id,display_name,handle,bio,avatar_path').single();
      if(profileError)throw profileError;
      auth.setProfile(updated);
-     // Profile details are saved as a separate RLS-protected record.
-     const {error:detailError}=await db.from('profile_details').upsert({
-       user_id:auth.user.id,...details,
-       headline:details.headline.trim(),city:details.city.trim(),
-       music_url:details.music_url.trim()||null,
-       website:details.website.trim()||null,interests,updated_at:new Date().toISOString()
-     },{onConflict:'user_id'});
-     if(detailError)throw detailError;
      if(uploaded&&auth.profile?.avatar_path){
        await db.storage.from('social-media').remove([auth.profile.avatar_path]);
      }
      setAvatarFile(null);
-     setDetails(v=>({...v,interests}));setNotice('Perfil atualizado com sucesso.');
+     setDetails(normalizeProfileDetails(payload));
+     setInterestsInput(payload.interests.join(', '));
+     setNotice('Perfil atualizado com sucesso.');
    } catch(err){
      if(uploaded){
        const {data:existing}=await db.from('profiles').select('avatar_path').eq('id',auth.user.id).single();
        if(existing?.avatar_path!==uploaded)await db.storage.from('social-media').remove([uploaded]);
      }
-     setError((err instanceof Error?err.message:'Erro ao salvar.')+' Se alguns dados foram salvos, atualize a página antes de tentar novamente.');
+     setError((err instanceof Error?err.message:'Erro ao salvar.')+
+       (detailsSaved?' As preferências foram salvas, mas o perfil principal não. Atualize a página antes de tentar novamente.':''));
    }finally{setSaving(false);}
  }
  return <GuardedPage {...auth}><main className={"section-page conecta-profile-page profile-layout-"+details.layout_style}>
