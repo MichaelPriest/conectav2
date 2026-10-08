@@ -182,3 +182,21 @@
 .human-frame{position:absolute;left:25%;right:25%;top:12%;bottom:12%;border:2px dashed #cebcff9f;border-radius:45%;pointer-events:none}
 .human-agree{display:flex;align-items:start;gap:11px;font-size:13px;color:var(--ink);line-height:1.6;padding:13px;background:#f3efff;border-radius:12px}
 .human-agree input{margin-top:4px}
+
+.conecta-poll-draft,.conecta-poll-card{background:#f6f3ff;border:1px solid #e6ddff;border-radius:16px;padding:16px;margin:14px 0}
+.conecta-poll-options,.conecta-poll-choices{display:grid;gap:8px;margin:10px 0}
+.conecta-poll-option{display:flex;gap:8px;align-items:center;border:1px solid #e0d8f4;border-radius:10px;background:white;padding:7px 11px}
+.conecta-poll-option input{border:0;outline:0;flex:1;min-width:0}
+.conecta-poll-option button{border:0;background:transparent;color:#796e99}
+.conecta-poll-choice{position:relative;isolation:isolate;overflow:hidden;border:1px solid #d9ccef;background:white;border-radius:10px;padding:11px;display:flex;justify-content:space-between;align-items:center;gap:8px;text-align:left;font-weight:650;color:#352755}
+.conecta-poll-choice:disabled{cursor:default;opacity:1}
+.conecta-poll-choice.is-selected{border-color:#7753d6}
+.conecta-poll-choice>span:not(.conecta-poll-progress){display:flex;gap:6px;align-items:center}
+.conecta-poll-progress{position:absolute;inset:0 auto 0 0;background:#ded2fa;z-index:-1;transition:width .25s}
+.conecta-poll-title{display:flex;gap:9px;align-items:center;color:#4c367c}
+.conecta-poll-foot{display:flex;justify-content:space-between;color:#6e6685;font-size:11px}
+.conecta-poll-foot span{display:flex;align-items:center;gap:4px}
+.conecta-reply-link{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:#7658c5;font-size:11px;font-weight:750;padding:3px 0}
+.conecta-comment-reply{margin-left:30px;padding-left:12px;border-left:2px solid #ddd1fa}
+.conecta-reply-to{background:#ede9ff;font-size:12px;padding:9px 12px;border-radius:9px;display:flex;justify-content:space-between}
+.conecta-reply-to button{border:0;background:none;color:#7855cf}

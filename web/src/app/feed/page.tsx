@@ -11,6 +11,9 @@ import { optimizeImage } from '@/lib/media';
 import { hydratePostMedia } from '@/lib/post-media';
 import { FeaturedCommunities } from '@/components/featured-communities';
 import {EmojiButton} from '@/components/emoji-button';
+import {PollDraft,validatePoll} from '@/components/poll-draft';
+import {attachPoll} from '@/lib/create-poll';
+import {BarChart3} from 'lucide-react';
 
 const PAGE_SIZE=15;
 
@@ -23,6 +26,9 @@ export default function FeedPage() {
   const [text,setText]=useState('');
   const [privacy,setPrivacy]=useState<'public'|'friends'|'private'>('public');
   const [files,setFiles]=useState<File[]>([]);
+  const [pollMode,setPollMode]=useState(false);
+  const [pollOptions,setPollOptions]=useState(['','']);
+  const [pollDays,setPollDays]=useState(7);
   const [hasMore,setHasMore]=useState(false);
   const [offset,setOffset]=useState(0);
   const picker=useRef<HTMLInputElement>(null);
@@ -47,7 +53,7 @@ export default function FeedPage() {
     const eligible=selected.filter(item => isImage
       ? ['image/jpeg','image/png','image/webp','image/gif'].includes(item.type)
       : ['video/mp4','video/webm'].includes(item.type));
-    setFiles(eligible.slice(0,isImage?5:1));
+    setPollMode(false);setFiles(eligible.slice(0,isImage?5:1));
     if(selected.length>5)setMessage('Você pode selecionar até cinco fotos por publicação.');
     event.target.value='';
   }
@@ -74,6 +80,7 @@ export default function FeedPage() {
   async function publish(e: FormEvent) {
     e.preventDefault();
     if(!user || (!text.trim()&&files.length===0)||busy)return;
+    if(pollMode){try{validatePoll(text,pollOptions);}catch(e){setMessage(e instanceof Error?e.message:'Enquete inválida.');return;}}
     setBusy(true);setMessage('');
     const db=supabaseBrowser();
     const uploaded:{storage_path:string;media_type:'image'|'video';position:number}[]=[];
@@ -100,13 +107,14 @@ export default function FeedPage() {
         .select('id').single();
       if(insertError)throw insertError;
       createdPostId=created.id;
+      if(pollMode)await attachPoll(db,created.id,text,pollOptions,pollDays);
       if(uploaded.length){
         const {error:galleryError}=await db.from('post_media').insert(uploaded.map(asset=>({
           post_id:created.id,owner_id:user.id,...asset
         })));
         if(galleryError)throw galleryError;
       }
-      setText('');setFiles([]);
+      setText('');setFiles([]);setPollMode(false);setPollOptions(['','']);
       await fetchPosts();
     }catch(err){
       if(createdPostId){
@@ -127,6 +135,7 @@ export default function FeedPage() {
         <div className="composer-top"><span className="avatar avatar-gradient">{profile?.display_name?.charAt(0).toUpperCase()||'C'}</span><div className="concept-composer-heading"><strong>{profile?.display_name ? 'Compartilhe um momento, '+profile.display_name.split(' ')[0] : 'O que você está pensando hoje?'}</strong><span>Uma boa história merece ser compartilhada.</span></div></div>
         <form onSubmit={publish}>
           <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="No que você está pensando hoje?" maxLength={3000} rows={3}/>
+          {pollMode&&<PollDraft question={text} options={pollOptions} onOptionsChange={setPollOptions} days={pollDays} onDaysChange={setPollDays}/>}
           {files.length>0&&<div className="concept-attachment">
             <div className={'composer-preview-grid '+(files.length>1?'multiple':'')}>
               {files.map((file,index)=><div className="composer-preview-item" key={file.name+index}>
@@ -144,6 +153,7 @@ export default function FeedPage() {
               <button type="button" onClick={()=>chooseFile('image')}><ImagePlus size={18}/> Foto</button>
               <button type="button" onClick={()=>chooseFile('video')}><Video size={18}/> Vídeo</button>
               <EmojiButton onSelect={emoji=>setText(previous=>(previous+emoji).slice(0,3000))}/>
+              <button type="button" onClick={()=>{setPollMode(v=>!v);setFiles([]);}} aria-pressed={pollMode}><BarChart3 size={18}/> Enquete</button>
             </div>
             <div className="concept-composer-submit"><select aria-label="Privacidade da publicação" value={privacy} onChange={e=>setPrivacy(e.target.value as typeof privacy)}><option value="public">Público</option><option value="friends">Amigos</option><option value="private">Só eu</option></select><button className="btn btn-primary" type="submit" disabled={busy||(!text.trim()&&files.length===0)}>{busy?<Loader2 className="spin" size={17}/>:<Send size={17}/>} Publicar</button></div>
           </div>
