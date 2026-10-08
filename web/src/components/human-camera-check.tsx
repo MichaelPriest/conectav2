@@ -116,9 +116,9 @@ export function HumanCameraCheck(){
         const count=result.face?.length||0;
         setFaceCount(count);
         if(count===1){
-          const face=result.face[0];
-          setLiveScore(typeof face.live==='number'?face.live:null);
-          setSpoofScore(typeof face.real==='number'?face.real:null);
+          const face=result.face?.[0];
+          setLiveScore(typeof face?.live==='number'?face.live:null);
+          setSpoofScore(typeof face?.real==='number'?face.real:null);
           setFeedback('Rosto detectado. Os indicadores são experimentais e não comprovam identidade ou idade.');
         }else{
           setLiveScore(null);setSpoofScore(null);
