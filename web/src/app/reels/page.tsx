@@ -51,6 +51,5 @@ export default function ReelsPage(){
          </div>
        </article>;
      })}</div>}
-   <section className="conecta-ad-placeholder" style={{maxWidth:760,margin:'26px auto'}}><span>PUBLICIDADE FUTURA · IDENTIFICADA</span><strong>Espaço reservado para campanhas</strong><p>Nenhum anúncio ativo e nenhuma segmentação de menores.</p></section>
  </main></GuardedPage>;
 }

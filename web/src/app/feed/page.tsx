@@ -11,6 +11,7 @@ import type { FeedPost } from '@/lib/types';
 import { optimizeImage } from '@/lib/media';
 import { hydratePostMedia } from '@/lib/post-media';
 import { FeaturedCommunities } from '@/components/featured-communities';
+import {DiscreetAdSlot} from '@/components/discreet-ad-slot';
 import {EmojiButton} from '@/components/emoji-button';
 import {PollDraft,validatePoll} from '@/components/poll-draft';
 import {attachPoll} from '@/lib/create-poll';
@@ -162,7 +163,10 @@ export default function FeedPage() {
         {message&&<p role="alert" className="form-error">{message}</p>}
       </section>
       <div className="feed-title concept-feed-title"><h2>Publicações recentes</h2><span>Mais recentes primeiro</span></div>
-      <div className="feed-list">{posts.length===0&&!loadingFeed&&<div className="empty-state card concept-empty-feed"><span className="concept-empty-illustration"><Sparkles size={34}/></span><h3>Boas histórias começam aqui.</h3><p>O Conecta está esperando sua primeira publicação. Convide amigos, conte algo e faça parte desta comunidade.</p><a className="btn btn-primary" href="#composer">Criar primeira publicação</a></div>}{posts.map(p=><PostCard key={p.id} post={p} userId={user?.id||''} refresh={()=>fetchPosts()}/>)}</div>
+      <div className="feed-list">{posts.length===0&&!loadingFeed&&<div className="empty-state card concept-empty-feed"><span className="concept-empty-illustration"><Sparkles size={34}/></span><h3>Boas histórias começam aqui.</h3><p>O Conecta está esperando sua primeira publicação. Convide amigos, conte algo e faça parte desta comunidade.</p><a className="btn btn-primary" href="#composer">Criar primeira publicação</a></div>}{posts.map((p,i)=><div key={p.id}>
+        <PostCard post={p} userId={user?.id||''} refresh={()=>fetchPosts()}/>
+        {i===5&&<DiscreetAdSlot format="mobile"/>}
+      </div>)}</div>
       {loadingFeed&&<div className="centered-loading"><Loader2 className="spin" size={23}/> Carregando publicações...</div>}
       {!loadingFeed&&hasMore&&<button type="button" className="btn btn-outline btn-block" onClick={()=>fetchPosts(offset,true)}>Carregar mais</button>}
     </main>

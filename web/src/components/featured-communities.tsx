@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Heart, Sparkles, Users } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase/browser';
+import {DiscreetAdSlot} from '@/components/discreet-ad-slot';
 
 type Community = {
   id: string;
@@ -62,11 +63,7 @@ export function FeaturedCommunities() {
           </div>)}
         </div>}
     </section>
-    <section className="conecta-ad-placeholder" aria-label="Espaço reservado para publicidade">
-      <span>ESPAÇO PUBLICITÁRIO RESERVADO</span>
-      <strong>Uma marca pode fazer parte desta conversa.</strong>
-      <p>Não há anúncio ativo. Futura publicidade terá identificação clara e critérios de proteção por idade.</p>
-    </section>
+    <DiscreetAdSlot format="desktop"/>
     <div className="concept-rail-bottom">
       <Sparkles size={15}/><span>O que te move, te conecta.</span>
     </div>

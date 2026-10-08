@@ -228,7 +228,6 @@ export default function CommunityDetail(){
     </div><aside className="conecta-community-side">
       <section className="panel"><h3>Sobre esta comunidade</h3><p>{community.description}</p><hr/><strong>Regras de convivência</strong>
         <p className="small-note" style={{whiteSpace:'pre-wrap'}}>{community.rules||'Respeite os participantes. Nada de spam, intimidação, golpes ou conteúdo ilegal.'}</p></section>
-      <section className="conecta-ad-placeholder"><span>ESPAÇO RESERVADO PARA PUBLICIDADE</span><strong>Sua marca no Conecta</strong><p>Nenhum anúncio ativo. Futuramente, publicidade identificada e adequada à idade.</p></section>
     </aside></div>
    </>}
  </main></GuardedPage>;
