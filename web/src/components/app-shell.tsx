@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Bell, Compass, Home, LogOut, Menu, MessageCircle, PlusCircle, Settings, Users, X } from 'lucide-react';
+import { Bell, Compass, Home, LogOut, Menu, MessageCircle, Moon, Search, Settings, Sun, Users, X } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/lib/types';
 import { supabaseBrowser } from '@/lib/supabase/browser';
@@ -49,6 +49,28 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNav, setMobileNav] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [dark, setDark] = useState(false);
+
+  useEffect(() => {
+    const selected = window.localStorage.getItem('conecta-theme') === 'dark';
+    setDark(selected);
+    document.documentElement.dataset.theme = selected ? 'dark' : 'light';
+  }, []);
+
+  function toggleTheme() {
+    setDark(previous => {
+      const selected = !previous;
+      window.localStorage.setItem('conecta-theme', selected ? 'dark' : 'light');
+      document.documentElement.dataset.theme = selected ? 'dark' : 'light';
+      return selected;
+    });
+  }
+
+  function search(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    router.push('/explorar?q=' + encodeURIComponent(searchValue.trim()));
+  }
 
   async function logout() {
     await supabaseBrowser().auth.signOut();
@@ -68,6 +90,14 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
     </aside>
     {mobileNav && <button className="mobile-overlay" aria-label="Fechar menu" onClick={() => setMobileNav(false)}/>}
     <div className="workspace">
+      <header className="desktop-topbar">
+        <form className="searchbox topbar-search" onSubmit={search}><Search size={18}/><input value={searchValue} onChange={e => setSearchValue(e.target.value)} placeholder="Buscar pessoas, comunidades e publicações..." aria-label="Buscar no Conecta"/></form>
+        <div className="topbar-actions">
+          <button onClick={toggleTheme} className="icon-btn" aria-label={dark ? "Usar tema claro" : "Usar tema escuro"} title="Alterar tema">{dark ? <Sun size={20}/> : <Moon size={20}/>}</button>
+          <span className="topbar-divider"/>
+          <Link className="topbar-account" href="/perfil"><span className="avatar avatar-gradient avatar-sm">{profile.display_name[0]?.toUpperCase()||"C"}</span><span>{profile.display_name}</span></Link>
+        </div>
+      </header>
       <header className="mobile-header"><button className="icon-btn" type="button" onClick={() => setMobileNav(true)} aria-label="Abrir menu"><Menu size={22}/></button><Link href="/feed" className="brand"><span className="brand-mark">c.</span> conecta<span className="brand-dot">.</span></Link><Link className="avatar avatar-gradient avatar-sm" href="/perfil">{profile.display_name[0]?.toUpperCase()||'C'}</Link></header>
       {children}
       <nav className="mobile-bottom-nav" aria-label="Navegação rápida">{navItems.map(({label,href,icon:Icon})=><Link aria-label={label} key={href} href={href} className={pathname===href?'active':''}><Icon size={22}/></Link>)}</nav>

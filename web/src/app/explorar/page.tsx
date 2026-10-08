@@ -19,6 +19,11 @@ export default function Explorar() {
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
   const [search,setSearch]=useState('');
+
+  useEffect(() => {
+    const term = new URLSearchParams(window.location.search).get('q');
+    if(term) setSearch(term);
+  }, []);
   const [filter,setFilter]=useState<Filter>('Tudo');
 
   useEffect(()=>{
