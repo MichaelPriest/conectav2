@@ -62,7 +62,7 @@ export default function Profile(){
    setSaving(true);setError('');setNotice('');
    const username=handle.trim().toLowerCase().replace(/^@/,'');
    if(!/^[a-z0-9_]{3,30}$/.test(username)){setError('Usuário inválido. Use de 3 a 30 letras, números ou _.');setSaving(false);return;}
-   if(details.music_url&&!parseMusicUrl(details.music_url)){setError('Use um link válido do Spotify ou vídeo do YouTube para música.');setSaving(false);return;}
+   if(details.music_url&&!parseMusicUrl(details.music_url)){setError('Use um link de Spotify, YouTube, SoundCloud ou Apple Music.');setSaving(false);return;}
    if(details.website){try{const url=new URL(details.website);if(url.protocol!=='https:')throw Error();}catch{setError('Seu site precisa ser uma URL HTTPS válida.');setSaving(false);return;}}
    const interests=[...new Set(interestsInput.split(',').map(v=>v.trim()).filter(Boolean))].slice(0,12);
    if(interests.some(v=>v.length>32)){setError('Cada interesse deve ter até 32 caracteres.');setSaving(false);return;}
@@ -128,7 +128,7 @@ export default function Profile(){
         <label className="field-label">Site pessoal HTTPS<input className="form-input" value={details.website||''} onChange={e=>setDetails(v=>({...v,website:e.target.value}))} placeholder="https://meusite.com" maxLength={512}/></label>
        </div>
        <label className="field-label">Interesses (até 12, separados por vírgula)<input className="form-input" maxLength={480} value={interestsInput} onChange={e=>setInterestsInput(e.target.value)} placeholder="Música, fotografia, games..."/></label>
-       <label className="field-label">Sua música ou playlist (Spotify / YouTube)<input className="form-input" maxLength={512} value={details.music_url||''} onChange={e=>setDetails(v=>({...v,music_url:e.target.value}))} placeholder="https://open.spotify.com/track/..."/></label>
+       <label className="field-label">Sua música ou playlist (Spotify, YouTube, SoundCloud ou Apple Music)<input className="form-input" maxLength={512} value={details.music_url||''} onChange={e=>setDetails(v=>({...v,music_url:e.target.value}))} placeholder="https://open.spotify.com/track/..."/></label>
        <label className="field-label">Cor da capa<select className="form-input" value={details.cover_theme} onChange={e=>setDetails(v=>({...v,cover_theme:e.target.value as Details['cover_theme']}))}>{themes.map(t=><option key={t} value={t}>{t==='violet'?'Violeta':t==='aqua'?'Água':t==='pink'?'Rosa':t==='sunset'?'Pôr do sol':'Noite'}</option>)}</select></label>
        <div className="conecta-profile-emoji"><span>Emoji de assinatura: <strong>{details.favorite_emoji}</strong></span><EmojiButton label="Escolher emoji de assinatura" onSelect={emoji=>setDetails(v=>({...v,favorite_emoji:emoji}))}/></div>
        {error&&<p className="form-error" role="alert">{error}</p>}{notice&&<p className="form-success" role="status">{notice}</p>}
@@ -139,7 +139,7 @@ export default function Profile(){
          <p className="muted">Verificação opcional por um fornecedor especializado, com prova de vida e documentos quando exigidos.</p>
          <Link href="/verificar-identidade" className="btn btn-outline"><Camera size={17}/> Verificar identidade</Link></section>
        <section className="panel"><h2><Sparkles size={19}/> Prévia da sua música</h2>{details.music_url&&parseMusicUrl(details.music_url)
-          ?<MusicEmbed url={details.music_url}/>:<p className="small-note">Adicione um link do Spotify ou YouTube para exibir um player no seu perfil. O visitante escolhe quando carregá-lo.</p>}</section>
+          ?<MusicEmbed url={details.music_url}/>:<p className="small-note">Adicione um link de Spotify, YouTube, SoundCloud ou Apple Music para exibir um player no seu perfil. O visitante escolhe quando carregá-lo.</p>}</section>
        <section className="panel"><h2>Seu espaço, sua privacidade</h2><p className="small-note">Cidade, interesses e música, quando preenchidos, serão visíveis para outros usuários. Não informe endereço residencial ou dados pessoais sensíveis.</p></section>
      </div>
    </div>

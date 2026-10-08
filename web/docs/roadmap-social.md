@@ -25,3 +25,8 @@
 
 ## Transparência
 Não inventar perfis, comentários, curtidas, contadores, notícias ou moderadores. As comunidades de partida são categorias reais do aplicativo, ainda sem conteúdo. Nunca ativar badges de idade ou identidade com base apenas em campos declarados pelo usuário.
+
+## Integrações de música
+- Embed de Spotify, vídeos musicais do YouTube com domínio de privacidade, SoundCloud e Apple Music, mediante URL validada.
+- Links são incorporados no site apenas após clique explícito do usuário; reproduções estão sujeitas aos termos e limitações do provedor.
+- A integração não fornece streaming independente, download ou importação de bibliotecas protegidas por direitos autorais.
