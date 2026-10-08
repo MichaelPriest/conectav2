@@ -1,4 +1,4 @@
--- Fixes a trigger runtime SQL error: pg_catalog.current_user is not a function.
+-- Fixes a trigger runtime SQL error: current_user is a SQL keyword, not a schema-qualified function.
 -- Kept SECURITY DEFINER in a non-exposed schema with explicit owner checks.
 -- Authenticated users may only update attempt_count; cannot self-verify identity or age.
 CREATE OR REPLACE FUNCTION conecta_internal.guard_identity_signature_update()
