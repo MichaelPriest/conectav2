@@ -7,6 +7,7 @@ import { GuardedPage, useAuthProfile } from '@/components/app-shell';
 import { PostCard } from '@/components/post-card';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import type { FeedPost } from '@/lib/types';
+import { optimizeImage } from '@/lib/media';
 
 const PAGE_SIZE=15;
 
@@ -56,10 +57,11 @@ export default function FeedPage() {
       if(file) {
         if(file.size>50*1024*1024)throw new Error('O limite de mídia nesta fase é de 50 MB.');
         if(!['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm'].includes(file.type))throw new Error('Formato de mídia não suportado.');
-        media_type=file.type.startsWith('video/')?'video':'image';
-        const extension=file.name.split('.').pop()?.toLowerCase()||'bin';
+        const optimized = file.type.startsWith('image/') ? await optimizeImage(file) : file;
+        media_type=optimized.type.startsWith('video/')?'video':'image';
+        const extension=optimized.name.split('.').pop()?.toLowerCase()||'bin';
         media_path=`${user.id}/${crypto.randomUUID()}.${extension}`;
-        const {error:storageError}=await db.storage.from('social-media').upload(media_path,file,{contentType:file.type,upsert:false});
+        const {error:storageError}=await db.storage.from('social-media').upload(media_path,optimized,{contentType:optimized.type,upsert:false});
         if(storageError)throw storageError;
       }
       const {error:insertError}=await db.from('posts').insert({author_id:user.id,content:text.trim(),visibility:privacy,media_path,media_type});
