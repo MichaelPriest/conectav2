@@ -101,3 +101,43 @@ create policy "media read by owner or visible post" on storage.objects for selec
  or exists(select 1 from public.profiles p where p.avatar_path=name)
  or exists(select 1 from public.communities c where c.cover_path=name or c.avatar_path=name)
  ));
+
+-- Hardening applied after feature rollout:
+revoke update,delete,truncate,references,trigger on public.post_polls,public.post_poll_options,public.post_poll_votes from anon,authenticated;
+revoke update,truncate,references,trigger on public.saved_posts from anon,authenticated;
+revoke insert,update,delete,truncate,references,trigger on public.post_polls,public.post_poll_options,public.post_poll_votes from anon;
+revoke insert,delete,truncate,references,trigger on public.saved_posts from anon;
+grant select,insert on public.post_polls,public.post_poll_options,public.post_poll_votes to authenticated;
+grant select,insert,delete on public.saved_posts to authenticated;
+
+-- Aggregate vote totals without exposing each voter's identity:
+drop policy if exists "votes readable for visible polls" on public.post_poll_votes;
+create policy "read own ballot only" on public.post_poll_votes for select to authenticated
+ using(user_id=(select auth.uid()));
+create or replace function app_private.aggregate_poll_votes(target_post uuid)
+returns table(option_id uuid,votes bigint)
+language plpgsql stable security definer set search_path=''
+as $func$
+begin
+ if (select auth.uid()) is null then return; end if;
+ if not exists(
+  select 1 from public.posts p where p.id=target_post and
+   (p.author_id=(select auth.uid()) or p.visibility='public' or
+    (p.visibility='friends' and exists(select 1 from public.friendships f
+      where f.status='accepted' and
+      ((f.requester_id=p.author_id and f.addressee_id=(select auth.uid()))
+       or (f.addressee_id=p.author_id and f.requester_id=(select auth.uid()))))))
+ ) then return; end if;
+ return query select o.id,count(v.user_id)::bigint from public.post_poll_options o
+ left join public.post_poll_votes v on v.poll_id=o.poll_id and v.option_id=o.id
+ where o.poll_id=target_post group by o.id;
+end $func$;
+revoke all on function app_private.aggregate_poll_votes(uuid) from public,anon,authenticated;
+grant usage on schema app_private to authenticated;
+grant execute on function app_private.aggregate_poll_votes(uuid) to authenticated;
+create or replace function public.poll_results(target_post uuid)
+returns table(option_id uuid,votes bigint)
+language sql stable security invoker set search_path=''
+as $func$ select * from app_private.aggregate_poll_votes(target_post); $func$;
+revoke all on function public.poll_results(uuid) from public,anon,authenticated;
+grant execute on function public.poll_results(uuid) to authenticated;
