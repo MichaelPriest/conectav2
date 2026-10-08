@@ -62,6 +62,11 @@ export function FeaturedCommunities() {
           </div>)}
         </div>}
     </section>
+    <section className="conecta-ad-placeholder" aria-label="Espaço reservado para publicidade">
+      <span>ESPAÇO PUBLICITÁRIO RESERVADO</span>
+      <strong>Uma marca pode fazer parte desta conversa.</strong>
+      <p>Não há anúncio ativo. Futura publicidade terá identificação clara e critérios de proteção por idade.</p>
+    </section>
     <div className="concept-rail-bottom">
       <Sparkles size={15}/><span>O que te move, te conecta.</span>
     </div>

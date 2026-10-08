@@ -200,3 +200,25 @@
 .conecta-comment-reply{margin-left:30px;padding-left:12px;border-left:2px solid #ddd1fa}
 .conecta-reply-to{background:#ede9ff;font-size:12px;padding:9px 12px;border-radius:9px;display:flex;justify-content:space-between}
 .conecta-reply-to button{border:0;background:none;color:#7855cf}
+
+.conecta-profile-wall{margin:22px 0;max-width:930px}.conecta-profile-tabs{display:flex;gap:7px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:17px;padding-bottom:11px}
+.conecta-profile-tabs button{border:0;background:transparent;padding:11px 14px;border-radius:11px;display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-weight:750}
+.conecta-profile-tabs button.active,.conecta-profile-tabs button:hover{background:#eee9ff;color:#7553d6}
+.conecta-photo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.conecta-photo-tile{position:relative;aspect-ratio:1/1;background:#e8e0f2;border-radius:10px;overflow:hidden}
+.conecta-photo-tile img,.conecta-photo-tile video{width:100%;height:100%;object-fit:cover}.conecta-photo-tile span{position:absolute;bottom:8px;left:8px;padding:5px 9px;border-radius:8px;font-size:11px;font-weight:750;background:#11182799;color:#fff}
+.conecta-ad-placeholder{display:grid;gap:10px;align-content:center;padding:24px 20px;border:1px dashed #bbb1d8;border-radius:16px;background:linear-gradient(145deg,#f4f1ff,#f2fbff);min-height:150px}
+.conecta-ad-placeholder>span{font-size:9px;letter-spacing:.09em;color:#88809c;font-weight:800}
+.conecta-ad-placeholder strong{font-size:14px;color:#655a85}.conecta-ad-placeholder p{margin:0;font-size:11px;color:#7d7891}
+.conecta-community-hero{background:#fff;border-radius:22px;border:1px solid #eeebf5;margin:19px 0;overflow:hidden}
+.conecta-community-cover{height:215px;background:linear-gradient(130deg,#9474e9,#66c9e7);background-size:cover;background-position:center}
+.conecta-community-identity{display:flex;align-items:center;gap:18px;padding:0 26px}.conecta-community-identity>div:nth-child(2){flex:1}.conecta-community-identity h1{margin:6px 0;color:var(--ink)}.conecta-community-identity p{color:var(--muted)}
+.conecta-community-icon{display:grid;place-items:center;width:88px;height:88px;flex-shrink:0;border:4px solid white;border-radius:23px;background:#e8e0ff;color:#7654cd;margin-top:-35px;overflow:hidden;position:relative}
+.conecta-community-icon img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.conecta-community-buttons{display:flex;gap:10px;padding:12px 26px 24px;flex-wrap:wrap}
+.conecta-community-columns{display:grid;grid-template-columns:minmax(0,710px) minmax(220px,1fr);gap:20px;align-items:start}.conecta-community-side{display:grid;gap:15px}.conecta-community-side .panel p{line-height:1.65}
+.conecta-community-composer{gap:6px;flex-wrap:wrap}.conecta-community-composer .btn{font-size:12px;padding:9px}
+.conecta-directory-cover{min-height:130px}.conecta-directory-avatar{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.conecta-official-mark{color:#8260df;font-size:13px}
+@media(max-width:950px){.conecta-community-columns{grid-template-columns:1fr}.conecta-community-side{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}}
+@media(max-width:620px){.conecta-photo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.conecta-community-cover{height:150px}.conecta-community-identity{padding:0 15px;gap:10px}.conecta-community-identity h1{font-size:22px}.conecta-community-icon{width:68px;height:68px}.conecta-community-buttons{padding:12px 15px 20px}}

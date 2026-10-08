@@ -7,6 +7,7 @@ import {supabaseBrowser} from '@/lib/supabase/browser';
 import {optimizeImage} from '@/lib/media';
 import {EmojiButton} from '@/components/emoji-button';
 import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
+import {ProfileTimeline} from '@/components/profile-timeline';
 
 type Details={
  headline:string;city:string;website:string;music_url:string;interests:string[];
@@ -143,5 +144,6 @@ export default function Profile(){
        <section className="panel"><h2>Seu espaço, sua privacidade</h2><p className="small-note">Cidade, interesses e música, quando preenchidos, serão visíveis para outros usuários. Não informe endereço residencial ou dados pessoais sensíveis.</p></section>
      </div>
    </div>
+   {auth.user&&<ProfileTimeline profileId={auth.user.id} viewerId={auth.user.id} isSelf/>}
  </main></GuardedPage>;
 }

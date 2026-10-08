@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {ArrowLeft,Clock,ExternalLink,MapPin,MessageCircle,Shield,UserCheck,UserPlus} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {MusicEmbed} from '@/components/music-embed';
+import {ProfileTimeline} from '@/components/profile-timeline';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import type {UserProfile} from '@/lib/types';
 
@@ -125,6 +126,7 @@ export default function PublicProfile(){
          </section>
        }
        {!blocked&&!blockedBy&&details?.music_url&&<section className="panel" style={{marginTop:18}}><MusicEmbed url={details.music_url}/></section>}
+       {!blocked&&!blockedBy&&auth.user&&<ProfileTimeline profileId={person.id} viewerId={auth.user.id} isSelf={own}/>}
        <p className="small-note" style={{marginTop:18}}>O Conecta exibe somente informações adicionadas voluntariamente. Dados pessoais sensíveis não devem aparecer no perfil.</p>
      </>}
  </main></GuardedPage>;
