@@ -31,6 +31,7 @@ const mobileItems = [
 
 export function useAuthProfile() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +49,18 @@ export function useAuthProfile() {
         if (!active) return;
         if (profileError) throw profileError;
         if (!profileData) { router.replace('/onboarding'); return; }
+        const {data:declaration,error:declarationError}=await client.from('registration_age_declarations')
+          .select('declared_band').eq('user_id',authUser.id).maybeSingle();
+        if(!active)return;
+        if(declarationError)throw declarationError;
+        if(!declaration){router.replace('/onboarding');return;}
+        // A user's own declaration may only RESTRICT access, never grant adult verification.
+        // Underage self-declarations stay on Conecta ID while independent age and
+        // parental assurance are not yet available. Server-side RLS/triggers
+        // also protect content from clients bypassing this navigation.
+        if(declaration.declared_band!=='18_plus'&&pathname!=='/verificar-identidade'){
+          router.replace('/verificar-identidade');return;
+        }
         setUser(authUser);
         setProfile(profileData as UserProfile);
       } catch (e) { if (active) setError(e instanceof Error ? e.message : 'Não foi possível conectar.'); }
@@ -55,7 +68,7 @@ export function useAuthProfile() {
     }
     void check();
     return () => { active = false; };
-  }, [router]);
+  }, [router,pathname]);
   return { user, profile, loading, error, setProfile };
 }
 
