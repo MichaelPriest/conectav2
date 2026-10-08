@@ -22,6 +22,13 @@ export default function Home() {
           <span><MessageCircle size={17}/> Converse de verdade</span>
           <span><ShieldCheck size={17}/> Controle sua privacidade</span>
         </div>
+        <div className="hero-preview" aria-label="Prévia visual do aplicativo Conecta">
+          <div className="hero-phone">
+            <div className="hero-photo"><div className="hero-photo-label">Boas histórias<br/>começam aqui.</div></div>
+            <div className="hero-phone-foot"><span className="brand"><span className="brand-mark">c.</span> conecta<span className="brand-dot">.</span></span><p>Pessoas. Ideias. Comunidades.</p><Link href="/auth?mode=signup" className="btn btn-primary btn-block">Começar agora <ArrowUpRight size={16}/></Link></div>
+          </div>
+          <div className="hero-mini-card"><span className="eyebrow"><Users size={15}/> SUAS COMUNIDADES</span><h3>Encontre pessoas que compartilham seus interesses.</h3><p>Uma rede construída para boas conversas.</p></div>
+        </div>
       </section>
       <div className="landing-art" aria-hidden="true"><span>conecta</span><span>conecta</span><span>conecta</span></div>
       <footer className="landing-footer">© {new Date().getFullYear()} Conecta · Feito para conexões reais</footer>

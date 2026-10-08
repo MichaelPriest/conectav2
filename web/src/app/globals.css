@@ -27,3 +27,19 @@
 :root[data-theme="dark"] .btn-outline,:root[data-theme="dark"] .filter-pill{background:#282b47;color:#cdbdff;border-color:#54487c}
 :root[data-theme="dark"] .discover-panel,:root[data-theme="dark"] .detail-header{background:linear-gradient(130deg,#41366b,#234857)}
 :root[data-theme="dark"] .discover-panel p,:root[data-theme="dark"] .detail-header p{color:#d4dcf4}
+
+/* Scenic artwork and phone silhouette echo the approved concept board. */
+@media(min-width:1100px){
+  .landing-content{padding-top:110px;min-height:740px}
+  .landing-content h1{font-size:clamp(52px,5vw,74px);max-width:690px}
+  .landing-content>p{max-width:490px}
+}
+.hero-preview{position:absolute;top:55px;right:52px;width:330px;height:600px;pointer-events:none;transform:rotate(7deg)}
+.hero-phone{position:absolute;top:0;right:0;width:275px;height:558px;overflow:hidden;background:#fff;border:9px solid #21243b;border-radius:39px;box-shadow:0 28px 66px #40326130;display:flex;flex-direction:column}
+.hero-phone:before{content:"";position:absolute;top:12px;left:50%;transform:translateX(-50%);width:76px;height:12px;border-radius:12px;background:#141625;z-index:2}
+.hero-photo{height:285px;background:linear-gradient(to bottom,#22295111,#101a4b6d),url('https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=900&q=85') center/cover;position:relative}
+.hero-photo-label{position:absolute;bottom:17px;left:16px;font:800 25px/1.17 'Plus Jakarta Sans',sans-serif;letter-spacing:-.05em;color:#fff;text-shadow:0 2px 9px #1118}
+.hero-phone-foot{padding:26px 18px;flex:1;display:flex;flex-direction:column;align-items:center;gap:10px;justify-content:center;text-align:center}.hero-phone-foot .brand{font-size:23px}.hero-phone-foot .brand-mark{width:33px;height:33px;font-size:24px}.hero-phone-foot p{color:#8589a0;margin:0 0 7px;font-size:12px}
+.hero-mini-card{background:#fff;border:1px solid #eae6fe;padding:22px;width:250px;position:absolute;left:-100px;bottom:12px;border-radius:20px;box-shadow:0 12px 40px #3b376b29;transform:rotate(-10deg)}.hero-mini-card h3{font-size:16px;line-height:1.35;margin:10px 0 8px}.hero-mini-card p{font-size:12px;color:#7f88a0;margin:0}
+@media(max-width:1099px){.hero-preview{display:none}}
+.auth-intro{background:linear-gradient(125deg,#2a265dd6,#6851bad5 45%,#8659d1ca),url('https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1300&q=85') center/cover}
