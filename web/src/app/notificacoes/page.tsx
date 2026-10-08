@@ -49,10 +49,14 @@ export default function Notifications() {
       <section className="empty-state card"><span className="concept-empty-illustration"><Bell size={34}/></span><h3>Tudo em dia!</h3><p>Quando alguém interagir com você, as notificações aparecerão aqui.</p><Link href="/explorar" className="btn btn-primary">Descobrir pessoas</Link></section>:
       <div className="notification-list">{items.map(item=>{
         const Icon=icons[item.kind]||Bell;
+        const href=(item.kind==='like'||item.kind==='comment')&&item.entity_id
+          ? '/post/'+item.entity_id
+          : item.profiles?.handle?'/p/'+item.profiles.handle:'/explorar';
         return <article key={item.id} className={'notification-row card '+(!item.read_at?'unread':'')}>
           <span className="concept-round-icon violet"><Icon size={21}/></span>
           <div><p><strong>{item.profiles?.display_name||'Alguém'}</strong> {labels[item.kind]||'interagiu com você'}</p><time>{new Date(item.created_at).toLocaleString('pt-BR')}</time></div>
-          {!item.read_at&&<button className="btn btn-outline" disabled={busy} onClick={()=>markRead(item.id)}>Marcar como lida</button>}
+          <Link href={href} className="btn btn-outline">Ver</Link>
+          {!item.read_at&&<button className="btn btn-outline" disabled={busy} onClick={()=>markRead(item.id)}>Lida</button>}
         </article>
       })}</div>}
   </main></GuardedPage>;
