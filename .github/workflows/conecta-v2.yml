@@ -50,5 +50,7 @@ jobs:
         run: npm run test:govbr
       - name: Validate identity origin behind proxies
         run: npm run test:origin
+      - name: Registration age and privacy tests
+        run: node --test tests/registration-age.test.cjs
       - name: Build Next.js
         run: npm run build

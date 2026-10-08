@@ -7,6 +7,7 @@ import { ArrowRight, Eye, EyeOff, Heart, LockKeyhole, Mail, Sparkles, UserRound 
 import { ConceptBrand } from '@/components/concept-brand';
 import { configured, supabaseBrowser } from '@/lib/supabase/browser';
 import {useLocale,LanguageSelect} from '@/lib/i18n';
+import {declaredBandFromDob,todayForDateInput} from '@/lib/registration-age';
 
 function AuthForm() {
   const searchParams = useSearchParams();
@@ -14,6 +15,8 @@ function AuthForm() {
   const {t}=useLocale();
   const [mode, setMode] = useState<'login'|'signup'>(searchParams.get('mode')==='signup'?'signup':'login');
   const [name,setName] = useState('');
+  const [birthDate,setBirthDate] = useState('');
+  const [agreedPrivacy,setAgreedPrivacy] = useState(false);
   const [email,setEmail] = useState('');
   const [password,setPassword] = useState('');
   const [showPassword,setShowPassword] = useState(false);
@@ -32,6 +35,12 @@ function AuthForm() {
     setError('');setMessage('');
     if(!configured()){setError('Conexão com o Conecta indisponível. Tente novamente em instantes.');return;}
     if(mode==='signup'&&name.trim().length<2){setError('Digite seu nome para continuar.');return;}
+    const declaredBand=mode==='signup'?declaredBandFromDob(birthDate):null;
+    if(mode==='signup'){
+      if(!declaredBand){setError('Informe uma data de nascimento válida.');return;}
+      if(declaredBand==='under_13'){setError('O Conecta não permite cadastro autônomo de menores de 13 anos.');return;}
+      if(!agreedPrivacy){setError('Leia e confirme as condições de privacidade e proteção por idade.');return;}
+    }
     if(password.length<8){setError('Use uma senha com pelo menos 8 caracteres.');return;}
     setBusy(true);
     try{
@@ -41,7 +50,7 @@ function AuthForm() {
           email:email.trim().toLowerCase(),password,
           options:{
             emailRedirectTo:`${window.location.origin}/auth/callback?next=/onboarding`,
-            data:{display_name:name.trim()}
+            data:{display_name:name.trim(),declared_age_band:declaredBand}
           }
         });
         if(signError)throw signError;
@@ -83,7 +92,20 @@ function AuthForm() {
           <button type="button" className={mode==='signup'?'selected':''} aria-pressed={mode==='signup'} onClick={()=>selectMode('signup')}>{t('signup')}</button>
         </div>
         <form className="conecta-auth-form" onSubmit={submit}>
-          {mode==='signup'&&<label className="conecta-auth-field"><span>{t('yourName')}</span><div className="conecta-auth-input"><UserRound size={18}/><input value={name} onChange={e=>setName(e.target.value)} type="text" autoComplete="name" placeholder="Como podemos chamar você?" minLength={2} maxLength={80} required/></div></label>}
+          {mode==='signup'&&<>
+            <label className="conecta-auth-field"><span>{t('yourName')}</span><div className="conecta-auth-input"><UserRound size={18}/><input value={name} onChange={e=>setName(e.target.value)} type="text" autoComplete="name" placeholder="Como podemos chamar você?" minLength={2} maxLength={80} required/></div></label>
+            <label className="conecta-auth-field"><span>Data de nascimento (autodeclaração)</span>
+              <div className="conecta-auth-input"><input aria-label="Data de nascimento" type="date" value={birthDate}
+                max={todayForDateInput()} onChange={e=>setBirthDate(e.target.value)} required/></div>
+            </label>
+            <p className="small-note">A data é usada no navegador para calcular sua faixa etária inicial; o Conecta não salva a data completa.
+              Menores de 18 anos precisam de proteções adicionais e, quando exigido, confirmação do responsável.
+              A idade declarada não concede selo de maioridade.</p>
+            <label className="human-agree"><input type="checkbox" checked={agreedPrivacy}
+              onChange={e=>setAgreedPrivacy(e.target.checked)} required/>
+              Entendo que a idade será conferida antes de liberar recursos restritos e concordo com o tratamento mínimo necessário à proteção da conta.
+            </label>
+          </>}
           <label className="conecta-auth-field"><span>{t('email')}</span><div className="conecta-auth-input"><Mail size={18}/><input value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email" placeholder="seuemail@exemplo.com" required/></div></label>
           <label className="conecta-auth-field"><span>{t('password')}</span><div className="conecta-auth-input"><LockKeyhole size={18}/><input value={password} onChange={e=>setPassword(e.target.value)} type={showPassword?'text':'password'} autoComplete={mode==='signup'?'new-password':'current-password'} placeholder={mode==='signup'?'Crie uma senha com 8 caracteres':'Digite sua senha'} minLength={8} required/><button type="button" className="conecta-auth-password-toggle" aria-label={showPassword?'Ocultar senha':'Mostrar senha'} onClick={()=>setShowPassword(v=>!v)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></div></label>
           {mode==='login'&&<div className="conecta-auth-form-options"><Link href="/auth/recuperar-senha">{t('forgot')}</Link></div>}
