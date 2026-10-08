@@ -6,6 +6,7 @@ import type { FeedPost, PostComment } from '@/lib/types';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import {EmojiButton} from '@/components/emoji-button';
 import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
+import {ProfileAvatar} from '@/components/profile-avatar';
 import {PollCard} from '@/components/poll-card';
 
 function ago(value: string) {
@@ -77,7 +78,7 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
     if (commentsOpen) {setCommentsOpen(false);return;}
     setCommentsOpen(true);
     const { data, error } = await supabaseBrowser().from('post_comments')
-      .select('id,post_id,parent_id,author_id,body,created_at,profiles!post_comments_author_id_fkey(display_name,handle)')
+      .select('id,post_id,parent_id,author_id,body,created_at,profiles!post_comments_author_id_fkey(display_name,handle,avatar_path)')
       .eq('post_id',post.id).order('created_at',{ascending:true}).limit(100);
     if(error) setNotice('Não foi possível carregar os comentários.');
     else setComments((data||[]) as unknown as PostComment[]);
@@ -91,7 +92,7 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
     const {error}=await db.from('post_comments').insert({post_id:post.id,author_id:userId,body:comment.trim(),parent_id:replyTo?.id||null});
     if(error) {setNotice(error.message);setSending(false);return;}
     setComment('');setReplyTo(null);setSending(false);
-    const {data}=await db.from('post_comments').select('id,post_id,author_id,body,created_at,profiles!post_comments_author_id_fkey(display_name,handle)').eq('post_id',post.id).order('created_at',{ascending:true}).limit(100);
+    const {data}=await db.from('post_comments').select('id,post_id,author_id,body,created_at,profiles!post_comments_author_id_fkey(display_name,handle,avatar_path)').eq('post_id',post.id).order('created_at',{ascending:true}).limit(100);
     setComments((data||[]) as unknown as PostComment[]);
     await refresh();
   }
@@ -118,7 +119,7 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
 
   const LikesIcon=Heart;
   return <article className="post-card" id={'post-'+post.id}>
-    <div className="post-head"><div className="avatar avatar-coral">{post.profiles?.display_name?.charAt(0).toUpperCase()||'C'}</div><div className="post-meta"><strong>{post.profiles?.display_name||'Pessoa da comunidade'}</strong><span>@{post.profiles?.handle||'conecta'} · {ago(post.created_at)}</span></div><div className="post-privacy" title={post.visibility}>{post.visibility==='public'?<Globe2 size={16}/>:post.visibility==='friends'?<Users size={16}/>:<LockKeyhole size={16}/>}</div>{post.author_id===userId&&<button className="icon-btn subtle" onClick={remove} title="Excluir publicação" aria-label="Excluir publicação"><Trash2 size={17}/></button>}</div>
+    <div className="post-head"><ProfileAvatar person={post.profiles}/><div className="post-meta"><strong>{post.profiles?.display_name||'Pessoa da comunidade'}</strong><span>@{post.profiles?.handle||'conecta'} · {ago(post.created_at)}</span></div><div className="post-privacy" title={post.visibility}>{post.visibility==='public'?<Globe2 size={16}/>:post.visibility==='friends'?<Users size={16}/>:<LockKeyhole size={16}/>}</div>{post.author_id===userId&&<button className="icon-btn subtle" onClick={remove} title="Excluir publicação" aria-label="Excluir publicação"><Trash2 size={17}/></button>}</div>
     <div className="post-body">{post.content && <p>{post.content}</p>}{media.length>0 && (media.length===1 && media[0].type==='video'
       ? <div className="post-media"><video src={media[0].url} controls preload="metadata"/></div>
       : <div className={'post-gallery '+(media.length===1?'gallery-one':media.length===2?'gallery-two':'gallery-mosaic')}>
@@ -148,13 +149,13 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
       {comments.length===0&&<p className="muted">Seja a primeira pessoa a comentar.</p>}
       {comments.filter(cm=>!cm.parent_id).map(root=><div className="conecta-comment-thread" key={root.id}>
         <div className="comment">
-          <span className="avatar avatar-xs avatar-gradient">{root.profiles?.display_name?.[0]||'C'}</span>
+          <ProfileAvatar person={root.profiles} size="tiny"/>
           <div><strong>{root.profiles?.display_name||'Pessoa'}</strong><p>{root.body}</p><small>{ago(root.created_at)}</small>
             <button className="conecta-reply-link" type="button" onClick={()=>{setReplyTo(root);setComment('');}}><Reply size={14}/> Responder</button>
           </div>
         </div>
         {comments.filter(cm=>cm.parent_id===root.id).map(reply=><div className="comment conecta-comment-reply" key={reply.id}>
-          <span className="avatar avatar-xs avatar-gradient">{reply.profiles?.display_name?.[0]||'C'}</span>
+          <ProfileAvatar person={reply.profiles} size="tiny"/>
           <div><strong>{reply.profiles?.display_name||'Pessoa'}</strong><p>{reply.body}</p><small>{ago(reply.created_at)}</small></div>
         </div>)}
       </div>)}

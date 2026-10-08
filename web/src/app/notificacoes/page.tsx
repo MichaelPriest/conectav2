@@ -3,11 +3,12 @@ import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import {Bell, CheckCheck, Heart, MessageCircle, UserPlus, Users, Sparkles} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
+import {ProfileAvatar} from '@/components/profile-avatar';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 
 type Notice = {
   id:string; kind:string; created_at:string; read_at:string|null; entity_id:string|null;
-  profiles:{display_name:string;handle:string}|null;
+  profiles:{display_name:string;handle:string;avatar_path:string|null}|null;
 };
 const labels:Record<string,string>={
   like:'curtiu sua publicação',comment:'comentou sua publicação',
@@ -25,7 +26,7 @@ export default function Notifications() {
   const load=useCallback(async()=>{
     if(!auth.user)return;
     const {data,error:queryError}=await supabaseBrowser().from('notifications')
-      .select('id,kind,created_at,read_at,entity_id,profiles!notifications_actor_id_fkey(display_name,handle)')
+      .select('id,kind,created_at,read_at,entity_id,profiles!notifications_actor_id_fkey(display_name,handle,avatar_path)')
       .eq('recipient_id',auth.user.id).order('created_at',{ascending:false}).limit(100);
     if(queryError)setError(queryError.message);else setItems((data||[]) as unknown as Notice[]);
     setLoading(false);

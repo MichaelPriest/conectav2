@@ -14,7 +14,7 @@ export type FeedPost = {
   media_path: string | null;
   media_type: 'image' | 'video' | null;
   created_at: string;
-  profiles: { handle: string; display_name: string } | null;
+  profiles: { handle: string; display_name: string; avatar_path:string|null } | null;
   post_likes: { count: number }[];
   post_comments: { count: number }[];
   post_media?: Array<{storage_path:string;media_type:'image'|'video';position:number}>;
@@ -29,5 +29,5 @@ export type PostComment = {
   author_id: string;
   body: string;
   created_at: string;
-  profiles: { display_name: string; handle: string } | null;
+  profiles: { display_name: string; handle: string; avatar_path:string|null } | null;
 };

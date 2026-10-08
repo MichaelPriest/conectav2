@@ -3,6 +3,7 @@ import {FormEvent,useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Music2,Trash2,ArrowLeft} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
+import {ProfileAvatar} from '@/components/profile-avatar';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {EmojiButton} from '@/components/emoji-button';
 import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
@@ -170,13 +171,13 @@ export default function Messages(){
        {!loading&&friends.length===0&&<p className="small-note">Adicione e aceite amizades antes de iniciar uma conversa. <Link className="rail-link" href="/explorar">Explorar pessoas</Link></p>}
        {!loading&&filtered.length===0&&<p className="small-note">Nenhuma conversa encontrada.</p>}
        <div className="conecta-chat-threads">{filtered.map(t=><button key={t.id} className={'conecta-chat-thread '+(t.id===active?'active':'')} onClick={()=>setActive(t.id)}>
-         <span className="avatar avatar-gradient">{t.other?.display_name[0]?.toUpperCase()||'C'}</span>
+         <ProfileAvatar person={t.other}/>
          <span><strong>{t.other?.display_name||'Conversa privada'}</strong><small>@{t.other?.handle||'contato'} · {t.last?.content?.slice(0,55)||'Comece a conversar'}</small></span>
          <time>{new Date(t.last?.created_at||t.created_at).toLocaleDateString('pt-BR')}</time>
        </button>)}</div>
      </aside>
      <section className="conecta-chat-main">
-       {active?<><header className="conecta-chat-head"><span className="avatar avatar-gradient">{current?.other?.display_name?.[0]?.toUpperCase()||'C'}</span>
+       {active?<><header className="conecta-chat-head"><ProfileAvatar person={current?.other}/>
          <div><strong>{current?.other?.display_name||'Conversa'}</strong><small>{current?.other?.handle?'@'+current.other.handle:'Mensagens privadas'}</small></div>
          {current?.other&&<><Link className="icon-btn" title="Ver perfil" href={'/p/'+current.other.handle}><UserRound size={19}/></Link><button className="icon-btn" type="button" title="Bloquear usuário" onClick={block}><Shield size={19}/></button></>}
        </header>

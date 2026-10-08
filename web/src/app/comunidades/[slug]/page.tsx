@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {useParams} from 'next/navigation';
 import {ArrowLeft,BarChart3,Camera,Check,Edit3,ImagePlus,MessageCircle,Send,Users,UserPlus,Video,X} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
+import {ProfileAvatar} from '@/components/profile-avatar';
 import {PostCard} from '@/components/post-card';
 import {EmojiButton} from '@/components/emoji-button';
 import {PollDraft,validatePoll} from '@/components/poll-draft';
@@ -43,7 +44,7 @@ export default function CommunityDetail(){
  const fetchPosts=useCallback(async(id:string,from=0,append=false)=>{
    const db=supabaseBrowser();
    const {data,error:e}=await db.from('posts')
-    .select('id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
+    .select('id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
     .eq('community_id',id).order('created_at',{ascending:false}).range(from,from+PAGE_SIZE-1);
    if(e){setError(e.message);return;}
    const rows=(data||[]) as unknown as FeedPost[];
@@ -193,7 +194,7 @@ export default function CommunityDetail(){
     </form>}
     <div className="conecta-community-columns"><div>
       {member&&<section className="composer card">
-        <div className="composer-top"><span className="avatar avatar-gradient">{auth.profile?.display_name?.[0]?.toUpperCase()||'C'}</span><div><strong>Compartilhe com a comunidade</strong><span>Discussões, fotos, vídeos e enquetes</span></div></div>
+        <div className="composer-top"><ProfileAvatar person={auth.profile}/><div><strong>Compartilhe com a comunidade</strong><span>Discussões, fotos, vídeos e enquetes</span></div></div>
         <form onSubmit={publish}>
           <textarea rows={3} value={text} onChange={e=>setText(e.target.value)} maxLength={3000} placeholder={pollMode?'Qual é a pergunta da enquete?':'O que você gostaria de compartilhar?'}/>
           {pollMode&&<PollDraft question={text} options={pollOptions} onOptionsChange={setPollOptions} days={pollDays} onDaysChange={setPollDays}/>}

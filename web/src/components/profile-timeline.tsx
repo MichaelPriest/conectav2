@@ -8,7 +8,7 @@ import {PostCard} from '@/components/post-card';
 import type {FeedPost} from '@/lib/types';
 
 type Tab='posts'|'photos'|'videos'|'saved';
-const POST_SELECT='id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)';
+const POST_SELECT='id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)';
 export function ProfileTimeline({profileId,viewerId,isSelf=false}:{profileId:string;viewerId:string;isSelf?:boolean}){
   const [tab,setTab]=useState<Tab>('posts');
   const [posts,setPosts]=useState<FeedPost[]>([]);

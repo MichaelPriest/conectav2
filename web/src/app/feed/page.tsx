@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Camera, Globe2, ImagePlus, Loader2, Send, Smile, Sparkles, Video, X } from 'lucide-react';
 import { GuardedPage, useAuthProfile } from '@/components/app-shell';
+import {ProfileAvatar} from '@/components/profile-avatar';
 import { PostCard } from '@/components/post-card';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import type { FeedPost } from '@/lib/types';
@@ -63,7 +64,7 @@ export default function FeedPage() {
     setLoadingFeed(true);setMessage('');
     const db=supabaseBrowser();
     const {data,error:queryError}=await db.from('posts')
-      .select('id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
+      .select('id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
       .is('community_id',null).order('created_at',{ascending:false})
       .range(from,from+PAGE_SIZE-1);
     if(queryError){setMessage(queryError.message);setLoadingFeed(false);return;}
@@ -132,7 +133,7 @@ export default function FeedPage() {
     <div className="page-columns concept-feed-columns"><main className="content-column">
       <div className="page-heading concept-feed-heading"><div><span className="section-eyebrow">NOVAS HISTÓRIAS, NOVAS CONEXÕES</span><h1>Seu feed</h1><p>Novas histórias, pessoas e ideias para um mundo mais conectado.</p></div><span className="concept-feed-sparkle" aria-hidden="true">✦</span></div>
       <section className="composer card concept-composer" id="composer">
-        <div className="composer-top"><span className="avatar avatar-gradient">{profile?.display_name?.charAt(0).toUpperCase()||'C'}</span><div className="concept-composer-heading"><strong>{profile?.display_name ? 'Compartilhe um momento, '+profile.display_name.split(' ')[0] : 'O que você está pensando hoje?'}</strong><span>Uma boa história merece ser compartilhada.</span></div></div>
+        <div className="composer-top"><ProfileAvatar person={profile}/><div className="concept-composer-heading"><strong>{profile?.display_name ? 'Compartilhe um momento, '+profile.display_name.split(' ')[0] : 'O que você está pensando hoje?'}</strong><span>Uma boa história merece ser compartilhada.</span></div></div>
         <form onSubmit={publish}>
           <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="No que você está pensando hoje?" maxLength={3000} rows={3}/>
           {pollMode&&<PollDraft question={text} options={pollOptions} onOptionsChange={setPollOptions} days={pollDays} onDaysChange={setPollDays}/>}

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Compass, Search, UserRound, Users, Video, ArrowUpRight, Sparkles } from 'lucide-react';
 import { GuardedPage, useAuthProfile } from '@/components/app-shell';
+import {ProfileAvatar} from '@/components/profile-avatar';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import type { UserProfile } from '@/lib/types';
 
@@ -34,7 +35,7 @@ export default function Explorar() {
       const [p,c,post]=await Promise.all([
         db.from('profiles').select('id,handle,display_name,bio,avatar_path').order('created_at',{ascending:false}).limit(60),
         db.from('communities').select('id,slug,name,description,owner_id').order('created_at',{ascending:false}).limit(50),
-        db.from('posts').select('id,content,created_at,author_id,media_path,media_type,profiles!posts_author_id_fkey(display_name,handle)').eq('visibility','public').is('community_id',null).order('created_at',{ascending:false}).limit(20)
+        db.from('posts').select('id,content,created_at,author_id,media_path,media_type,profiles!posts_author_id_fkey(display_name,handle,avatar_path)').eq('visibility','public').is('community_id',null).order('created_at',{ascending:false}).limit(20)
       ]);
       if(!active)return;
       const failure=p.error||c.error||post.error;
@@ -78,7 +79,7 @@ export default function Explorar() {
       {error&&<p className="form-error" role="alert">{error}</p>}
       {loading&&<div className="centered-loading">Carregando descoberta...</div>}
       {!loading&&<>
-        {showPeople&&visiblePeople.length>0&&<section><div className="feed-title" style={{margin:'30px 0 16px'}}><h2>Pessoas para conhecer</h2><span>{visiblePeople.length} resultados</span></div><div className="tiles-grid concept-discovery-cards">{visiblePeople.map(p=><article className="tile-card" key={p.id}><div className="concept-person-cover"><span className="tile-avatar"><UserRound size={25}/></span></div><h3>{p.display_name}</h3><span className="tile-meta">@{p.handle}</span><p>{p.bio||'Conheça mais sobre essa pessoa.'}</p><Link className="btn btn-outline" href={'/p/'+p.handle}>Ver perfil <ArrowUpRight size={16}/></Link></article>)}</div></section>}
+        {showPeople&&visiblePeople.length>0&&<section><div className="feed-title" style={{margin:'30px 0 16px'}}><h2>Pessoas para conhecer</h2><span>{visiblePeople.length} resultados</span></div><div className="tiles-grid concept-discovery-cards">{visiblePeople.map(p=><article className="tile-card" key={p.id}><div className="concept-person-cover"><ProfileAvatar person={p} size="large"/></div><h3>{p.display_name}</h3><span className="tile-meta">@{p.handle}</span><p>{p.bio||'Conheça mais sobre essa pessoa.'}</p><Link className="btn btn-outline" href={'/p/'+p.handle}>Ver perfil <ArrowUpRight size={16}/></Link></article>)}</div></section>}
         {showCommunities&&visibleCommunities.length>0&&<section><div className="feed-title" style={{margin:'30px 0 16px'}}><h2>Comunidades</h2><Link href="/comunidades">Ver todas</Link></div><div className="tiles-grid concept-discovery-cards">{visibleCommunities.map(c=><article className="tile-card" key={c.id}><div className="concept-group-cover"><span className="tile-avatar"><Users size={25}/></span></div><h3>{c.name}</h3><p>{c.description||'Encontre pessoas com o mesmo interesse.'}</p><Link className="btn btn-outline" href={'/comunidades/'+c.slug}>Conhecer <ArrowUpRight size={16}/></Link></article>)}</div></section>}
         {showPosts&&filteredPosts.length>0&&<section className="concept-explore-section">
           <div className="feed-title concept-explore-subheading"><h2>{filter==='Vídeos'?'Vídeos da comunidade':'Descubra novas histórias'}</h2><span>Publicações públicas</span></div>
