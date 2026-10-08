@@ -181,16 +181,20 @@ create policy "write own post" on public.posts
   for insert to authenticated with check (
     author_id = (select auth.uid())
     and (media_path is null or media_path like (select auth.uid())::text || '/%')
-    and (community_id is null or exists (
+    and (community_id is null or (visibility = 'public' and exists (
       select 1 from public.community_members cm
       where cm.community_id = posts.community_id and cm.user_id = (select auth.uid())
-    ))
+    )))
   );
 create policy "edit own post" on public.posts
   for update to authenticated using (author_id = (select auth.uid()))
   with check (
     author_id = (select auth.uid())
     and (media_path is null or media_path like (select auth.uid())::text || '/%')
+    and (community_id is null or (visibility = 'public' and exists (
+      select 1 from public.community_members cm
+      where cm.community_id = posts.community_id and cm.user_id = (select auth.uid())
+    )))
   );
 create policy "delete own post" on public.posts
   for delete to authenticated using (author_id = (select auth.uid()));
