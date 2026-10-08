@@ -1,8 +1,10 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {Camera,CameraOff,ShieldAlert,ScanFace} from 'lucide-react';
+import {advanceChallenge,challengePrompt,createChallenge,currentChallenge} from '@/lib/liveness-challenge';
+import type {ChallengeState,FaceFrame} from '@/lib/liveness-challenge';
 
-type HumanDetection={face?:Array<{live?:number;real?:number}>};
+type HumanDetection={face?:Array<{live?:number;real?:number;faceScore?:number;boxScore?:number;rotation?:{angle?:{yaw?:number}}|null}>;gesture?:Array<{gesture?:string}>|Record<string,{gesture?:string}>};
 type HumanInstance={load:()=>Promise<unknown>;detect:(input:HTMLVideoElement)=>Promise<HumanDetection>};
 type HumanConstructor=new(config:Record<string,unknown>)=>HumanInstance;
 
@@ -59,6 +61,8 @@ export function HumanCameraCheck(){
   const [frameCount,setFrameCount]=useState(0);
   const [liveScore,setLiveScore]=useState<number|null>(null);
   const [spoofScore,setSpoofScore]=useState<number|null>(null);
+  const [progress,setProgress]=useState<ChallengeState|null>(null);
+  const [outcome,setOutcome]=useState<'idle'|'completed'|'inconclusive'>('idle');
 
   function stop(){
     currentRun.current++;
@@ -74,7 +78,8 @@ export function HumanCameraCheck(){
       setFeedback('Câmera indisponível. Utilize HTTPS e um navegador que permita acesso à câmera.');
       return;
     }
-    setBusy(true);setFeedback('Carregando o Human e seus modelos antes de ativar a câmera...');
+    setBusy(true);setOutcome('idle');setProgress(null);
+    setFeedback('Carregando o Human e os modelos antes de ativar a câmera...');
     const run=++currentRun.current;
     try{
       const Human=await loadBrowserHuman();
@@ -86,15 +91,16 @@ export function HumanCameraCheck(){
         debug:false,
         face:{
           enabled:true,
-          detector:{rotation:false,return:false},
+          detector:{rotation:true,return:false},
+          mesh:{enabled:true},
           description:{enabled:false},
           antispoof:{enabled:true},
           liveness:{enabled:true},
-          iris:{enabled:false},
+          iris:{enabled:true},
           emotion:{enabled:false}
         },
         body:{enabled:false},hand:{enabled:false},object:{enabled:false},
-        gesture:{enabled:false}
+        gesture:{enabled:true}
       });
       await human.load();
       if(run!==currentRun.current)return;
@@ -109,42 +115,60 @@ export function HumanCameraCheck(){
       setActive(true);setBusy(false);
       setFeedback('Modelos carregados. Posicione seu rosto na moldura e olhe para a câmera.');
       // Only ephemeral browser processing; no snapshot, upload, template, ID, age or backend decision.
+      let state=createChallenge(Date.now(),crypto.getRandomValues(new Uint8Array(1))[0]%2===0);
+      setProgress(state);
+      setFeedback(challengePrompt(currentChallenge(state)));
       let cycles=0;
-      while(run===currentRun.current&&mediaRef.current?.active&&cycles<180){
-        const result=await human.detect(video);
+      while(run===currentRun.current&&mediaRef.current?.active){
+        const detection=await human.detect(video);
         if(run!==currentRun.current)break;
-        const count=result.face?.length||0;
-        setFaceCount(count);
-        if(count===1){
-          const face=result.face?.[0];
-          setLiveScore(typeof face?.live==='number'?face.live:null);
-          setSpoofScore(typeof face?.real==='number'?face.real:null);
-          setFeedback('Rosto detectado. Os indicadores são experimentais e não comprovam identidade ou idade.');
-        }else{
-          setLiveScore(null);setSpoofScore(null);
-          setFeedback(count===0?'Nenhum rosto detectado. Ajuste a iluminação.':'Mostre apenas uma pessoa diante da câmera.');
-        }
+        const faces=detection.face||[], face=faces[0];
+        const entries=detection.gesture||[];
+        const gestures=(Array.isArray(entries)?entries:Object.values(entries)).map(g=>g.gesture||'');
+        const frame:FaceFrame={
+          timestamp:Date.now(),faceCount:faces.length,
+          faceScore:typeof face?.faceScore==='number'?face.faceScore:typeof face?.boxScore==='number'?face.boxScore:null,
+          liveness:typeof face?.live==='number'?face.live:null,
+          antiSpoof:typeof face?.real==='number'?face.real:null,
+          yawRadians:typeof face?.rotation?.angle?.yaw==='number'?face.rotation.angle.yaw:null,
+          gestures
+        };
+        state=advanceChallenge(state,frame);
+        setProgress(state);setFaceCount(faces.length);
+        setLiveScore(frame.liveness);setSpoofScore(frame.antiSpoof);
         setFrameCount(++cycles);
-        await new Promise<void>(resolve=>setTimeout(resolve,800));
+        if(state.status!=='running'){
+          setOutcome(state.status);
+          setFeedback(state.status==='completed'?
+            'Desafios técnicos concluídos. Isso NÃO comprova identidade ou idade.':
+            state.reason);
+          stop();break;
+        }
+        setFeedback(state.reason||challengePrompt(currentChallenge(state)));
+        await new Promise<void>(resolve=>setTimeout(resolve,350));
       }
-      if(run===currentRun.current){stop();setFeedback('Sessão de teste concluída. Nenhuma imagem foi armazenada.');}
+      if(run===currentRun.current){
+        setOutcome('inconclusive');
+        stop();setFeedback('Sessão encerrada sem completar os desafios. Tente novamente.');
+      }
     }catch(err){
       if(run===currentRun.current){
-        stop();setFeedback(err instanceof Error?err.message:'Não foi possível inicializar a câmera.');
+        setOutcome('inconclusive');stop();setFeedback(err instanceof Error?err.message:'Não foi possível inicializar a câmera.');
       }
     }finally{if(run===currentRun.current)setBusy(false);}
   }
   return <section className="panel human-camera-panel" style={{marginTop:20}}>
-    <div className="feed-title"><h2><ScanFace size={22} color="#7655da" style={{verticalAlign:'middle'}}/> Human · captura local experimental</h2><span className="small-note">Software livre</span></div>
-    <p className="muted">Faça um teste voluntário de detecção facial e indicadores de vivacidade no seu próprio navegador. Esta etapa <strong>não verifica sua identidade, idade ou documento</strong> e não concede selo nem libera acesso.</p>
+    <div className="feed-title"><h2><ScanFace size={22} color="#7655da" style={{verticalAlign:'middle'}}/> Human · teste guiado de vivacidade</h2><span className="small-note">Software livre</span></div>
+    <p className="muted">Faça um teste voluntário com movimentos da cabeça, uma piscada e análise experimental de vivacidade no navegador. Esta etapa <strong>não verifica sua identidade, idade ou documento</strong> e não concede selo nem libera acesso.</p>
     <label className="human-agree"><input type="checkbox" checked={agreed} onChange={e=>setAgreed(e.target.checked)} disabled={active||busy}/> Entendo que minha câmera será usada somente durante o teste. Não será enviado nem salvo vídeo ou foto pelo Conecta.</label>
     <div className="human-video-wrap"><video ref={videoRef} autoPlay muted playsInline aria-label="Prévia privada da câmera"/><div className="human-frame" aria-hidden="true"/></div>
-    <p className="small-note" role="status">{feedback}</p>
-    {active&&<p className="small-note">Rostos: {faceCount} · Quadros avaliados: {frameCount} · Vivacidade: {liveScore===null?'não disponível':(liveScore*100).toFixed(0)+'%'} · Antifraude: {spoofScore===null?'não disponível':(spoofScore*100).toFixed(0)+'%'}</p>}
+    {progress&&<div className="human-challenge-progress"><strong>Desafios: {Math.min(progress.index,4)} de 4</strong><progress value={Math.min(progress.index,4)} max={4}/><p>{challengePrompt(currentChallenge(progress))}</p></div>}
+    <p className={outcome==='completed'?'form-success':'small-note'} role="status">{feedback}</p>
+    {(active||outcome!=="idle")&&<p className="small-note">Rostos: {faceCount} · Quadros avaliados: {frameCount} · Vivacidade: {liveScore===null?'não disponível':(liveScore*100).toFixed(0)+'%'} · Antifraude: {spoofScore===null?'não disponível':(spoofScore*100).toFixed(0)+'%'}</p>}
     <div className="row" style={{gap:12,flexWrap:'wrap'}}>
-      {!active?<button type="button" className="btn btn-outline" onClick={()=>void start()} disabled={!agreed||busy}><Camera size={18}/>{busy?'Carregando modelos...':'Testar câmera com Human'}</button>:
-        <button type="button" className="btn btn-outline" onClick={()=>{stop();setFeedback('Câmera desligada. Nenhum dado facial armazenado.');}}><CameraOff size={18}/> Desligar câmera</button>}
+      {!active&&!busy?<button type="button" className="btn btn-outline" onClick={()=>void start()} disabled={!agreed}><Camera size={18}/>{outcome==='idle'?'Iniciar teste guiado':'Repetir teste guiado'}</button>:
+        <button type="button" className="btn btn-outline" onClick={()=>{stop();setOutcome('inconclusive');setFeedback('Câmera desligada e teste cancelado.');}}><CameraOff size={18}/> Desligar câmera</button>}
     </div>
-    <p className="small-note"><ShieldAlert size={15} style={{verticalAlign:'middle'}}/> O Human usa modelos de IA com limitações conhecidas contra fotos e telas. A proteção de adolescentes exige aferição de idade independente.</p>
+    <p className="small-note"><ShieldAlert size={15} style={{verticalAlign:'middle'}}/> Não aprova identidade ou idade. O documento precisará ter autenticidade verificada e a data de nascimento confirmada por fonte independente.</p>
   </section>;
 }
