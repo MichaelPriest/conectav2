@@ -3,6 +3,7 @@ import './globals.css';
 import './concept.css';
 import './experience.css';
 import './auth-concept.css';
+import {LocaleProvider} from '@/lib/i18n';
 
 export const metadata: Metadata = {
   title: 'Conecta — Sua comunidade, seu mundo',
@@ -10,5 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="pt-BR"><body>{children}</body></html>;
+  return <html lang="pt-BR"><body><LocaleProvider>{children}</LocaleProvider></body></html>;
 }
