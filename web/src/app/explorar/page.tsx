@@ -82,7 +82,7 @@ export default function Explorar() {
         {showPosts&&filteredPosts.length>0&&<section className="concept-explore-section">
           <div className="feed-title concept-explore-subheading"><h2>{filter==='Vídeos'?'Vídeos da comunidade':'Descubra novas histórias'}</h2><span>Publicações públicas</span></div>
           <div className="concept-explore-gallery">
-            {filteredPosts.map(p=><Link className={'concept-explore-tile '+(!p.mediaUrl?'concept-explore-text-only':'')} href={'/feed?post='+p.id} key={p.id}>
+            {filteredPosts.map(p=><Link className={'concept-explore-tile '+(!p.mediaUrl?'concept-explore-text-only':'')} href={'/post/'+p.id} key={p.id}>
               <div className="concept-explore-art">
                 {p.mediaUrl?(p.media_type==='video'?<video muted playsInline preload="metadata" src={p.mediaUrl}/>:<img src={p.mediaUrl} alt={p.content?.substring(0,90)||'Foto compartilhada'}/>):<span className="concept-explore-art-symbol">✦</span>}
               </div>

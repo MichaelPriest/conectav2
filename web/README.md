@@ -5,10 +5,10 @@ O site antigo na raiz do repositório foi preservado como referência; **nenhum 
 
 ## Preparar
 
-1. Criar um projeto Supabase **exclusivo para Conecta**.
-2. No SQL Editor do projeto, executar o arquivo \`../supabase/schema.sql\` (o SQL ainda não foi executado).
+1. Projeto Supabase dedicado já criado: `opdlxxrcdsxqmlhgayfm` (não reutilizar outros projetos).
+2. O banco deste projeto já está criado, com migrações `conecta_v2_initial_schema`, `restrict_rls_trigger_execution`, `gallery_and_notifications` e `conecta_foreign_key_indexes`. Não executar novamente. Para um novo projeto vazio, usar os scripts SQL na ordem descrita.
 3. Em Authentication, configurar URL de redirecionamento e confirmação de e-mail.
-4. Copiar \`.env.example\` para \`.env.local\` e preencher URL e **chave publicável**.
+4. Copiar `.env.example` para `.env.local` e preencher a **chave publicável** do projeto. Nenhuma chave secreta deve ser exposta.
 5. Executar \`npm install\`, \`npm run dev\`. Para produção, configurar Vercel com Root Directory = \`web\`.
 6. Testar cadastro, confirmação de e-mail, login, posts públicos/privados, likes, comentários e RLS entre **duas contas reais** antes de publicar.
 
@@ -40,3 +40,9 @@ O PostgreSQL é escalável, mas hospedagem, backups e transferências têm limit
 - O armazenamento de mídias é privado, com URLs temporárias por permissão de leitura no PostgreSQL.
 - O banco requer usuários reais para testes ponta a ponta de upload, curtidas, comentários e amizades.
 - Previews automáticos da Vercel estão desativados no projeto `conectav2`, evitando builds repetidos durante desenvolvimento.
+
+### Reconstrução em outro Supabase
+Ordem de scripts para um **projeto vazio e independente**: `supabase/schema.sql`, `supabase/changes/gallery_and_notifications.sql`, `supabase/changes/conecta_foreign_key_indexes.sql`. A correção de privilégios `revoke execute on function public.rls_auto_enable() from public, anon, authenticated;` foi aplicada neste projeto. O script inicial deve incluir `revoke update ... grant update(read_at)` para notificações; ver migrações do projeto antes de executar em outro ambiente.
+
+### Consumo de builds
+O workflow do GitHub Actions roda uma validação por atualização do PR, com cancelamento de builds anteriores. Os previews automáticos da Vercel estão desabilitados para o projeto `conectav2` até termos uma versão consolidada.
