@@ -32,6 +32,7 @@ export default function IdentityPage(){
   const [result,setResult]=useState<Result|null>(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
+  const [declaredBand,setDeclaredBand]=useState<string|null>(null);
 
   const token=useCallback(async()=>{
     const {data:{session}}=await supabaseBrowser().auth.getSession();
@@ -55,6 +56,17 @@ export default function IdentityPage(){
   },[auth.user,token]);
 
   useEffect(()=>{void refresh();},[refresh]);
+
+  useEffect(()=>{
+    if(!auth.user)return;
+    let mounted=true;
+    void supabaseBrowser().from('registration_age_declarations')
+      .select('declared_band').eq('user_id',auth.user.id).maybeSingle()
+      .then(({data,error})=>{
+        if(mounted&&!error)setDeclaredBand(data?.declared_band||null);
+      });
+    return ()=>{mounted=false;};
+  },[auth.user]);
 
   async function begin(){
     setBusy(true);setError('');
@@ -85,6 +97,21 @@ export default function IdentityPage(){
       <h1>Identidade e idade <span className="wave">✳</span></h1>
       <p>Confira sua CIN no aplicativo oficial gratuito e use as ferramentas experimentais do Conecta sem compartilhar documentos.</p>
     </div></div>
+    <section className="panel" style={{marginBottom:20}}>
+      <div className="feed-title"><h2>Etapas de proteção da conta</h2></div>
+      <p><strong>1. Cadastro:</strong> {declaredBand
+        ?declaredBand==='18_plus'?'faixa de 18 anos ou mais autodeclarada (não comprovada)':
+         declaredBand==='13_15'?'faixa de 13–15 anos autodeclarada, proteção juvenil ativa':
+         'faixa de 16–17 anos autodeclarada, proteção juvenil ativa'
+        :'faixa etária ainda não informada'}.</p>
+      <p><strong>2. Pré-triagem:</strong> QR Code da CIN e prova de vida com Human — ferramentas gratuitas e experimentais.</p>
+      <p><strong>3. Assinatura:</strong> declaração individual assinada no gov.br, com conferência técnica do PDF e consulta ao VALIDAR.</p>
+      <p><strong>4. Decisão:</strong> a confirmação de identidade e idade depende de verificação confiável da titularidade e situação documental.
+         Para menores, também é necessário verificar o vínculo do responsável.</p>
+      {declaredBand&&declaredBand!=='18_plus'&&
+        <p className="form-error" role="status">A conta permanece protegida e sem publicação ou mensagens até termos um processo confiável de verificação de idade e responsável.</p>}
+      <p className="small-note">Nenhum teste local, PDF com assinatura íntegra ou data declarada cria automaticamente um selo de conta verificada ou habilita recursos exclusivos para adultos.</p>
+    </section>
     <section className="panel conecta-id-official" style={{marginBottom:20}}>
       <div className="feed-title"><h2><ShieldCheck size={22} color="#5e7cbd" style={{verticalAlign:'middle'}}/> Validação oficial gratuita da CIN</h2>
         <span className="small-note">Ministério da Justiça e Segurança Pública</span></div>
