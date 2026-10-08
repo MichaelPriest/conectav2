@@ -90,6 +90,7 @@ export default function Messages(){
  },[messages.length]);
 
  useEffect(()=>{void loadThreads();},[loadThreads]);
+ useEffect(()=>{const name=new URLSearchParams(window.location.search).get('to');if(name)setRecipient(name);},[]);
  useEffect(()=>{
    if(!active)return;
    setMessages([]);void loadMessages(active);
@@ -135,10 +136,10 @@ export default function Messages(){
    e.preventDefault();if(!active||!auth.user||!compose.trim()||sending)return;
    setSending(true);setError('');
    const value=compose.trim();
-   const {error:e}=await supabaseBrowser().from('messages').insert({
+   const {error:sendError}=await supabaseBrowser().from('messages').insert({
      conversation_id:active,sender_id:auth.user.id,content:value
    });
-   if(e)setError(e.message);
+   if(sendError)setError(sendError.message);
    else{setCompose('');await loadMessages(active);await loadThreads();}
    setSending(false);
  }

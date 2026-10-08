@@ -4,6 +4,8 @@ import { FormEvent, useEffect, useState } from 'react';
 import { Heart, MessageCircle, Send, Share2, LockKeyhole, Users, Globe2, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { FeedPost, PostComment } from '@/lib/types';
 import { supabaseBrowser } from '@/lib/supabase/browser';
+import {EmojiButton} from '@/components/emoji-button';
+import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
 
 function ago(value: string) {
   const minutes = Math.max(0, Math.floor((Date.now()-new Date(value).getTime())/60000));
@@ -106,7 +108,7 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
             <img src={item.url} alt={'Foto '+(index+1)+' da publicação'} loading="lazy"/>
             {index===2&&media.length>3&&<span className="post-gallery-more">+{media.length-3}</span>}
           </button>)}
-        </div>)}</div>
+        </div>)}{parseMusicUrl(post.content)&&<MusicEmbed url={post.content}/>}</div>
     <div className="post-stats"><span>{post.post_likes?.[0]?.count||0} curtidas</span><span>{post.post_comments?.[0]?.count||0} comentários</span></div>
     <div className="post-actions"><button aria-pressed={liked} disabled={pendingLike} onClick={like} className={liked?'liked':''}><LikesIcon size={19} fill={liked?'currentColor':'none'}/> Curtir</button><button onClick={openComments}><MessageCircle size={19}/> Comentar</button><button onClick={share}><Share2 size={19}/> Compartilhar</button></div>
     {notice && <div className="inline-notice" role="status">{notice}</div>}
@@ -123,6 +125,6 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
         <span className="media-lightbox-caption">{activeMediaIndex+1} de {media.length}</span>
       </div>
     </div>}
-    {commentsOpen && <section className="comments-panel"><h3>Comentários</h3>{comments.length===0&&<p className="muted">Seja a primeira pessoa a comentar.</p>}{comments.map(c=><div className="comment" key={c.id}><span className="avatar avatar-xs avatar-gradient">{c.profiles?.display_name?.[0]||'C'}</span><div><strong>{c.profiles?.display_name||'Pessoa'}</strong><p>{c.body}</p><small>{ago(c.created_at)}</small></div></div>)}<form onSubmit={submitComment} className="comment-form"><input aria-label="Seu comentário" placeholder="Escreva um comentário..." maxLength={1000} required value={comment} onChange={e=>setComment(e.target.value)}/><button type="submit" disabled={sending||!comment.trim()} className="icon-btn primary-circle" title="Comentar"><Send size={19}/></button></form></section>}
+    {commentsOpen && <section className="comments-panel"><h3>Comentários</h3>{comments.length===0&&<p className="muted">Seja a primeira pessoa a comentar.</p>}{comments.map(c=><div className="comment" key={c.id}><span className="avatar avatar-xs avatar-gradient">{c.profiles?.display_name?.[0]||'C'}</span><div><strong>{c.profiles?.display_name||'Pessoa'}</strong><p>{c.body}</p><small>{ago(c.created_at)}</small></div></div>)}<form onSubmit={submitComment} className="comment-form"><EmojiButton onSelect={emoji=>setComment(current=>(current+emoji).slice(0,1000))}/><input aria-label="Seu comentário" placeholder="Escreva um comentário..." maxLength={1000} required value={comment} onChange={e=>setComment(e.target.value)}/><button type="submit" disabled={sending||!comment.trim()} className="icon-btn primary-circle" title="Comentar"><Send size={19}/></button></form></section>}
   </article>;
 }

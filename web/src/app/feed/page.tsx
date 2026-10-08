@@ -10,6 +10,7 @@ import type { FeedPost } from '@/lib/types';
 import { optimizeImage } from '@/lib/media';
 import { hydratePostMedia } from '@/lib/post-media';
 import { FeaturedCommunities } from '@/components/featured-communities';
+import {EmojiButton} from '@/components/emoji-button';
 
 const PAGE_SIZE=15;
 
@@ -142,7 +143,7 @@ export default function FeedPage() {
               <input ref={picker} type="file" hidden accept="image/jpeg,image/png,image/webp,image/gif" onChange={selectFiles}/>
               <button type="button" onClick={()=>chooseFile('image')}><ImagePlus size={18}/> Foto</button>
               <button type="button" onClick={()=>chooseFile('video')}><Video size={18}/> Vídeo</button>
-              <button type="button" onClick={()=>setText(previous=>previous + (previous && !previous.endsWith(' ')?' ':'')+'💜')}><Smile size={18}/> Sentimento</button>
+              <EmojiButton onSelect={emoji=>setText(previous=>(previous+emoji).slice(0,3000))}/>
             </div>
             <div className="concept-composer-submit"><select aria-label="Privacidade da publicação" value={privacy} onChange={e=>setPrivacy(e.target.value as typeof privacy)}><option value="public">Público</option><option value="friends">Amigos</option><option value="private">Só eu</option></select><button className="btn btn-primary" type="submit" disabled={busy||(!text.trim()&&files.length===0)}>{busy?<Loader2 className="spin" size={17}/>:<Send size={17}/>} Publicar</button></div>
           </div>

@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation';
 import { ArrowLeft, Check, MessageCircle, Send, Users, UserPlus } from 'lucide-react';
 import { GuardedPage, useAuthProfile } from '@/components/app-shell';
 import { PostCard } from '@/components/post-card';
+import {EmojiButton} from '@/components/emoji-button';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import type {FeedPost} from '@/lib/types';
 import { hydratePostMedia } from '@/lib/post-media';
@@ -101,7 +102,7 @@ export default function CommunityDetail() {
       {error&&<p className="form-error" role="alert">{error}</p>}
       {member&&<section className="composer card" style={{maxWidth:710}}>
         <div className="composer-top"><span className="avatar avatar-gradient">{auth.profile?.display_name?.[0]?.toUpperCase()||'C'}</span><div><strong>Nova discussão</strong><span>Compartilhe algo com a comunidade</span></div></div>
-        <form onSubmit={publish}><textarea rows={3} value={text} onChange={e=>setText(e.target.value)} maxLength={3000} placeholder="O que você gostaria de compartilhar?"/><div className="composer-bottom"><span className="small-note">Visível publicamente nesta comunidade</span><button type="submit" className="btn btn-primary" disabled={busy||!text.trim()}><Send size={17}/> Publicar</button></div></form>
+        <form onSubmit={publish}><textarea rows={3} value={text} onChange={e=>setText(e.target.value)} maxLength={3000} placeholder="O que você gostaria de compartilhar?"/><div className="composer-bottom"><EmojiButton onSelect={emoji=>setText(value=>(value+emoji).slice(0,3000))}/><span className="small-note">Visível publicamente nesta comunidade</span><button type="submit" className="btn btn-primary" disabled={busy||!text.trim()}><Send size={17}/> Publicar</button></div></form>
       </section>}
       {!member&&<div className="panel" style={{maxWidth:710,marginBottom:22}}><MessageCircle size={20} color="#8564eb"/><p className="muted" style={{margin:'9px 0 0'}}>Participe da comunidade para publicar discussões.</p></div>}
       <div className="feed-title" style={{maxWidth:710}}><h2>Discussões recentes</h2><span>Mais recentes primeiro</span></div>
