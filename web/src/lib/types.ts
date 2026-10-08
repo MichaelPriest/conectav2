@@ -17,6 +17,8 @@ export type FeedPost = {
   profiles: { handle: string; display_name: string } | null;
   post_likes: { count: number }[];
   post_comments: { count: number }[];
+  post_media?: Array<{storage_path:string;media_type:'image'|'video';position:number}>;
+  media?: Array<{url:string;path:string;type:'image'|'video'}>;
   mediaUrl?: string | null;
 };
 

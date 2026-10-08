@@ -8,6 +8,7 @@ import { PostCard } from '@/components/post-card';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import type { FeedPost } from '@/lib/types';
 import { optimizeImage } from '@/lib/media';
+import { hydratePostMedia } from '@/lib/post-media';
 import { FeaturedCommunities } from '@/components/featured-communities';
 
 const PAGE_SIZE=15;
@@ -20,24 +21,34 @@ export default function FeedPage() {
   const [message,setMessage]=useState('');
   const [text,setText]=useState('');
   const [privacy,setPrivacy]=useState<'public'|'friends'|'private'>('public');
-  const [file,setFile]=useState<File|null>(null);
+  const [files,setFiles]=useState<File[]>([]);
   const [hasMore,setHasMore]=useState(false);
   const [offset,setOffset]=useState(0);
   const picker=useRef<HTMLInputElement>(null);
   const [fileMode,setFileMode]=useState<'image'|'video'>('image');
-  const [preview,setPreview]=useState<string|null>(null);
+  const [previews,setPreviews]=useState<string[]>([]);
   useEffect(() => {
-    if (!file) {setPreview(null);return;}
-    const objectUrl=URL.createObjectURL(file);
-    setPreview(objectUrl);
-    return ()=> URL.revokeObjectURL(objectUrl);
-  },[file]);
+    const urls=files.map(file=>URL.createObjectURL(file));
+    setPreviews(urls);
+    return ()=>urls.forEach(url=>URL.revokeObjectURL(url));
+  },[files]);
   function chooseFile(mode:'image'|'video'){
     setFileMode(mode);
     if(picker.current){
       picker.current.accept=mode==='image'?'image/jpeg,image/png,image/webp,image/gif':'video/mp4,video/webm';
+      picker.current.multiple=mode==='image';
       picker.current.click();
     }
+  }
+  function selectFiles(event:React.ChangeEvent<HTMLInputElement>) {
+    const selected=Array.from(event.target.files||[]);
+    const isImage=fileMode==='image';
+    const eligible=selected.filter(item => isImage
+      ? ['image/jpeg','image/png','image/webp','image/gif'].includes(item.type)
+      : ['video/mp4','video/webm'].includes(item.type));
+    setFiles(eligible.slice(0,isImage?5:1));
+    if(selected.length>5)setMessage('Você pode selecionar até cinco fotos por publicação.');
+    event.target.value='';
   }
 
   const fetchPosts=useCallback(async (from=0,append=false) => {
@@ -45,16 +56,12 @@ export default function FeedPage() {
     setLoadingFeed(true);setMessage('');
     const db=supabaseBrowser();
     const {data,error:queryError}=await db.from('posts')
-      .select('id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name),post_likes(count),post_comments(count)')
+      .select('id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
       .is('community_id',null).order('created_at',{ascending:false})
       .range(from,from+PAGE_SIZE-1);
     if(queryError){setMessage(queryError.message);setLoadingFeed(false);return;}
     const rows=(data||[]) as unknown as FeedPost[];
-    const decorated=await Promise.all(rows.map(async p=>{
-      if(!p.media_path)return p;
-      const {data:media,error:mediaError}=await db.storage.from('social-media').createSignedUrl(p.media_path,3600);
-      return {...p,mediaUrl:mediaError?null:media?.signedUrl};
-    }));
+    const decorated=await hydratePostMedia(db,rows);
     setPosts(prev=>append?[...prev,...decorated]:decorated);
     setOffset(from+rows.length);
     setHasMore(rows.length===PAGE_SIZE);
@@ -65,28 +72,50 @@ export default function FeedPage() {
 
   async function publish(e: FormEvent) {
     e.preventDefault();
-    if(!user || (!text.trim()&&!file)||busy)return;
+    if(!user || (!text.trim()&&files.length===0)||busy)return;
     setBusy(true);setMessage('');
     const db=supabaseBrowser();
-    let media_path:string|null=null,media_type:'image'|'video'|null=null;
+    const uploaded:{storage_path:string;media_type:'image'|'video';position:number}[]=[];
+    let createdPostId:string|null=null;
+    let rollbackFailed=false;
     try {
-      if(file) {
-        if(file.size>50*1024*1024)throw new Error('O limite de mídia nesta fase é de 50 MB.');
-        if(!['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm'].includes(file.type))throw new Error('Formato de mídia não suportado.');
-        const optimized = file.type.startsWith('image/') ? await optimizeImage(file) : file;
-        media_type=optimized.type.startsWith('video/')?'video':'image';
+      if(files.some(file=>file.size>50*1024*1024))throw new Error('Cada arquivo pode ter no máximo 50 MB.');
+      if(files.length>5)throw new Error('Limite de cinco mídias por publicação.');
+      if(files.some(file=>file.type.startsWith('video/'))&&files.length>1)throw new Error('Publique um vídeo por vez.');
+      for(const [position,file] of files.entries()){
+        const optimized=file.type.startsWith('image/')?await optimizeImage(file):file;
+        const media_type:'image'|'video'=optimized.type.startsWith('video/')?'video':'image';
         const extension=optimized.name.split('.').pop()?.toLowerCase()||'bin';
-        media_path=`${user.id}/${crypto.randomUUID()}.${extension}`;
-        const {error:storageError}=await db.storage.from('social-media').upload(media_path,optimized,{contentType:optimized.type,upsert:false});
+        const storage_path=`${user.id}/${crypto.randomUUID()}.${extension}`;
+        const {error:storageError}=await db.storage.from('social-media')
+          .upload(storage_path,optimized,{contentType:optimized.type,upsert:false});
         if(storageError)throw storageError;
+        uploaded.push({storage_path,media_type,position});
       }
-      const {error:insertError}=await db.from('posts').insert({author_id:user.id,content:text.trim(),visibility:privacy,media_path,media_type});
+      const first=uploaded[0];
+      const {data:created,error:insertError}=await db.from('posts')
+        .insert({author_id:user.id,content:text.trim(),visibility:privacy,
+          media_path:first?.storage_path??null,media_type:first?.media_type??null})
+        .select('id').single();
       if(insertError)throw insertError;
-      setText('');setFile(null);
+      createdPostId=created.id;
+      if(uploaded.length){
+        const {error:galleryError}=await db.from('post_media').insert(uploaded.map(asset=>({
+          post_id:created.id,owner_id:user.id,...asset
+        })));
+        if(galleryError)throw galleryError;
+      }
+      setText('');setFiles([]);
       await fetchPosts();
     }catch(err){
-      if(media_path)await db.storage.from('social-media').remove([media_path]);
-      setMessage(err instanceof Error?err.message:'Não foi possível publicar.');
+      if(createdPostId){
+        const {error:deleteError}=await db.from('posts').delete().eq('id',createdPostId);
+        rollbackFailed=Boolean(deleteError);
+      }
+      if(!rollbackFailed&&uploaded.length)await db.storage.from('social-media')
+        .remove(uploaded.map(item=>item.storage_path));
+      setMessage((err instanceof Error?err.message:'Não foi possível publicar.') +
+        (rollbackFailed?' A publicação parcial precisa ser removida manualmente.':''));
     }finally{setBusy(false);}
   }
 
@@ -97,18 +126,25 @@ export default function FeedPage() {
         <div className="composer-top"><span className="avatar avatar-gradient">{profile?.display_name?.charAt(0).toUpperCase()||'C'}</span><div className="concept-composer-heading"><strong>{profile?.display_name ? 'Compartilhe um momento, '+profile.display_name.split(' ')[0] : 'O que você está pensando hoje?'}</strong><span>Uma boa história merece ser compartilhada.</span></div></div>
         <form onSubmit={publish}>
           <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="No que você está pensando hoje?" maxLength={3000} rows={3}/>
-          {file && <div className="concept-attachment">
-            {preview && (file.type.startsWith('video/')?<video src={preview} controls preload="metadata"/>:<img src={preview} alt="Pré-visualização da imagem anexada"/>)}
-            <div className="selected-file"><span>{file.name}</span><button className="icon-btn" type="button" onClick={()=>setFile(null)} aria-label="Remover arquivo"><X size={16}/></button></div>
+          {files.length>0&&<div className="concept-attachment">
+            <div className={'composer-preview-grid '+(files.length>1?'multiple':'')}>
+              {files.map((file,index)=><div className="composer-preview-item" key={file.name+index}>
+                {previews[index]&&(file.type.startsWith('video/')
+                  ?<video src={previews[index]} controls preload="metadata"/>
+                  :<img src={previews[index]} alt={'Prévia '+(index+1)}/>)}
+                <button className="composer-preview-remove" type="button" onClick={()=>setFiles(previous=>previous.filter((_,i)=>i!==index))} aria-label={'Remover mídia '+(index+1)}><X size={15}/></button>
+              </div>)}
+            </div>
+            <p className="small-note">{files.length} {files.length===1?'arquivo selecionado':'arquivos selecionados'} · até 5 fotos por publicação</p>
           </div>}
           <div className="composer-bottom concept-composer-toolbar">
             <div className="composer-tools concept-composer-tools">
-              <input ref={picker} type="file" hidden accept="image/jpeg,image/png,image/webp,image/gif" onChange={e=>setFile(e.target.files?.[0]||null)}/>
+              <input ref={picker} type="file" hidden accept="image/jpeg,image/png,image/webp,image/gif" onChange={selectFiles}/>
               <button type="button" onClick={()=>chooseFile('image')}><ImagePlus size={18}/> Foto</button>
               <button type="button" onClick={()=>chooseFile('video')}><Video size={18}/> Vídeo</button>
               <button type="button" onClick={()=>setText(previous=>previous + (previous && !previous.endsWith(' ')?' ':'')+'💜')}><Smile size={18}/> Sentimento</button>
             </div>
-            <div className="concept-composer-submit"><select aria-label="Privacidade da publicação" value={privacy} onChange={e=>setPrivacy(e.target.value as typeof privacy)}><option value="public">Público</option><option value="friends">Amigos</option><option value="private">Só eu</option></select><button className="btn btn-primary" type="submit" disabled={busy||(!text.trim()&&!file)}>{busy?<Loader2 className="spin" size={17}/>:<Send size={17}/>} Publicar</button></div>
+            <div className="concept-composer-submit"><select aria-label="Privacidade da publicação" value={privacy} onChange={e=>setPrivacy(e.target.value as typeof privacy)}><option value="public">Público</option><option value="friends">Amigos</option><option value="private">Só eu</option></select><button className="btn btn-primary" type="submit" disabled={busy||(!text.trim()&&files.length===0)}>{busy?<Loader2 className="spin" size={17}/>:<Send size={17}/>} Publicar</button></div>
           </div>
         </form>
         {message&&<p role="alert" className="form-error">{message}</p>}

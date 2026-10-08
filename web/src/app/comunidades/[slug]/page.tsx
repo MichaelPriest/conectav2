@@ -8,6 +8,7 @@ import { GuardedPage, useAuthProfile } from '@/components/app-shell';
 import { PostCard } from '@/components/post-card';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 import type {FeedPost} from '@/lib/types';
+import { hydratePostMedia } from '@/lib/post-media';
 
 type Community = { id:string;name:string;slug:string;description:string;owner_id:string;created_at:string };
 const PAGE_SIZE=15;
@@ -29,15 +30,11 @@ export default function CommunityDetail() {
   const fetchPosts=useCallback(async(id:string,from=0,append=false)=>{
     const db=supabaseBrowser();
     const {data,error:fetchError}=await db.from('posts')
-      .select('id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name),post_likes(count),post_comments(count)')
+      .select('id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
       .eq('community_id',id).order('created_at',{ascending:false}).range(from,from+PAGE_SIZE-1);
     if(fetchError){setError(fetchError.message);return;}
     const results=(data||[]) as unknown as FeedPost[];
-    const decorated=await Promise.all(results.map(async item=>{
-      if(!item.media_path)return item;
-      const {data:media}=await db.storage.from('social-media').createSignedUrl(item.media_path,3600);
-      return {...item,mediaUrl:media?.signedUrl||null};
-    }));
+    const decorated=await hydratePostMedia(db,results);
     setPosts(previous=>append?[...previous,...decorated]:decorated);
     setHasMore(results.length===PAGE_SIZE);
     setOffset(from+results.length);
