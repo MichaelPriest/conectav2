@@ -60,16 +60,16 @@ export default function ModerationPanel(){
    if(e)setError(e.message);else{setNotice(action==='approve'?'Publicação aprovada.':'Publicação rejeitada.');await load();}
    setBusy(false);
  }
- async function saveSettings(e:FormEvent){
-   e.preventDefault();if(!community||!admin||busy)return;
+ async function saveSettings(event:FormEvent){
+   event.preventDefault();if(!community||!admin||busy)return;
    setBusy(true);setError('');
    const terms=[...new Set(blockedTerms.split(',').map(x=>x.trim()).filter(Boolean))].slice(0,30);
    const {error:e}=await supabaseBrowser().rpc('set_community_moderation',{cid:community.id,mode,terms});
    if(e)setError(e.message);else{setNotice('Configuração de moderação atualizada.');await load();}
    setBusy(false);
  }
- async function assign(e:FormEvent){
-   e.preventDefault();if(!community||!owner||busy)return;
+ async function assign(event:FormEvent){
+   event.preventDefault();if(!community||!owner||busy)return;
    const p=members.find(m=>m.handle===user);
    if(!p){setError('Escolha um participante da comunidade.');return;}
    setBusy(true);setError('');
