@@ -65,3 +65,19 @@ export function safePersonaLink(raw:string|undefined):string|null{
        url.hostname==='go.perso.na')?url.toString():null;
   }catch{return null;}
 }
+
+/**
+ * Scoped identity access: uses the signed-in user's own JWT and table RLS,
+ * never an administrative service role. Required by free gov.br PDF flow.
+ */
+export async function identityUserContext(request:NextRequest){
+ const token=request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
+ if(!token||!runtimeConfig.supabaseUrl||!runtimeConfig.publicKey)return null;
+ const client=createClient(runtimeConfig.supabaseUrl,runtimeConfig.publicKey,{
+  auth:{persistSession:false,autoRefreshToken:false},
+  global:{headers:{Authorization:'Bearer '+token}}
+ });
+ const {data,error}=await client.auth.getUser(token);
+ if(error||!data.user)return null;
+ return {user:data.user,db:client};
+}
