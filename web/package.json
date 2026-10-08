@@ -15,7 +15,8 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "lucide-react": "0.468.0",
-    "emoji-picker-react": "4.22.3"
+    "emoji-picker-react": "4.22.3",
+    "@vladmandic/human": "3.3.6"
   },
   "devDependencies": {
     "@types/node": "22.18.6",

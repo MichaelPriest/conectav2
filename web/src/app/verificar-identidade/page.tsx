@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {ArrowLeft,Camera,CheckCircle2,ExternalLink,FileCheck2,ShieldCheck,Users,RefreshCw,LockKeyhole} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {supabaseBrowser} from '@/lib/supabase/browser';
+import {HumanCameraCheck} from '@/components/human-camera-check';
 
 type Result={
   configured?:boolean;
@@ -106,5 +107,5 @@ export default function IdentityPage(){
       </button>
       <p className="fineprint" style={{textAlign:'left'}}>Aprovar uma selfie não libera automaticamente recursos restritos por idade. As validações e autorizações legais precisam estar concluídas.</p>
     </section>
-  </main></GuardedPage>;
+  <HumanCameraCheck/></main></GuardedPage>;
 }
