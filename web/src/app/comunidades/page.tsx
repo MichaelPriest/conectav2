@@ -13,6 +13,7 @@ export default function Comunidades() {
   const [items,setItems]=useState<Community[]>([]);
   const [joined,setJoined]=useState<Set<string>>(new Set());
   const [search,setSearch]=useState('');
+  const [onlyMine,setOnlyMine]=useState(false);
   const [modal,setModal]=useState(false);
   const [name,setName]=useState('');
   const [slug,setSlug]=useState('');
@@ -33,7 +34,7 @@ export default function Comunidades() {
   },[auth.user]);
 
   useEffect(()=>{if(auth.user)void load();},[auth.user,load]);
-  const filtered=useMemo(()=>items.filter(c=>(c.name+' '+c.description).toLowerCase().includes(search.toLowerCase().trim())),[items,search]);
+  const filtered=useMemo(()=>items.filter(c=>(c.name+' '+c.description).toLowerCase().includes(search.toLowerCase().trim())&&(!onlyMine||joined.has(c.id))),[items,search,onlyMine,joined]);
 
   async function create(e:FormEvent) {
     e.preventDefault();
@@ -57,10 +58,11 @@ export default function Comunidades() {
         <label className="searchbox"><Search size={18}/><input aria-label="Buscar comunidades" placeholder="Buscar comunidades..." value={search} onChange={e=>setSearch(e.target.value)}/></label>
         <button className="btn btn-primary" onClick={()=>setModal(true)}><Plus size={18}/> Criar comunidade</button>
       </div>
+      <div className="filter-pills concept-directory-filters" role="group" aria-label="Filtrar comunidades"><button type="button" className={'filter-pill '+(!onlyMine?'active':'')} onClick={()=>setOnlyMine(false)}>Todas</button><button type="button" className={'filter-pill '+(onlyMine?'active':'')} onClick={()=>setOnlyMine(true)}>Minhas comunidades</button></div>
       {error&&<p className="form-error" role="alert">{error}</p>}
       {loading?<div className="centered-loading">Carregando comunidades...</div>:filtered.length>0?
-        <div className="tiles-grid">{filtered.map(c=><article className="tile-card" key={c.id}>
-          <div className="tile-avatar"><Users size={24}/></div>
+        <div className="tiles-grid concept-directory-grid">{filtered.map(c=><article className="tile-card concept-directory-card" key={c.id}>
+          <div className="concept-group-cover"><span className="tile-avatar"><Users size={24}/></span></div>
           <h3>{c.name}</h3><p>{c.description||'Uma comunidade para trocar ideias.'}</p>
           <span className="tile-meta">{joined.has(c.id)?'✓ Você participa':c.owner_id===auth.user?.id?'Criada por você':'Aberta para participar'}</span>
           <Link href={'/comunidades/'+c.slug} className="btn btn-outline">Ver comunidade <ArrowUpRight size={16}/></Link>

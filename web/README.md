@@ -26,3 +26,10 @@ O site antigo na raiz do repositório foi preservado como referência; **nenhum 
 
 ### Limites
 O PostgreSQL é escalável, mas hospedagem, backups e transferências têm limites e custos. O plano grátis não é ilimitado.
+
+## Fidelity to approved concept (October 2026)
+- Landing page: brand mark, concept laptop and mobile device presentations (illustrative only, not actual user posts).
+- Actual app: unified desktop sidebar/top search and mobile navigation; feed composer, media cards, featured communities, visual Explore/Communities, notifications and messaging.
+- All functional community/person/post views use real database queries; no fabricated user counts or fake posts.
+- Conecta V2 Vercel project **preview auto deployments disabled** during active development to conserve build quota; explicitly re-enable when ready to test a consolidated candidate.
+- After deploying: verify the design against the approved art on 1440px desktop, 768px tablet and 390px mobile, then iterate visual differences.

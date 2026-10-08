@@ -63,7 +63,7 @@ export default function Explorar() {
   const visiblePosts=useMemo(()=>posts.filter(p=>!needle||(p.content+' '+(p.profiles?.display_name||'')).toLowerCase().includes(needle)),[posts,needle]);
   const showPeople=filter==='Tudo'||filter==='Pessoas',showCommunities=filter==='Tudo'||filter==='Comunidades',showPosts=filter==='Tudo'||filter==='Publicações'||filter==='Vídeos';
   const filteredPosts=filter==='Vídeos'?visiblePosts.filter(p=>p.media_type==='video'):visiblePosts;
-  const hasContent=(showPeople&&visiblePeople.length>0)||(showCommunities&&visibleCommunities.length>0)||(showPosts&&visiblePosts.length>0);
+  const hasContent=(showPeople&&visiblePeople.length>0)||(showCommunities&&visibleCommunities.length>0)||(showPosts&&filteredPosts.length>0);
 
   return <GuardedPage {...auth}>
     <main className="section-page">
