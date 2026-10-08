@@ -10,9 +10,9 @@ const source = fs.readFileSync(filename, 'utf8');
 const transpiled = typescript.transpileModule(source, {
   compilerOptions: { module: typescript.ModuleKind.CommonJS, target: typescript.ScriptTarget.ES2022 }
 }).outputText;
-const exports = {};
-vm.runInNewContext(transpiled, { exports }, { filename });
-const { normalizeProfileDetails, prepareProfileDetails } = exports;
+const loadedExports = {};
+vm.runInNewContext(transpiled, { exports: loadedExports }, { filename });
+const { normalizeProfileDetails, prepareProfileDetails } = loadedExports;
 
 test('profile loaded with nullable DB fields is safe and shows empty inputs', () => {
   const normalized = normalizeProfileDetails({
