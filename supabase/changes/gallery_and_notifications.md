@@ -1,0 +1,7 @@
+-- Applied to Conecta Supabase via migration gallery_and_notifications on 2026-10-08.
+-- See migration history for authoritative applied SQL. Changes from initial schema:
+-- public.post_media (post_id,owner_id,storage_path,media_type,position) with RLS;
+-- storage.objects read grants for media in visible posts;
+-- app_private.notify_post_like, notify_post_comment, notify_friendship;
+-- AFTER INSERT/UPDATE triggers on post_likes, post_comments and friendships.
+-- This is a *record* of deployment, not a script to execute again.
