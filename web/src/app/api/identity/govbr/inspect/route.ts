@@ -30,7 +30,12 @@ export async function POST(request:NextRequest){
    .update({attempt_count:data.attempt_count+1})
    .eq('id',id).eq('user_id',ctx.user.id).eq('status','issued')
    .eq('attempt_count',data.attempt_count).select('attempt_count').maybeSingle();
- if(attemptError||!attempt)return fail('Limite de tentativas ou concorrencia. Recarregue a pagina.',429);
+ if(attemptError){
+   // A database/permission failure is not the user's attempt limit.
+   // Do not reveal PostgreSQL internals, but don't mislabel server failures as 429.
+   return fail('Nao foi possivel registrar a analise. Atualize a pagina e tente novamente.',503);
+ }
+ if(!attempt)return fail('A declaracao foi alterada por outra requisicao. Atualize a pagina.',409);
  const pdf=Buffer.from(await pdfFile.arrayBuffer());
  const result=await inspectSignedStatement(pdf,challengeMarker(id,data.nonce));
  // Integrity is reported only for this request. A client-visible JWT cannot
