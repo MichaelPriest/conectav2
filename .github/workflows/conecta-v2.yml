@@ -48,5 +48,7 @@ jobs:
         run: npm run test:cin
       - name: Gov.br signed PDF challenge tests
         run: npm run test:govbr
+      - name: Validate identity origin behind proxies
+        run: npm run test:origin
       - name: Build Next.js
         run: npm run build

@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {identityUserContext} from '@/lib/identity-server';
+import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {generateStatementPdf,newNonce} from '@/lib/govbr-challenge';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -37,8 +38,7 @@ export async function GET(request:NextRequest){
 }
 
 export async function POST(request:NextRequest){
- const origin=request.headers.get('origin');
- if(origin&&origin!==new URL(request.url).origin)return deny('Origem invalida.',403);
+ if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))return deny('Origem invalida.',403);
  const ctx=await identityUserContext(request);
  if(!ctx)return deny('Sua sessao expirou. Entre novamente para baixar a declaracao.',401);
  const {data,error}=await ctx.db.from('identity_signature_challenges')

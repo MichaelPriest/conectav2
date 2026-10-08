@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {identityUserContext} from '@/lib/identity-server';
+import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {challengeMarker,MAX_SIGNED_PDF_BYTES} from '@/lib/govbr-challenge';
 import {inspectSignedStatement} from '@/lib/govbr-pdf-inspect';
 export const runtime='nodejs';
@@ -7,8 +8,7 @@ export const dynamic='force-dynamic';
 const headers={'Cache-Control':'private, no-store, max-age=0'};
 const fail=(message:string,status:number)=>NextResponse.json({error:message},{status,headers});
 export async function POST(request:NextRequest){
- const origin=request.headers.get('origin');
- if(origin&&origin!==new URL(request.url).origin)return fail('Origem invalida.',403);
+ if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))return fail('Origem invalida.',403);
  const length=Number(request.headers.get('content-length')||0);
  if(length>MAX_SIGNED_PDF_BYTES+32768)return fail('Arquivo excede 6 MB.',413);
  const ctx=await identityUserContext(request);

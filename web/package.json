@@ -10,7 +10,8 @@
     "test:profile": "node --test tests/profile-details.test.cjs",
     "test:human": "node --test tests/human-browser.test.cjs tests/liveness-challenge.test.cjs",
     "test:cin": "node --test tests/cin-qr.test.cjs",
-    "test:govbr": "node --test tests/govbr-flow.test.cjs"
+    "test:govbr": "node --test tests/govbr-flow.test.cjs",
+    "test:origin": "node --test tests/identity-origin.test.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
