@@ -46,3 +46,12 @@ Ordem de scripts para um **projeto vazio e independente**: `supabase/schema.sql`
 
 ### Consumo de builds
 O workflow do GitHub Actions roda uma validação por atualização do PR, com cancelamento de builds anteriores. Os previews automáticos da Vercel estão desabilitados para o projeto `conectav2` até termos uma versão consolidada.
+
+## Migração de hospedagem — 8/10/2026
+- Código legado Firebase arquivado em `legacy-firebase/`, fora da raiz ativa de publicação; os dados originais do Firebase não foram alterados.
+- Código ativo Next.js fica em `web/` e usa somente Supabase Auth, Postgres e Storage.
+- Vercel projeto `conectav2`: Root Directory `web`, Framework `nextjs`, Node.js 22; variáveis `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` configuradas para `production`, `preview` e `development`.
+- Páginas de autenticação: `/auth`, `/auth/recuperar-senha`, `/auth/redefinir-senha`; confirmação via `/auth/callback`.
+- O Supabase exige permitir URLs de redirecionamento em Authentication > URL Configuration: `https://conectav2.vercel.app/auth/callback*` e domínios efetivamente usados, com URL principal `https://conectav2.vercel.app`. Configuração da URL de autenticação precisa ser verificada na dashboard caso não esteja acessível via conector.
+- Antes de testes reais, validar cadastro e login com duas contas que possuam e-mails acessíveis; testes sem usuários reais não comprovam o envio de e-mails.
+- Deploys automáticos temporariamente suspensos usando Ignored Build Step; publicar apenas um build validado.

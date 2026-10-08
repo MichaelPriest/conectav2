@@ -1,6 +1,13 @@
 name: Conecta V2 • Next.js validation
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web/**'
+      - 'supabase/**'
+      - '.github/workflows/conecta-v2.yml'
   pull_request:
     paths:
       - 'web/**'
