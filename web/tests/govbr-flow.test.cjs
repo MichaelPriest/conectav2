@@ -41,3 +41,16 @@ test('signature parser checks signed ranges, CMS and refuses missing signature',
  assert.match(parser,/c\+d!==pdf.length/);
  assert.match(parser,/challenge_mismatch/);
 });
+
+test('native browser download uses SSR cookie auth with server-side getUser validation',()=>{
+ const server=fs.readFileSync(path.join(__dirname,'../src/lib/identity-server.ts'),'utf8');
+ assert.match(server,/createServerClient/);
+ assert.match(server,/request\.cookies\.getAll/);
+ assert.match(server,/client\.auth\.getUser\(\)/);
+ const route=fs.readFileSync(path.join(__dirname,'../src/app/api/identity/govbr/challenge/route.ts'),'utf8');
+ assert.match(route,/request\.nextUrl\.searchParams\.get\('download'\)/);
+ assert.match(route,/Content-Disposition/);
+ const comp=fs.readFileSync(path.join(__dirname,'../src/components/govbr-signature-flow.tsx'),'utf8');
+ assert.match(comp,/method="POST"/);
+ assert.match(comp,/download=1/);
+});

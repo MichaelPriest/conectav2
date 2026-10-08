@@ -112,9 +112,21 @@ export function GovBrSignatureFlow(){
       <a className="btn btn-outline" href={downloadUrl} target="_blank" rel="noopener noreferrer">
        <ExternalLink size={17}/> Abrir PDF</a>
     </div>}
-    <p className="small-note">No celular, toque em "Salvar PDF" depois da geracao.
-      Se o navegador nao baixar automaticamente, utilize "Abrir PDF" e escolha salvar ou compartilhar.
-      A ultima declaracao pode ser recuperada enquanto estiver valida.</p>
+    <div className="row" style={{gap:10,flexWrap:'wrap',marginTop:9}}>
+      <form action="/api/identity/govbr/challenge" method="POST">
+        <button type="submit" className="btn btn-outline" disabled={busy}>
+          <Download size={17}/> Baixar direto pelo navegador
+        </button>
+      </form>
+      {challenge?.status==='issued'&&isActive&&
+        <a className="btn btn-outline" href="/api/identity/govbr/challenge?download=1"
+          download="conecta-id-declaracao.pdf">
+          <Download size={17}/> Baixar declaracao existente diretamente
+        </a>}
+    </div>
+    <p className="small-note">Se "Gerar declaracao" nao baixar no seu celular, use
+      "Baixar direto pelo navegador". Esta opcao usa um download HTTP tradicional.
+      Caso a declaracao ja exista, a opcao de baixar novamente evita consumir outra tentativa.</p>
    </div>
    <div><strong>2. Assine o PDF no servico oficial</strong>
     <p className="small-note">Entre no gov.br Prata ou Ouro e assine o arquivo baixado.
