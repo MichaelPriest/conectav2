@@ -3,68 +3,102 @@
 import { FormEvent, Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight, LockKeyhole, Mail, Sparkles } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Heart, LockKeyhole, Mail, Sparkles, UserRound } from 'lucide-react';
+import { ConceptBrand } from '@/components/concept-brand';
 import { configured, supabaseBrowser } from '@/lib/supabase/browser';
 
 function AuthForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [mode, setMode] = useState<'login' | 'signup'>(searchParams.get('mode') === 'signup' ? 'signup' : 'login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  const [mode, setMode] = useState<'login'|'signup'>(searchParams.get('mode')==='signup'?'signup':'login');
+  const [name,setName] = useState('');
+  const [email,setEmail] = useState('');
+  const [password,setPassword] = useState('');
+  const [showPassword,setShowPassword] = useState(false);
+  const [busy,setBusy] = useState(false);
+  const [message,setMessage] = useState('');
+  const [error,setError] = useState('');
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError('');
-    setMessage('');
-    if (!configured()) { setError('O banco ainda não foi configurado. Consulte o README do projeto.'); return; }
-    setBusy(true);
-    try {
-      const client = supabaseBrowser();
-      if (mode === 'signup') {
-        const { data, error: authError } = await client.auth.signUp({
-          email: email.trim(),
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-        });
-        if (authError) throw authError;
-        if (data.session) router.replace('/onboarding');
-        else setMessage('Confira seu e-mail para confirmar sua conta e depois entre no Conecta.');
-      } else {
-        const { error: authError } = await client.auth.signInWithPassword({ email: email.trim(), password });
-        if (authError) throw authError;
-        router.replace('/feed');
-        router.refresh();
-      }
-    } catch (err) { setError(err instanceof Error ? err.message : 'Não foi possível entrar.'); }
-    finally { setBusy(false); }
+  function selectMode(next:'login'|'signup') {
+    setMode(next);setError('');setMessage('');
+    window.history.replaceState({},'',next==='signup'?'/auth?mode=signup':'/auth');
   }
 
-  return <main className="auth-screen">
-    <section className="auth-intro">
-      <Link href="/" className="brand brand-light"><span className="brand-mark">c.</span> conecta<span className="brand-dot">.</span></Link>
-      <div className="auth-intro-copy"><div className="eyebrow"><Sparkles size={15}/> SUA PRÓXIMA CONEXÃO COMEÇA AQUI</div><h1>Boas conexões<br/>mudam <em>tudo.</em></h1><p>Um lugar para compartilhar ideias, descobrir pessoas e fazer parte de algo maior.</p></div>
-      <p className="auth-caption">Sua voz. Seu espaço. Sua comunidade.</p>
+  async function submit(event:FormEvent<HTMLFormElement>){
+    event.preventDefault();
+    if(busy)return;
+    setError('');setMessage('');
+    if(!configured()){setError('Conexão com o Conecta indisponível. Tente novamente em instantes.');return;}
+    if(mode==='signup'&&name.trim().length<2){setError('Digite seu nome para continuar.');return;}
+    if(password.length<8){setError('Use uma senha com pelo menos 8 caracteres.');return;}
+    setBusy(true);
+    try{
+      const db=supabaseBrowser();
+      if(mode==='signup'){
+        const {data,error:signError}=await db.auth.signUp({
+          email:email.trim().toLowerCase(),password,
+          options:{
+            emailRedirectTo:`${window.location.origin}/auth/callback?next=/onboarding`,
+            data:{display_name:name.trim()}
+          }
+        });
+        if(signError)throw signError;
+        if(data.session){router.replace('/onboarding');router.refresh();}
+        else setMessage('Confira seu e-mail para confirmar a conta. Depois, entre no Conecta.');
+      }else{
+        const {error:loginError}=await db.auth.signInWithPassword({
+          email:email.trim().toLowerCase(),password
+        });
+        if(loginError)throw loginError;
+        router.replace('/feed');router.refresh();
+      }
+    }catch(err){setError(err instanceof Error?err.message:'Não foi possível continuar.');}
+    finally{setBusy(false);}
+  }
+
+  return <main className="conecta-auth">
+    <section className="conecta-auth-hero" aria-label="Bem-vindo ao Conecta">
+      <div className="conecta-auth-hero-content">
+        <div className="conecta-auth-brand"><ConceptBrand light/><span>Uma rede social mais humana.</span></div>
+        <div className="conecta-auth-hero-copy">
+          <div className="conecta-auth-label"><Sparkles size={15}/> PESSOAS. IDEIAS. COMUNIDADES.</div>
+          <h1>Boas histórias<br/>começam <em>aqui.</em></h1>
+          <p>Conecte-se com pessoas, descubra novas ideias e encontre seu lugar em comunidades que inspiram.</p>
+          <div className="conecta-auth-social"><span><Heart size={18}/> Conexões reais</span><span>✦ Seu espaço, seu jeito</span></div>
+        </div>
+        <div className="conecta-auth-hero-footer">Conecta · Um mundo mais próximo de você.</div>
+      </div>
     </section>
-    <section className="auth-panel">
-      <div className="auth-card">
-        <h2>{mode === 'login' ? 'Bem-vindo de volta' : 'Vamos criar sua conta'}</h2>
-        <p className="muted">{mode === 'login' ? 'Entre e descubra o que está acontecendo.' : 'Comece sua jornada no Conecta.'}</p>
-        <div className="auth-switch"><button onClick={() => {setMode('login');setError('');setMessage('');}} className={mode === 'login' ? 'selected' : ''}>Entrar</button><button onClick={() => {setMode('signup');setError('');setMessage('');}} className={mode === 'signup' ? 'selected' : ''}>Cadastrar</button></div>
-        <form className="stack" onSubmit={submit}>
-          <label className="field-label">E-mail <span className="field-icon"><Mail size={17}/><input type="email" placeholder="voce@exemplo.com" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="email" required/></span></label>
-          <label className="field-label">Senha <span className="field-icon"><LockKeyhole size={17}/><input type="password" minLength={6} placeholder="Sua senha" value={password} onChange={e=>setPassword(e.target.value)} autoComplete={mode==='signup'?'new-password':'current-password'} required/></span></label>
-          {error && <p className="form-error" role="alert">{error}</p>}
-          {message && <p className="form-success" role="status">{message}</p>}
-          <button className="btn btn-primary btn-block btn-lg" disabled={busy} type="submit">{busy?'Aguarde...':mode==='login'?'Entrar':'Criar conta'} <ArrowRight size={18}/></button>
+
+    <section className="conecta-auth-form-wrap">
+      <div className="conecta-auth-panel">
+        <div className="conecta-auth-mobile-brand"><ConceptBrand/></div>
+        <div className="conecta-auth-kicker"><span className="conecta-auth-kicker-icon"><Heart size={16}/></span> Seu lugar é aqui</div>
+        <h2>{mode==='login'?'Que bom ter você de volta!':'Sua história começa agora.'}</h2>
+        <p className="conecta-auth-description">{mode==='login'?'Entre para reencontrar suas pessoas e suas comunidades.':'Crie sua conta e venha compartilhar o que te inspira.'}</p>
+        <div className="conecta-auth-tabs" role="group" aria-label="Escolha entrar ou criar conta">
+          <button type="button" className={mode==='login'?'selected':''} aria-pressed={mode==='login'} onClick={()=>selectMode('login')}>Entrar</button>
+          <button type="button" className={mode==='signup'?'selected':''} aria-pressed={mode==='signup'} onClick={()=>selectMode('signup')}>Criar conta</button>
+        </div>
+        <form className="conecta-auth-form" onSubmit={submit}>
+          {mode==='signup'&&<label className="conecta-auth-field"><span>Seu nome</span><div className="conecta-auth-input"><UserRound size={18}/><input value={name} onChange={e=>setName(e.target.value)} type="text" autoComplete="name" placeholder="Como podemos chamar você?" minLength={2} maxLength={80} required/></div></label>}
+          <label className="conecta-auth-field"><span>E-mail</span><div className="conecta-auth-input"><Mail size={18}/><input value={email} onChange={e=>setEmail(e.target.value)} type="email" autoComplete="email" placeholder="seuemail@exemplo.com" required/></div></label>
+          <label className="conecta-auth-field"><span>Senha</span><div className="conecta-auth-input"><LockKeyhole size={18}/><input value={password} onChange={e=>setPassword(e.target.value)} type={showPassword?'text':'password'} autoComplete={mode==='signup'?'new-password':'current-password'} placeholder={mode==='signup'?'Crie uma senha com 8 caracteres':'Digite sua senha'} minLength={8} required/><button type="button" className="conecta-auth-password-toggle" aria-label={showPassword?'Ocultar senha':'Mostrar senha'} onClick={()=>setShowPassword(v=>!v)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></div></label>
+          {mode==='login'&&<div className="conecta-auth-form-options"><Link href="/auth/recuperar-senha">Esqueceu sua senha?</Link></div>}
+          {searchParams.get('error')==='confirmation'&&<p className="form-error" role="alert">O link expirou ou não pôde ser confirmado. Solicite um novo link.</p>}
+          {error&&<p className="form-error" role="alert">{error}</p>}
+          {message&&<p className="form-success" role="status">{message}</p>}
+          <button className="btn btn-primary conecta-auth-submit" type="submit" disabled={busy}>{busy?'Aguarde...':mode==='login'?'Entrar no Conecta':'Criar minha conta'} <ArrowRight size={18}/></button>
         </form>
-        <p className="fineprint">Ao continuar, você concorda em respeitar as regras das comunidades e a privacidade das pessoas.</p>
+        <div className="conecta-auth-bottom">
+          {mode==='login'?<>Ainda não faz parte? <button type="button" onClick={()=>selectMode('signup')}>Crie sua conta</button></>:<>Já faz parte? <button type="button" onClick={()=>selectMode('login')}>Entre na sua conta</button></>}
+        </div>
+        <p className="conecta-auth-terms">Uma rede feita para conversas positivas, respeito e privacidade.</p>
+        <Link className="conecta-auth-back" href="/">← Voltar ao início</Link>
       </div>
     </section>
   </main>;
 }
-
-export default function AuthPage() { return <Suspense fallback={<main className="auth-screen"><p>Carregando...</p></main>}><AuthForm/></Suspense>; }
+export default function AuthPage(){
+  return <Suspense fallback={<main className="center-screen"><div className="loading-ring"/><p>Carregando Conecta...</p></main>}><AuthForm/></Suspense>;
+}

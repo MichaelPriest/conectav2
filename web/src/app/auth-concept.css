@@ -1,0 +1,46 @@
+
+/* Conecta Auth — desktop split view and mobile welcome aligned to approved visual concept */
+.conecta-auth{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(380px,.95fr);min-height:100dvh;background:radial-gradient(circle at 100% 0,#ecddff,transparent 40%),#fcfbff}
+.conecta-auth-hero{position:relative;min-height:650px;isolation:isolate;background:#262454;color:#fff;overflow:hidden}
+.conecta-auth-hero:before{content:"";position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1700&q=85') center/cover;z-index:-2}
+.conecta-auth-hero:after{content:"";position:absolute;inset:0;background:linear-gradient(155deg,#272458c0 2%,#363a6b6a 38%,#162047b8 69%,#34216ae0 100%);z-index:-1}
+.conecta-auth-hero-content{height:100%;min-height:650px;display:flex;flex-direction:column;justify-content:space-between;padding:clamp(26px,4.5vw,64px)}
+.conecta-auth-brand{display:grid;align-content:start;gap:5px}.conecta-auth-brand .concept-brand{font-size:30px}.conecta-auth-brand>span{font-size:12px;color:#efeaff;padding-left:52px}
+.conecta-auth-hero-copy{max-width:660px;margin-top:auto;padding-bottom:48px}
+.conecta-auth-label{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.13em;color:#e1dbff;margin-bottom:19px}
+.conecta-auth-hero-copy h1{font-size:clamp(46px,4.9vw,74px);line-height:1.12;letter-spacing:-.065em;color:#fff;margin:0 0 25px}
+.conecta-auth-hero-copy h1 em{font-style:normal;color:#f7b6db}
+.conecta-auth-hero-copy p{font-size:16px;line-height:1.8;color:#f2efff;max-width:500px;margin:0}
+.conecta-auth-social{display:flex;gap:11px;flex-wrap:wrap;margin-top:32px}
+.conecta-auth-social span{display:flex;align-items:center;gap:7px;padding:8px 12px;border:1px solid #ffffff50;border-radius:100px;background:#ffffff20;backdrop-filter:blur(8px);font-size:12px;color:#fff}
+.conecta-auth-hero-footer{color:#f3eaffb5;font-size:12px}
+.conecta-auth-form-wrap{display:grid;place-items:center;padding:42px 26px}
+.conecta-auth-panel{width:min(100%,455px)}
+.conecta-auth-mobile-brand{display:none}
+.conecta-auth-kicker{display:flex;align-items:center;gap:9px;color:#825bef;font-size:12px;font-weight:800;margin-bottom:16px}.conecta-auth-kicker-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;color:#e975a0;background:#ffdeeb}
+.conecta-auth-panel h2{font-size:clamp(28px,2.5vw,37px);letter-spacing:-.06em;line-height:1.13;margin:0 0 13px;color:#1d2547}
+.conecta-auth-description{font-size:14px;color:#808ba9;margin:0 0 26px;max-width:390px;line-height:1.6}
+.conecta-auth-tabs{background:#f1effb;padding:5px;border-radius:13px;display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:28px}
+.conecta-auth-tabs button{border:0;border-radius:10px;padding:11px;color:#8688a7;background:transparent;font-weight:800}
+.conecta-auth-tabs button.selected{color:#7051db;background:#fff;box-shadow:0 4px 14px #372f6630}
+.conecta-auth-form{display:grid;gap:17px}.conecta-auth-field{display:grid;gap:8px;color:#495372;font-size:12px;font-weight:700}
+.conecta-auth-input{display:flex;align-items:center;gap:11px;height:52px;background:#fff;border:1px solid #e1e1f1;padding:0 14px;border-radius:12px;color:#8d82bb;transition:border-color .15s,box-shadow .15s}
+.conecta-auth-input:focus-within{border-color:#9978ee;box-shadow:0 0 0 3px #936ded1a}
+.conecta-auth-input input{flex:1;min-width:0;outline:0;border:0;background:transparent;color:#1d2547;font-size:14px;height:100%}
+.conecta-auth-input input::placeholder{color:#a7a9bc}
+.conecta-auth-password-toggle{display:grid;place-items:center;color:#8c8caa;background:transparent;border:0;padding:6px;margin-right:-4px}
+.conecta-auth-form-options{display:flex;justify-content:flex-end;margin-top:-7px}.conecta-auth-form-options a{color:#7956e8;font-size:12px;font-weight:800}
+.conecta-auth-submit{width:100%;min-height:52px;gap:10px;font-size:14px;margin-top:2px;border-radius:12px}
+.conecta-auth-bottom{margin-top:24px;text-align:center;color:#838ba9;font-size:13px}.conecta-auth-bottom button{font-weight:800;color:#8057ec;border:0;background:none;padding:0 3px}
+.conecta-auth-terms{font-size:11px;text-align:center;margin:25px 0 14px;color:#a1a7b9}
+.conecta-auth-back{display:block;text-align:center;color:#8688aa;font-size:12px}
+.conecta-auth-utility{min-height:100dvh;display:grid;place-items:center;padding:28px 16px;background:radial-gradient(circle at 0% 0%,#dfd6ff,transparent 38%),radial-gradient(circle at 100% 100%,#d6f2fd,transparent 38%),#faf9ff}
+.conecta-auth-utility-card{background:#fff;box-shadow:0 15px 56px #34346220;border:1px solid #e9e7f5;border-radius:26px;padding:clamp(23px,4vw,41px);width:min(100%,480px)}
+.conecta-auth-utility-card>.concept-brand{margin-bottom:31px}
+.conecta-auth-utility-icon{display:grid;place-items:center;width:54px;height:54px;background:#ece7ff;color:#8256f1;border-radius:17px;margin-bottom:18px}
+.conecta-auth-utility-card h1{font-size:29px;line-height:1.2;margin:0 0 10px;color:#1e294b}
+.conecta-auth-utility-card>p{color:#7e88a5;line-height:1.7;margin:0 0 26px}
+.conecta-auth-utility-back{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:23px;font-size:13px;color:#7759e7;font-weight:800}
+@media(max-width:950px){.conecta-auth{grid-template-columns:1fr}.conecta-auth-hero{min-height:320px}.conecta-auth-hero-content{min-height:320px;padding:30px 25px;gap:60px}.conecta-auth-hero-copy{padding-bottom:0;margin:0}.conecta-auth-hero-copy h1{font-size:clamp(37px,6.5vw,52px);margin-bottom:13px}.conecta-auth-hero-copy p{font-size:13px}.conecta-auth-social,.conecta-auth-hero-footer{display:none}.conecta-auth-form-wrap{position:relative;margin-top:-19px;background:#fcfbff;border-radius:23px 23px 0 0;padding:30px 18px 50px}.conecta-auth-kicker{margin-bottom:12px}}
+@media(max-width:490px){.conecta-auth-hero{min-height:295px}.conecta-auth-hero-content{min-height:295px;padding:22px 23px;gap:55px}.conecta-auth-brand .concept-brand{font-size:25px}.conecta-auth-brand>span{font-size:10px}.conecta-auth-hero-copy h1{font-size:38px}.conecta-auth-hero-copy p{font-size:12px;line-height:1.65}.conecta-auth-label{font-size:9px;letter-spacing:.08em;margin-bottom:10px}.conecta-auth-form-wrap{padding:26px 18px 45px}.conecta-auth-panel h2{font-size:29px}.conecta-auth-description{font-size:13px}.conecta-auth-tabs{margin-bottom:21px}.conecta-auth-input{height:49px}.conecta-auth-submit{height:50px}}
+@media(prefers-reduced-motion:reduce){.conecta-auth-input{transition:none}}

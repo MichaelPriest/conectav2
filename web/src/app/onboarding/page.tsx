@@ -21,6 +21,7 @@ export default function OnboardingPage() {
         const { data: { user } } = await db.auth.getUser();
         if (!active) return;
         if (!user) { router.replace('/auth'); return; }
+        if(user.user_metadata?.display_name)setName(String(user.user_metadata.display_name).slice(0,80));
         const { data } = await db.from('profiles').select('id').eq('id', user.id).maybeSingle();
         if (data) { router.replace('/feed'); return; }
         setReady(true);

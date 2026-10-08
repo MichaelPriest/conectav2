@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import './concept.css';
 import './experience.css';
+import './auth-concept.css';
 
 export const metadata: Metadata = {
   title: 'Conecta — Sua comunidade, seu mundo',
