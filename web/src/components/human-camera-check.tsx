@@ -1,6 +1,51 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import {Camera,CameraOff,ShieldAlert,ScanFace,CheckCircle2} from 'lucide-react';
+import {Camera,CameraOff,ShieldAlert,ScanFace} from 'lucide-react';
+
+type HumanDetection={face?:Array<{live?:number;real?:number}>};
+type HumanInstance={load:()=>Promise<unknown>;detect:(input:HTMLVideoElement)=>Promise<HumanDetection>};
+type HumanConstructor=new(config:Record<string,unknown>)=>HumanInstance;
+
+declare global {
+  interface Window {
+    Human?:{Human?:HumanConstructor};
+  }
+}
+
+let humanConstructorPromise:Promise<HumanConstructor>|null=null;
+
+/**
+ * Load the Human IIFE browser distribution from our own origin.
+ * Next.js must NOT bundle or runtime-import Human's Node-targeted package.
+ * The file is copied from the pinned npm package by scripts/prepare-human.cjs
+ * as part of the build, so no third-party JavaScript URL is executed.
+ */
+function loadBrowserHuman():Promise<HumanConstructor>{
+  if(typeof window==='undefined')return Promise.reject(new Error('Câmera disponível somente no navegador.'));
+  const ready=window.Human?.Human;
+  if(ready)return Promise.resolve(ready);
+  if(!humanConstructorPromise){
+    humanConstructorPromise=new Promise<HumanConstructor>((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src='/vendor/human.js';
+      script.async=true;
+      script.referrerPolicy='no-referrer';
+      script.dataset.conectaHuman='true';
+      script.onload=()=>{
+        if(window.Human?.Human)resolve(window.Human.Human);
+        else reject(new Error('A biblioteca Human foi carregada, mas não inicializou.'));
+      };
+      script.onerror=()=>reject(new Error('Não foi possível carregar o Human local. Atualize a página e tente novamente.'));
+      document.head.appendChild(script);
+    }).catch(error=>{
+      humanConstructorPromise=null;
+      document.querySelector('script[data-conecta-human]')?.remove();
+      throw error;
+    });
+  }
+  return humanConstructorPromise;
+}
+
 
 export function HumanCameraCheck(){
   const videoRef=useRef<HTMLVideoElement>(null);
@@ -29,17 +74,11 @@ export function HumanCameraCheck(){
       setFeedback('Câmera indisponível. Utilize HTTPS e um navegador que permita acesso à câmera.');
       return;
     }
-    setBusy(true);setFeedback('Iniciando a câmera e carregando os modelos locais...');
+    setBusy(true);setFeedback('Carregando o Human e seus modelos antes de ativar a câmera...');
     const run=++currentRun.current;
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
-      if(run!==currentRun.current){stream.getTracks().forEach(t=>t.stop());return;}
-      mediaRef.current=stream;
-      const video=videoRef.current;
-      if(!video)throw new Error('Câmera não pronta.');
-      video.srcObject=stream;
-      await video.play();
-      const {Human}=await import('@vladmandic/human/dist/human.esm.js');
+      const Human=await loadBrowserHuman();
+      if(run!==currentRun.current)return;
       const human=new Human({
         backend:'webgl',
         modelBasePath:'https://vladmandic.github.io/human-models/models/',
@@ -58,6 +97,14 @@ export function HumanCameraCheck(){
         gesture:{enabled:false}
       });
       await human.load();
+      if(run!==currentRun.current)return;
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false});
+      if(run!==currentRun.current){stream.getTracks().forEach(t=>t.stop());return;}
+      mediaRef.current=stream;
+      const video=videoRef.current;
+      if(!video)throw new Error('Câmera não pronta.');
+      video.srcObject=stream;
+      await video.play();
       if(run!==currentRun.current)return;
       setActive(true);setBusy(false);
       setFeedback('Modelos carregados. Posicione seu rosto na moldura e olhe para a câmera.');

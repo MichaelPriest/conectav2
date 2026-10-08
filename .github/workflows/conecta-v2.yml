@@ -42,5 +42,7 @@ jobs:
         run: npm run typecheck
       - name: Regression tests for nullable profile details
         run: npm run test:profile
+      - name: Verify bundled Human browser library
+        run: npm run test:human
       - name: Build Next.js
         run: npm run build

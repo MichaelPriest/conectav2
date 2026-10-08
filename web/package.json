@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "node scripts/prepare-human.cjs && next dev",
+    "build": "node scripts/prepare-human.cjs && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:profile": "node --test tests/profile-details.test.cjs"
+    "test:profile": "node --test tests/profile-details.test.cjs",
+    "test:human": "node --test tests/human-browser.test.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
