@@ -66,8 +66,8 @@ export default function Messages() {
     e.preventDefault();
     if(!active||!auth.user||!compose.trim()||sending)return;
     setSending(true);setError('');
-    const {error:e}=await supabaseBrowser().from('messages').insert({conversation_id:active,sender_id:auth.user.id,content:compose.trim()});
-    if(e)setError(e.message);else{setCompose('');await loadMessages(active);}
+    const {error:sendError}=await supabaseBrowser().from('messages').insert({conversation_id:active,sender_id:auth.user.id,content:compose.trim()});
+    if(sendError)setError(sendError.message);else{setCompose('');await loadMessages(active);}
     setSending(false);
   }
   return <GuardedPage {...auth}><main className="section-page">
