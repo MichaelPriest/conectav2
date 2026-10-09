@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Bell, Bookmark, Compass, Clapperboard, Home, LogOut, Menu, MessageCircle, Moon, Plus, Search, Settings, Sun, Users, X, PanelLeftClose, PanelLeftOpen, HeartHandshake } from 'lucide-react';
+import { Bell, Bookmark, Compass, Clapperboard, Home, LogOut, Menu, MessageCircle, Moon, Plus, Search, Settings, Sun, Users, X, PanelLeftClose, PanelLeftOpen, HeartHandshake, ShieldCheck } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/lib/types';
 import { supabaseBrowser } from '@/lib/supabase/browser';
@@ -83,6 +83,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
   const [searchValue, setSearchValue] = useState('');
   const [dark, setDark] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [platformRole,setPlatformRole]=useState(false);
 
   useEffect(() => {
     const selected = window.localStorage.getItem('conecta-theme') === 'dark';
@@ -141,6 +142,15 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
     };
   }, [pathname]);
 
+  useEffect(()=>{
+    let live=true;
+    void supabaseBrowser().from('platform_moderators').select('role')
+      .eq('user_id',profile.id).maybeSingle().then(({data,error})=>{
+       if(live)setPlatformRole(!error&&Boolean(data?.role));
+      });
+    return()=>{live=false;};
+  },[profile.id]);
+
   async function logout() {
     await supabaseBrowser().auth.signOut();
     router.replace('/auth'); router.refresh();
@@ -155,6 +165,11 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
           <Icon size={20} strokeWidth={1.9}/><span>{t(({'Início':'home','Explorar':'explore','Reels':'reels','Comunidades':'communities','Acolhimento':'support','Conexões':'connections','Notificações':'notifications','Mensagens':'messages','Perfil':'profile','Publicar':'post'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')}</span>
           {label==='Notificações' && unread>0 && <span className="concept-nav-count">{unread>99?'99+':unread}</span>}
         </Link>)}
+        {platformRole&&<Link href="/moderacao" title="Moderação da plataforma" onClick={()=>setMobileNav(false)}
+          aria-current={pathname==='/moderacao'?'page':undefined}
+          className={'nav-link '+(pathname==='/moderacao'?'nav-active':'')}>
+          <ShieldCheck size={20} strokeWidth={1.9}/><span>Moderação</span>
+        </Link>}
       </nav>
       <div className="concept-sidebar-note">
         <span className="concept-sidebar-note-icon"><Users size={20}/></span>
