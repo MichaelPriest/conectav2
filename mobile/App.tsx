@@ -1,4 +1,4 @@
-import React,{useCallback,useEffect,useMemo,useState} from 'react';
+import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {
  Alert,AppState,FlatList,KeyboardAvoidingView,Linking,Platform,Pressable,Share,
  RefreshControl,SafeAreaView,ScrollView,StatusBar as NativeStatusBar,
@@ -149,12 +149,14 @@ function FeedScreen({userId}:{userId:string}){
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [more,setMore]=useState(false),[loadingMore,setLoadingMore]=useState(false);
  const [draftReady,setDraftReady]=useState(false);
+ const draftRevision=useRef(0);
  const draftKey='conecta-mobile-feed-draft:'+userId;
  useEffect(()=>{
   let mounted=true;
   setDraftReady(false);
+  const revision=++draftRevision.current;
   void AsyncStorage.getItem(draftKey).then(raw=>{
-   if(!mounted)return;
+   if(!mounted||revision!==draftRevision.current)return;
    if(raw){
     try{
      const draft=JSON.parse(raw) as {text?:unknown;visibility?:unknown};
@@ -164,8 +166,8 @@ function FeedScreen({userId}:{userId:string}){
     }catch{/* Ignore corrupt local drafts. */}
    }
   }).catch(()=>{/* Drafts are optional offline convenience. */})
-   .finally(()=>{if(mounted)setDraftReady(true);});
-  return()=>{mounted=false;};
+   .finally(()=>{if(mounted&&revision===draftRevision.current)setDraftReady(true);});
+  return()=>{mounted=false;draftRevision.current++;};
  },[draftKey]);
  useEffect(()=>{
   if(!draftReady)return;
@@ -195,7 +197,9 @@ function FeedScreen({userId}:{userId:string}){
   if(!validPost||busy)return;
   setBusy(true);setError('');
   try{
-   await publishTextPost(userId,text,visibility);setText('');
+   await publishTextPost(userId,text,visibility);
+   setText('');
+   await AsyncStorage.removeItem(draftKey).catch(()=>{});
    await refresh();
    Alert.alert('Publicação enviada','O conteúdo segue as mesmas regras de moderação do site.');
   }catch(e){setError(errorMessage(e));}
@@ -228,6 +232,9 @@ function FeedScreen({userId}:{userId:string}){
      </Text>
     </Pressable>)}
    </View>
+   {text.length>0&&<Pressable accessibilityRole="button" accessibilityLabel="Descartar rascunho" onPress={()=>{
+    setText('');void AsyncStorage.removeItem(draftKey).catch(()=>{});
+   }}><Text style={[s.secondaryText,{marginBottom:12}]}>Descartar rascunho</Text></Pressable>}
    <Action label={busy?'Publicando...':'Publicar texto'} disabled={busy||!validPost}
     onPress={()=>void publish()}/>
    <Text style={[s.muted,{marginTop:8}]}>Fotos, vídeos, Stories e enquetes são acessíveis no site enquanto as telas nativas são ampliadas.</Text>
