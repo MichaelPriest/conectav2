@@ -97,7 +97,7 @@ begin
    and exists (select 1 from public.chat_calls cc where cc.id=_id
       and (cc.caller_id=me or cc.callee_id=me)
       and cc.status in ('ended','declined','missed'));
-end;$;
+end;$$;
 
 
 revoke all on function public.end_chat_call(uuid,boolean) from PUBLIC,anon;
