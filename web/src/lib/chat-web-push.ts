@@ -1,10 +1,20 @@
 /** Static, SSRF-safe allowlist of Web Push gateways. User input is untrusted. */
 export function allowedChatPushEndpoint(raw:string):boolean{
-  if(typeof raw!=='string'||raw.length>2048||raw.length<30)return false;
+  if(typeof raw!=='string'||raw.length>4096||raw.length<30)return false;
   try{
     const url=new URL(raw);
-    if(url.protocol!=='https:'||url.username||url.password||url.hash||url.search||url.port)return false;
+    if(url.protocol!=='https:'||url.username||url.password||url.hash||url.port)return false;
     const host=url.hostname.toLowerCase();
+    // Microsoft Edge on Windows uses WNS. WNS endpoints contain a token query.
+    // Only a single token on the documented /w path is permitted, preventing SSRF.
+    if(host==='notify.windows.com'||host.endsWith('.notify.windows.com')){
+      if(url.pathname!=='/w'&&url.pathname!=='/w/')return false;
+      if(url.searchParams.size!==1||!url.searchParams.has('token'))return false;
+      const token=url.searchParams.get('token');
+      return typeof token==='string'&&token.length>=16&&token.length<=3072&&
+        /^[A-Za-z0-9_+\\/=-]+$/.test(token);
+    }
+    if(url.search)return false;
     return host==='fcm.googleapis.com'||host==='fcm-xm.googleapis.com'||
       host==='android.googleapis.com'||host==='updates.push.services.mozilla.com'||
       host==='push.services.mozilla.com'||host==='web.push.apple.com'||
@@ -36,4 +46,13 @@ export function validChatPushSubject(value:string|undefined):boolean{
      !url.hash&&!url.search&&!url.port);
    return false;
  }catch{return false;}
+}
+
+/** WNS requires raw-notification headers, and rejects the generic Urgency header. */
+export function chatPushDeliveryOptions(endpoint:string){
+ const host=new URL(endpoint).hostname.toLowerCase();
+ const isWns=host==='notify.windows.com'||host.endsWith('.notify.windows.com');
+ return isWns?
+   {TTL:300,timeout:8000,headers:{'X-WNS-Type':'wns/raw'}}:
+   {TTL:300,timeout:8000,urgency:'normal' as const};
 }

@@ -193,3 +193,20 @@ Antes de ativar o webhook, revalidar o resultado do diagnóstico no deploy
 que contiver este script. A URL `https://conectav2-validacao.onrender.com/api/chat/push/webhook`
 passa a ser um destino permitido no gatilho do banco, mas o estado
 `enabled=false` deve permanecer até teste satisfatório.
+
+## Chat V4.6 — diagnóstico e Edge no Windows (09/10/2026)
+
+A validação antiga recusava os canais Web Push do Edge no Windows
+(`https://*.notify.windows.com/w/?token=...`), inclusive antes de
+gravar a inscrição no Supabase. A lista segura agora aceita APENAS
+subdomínios de `notify.windows.com`, URL HTTPS, rota `/w/` e
+parâmetro único `token` com formato validado. URLs de outros hosts
+e parâmetros de redirecionamento continuam bloqueados para evitar SSRF.
+
+Entregas WNS passam a utilizar o cabeçalho `X-WNS-Type: wns/raw` e
+omitir `urgency`, mantendo payload sem conteúdo privado. O painel
+do chat informa exatamente se há bloqueio do navegador, falha de
+credencial/sessão ou cadastro não concluído e traz um botão para
+**testar o próprio dispositivo** (sem criar mensagem nem usuário fictício).
+Esse teste autentica o usuário e envia Web Push somente à sua
+própria inscrição persistida, com limitação por sessão do servidor.

@@ -9,7 +9,7 @@ const source=fs.readFileSync(path.join(__dirname,'../src/lib/chat-web-push.ts'),
 const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const mod={exports:{}};
 vm.runInNewContext(js,{module:mod,exports:mod.exports,URL});
-const {allowedChatPushEndpoint,validChatPushKey,CHAT_PUSH_PAYLOAD,CHAT_PUSH_BODY,chatPushShouldNotify}=mod.exports;
+const {allowedChatPushEndpoint,validChatPushKey,CHAT_PUSH_PAYLOAD,CHAT_PUSH_BODY,chatPushShouldNotify,chatPushDeliveryOptions}=mod.exports;
 test('strict HTTPS gateway allowlist rejects SSRF and URLs with credentials',()=>{
   assert.equal(allowedChatPushEndpoint('https://fcm.googleapis.com/fcm/send/abcdefghijklmnop'),true);
   assert.equal(allowedChatPushEndpoint('https://updates.push.services.mozilla.com/wpush/v2/abcdefghijklmnop'),true);
@@ -36,4 +36,26 @@ test('push is not sent to sender, muted rooms or messages already read',()=>{
  assert.equal(chatPushShouldNotify({user_id:'recipient',muted_until:'2026-10-11T12:00:00Z',last_read_at:null},'sender',created,Date.parse(created)),false);
  assert.equal(chatPushShouldNotify({user_id:'recipient',muted_until:null,last_read_at:'2026-10-09T12:01:00Z'},'sender',created),false);
  assert.equal(chatPushShouldNotify({user_id:'recipient',muted_until:null,last_read_at:null},'sender',created),true);
+});
+
+test('Edge on Windows WNS push gateways with a single token are accepted',()=>{
+ const wns='https://wns2-ch1p.notify.windows.com/w/?token=AQEBabcdefghijklmno%2F1234%2Btest%3D';
+ assert.equal(allowedChatPushEndpoint(wns),true);
+ assert.equal(allowedChatPushEndpoint('https://cloud.notify.windows.com/w/?token=AQEBabcdefghijklmno123456'),true);
+ assert.equal(chatPushDeliveryOptions(wns).headers['X-WNS-Type'],'wns/raw');
+ assert.equal('urgency' in chatPushDeliveryOptions(wns),false);
+ const fcm=chatPushDeliveryOptions('https://fcm.googleapis.com/fcm/send/abcdefghijklmnop');
+ assert.equal(fcm.urgency,'normal');
+ assert.equal('headers' in fcm,false);
+ for(const bad of [
+  'https://wns2-ch1p.notify.windows.com.evil.test/w/?token=AQEBabcdefghijklmno',
+  'https://evil.test/w/?token=AQEBabcdefghijklmno',
+  'http://wns2-ch1p.notify.windows.com/w/?token=AQEBabcdefghijklmno',
+  'https://wns2-ch1p.notify.windows.com:4433/w/?token=AQEBabcdefghijklmno',
+  'https://wns2-ch1p.notify.windows.com/admin?token=AQEBabcdefghijklmno',
+  'https://wns2-ch1p.notify.windows.com/w/?token=AQEBabcdefghijklmno&next=evil',
+  'https://wns2-ch1p.notify.windows.com/w/?redirect=https://evil.test',
+  'https://wns2-ch1p.notify.windows.com/w/?token=abc',
+  'https://wns2-ch1p.notify.windows.com/w/?token=bad%0Aheader'
+ ])assert.equal(allowedChatPushEndpoint(bad),false,bad);
 });

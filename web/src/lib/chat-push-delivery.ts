@@ -1,6 +1,6 @@
 import {createClient,type SupabaseClient} from '@supabase/supabase-js';
 import webpush from 'web-push';
-import {CHAT_PUSH_PAYLOAD,chatPushShouldNotify} from '@/lib/chat-web-push';
+import {CHAT_PUSH_PAYLOAD,chatPushShouldNotify,chatPushDeliveryOptions} from '@/lib/chat-web-push';
 
 export const CHAT_PUSH_UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export function privilegedChatPushClient():SupabaseClient|null{
@@ -54,7 +54,7 @@ export async function deliverChatPush(admin:SupabaseClient,messageId:string,expe
    try{
      await webpush.sendNotification({endpoint:item.endpoint,
        keys:{p256dh:item.p256dh,auth:item.auth_key}},CHAT_PUSH_PAYLOAD,
-       {TTL:300,urgency:'normal',timeout:4500});
+       chatPushDeliveryOptions(item.endpoint));
      return true;
    }catch(e){
      const statusCode=(e as {statusCode?:number}).statusCode;

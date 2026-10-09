@@ -57,3 +57,11 @@
 .conecta-chat-group-permissions label{display:flex;align-items:center;gap:.65rem}
 .conecta-chat-group-permissions input{accent-color:var(--primary,#7c3aed)}
 .conecta-chat-roster-member{flex-wrap:wrap}
+
+/* Visible Web Push status and actionable feedback in both chat headers. */
+.conecta-chat-push-control{position:relative;display:inline-flex;align-items:center;gap:5px;min-width:0;flex-shrink:0}
+.conecta-chat-push-trigger,.conecta-chat-push-test{display:inline-flex;align-items:center;justify-content:center;gap:5px;border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:7px 9px;color:var(--ink);font-size:11px;font-weight:700;white-space:nowrap}
+.conecta-chat-push-trigger:hover,.conecta-chat-push-test:hover{border-color:var(--brand);color:var(--brand)}
+.conecta-chat-push-test{color:var(--brand)}
+.conecta-chat-push-feedback{position:absolute;z-index:60;right:0;top:calc(100% + 6px);width:min(320px,75vw);padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);font-size:12px;line-height:1.4;color:var(--ink);white-space:normal}
+@media(max-width:740px){.conecta-chat-push-trigger{padding:7px}.conecta-chat-push-trigger>span{display:none}.conecta-chat-push-test{padding:7px 5px;font-size:10px}}
