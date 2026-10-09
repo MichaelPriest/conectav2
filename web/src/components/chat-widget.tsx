@@ -6,7 +6,9 @@ import {supabaseBrowser} from '@/lib/supabase/browser';
 import {MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
 import {useChatTyping} from '@/lib/use-chat-typing';
+import {ProfileAvatar} from '@/components/profile-avatar';
 type Thread={id:string;title:string;group:boolean;otherNames:string;lastAt:string;unread:number;preview:string;mutedUntil:string|null};
+type Contact={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Msg={id:string;conversation_id:string;sender_id:string;content:string;created_at:string;media_type:string|null;edited_at:string|null;deleted_at:string|null};
 export function ChatWidget({userId}:{userId:string}){
  const [open,setOpen]=useState(false),[threads,setThreads]=useState<Thread[]>([]);
@@ -14,6 +16,9 @@ export function ChatWidget({userId}:{userId:string}){
  const [text,setText]=useState(''),[loading,setLoading]=useState(false),[sending,setSending]=useState(false);
  const [error,setError]=useState('');
  const [totalUnread,setTotalUnread]=useState(0);
+ const [contacts,setContacts]=useState<Contact[]>([]);
+ const [contactSearch,setContactSearch]=useState('');
+ const [starting,setStarting]=useState<string|null>(null);
  const end=useRef<HTMLDivElement>(null);
  const typingIds=useChatTyping(open&&active?active.id:null,userId,text,open&&Boolean(active));
  useEffect(()=>{
@@ -23,6 +28,21 @@ export function ChatWidget({userId}:{userId:string}){
    setOpen(next);
    try{localStorage.setItem('conecta-chat-widget-open',next?'1':'0');}catch{}
  }
+ const loadContacts=useCallback(async()=>{
+   const db=supabaseBrowser();
+   const {data:links,error:e}=await db.from('friendships').select('requester_id,addressee_id')
+     .eq('status','accepted')
+     .or('requester_id.eq.'+userId+',addressee_id.eq.'+userId);
+   if(e){setError(e.message);return;}
+   const ids=[...new Set((links||[]).map(link=>
+     link.requester_id===userId?link.addressee_id:link.requester_id))];
+   if(!ids.length){setContacts([]);return;}
+   const {data,error:profilesError}=await db.from('profiles')
+     .select('id,handle,display_name,avatar_path').in('id',ids);
+   if(profilesError){setError(profilesError.message);return;}
+   setContacts(((data||[]) as Contact[]).sort((a,b)=>
+     a.display_name.localeCompare(b.display_name,'pt-BR')));
+ },[userId]);
  const loadThreads=useCallback(async()=>{
    const db=supabaseBrowser();
    const {data:own,error:e}=await db.from('conversation_members').select('conversation_id,muted_until').eq('user_id',userId).limit(150);
@@ -72,7 +92,39 @@ export function ChatWidget({userId}:{userId:string}){
      .eq('conversation_id',conversationId).order('created_at',{ascending:false}).limit(50);
    if(e)setError(e.message);else setMessages([...(data||[])].reverse());
  },[]);
- useEffect(()=>{void loadThreads();},[loadThreads]);
+ useEffect(()=>{void loadThreads();void loadContacts();},[loadThreads,loadContacts]);
+ async function openContact(person:Contact){
+   if(starting)return;
+   setStarting(person.id);setError('');
+   try{
+     const db=supabaseBrowser();
+     const {data:own,error:membershipError}=await db.from('conversation_members')
+       .select('conversation_id').eq('user_id',userId).limit(150);
+     if(membershipError)throw membershipError;
+     let foundId:string|null=null;
+     for(const room of own||[]){
+       const {data:members,error:memberError}=await db.from('conversation_members')
+         .select('user_id').eq('conversation_id',room.conversation_id);
+       if(memberError)continue;
+       const ids=(members||[]).map(item=>item.user_id);
+       if(ids.length===2&&ids.includes(userId)&&ids.includes(person.id)){
+         foundId=room.conversation_id;break;
+       }
+     }
+     if(!foundId){
+       const {data:id,error:e}=await db.rpc('create_conversation_with_members',{
+          _title:'Conversa privada',_other_user_ids:[person.id]
+       });
+       if(e)throw e;
+       foundId=id as string;
+     }
+     await loadThreads();
+     setActive({id:foundId,title:person.display_name,group:false,
+       otherNames:person.display_name,lastAt:new Date().toISOString(),
+       unread:0,preview:'',mutedUntil:null});
+   }catch(e){setError(e instanceof Error?e.message:'Não foi possível abrir a conversa.');}
+   finally{setStarting(null);}
+ }
  useEffect(()=>{
    const db=supabaseBrowser();
    // RLS on messages means events are delivered only for joined conversations.
@@ -125,12 +177,26 @@ export function ChatWidget({userId}:{userId:string}){
        <button className="icon-btn" type="button" aria-label="Fechar chat" onClick={()=>toggle(false)}><X size={20}/></button>
      </header>
      {!active?<div className="conecta-chat-widget-list">
-       {threads.length===0?<div className="conecta-widget-empty"><MessageCircle size={26}/><p>Suas conversas aparecem aqui.</p><Link href="/mensagens">Iniciar conversa</Link></div>:
+       {threads.length===0?<div className="conecta-widget-empty"><MessageCircle size={26}/><p>Suas conversas aparecem aqui.</p></div>:
          threads.map(t=><button key={t.id} type="button" onClick={()=>{setActive(t);setError('');}}><span className="conecta-widget-thread-icon">{t.group?<Users size={19}/>:<MessageCircle size={19}/>}</span>
            <span><strong>{t.title}</strong><small>{t.preview.slice(0,75)}</small></span>
            {t.mutedUntil&&Date.parse(t.mutedUntil)>Date.now()&&<BellOff size={13} aria-label="Conversa silenciada"/>}
            {t.unread>0&&<span className="conecta-chat-unread" aria-label={t.unread+' mensagens não lidas'}>{t.unread>99?'99+':t.unread}</span>}</button>)}
-       <Link className="conecta-widget-new" href="/mensagens">Nova conversa ou grupo <ExternalLink size={14}/></Link>
+       <section className="conecta-widget-contacts" aria-label="Minhas conexões">
+         <strong className="conecta-widget-contacts-title">Conexões ({contacts.length})</strong>
+         <input className="form-input" aria-label="Buscar conexões no chat" value={contactSearch}
+           placeholder="Pesquisar nome ou @usuário" onChange={e=>setContactSearch(e.target.value)}/>
+         {contacts.filter(person=>(person.display_name+' '+person.handle)
+           .toLocaleLowerCase('pt-BR').includes(contactSearch.toLocaleLowerCase('pt-BR')))
+           .map(person=><button type="button" key={person.id}
+             disabled={Boolean(starting)} onClick={()=>void openContact(person)}>
+             <ProfileAvatar person={person} size="small"/>
+             <span><strong>{person.display_name}</strong><small>@{person.handle}</small></span>
+             {starting===person.id?<Loader2 size={15} className="spin"/>:<MessageCircle size={15}/>}
+           </button>)}
+         {!contacts.length&&<small>Aceite conexões para conversar.</small>}
+       </section>
+       <Link className="conecta-widget-new" href="/mensagens">Abrir mensageiro completo <ExternalLink size={14}/></Link>
      </div>:
        <><div className="conecta-chat-widget-log" role="log" aria-live="polite">
          {loading&&<span className="small-note">Carregando...</span>}
