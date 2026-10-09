@@ -257,3 +257,16 @@ simplificar a sinalização gratuita; algumas combinações de redes exigirão
 TURN. Chamadas com a aba fechada não são recebidas e ainda não há histórico
 ou recurso de chamadas em grupo. A interface permite aceitar, recusar,
 silenciar, desligar câmera e encerrar, sem serviço pago obrigatório.
+
+## Chat V4.10 — Realtime e histórico curto de chamadas perdidas
+- A tabela chat_calls foi adicionada à publication supabase_realtime, com RLS mantida.
+- Eventos filtrados por caller_id/callee_id substituem polling agressivo; fallback em 12s.
+- Chamadas não atendidas podem ser marcadas missed após 8s ou expiração; SDP
+  é apagado no encerramento. Histórico visível por até 7 dias aos participantes.
+- Avisos de chamadas perdidas são calculados do lado do destinatário e
+  dispensáveis no navegador, sem armazenar monitoramento extra.
+- Duas abas não devem encerrar uma chamada atendida em outra aba.
+- Notificação do sistema para chamada entrante ocorre somente com permissão
+  previamente concedida e página aberta em segundo plano.
+- SDP nunca fica acessível a terceiros: RLS restringe participantes com
+  amizade aceita e sem bloqueios. STUN é grátis mas não substitui TURN.

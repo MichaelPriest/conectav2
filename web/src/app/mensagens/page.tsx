@@ -13,7 +13,7 @@ import {MentionInput,MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
 import {useChatTyping} from '@/lib/use-chat-typing';
 import {ChatOnlineStatus,ChatPresenceToggle} from '@/components/chat-presence';
-import {ChatCallButtons} from '@/components/chat-calls';
+import {ChatCallButtons,ChatMissedCalls} from '@/components/chat-calls';
 import {mergeChatPage,olderChatCursor} from '@/lib/chat-timeline';
 import {groupAccess,canRemoveGroupTarget} from '@/lib/chat-group-roles';
 
@@ -640,7 +640,7 @@ export default function Messages(){
    <div className="page-heading"><div><span className="section-eyebrow">MENSAGENS REAIS · AMIZADES ACEITAS</span><h1>Conversas <span className="wave">✳</span></h1><p>Troque mensagens privadas, músicas e emojis com suas amizades.</p></div></div>
    <div className={'conecta-chat-layout card'+(active?' conecta-chat-has-active':'')}>
      <aside className="conecta-chat-sidebar">
-       <div className="feed-title"><h2>Caixa de entrada</h2><button className="icon-btn" title="Atualizar" onClick={()=>void loadThreads()}><RefreshCw size={18}/></button></div>
+       <div className="feed-title"><h2>Caixa de entrada</h2><ChatMissedCalls/><button className="icon-btn" title="Atualizar" onClick={()=>void loadThreads()}><RefreshCw size={18}/></button></div>
        <label className="searchbox"><Search size={17}/><input aria-label="Filtrar conversas" placeholder="Buscar conversa..." value={threadSearch} onChange={e=>setThreadSearch(e.target.value)}/></label>
        <section className="conecta-chat-connections" aria-label="Lista de conexões">
          <div className="conecta-chat-connections-heading">

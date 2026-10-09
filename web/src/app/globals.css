@@ -88,3 +88,9 @@
 .conecta-call-remote{width:100%;height:min(36vh,270px);object-fit:contain;background:#0c1329;border-radius:14px}
 .conecta-call-local{width:150px;max-height:95px;object-fit:contain;background:#0c1329;border-radius:12px}
 @media(max-width:680px){.conecta-call-panel{padding:17px}.conecta-call-buttons .icon-btn{width:30px;height:32px}}
+
+/* Missed-call count is private, transient and locally dismissible. */
+.conecta-chat-missed{display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:6px 9px;border-radius:10px;border:1px solid #e4b2be;background:#fff0f3;color:#ac3153;font-size:11px;font-weight:700}
+.conecta-chat-missed:hover{background:#ffe4eb}
+.conecta-chat-missed span{font-size:16px;line-height:1;padding-left:3px}
+.conecta-chat-widget-list>.conecta-chat-missed{margin:10px 12px 0}

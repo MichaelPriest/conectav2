@@ -1,16 +1,17 @@
 'use client';
 import {createContext,useCallback,useContext,useEffect,useRef,useState} from 'react';
-import {Phone,PhoneOff,Video,Mic,MicOff,VideoOff,Check,Loader2,Volume2} from 'lucide-react';
+import {Phone,PhoneOff,Video,Mic,MicOff,VideoOff,Check,Loader2,Volume2,PhoneMissed} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 
 type CallKind='audio'|'video';
 type CallRow={id:string;conversation_id:string;caller_id:string;callee_id:string;kind:CallKind;
- status:'ringing'|'accepted'|'ended'|'declined';offer_sdp:string|null;answer_sdp:string|null;expires_at:string};
+ status:'ringing'|'accepted'|'ended'|'declined'|'missed';offer_sdp:string|null;answer_sdp:string|null;expires_at:string};
 type CallContext={busy:boolean;hasCall:boolean;error:string;
+ missedCount:number;acknowledgeMissed:()=>void;
  start:(conversationId:string,recipientId:string,recipientName:string,kind:CallKind)=>Promise<void>};
 const Context=createContext<CallContext|null>(null);
 const config:RTCConfiguration={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
-const intervalMs=1900;
+const intervalMs=12000;
 const describe=(e:unknown)=>e instanceof Error?e.message:'Não foi possível realizar a chamada.';
 
 async function iceComplete(pc:RTCPeerConnection){
@@ -35,6 +36,29 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
  const sentOffer=useRef(false),sentAnswer=useRef(false),negotiating=useRef(false),querying=useRef(false);
  const localVideo=useRef<HTMLVideoElement|null>(null),remoteVideo=useRef<HTMLVideoElement|null>(null);
  const ended=useRef<string|null>(null);
+ const notifiedIncoming=useRef<string|null>(null);
+ const failureTimer=useRef<number|null>(null);
+ const [missedCount,setMissedCount]=useState(0);
+ const missedAckKey='conecta-call-missed-ack:'+userId;
+ const refreshMissed=useCallback(async()=>{
+   if(document.hidden)return;
+   const since=new Date(Date.now()-7*24*60*60*1000).toISOString();
+   const {data,error:e}=await db.from('chat_calls')
+     .select('id,created_at,status,expires_at')
+     .eq('callee_id',userId).gte('created_at',since)
+     .order('created_at',{ascending:false}).limit(80);
+   if(e)return;
+   let acknowledged=0;
+   try{acknowledged=Date.parse(localStorage.getItem(missedAckKey)||'')||0;}catch{}
+   const now=Date.now();
+   const count=(data||[]).filter(row=>Date.parse(row.created_at)>acknowledged&&
+     (row.status==='missed'||(row.status==='ringing'&&Date.parse(row.expires_at)<=now))).length;
+   setMissedCount(count);
+ },[db,userId,missedAckKey]);
+ const acknowledgeMissed=useCallback(()=>{
+   try{localStorage.setItem(missedAckKey,new Date().toISOString());}catch{}
+   setMissedCount(0);
+ },[missedAckKey]);
 
  useEffect(()=>{if(localVideo.current)localVideo.current.srcObject=local;},[local,current?.id]);
  useEffect(()=>{
@@ -44,6 +68,8 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
  },[remote,current?.id]);
 
  const release=useCallback(()=>{
+  if(failureTimer.current!==null)window.clearTimeout(failureTimer.current);
+  failureTimer.current=null;
   pcRef.current?.close();pcRef.current=null;
   streamRef.current?.getTracks().forEach(track=>track.stop());streamRef.current=null;
   setLocal(null);setRemote(null);setAudioBlocked(false);
@@ -73,11 +99,20 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
    });
   };
   pc.onconnectionstatechange=()=>{
-   if(pc.connectionState==='connected')setStatus('Conectada');
-   else if(pc.connectionState==='connecting')setStatus('Conectando…');
-   else if(pc.connectionState==='failed')setStatus('Falha na conexão P2P. Esta rede pode exigir TURN.');
+   if(pc.connectionState==='connected'){
+    if(failureTimer.current!==null)window.clearTimeout(failureTimer.current);
+    failureTimer.current=null;setStatus('Conectada');
+   }else if(pc.connectionState==='connecting')setStatus('Conectando…');
+   else if(pc.connectionState==='failed'){
+    setStatus('Falha na conexão P2P.');
+    setError('A ligação não conectou. Tente outra rede; algumas conexões exigem TURN.');
+    if(failureTimer.current!==null)window.clearTimeout(failureTimer.current);
+    failureTimer.current=window.setTimeout(()=>{
+      if(pcRef.current===pc)void end();
+    },4500);
+   }
   };
- },[]);
+ },[end]);
  const start=useCallback(async(conversationId:string,recipientId:string,recipientName:string,kind:CallKind)=>{
   if(currentRef.current||busyRef.current)return;
   busyRef.current=true;setBusy(true);setError('');setContact(recipientName);
@@ -146,16 +181,23 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
      .select('id,conversation_id,caller_id,callee_id,kind,status,offer_sdp,answer_sdp,expires_at')
      .eq('id',row.id).maybeSingle();
     if(e)return;
-    if(!data||data.status==='ended'||data.status==='declined'||
+    if(!data||data.status==='ended'||data.status==='declined'||data.status==='missed'||
       Date.parse(data.expires_at)<=Date.now()){
       void end();return;
     }
     // A previous pending fetch must not revive a call that has just ended.
     if(currentRef.current?.id!==row.id)return;
     const updated=data as CallRow;
-    currentRef.current=updated;setCurrent(updated);
+    // A different tab accepted the same incoming call. Don't hang it up.
+    if(updated.status==='accepted'&&updated.callee_id===userId&&!pcRef.current){
+      release();return;
+    }
+    currentRef.current=updated;
+    if(updated.status!==row.status||updated.offer_sdp!==row.offer_sdp||
+       updated.answer_sdp!==row.answer_sdp||updated.expires_at!==row.expires_at)
+      setCurrent(updated);
     if(updated.status==='accepted'&&pcRef.current)void negotiate(updated);
-   }else if(!document.hidden){
+   }else{
     const {data,error:e}=await db.from('chat_calls')
      .select('id,conversation_id,caller_id,callee_id,kind,status,offer_sdp,answer_sdp,expires_at')
      .eq('callee_id',userId).eq('status','ringing')
@@ -169,21 +211,45 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     ended.current=null;currentRef.current=incoming;setCurrent(incoming);
     setContact(person?.display_name||'Sua conexão');
     setStatus('Chamada recebida');
+    if(document.hidden&&typeof Notification!=='undefined'&&
+       Notification.permission==='granted'&&notifiedIncoming.current!==incoming.id){
+      notifiedIncoming.current=incoming.id;
+      try{
+       const alert=new Notification('Conecta · Chamada recebida',{
+        body:'Uma conexão está ligando. Abra o Conecta para atender.',
+        tag:'conecta-call-'+incoming.id
+       });
+       alert.onclick=()=>{window.focus();alert.close();};
+      }catch{/* Notification access is not guaranteed. */}
+    }
    }
   }finally{querying.current=false;}
- },[db,end,negotiate,userId]);
+ },[db,end,negotiate,userId,release]);
  useEffect(()=>{
-  void check();
-  const timer=window.setInterval(()=>{void check();},1900);
-  const visibility=()=>{if(!document.hidden)void check();};
+  void check();void refreshMissed();
+  // RLS protects events: each browser listens only to calls involving its user.
+  const channel=db.channel('conecta-call-signals-'+userId)
+    .on('postgres_changes',{schema:'public',table:'chat_calls',event:'*',
+      filter:'callee_id=eq.'+userId},()=>{void check();void refreshMissed();})
+    .on('postgres_changes',{schema:'public',table:'chat_calls',event:'*',
+      filter:'caller_id=eq.'+userId},()=>{void check();})
+    .subscribe();
+  const timer=window.setInterval(()=>{void check();},intervalMs);
+  const missedTimer=window.setInterval(()=>{void refreshMissed();},90000);
+  const visibility=()=>{if(!document.hidden){void check();void refreshMissed();}};
   document.addEventListener('visibilitychange',visibility);
   return()=>{
-   window.clearInterval(timer);document.removeEventListener('visibilitychange',visibility);
+   window.clearInterval(timer);window.clearInterval(missedTimer);
+   document.removeEventListener('visibilitychange',visibility);
+   void db.removeChannel(channel);
    const row=currentRef.current;
-   if(row)void db.rpc('end_chat_call',{_id:row.id,_decline:false});
+   // Do not terminate a ringing call merely because an unrelated tab closes.
+   if(row&&(row.caller_id===userId||Boolean(pcRef.current)))
+     void db.rpc('end_chat_call',{_id:row.id,_decline:false});
+   if(failureTimer.current!==null)window.clearTimeout(failureTimer.current);
    pcRef.current?.close();streamRef.current?.getTracks().forEach(track=>track.stop());
   };
- },[db,check]);
+ },[db,check,refreshMissed,userId]);
  useEffect(()=>{
   if(!current||current.status!=='accepted')return;
   const timer=window.setInterval(()=>{
@@ -200,7 +266,8 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
   if(!track)return;track.enabled=!track.enabled;setCamOn(track.enabled);
  }
  const incoming=current?.callee_id===userId&&current.status==='ringing';
- return <Context.Provider value={{busy,hasCall:Boolean(current),error,start}}>{children}
+ return <Context.Provider value={{busy,hasCall:Boolean(current),error,start,
+   missedCount,acknowledgeMissed}}>{children}
   {current&&<div className="conecta-call-backdrop">
    <section className="conecta-call-panel" role="dialog" aria-modal="true"
     aria-label={incoming?'Chamada recebida':'Chamada de áudio ou vídeo'}>
@@ -250,4 +317,17 @@ export function ChatCallButtons({conversationId,calleeId,calleeName}:{
    onClick={()=>void ctx.start(conversationId,calleeId,calleeName||'Conexão','video')}><Video size={17}/></button>
   {ctx.error&&!ctx.hasCall&&<small className="conecta-call-inline-error" role="alert">{ctx.error}</small>}
  </span>;
+}
+
+/** User-controlled, local-only acknowledgement; no extra device or tracking data. */
+export function ChatMissedCalls(){
+ const ctx=useContext(Context);
+ if(!ctx||ctx.missedCount===0)return null;
+ return <button className="conecta-chat-missed" type="button"
+  onClick={ctx.acknowledgeMissed}
+  aria-label={ctx.missedCount+' chamadas perdidas. Dispensar aviso.'}>
+  <PhoneMissed size={14}/>
+  {ctx.missedCount===1?'1 chamada perdida':ctx.missedCount+' chamadas perdidas'}
+  <span aria-hidden="true">×</span>
+ </button>;
 }

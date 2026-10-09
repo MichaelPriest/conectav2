@@ -9,7 +9,7 @@ import {useChatTyping} from '@/lib/use-chat-typing';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {ChatPushControl,notifyChatMessageSent} from '@/components/chat-push-control';
 import {ChatOnlineStatus,ChatPresenceToggle} from '@/components/chat-presence';
-import {ChatCallButtons} from '@/components/chat-calls';
+import {ChatCallButtons,ChatMissedCalls} from '@/components/chat-calls';
 type Thread={id:string;title:string;group:boolean;otherNames:string;otherId:string|null;other:Contact|null;lastAt:string;unread:number;preview:string;mutedUntil:string|null};
 type Contact={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Msg={id:string;conversation_id:string;sender_id:string;content:string;created_at:string;media_type:string|null;edited_at:string|null;deleted_at:string|null};
@@ -234,6 +234,7 @@ export function ChatWidget({userId}:{userId:string}){
        <button className="icon-btn" type="button" aria-label="Fechar chat" onClick={()=>toggle(false)}><X size={20}/></button>
      </header>
      {!active?<div className="conecta-chat-widget-list">
+       <ChatMissedCalls/>
        {threads.length===0?<div className="conecta-widget-empty"><MessageCircle size={26}/><p>Suas conversas aparecem aqui.</p></div>:
          threads.map(t=><button key={t.id} type="button" onClick={()=>{setActive(t);setError('');}}>{t.group?<span className="conecta-widget-thread-icon"><Users size={19}/></span>:
             <ProfileAvatar person={t.other} size="small"/>}
