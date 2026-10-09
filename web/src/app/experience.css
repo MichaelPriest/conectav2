@@ -586,3 +586,30 @@
 .conecta-safety-history article p{margin:0;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:900px){.conecta-safety-layout{grid-template-columns:1fr}.conecta-safety-overview{grid-template-columns:1fr 1fr}.conecta-safety-layout>.panel{min-height:0}}
 @media(max-width:580px){.conecta-safety-overview{grid-template-columns:1fr}.conecta-safety-facts{grid-template-columns:1fr}.conecta-safety-center .page-heading{align-items:flex-start;flex-wrap:wrap}.conecta-safety-filters button:last-child{margin-left:0}.conecta-safety-layout>.panel{padding:14px}}
+
+
+/* Moderation queue for quarantined feed media and stories */
+.conecta-content-review{display:grid;gap:4px;background:#fff7e5;color:#785520;border:1px solid #f2dfa5;border-radius:10px;padding:11px 14px;margin-top:12px}
+.conecta-content-review strong{font-size:12px}.conecta-content-review span{font-size:11px;line-height:1.55}
+.conecta-content-moderation{padding:22px;margin:18px 0 26px;display:grid;gap:15px}
+.conecta-content-moderation-head{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px}
+.conecta-content-moderation-head h2{display:flex;align-items:center;gap:10px;font-size:19px;margin:6px 0}
+.conecta-content-moderation-head p{font-size:12px;color:var(--muted);max-width:720px;margin:0}
+.conecta-content-moderation-body{display:grid;grid-template-columns:minmax(0,0.85fr) minmax(0,1.15fr);gap:18px}
+.conecta-content-pending-list{max-height:450px;overflow:auto;display:grid;align-content:start;gap:8px}
+.conecta-content-pending-item{display:grid;gap:8px;text-align:left;color:var(--ink);border:1px solid var(--line);border-radius:12px;background:#fff;padding:13px;min-width:0}
+.conecta-content-pending-item:hover,.conecta-content-pending-item.active{border-color:#a991ee;background:#f8f5ff}
+.conecta-content-pending-item>span{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:11px}
+.conecta-content-pending-item>span small{font-size:10px;color:var(--muted)}
+.conecta-content-pending-item>p{font-size:11px;line-height:1.5;color:#767b94;margin:0;overflow-wrap:anywhere}
+.conecta-content-pending-detail{display:grid;align-content:start;gap:14px;min-width:0;background:#f9f8fe;border:1px solid var(--line);border-radius:13px;padding:18px}
+.conecta-content-pending-heading{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px}
+.conecta-content-pending-heading strong{font-size:12px}
+.conecta-content-pending-heading small{color:var(--muted);font-size:10px}
+.conecta-content-moderation-text{background:white;border:1px solid var(--line);border-radius:8px;padding:11px;font-size:12px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.conecta-content-moderation-previews{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;max-height:380px;overflow:auto}
+.conecta-content-moderation-previews img,.conecta-content-moderation-previews video{display:block;max-width:100%;max-height:260px;width:100%;object-fit:contain;border-radius:10px;background:#10101b}
+.conecta-content-pending-actions{display:flex;gap:10px;flex-wrap:wrap}
+.conecta-content-pending-detail .small-note{color:var(--muted);font-size:11px;line-height:1.5}
+@media(max-width:900px){.conecta-content-moderation-body{grid-template-columns:1fr}.conecta-content-pending-list{max-height:290px}}
+@media(max-width:560px){.conecta-content-moderation{padding:14px}.conecta-content-pending-detail{padding:12px}}
