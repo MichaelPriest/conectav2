@@ -18,7 +18,7 @@ export default function ReelsPage(){
    async function load(){
      const db=supabaseBrowser();
      const {data,error:e}=await db.from('posts')
-       .select('id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(display_name,handle,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
+       .select('id,author_id,community_id,moderation_status,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(display_name,handle,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
        .eq('visibility','public').eq('media_type','video')
        .order('created_at',{ascending:false}).limit(36);
      if(!alive)return;
