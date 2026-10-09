@@ -135,6 +135,8 @@ function FeedScreen({userId}:{userId:string}){
  const [text,setText]=useState(''),[visibility,setVisibility]=useState<'public'|'friends'|'private'>('public');
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [more,setMore]=useState(false),[loadingMore,setLoadingMore]=useState(false);
+ const postLength=text.trim().length;
+ const validPost=postLength>0&&postLength<=3000;
  const load=useCallback(async(offset=0)=>{
   const result=await loadFeed(offset);
   const ownLikes=await myLikes(userId,result.items.map(x=>x.id));
@@ -149,7 +151,7 @@ function FeedScreen({userId}:{userId:string}){
  },[load]);
  useEffect(()=>{void refresh();},[refresh]);
  const publish=async()=>{
-  if(!text.trim()||busy)return;
+  if(!validPost||busy)return;
   setBusy(true);setError('');
   try{
    await publishTextPost(userId,text,visibility);setText('');
@@ -173,16 +175,19 @@ function FeedScreen({userId}:{userId:string}){
   <View style={s.card}>
    <Text style={[s.primaryText,{marginBottom:5}]}>No que você está pensando?</Text>
    <Field value={text} onChangeText={setText} placeholder="Conte algo para a sua rede..." multiline/>
+    <Text accessibilityLiveRegion="polite" style={[s.muted,{textAlign:'right',marginBottom:10,color:postLength>3000?t.danger:t.muted}]}>{postLength}/3000 caracteres</Text>
    <View style={[s.row,{gap:7,marginBottom:12,flexWrap:'wrap'}]}>
     {(['public','friends','private'] as const).map(v=><Pressable key={v}
-     onPress={()=>setVisibility(v)} style={[s.secondary,
+     accessibilityRole="radio" accessibilityState={{checked:visibility===v}}
+      accessibilityLabel={v==='public'?'Público':v==='friends'?'Conexões':'Só eu'}
+      onPress={()=>setVisibility(v)} style={[s.secondary,
        visibility===v&&{backgroundColor:t.primary}]}>
      <Text style={[s.secondaryText,visibility===v&&{color:'#FFF'}]}>
       {v==='public'?'Público':v==='friends'?'Conexões':'Só eu'}
      </Text>
     </Pressable>)}
    </View>
-   <Action label={busy?'Publicando...':'Publicar texto'} disabled={busy||!text.trim()}
+   <Action label={busy?'Publicando...':'Publicar texto'} disabled={busy||!validPost}
     onPress={()=>void publish()}/>
    <Text style={[s.muted,{marginTop:8}]}>Fotos, vídeos, Stories e enquetes são acessíveis no site enquanto as telas nativas são ampliadas.</Text>
   </View>
