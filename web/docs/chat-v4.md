@@ -281,3 +281,12 @@ consulta a cada 1,8 segundo; sem chamada, a verificação é cada 12 segundos,
 mantendo Supabase Realtime principal. STUN Cloudflare gratuito complementa
 Google. Redes NAT/firewall restritivas exigem TURN autenticado, ainda não
 configurado; não interpretar CI de frontend como teste de áudio entre redes.
+
+## Chat V4.12 — Trickle ICE / candidata separada
+- Oferta SDP enviada imediatamente após setLocalDescription; sem espera de 14s.
+- Candidatos descobertos incrementalmente, via RPC autenticada no Supabase.
+- Candidatos remotos entram via addIceCandidate somente após remoteDescription.
+- Tabela de ICE com limite de 60 por participante, RLS e exclusão ao encerrar.
+- Cliente Supabase estável entre renders do componente de chamada.
+- A mídia segue P2P criptografada pelo navegador; não é armazenada.
+- Redes que bloqueiem P2P ainda podem precisar de Coturn hospedado.

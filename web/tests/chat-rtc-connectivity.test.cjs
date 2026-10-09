@@ -12,6 +12,8 @@ test('accepted calls poll promptly while idle polling stays light',()=>{
 });
 test('RTC reports negotiation stages and terminates stalled attempts',()=>{
  assert.match(code,/iceConnectionState/);
+ assert.ok(!code.includes('await iceComplete(pc)'));
+ assert.match(code,/receiveCandidates/);
  assert.match(code,/const negotiationTimeoutMs=47000/);
  assert.match(code,/resposta WebRTC não chegou/);
  assert.match(code,/necessário TURN/);

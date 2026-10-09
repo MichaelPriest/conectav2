@@ -4,11 +4,11 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const read=p=>fs.readFileSync(path.join(__dirname,'..',p),'utf8');
-test('WebRTC call uses real microphones/cameras and full ICE descriptions',()=>{
+test('WebRTC call uses real microphones/cameras and incremental ICE',()=>{
  const src=read('src/components/chat-calls.tsx');
  for(const expected of [
   'navigator.mediaDevices.getUserMedia','new RTCPeerConnection',
-  'iceGatheringState','await iceComplete(pc)',
+  'iceGatheringState','pc.onicecandidate','pc.addIceCandidate',
   "db.rpc('signal_chat_call'","db.rpc('end_chat_call'",
   "db.rpc('keep_chat_call_alive'",'getAudioTracks()','getVideoTracks()'
  ])assert.ok(src.includes(expected),expected);
