@@ -13,6 +13,12 @@ export type PostComment={
  body:string;moderation_status:'approved'|'pending'|'rejected';
  created_at:string;profiles:{display_name:string;handle:string;avatar_path:string|null}|null;
 };
+export type Story={
+ id:string;author_id:string;caption:string;media_path:string;
+ media_type:'image'|'video';visibility:'public'|'friends'|'private';
+ moderation_status:'approved'|'pending'|'rejected';created_at:string;expires_at:string;
+ profiles:{display_name:string;handle:string;avatar_path:string|null}|null;
+};
 export type Friendship={id:string;requester_id:string;addressee_id:string;status:string;created_at:string};
 export type Community={id:string;slug:string;name:string;description:string;cover_path:string|null;avatar_path:string|null;is_official:boolean};
 export type Notice={id:string;kind:string;created_at:string;read_at:string|null;entity_id:string|null;profiles:{display_name:string;handle:string}|null};
