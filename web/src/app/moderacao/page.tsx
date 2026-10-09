@@ -7,6 +7,7 @@ import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {PendingContentPanel} from '@/components/pending-content-panel';
 import {PendingCommentsPanel} from '@/components/pending-comments-panel';
+import {ModerationAppealsPanel} from '@/components/moderation-appeals-panel';
 
 type QueueItem={
  report_id:string;
@@ -149,6 +150,7 @@ export default function PlatformModeration(){
      </div>
      <PendingContentPanel/>
      <PendingCommentsPanel/>
+     <ModerationAppealsPanel/>
      <div className="conecta-safety-filters" aria-label="Filtrar denúncias">
       {filters.map(f=><button key={f.id} type="button"
         aria-pressed={filter===f.id} className={filter===f.id?'active':''}
