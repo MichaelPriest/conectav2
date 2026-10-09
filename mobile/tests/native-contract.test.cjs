@@ -91,3 +91,16 @@ test('Native safety reporting uses same RLS-protected web workflow',()=>{
  assert.match(ui,/Assédio ou intimidação/);
  assert.match(ui,/Exposição de informações pessoais/);
 });
+
+test('Native Stories use the same 24h expiry, RLS and moderation as web',()=>{
+ const story=read('src/stories.ts'),ui=read('src/story-ui.tsx');
+ assert.match(story,/from\('stories'\)/);
+ assert.match(story,/\.gt\('expires_at',new Date\(\)\.toISOString\(\)\)/);
+ assert.match(story,/storage\.from\('social-media'\)\.upload\(/);
+ assert.match(story,/requestContentModeration\('story',createdId\)/);
+ assert.match(story,/from\('stories'\)\.delete\(\)/);
+ assert.match(ui,/Date\.parse\(story\.expires_at\)>Date\.now\(\)/);
+ assert.match(ui,/launchImageLibraryAsync/);
+ assert.match(ui,/requestCameraPermissionsAsync/);
+ assert.match(app,/StoryRail userId=/);
+});
