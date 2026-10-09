@@ -94,7 +94,7 @@ export default function ModerationPanel(){
     {notice&&<p className="form-success">{notice}</p>}
     {loading?<p>Carregando moderação...</p>:!authorized?
        <section className="panel"><ShieldAlert size={25}/><h2>Somente equipe autorizada</h2><p>O proprietário, os administradores e os moderadores podem acessar esta área.</p></section>:
-       <><PendingCommentsPanel communityId={community.id}/><div className="conecta-moderation-layout">
+       <>{community&&<PendingCommentsPanel communityId={community.id}/>}<div className="conecta-moderation-layout">
         <section className="panel">
          <h2>Fila de aprovação ({queue.length})</h2>
          {queue.length===0?<p className="small-note">Nenhuma publicação aguardando decisão.</p>:
