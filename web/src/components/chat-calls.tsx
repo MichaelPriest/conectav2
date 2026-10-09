@@ -181,6 +181,44 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
   }catch(e){setError(describe(e));void end(true);}
   finally{busyRef.current=false;setBusy(false);}
  },[acquire,db,end,userId]);
+ const flushBufferedCandidates=useCallback(async(pc:RTCPeerConnection)=>{
+  if(!pc.currentRemoteDescription)return;
+  const buffered=bufferedRemoteCandidates.current.splice(0);
+  for(const candidate of buffered){
+   if(pcRef.current!==pc)return;
+   try{await pc.addIceCandidate(candidate);}
+   catch{setCallPhase('Candidato ICE remoto rejeitado');}
+  }
+ },[]);
+
+ const receiveCandidates=useCallback(async(row:CallRow)=>{
+  const pc=pcRef.current;
+  if(!pc||row.status!=='accepted'||remoteCandidatesFetching.current)return;
+  remoteCandidatesFetching.current=true;
+  try{
+   const {data,error:e}=await db.from('chat_call_ice_candidates')
+     .select('id,sender_id,candidate')
+     .eq('call_id',row.id).gt('id',lastRemoteCandidateId.current)
+     .order('id',{ascending:true}).limit(100);
+   if(e){setCallPhase('Não foi possível receber os candidatos ICE');return;}
+   for(const item of data||[]){
+    if(pcRef.current!==pc||currentRef.current?.id!==row.id)return;
+    const candidateId=Number(item.id);
+    if(Number.isFinite(candidateId))
+     lastRemoteCandidateId.current=Math.max(lastRemoteCandidateId.current,candidateId);
+    if(item.sender_id===userId)continue;
+    const candidate=item.candidate as RTCIceCandidateInit;
+    if(typeof candidate?.candidate!=='string')continue;
+    if(pc.currentRemoteDescription){
+     try{await pc.addIceCandidate(candidate);}
+     catch{setCallPhase('Candidato ICE remoto rejeitado');}
+    }else{
+     bufferedRemoteCandidates.current.push(candidate);
+    }
+   }
+  }finally{remoteCandidatesFetching.current=false;}
+ },[db,userId]);
+
  const negotiate=useCallback(async(row:CallRow)=>{
   const pc=pcRef.current;
   if(!pc||negotiating.current||row.status!=='accepted')return;
@@ -214,6 +252,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     setStatus('Recebi a oferta · preparando resposta…');
     setCallPhase('Oferta recebida');
     await pc.setRemoteDescription({type:'offer',sdp:row.offer_sdp});
+    await flushBufferedCandidates(pc);
     await pc.setLocalDescription(await pc.createAnswer());
     // Trickle ICE: send SDP immediately, subsequent candidates go over RPC.
     const sdp=pc.localDescription?.sdp;
@@ -225,11 +264,12 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
    }else if(row.caller_id===userId&&row.answer_sdp&&!pc.currentRemoteDescription){
     setCallPhase('Resposta WebRTC recebida');
     await pc.setRemoteDescription({type:'answer',sdp:row.answer_sdp});
+    await flushBufferedCandidates(pc);
     setStatus('Oferta e resposta recebidas · verificando rede…');
    }
   }catch(e){setError(describe(e));void end();}
   finally{negotiating.current=false;}
- },[db,end,userId]);
+ },[db,end,userId,flushBufferedCandidates]);
  const check=useCallback(async()=>{
   if(querying.current||busyRef.current||negotiating.current)return;
   querying.current=true;
@@ -255,7 +295,10 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     if(updated.status!==row.status||updated.offer_sdp!==row.offer_sdp||
        updated.answer_sdp!==row.answer_sdp||updated.expires_at!==row.expires_at)
       setCurrent(updated);
-    if(updated.status==='accepted'&&pcRef.current)void negotiate(updated);
+    if(updated.status==='accepted'&&pcRef.current){
+      void negotiate(updated);
+      void receiveCandidates(updated);
+    }
    }else{
     const {data,error:e}=await db.from('chat_calls')
      .select('id,conversation_id,caller_id,callee_id,kind,status,offer_sdp,answer_sdp,expires_at')
@@ -284,7 +327,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     }
    }
   }finally{querying.current=false;}
- },[db,end,negotiate,userId,release]);
+ },[db,end,negotiate,receiveCandidates,userId,release]);
  useEffect(()=>{
   void check();void refreshMissed();
   // RLS protects events: each browser listens only to calls involving its user.
@@ -354,6 +397,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
         <span>Resposta: {current.answer_sdp?'recebida':'aguardando'}</span>
         <span>ICE: {iceState}</span>
         <span>Conexão: {pcRef.current?.connectionState||'não iniciada'}</span>
+        <span>ICE remoto: {lastRemoteCandidateId.current>0?'recebido':'aguardando'}</span>
         <span>Servidor TURN: não configurado</span>
       </div>}
     </div>}
