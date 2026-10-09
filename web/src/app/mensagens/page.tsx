@@ -311,7 +311,7 @@ export default function Messages(){
    else{
      setReactions(old=>currentReaction?
        old.filter(r=>!(r.message_id===message.id&&r.user_id===currentUserId&&r.emoji===emoji)):
-       [...old,{message_id:message.id,user_id:auth.user.id,emoji,created_at:new Date().toISOString()}]);
+       [...old,{message_id:message.id,user_id:currentUserId,emoji,created_at:new Date().toISOString()}]);
    }
    setReactionOpen(null);setMessageBusy(false);
  }
