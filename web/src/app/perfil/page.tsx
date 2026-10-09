@@ -24,6 +24,9 @@ export default function Profile(){
  const [interestsInput,setInterestsInput]=useState('');
  const [avatarUrl,setAvatarUrl]=useState<string|null>(null);
  const [avatarFile,setAvatarFile]=useState<File|null>(null);
+ const [coverPath,setCoverPath]=useState<string|null>(null);
+ const [coverUrl,setCoverUrl]=useState<string|null>(null);
+ const [coverSaving,setCoverSaving]=useState(false);
  const [posts,setPosts]=useState(0),[friends,setFriends]=useState(0);
  const [saving,setSaving]=useState(false),[ready,setReady]=useState(false);
  const [error,setError]=useState(''),[notice,setNotice]=useState('');
@@ -33,7 +36,7 @@ export default function Profile(){
    const [p,f,d]=await Promise.all([
      db.from('posts').select('id',{count:'exact',head:true}).eq('author_id',auth.user.id),
      db.from('friendships').select('id',{count:'exact',head:true}).eq('status','accepted').or('requester_id.eq.'+auth.user.id+',addressee_id.eq.'+auth.user.id),
-     db.from('profile_details').select('headline,city,website,music_url,interests,favorite_emoji,cover_theme,mood_text,layout_style').eq('user_id',auth.user.id).maybeSingle()
+     db.from('profile_details').select('headline,city,website,music_url,interests,favorite_emoji,cover_theme,mood_text,layout_style,cover_path').eq('user_id',auth.user.id).maybeSingle()
    ]);
    if(!p.error)setPosts(p.count||0);
    if(!f.error)setFriends(f.count||0);
@@ -41,6 +44,11 @@ export default function Profile(){
    else if(d.data){
      const v=normalizeProfileDetails(d.data);
      setDetails(v);setInterestsInput(v.interests.join(', '));
+     setCoverPath(d.data.cover_path||null);
+     if(d.data.cover_path){
+       const {data:cover}=await db.storage.from('social-media').createSignedUrl(d.data.cover_path,3600);
+       setCoverUrl(cover?.signedUrl||null);
+     }else setCoverUrl(null);
    }
    if(auth.profile?.avatar_path){
      const {data}=await db.storage.from('social-media').createSignedUrl(auth.profile.avatar_path,3600);
@@ -59,6 +67,40 @@ export default function Profile(){
    return()=>URL.revokeObjectURL(url);
  },[avatarFile]);
 
+ async function uploadCover(file:File|null){
+   if(!file||!auth.user||coverSaving)return;
+   setError('');setNotice('');setCoverSaving(true);
+   const db=supabaseBrowser();let uploaded='';
+   try{
+     if(!['image/jpeg','image/png','image/webp'].includes(file.type)||file.size>8*1024*1024)
+       throw new Error('A capa deve ser JPG, PNG ou WebP, até 8 MB.');
+     const prepared=await optimizeImage(file);
+     const ext=prepared.name.split('.').pop()?.toLowerCase()||'webp';
+     uploaded=auth.user.id+'/covers/'+crypto.randomUUID()+'.'+ext;
+     const {error:uploadError}=await db.storage.from('social-media').upload(uploaded,prepared,{contentType:prepared.type,upsert:false});
+     if(uploadError)throw uploadError;
+     const {error:saveError}=await db.from('profile_details').upsert({user_id:auth.user.id,cover_path:uploaded},{onConflict:'user_id'});
+     if(saveError)throw saveError;
+     const previous=coverPath;setCoverPath(uploaded);
+     const {data:signed}=await db.storage.from('social-media').createSignedUrl(uploaded,3600);
+     setCoverUrl(signed?.signedUrl||null);
+     if(previous)await db.storage.from('social-media').remove([previous]);
+     setNotice('Imagem de capa atualizada.');
+   }catch(e){
+     if(uploaded)await db.storage.from('social-media').remove([uploaded]);
+     setError(e instanceof Error?e.message:'Não foi possível salvar a capa.');
+   }finally{setCoverSaving(false);}
+ }
+ async function removeCover(){
+   if(!auth.user||!coverPath||coverSaving)return;
+   setCoverSaving(true);setError('');
+   const old=coverPath;
+   const db=supabaseBrowser();
+   const {error:e}=await db.from('profile_details').update({cover_path:null}).eq('user_id',auth.user.id);
+   if(e)setError(e.message);
+   else{setCoverPath(null);setCoverUrl(null);await db.storage.from('social-media').remove([old]);setNotice('Capa personalizada removida.');}
+   setCoverSaving(false);
+ }
  async function submit(event:FormEvent){
    event.preventDefault();if(!auth.user||saving)return;
    setSaving(true);setError('');setNotice('');
@@ -116,7 +158,8 @@ export default function Profile(){
  }
  return <GuardedPage {...auth}><main className={"section-page conecta-profile-page profile-layout-"+details.layout_style}>
    <div className="page-heading"><div><span className="section-eyebrow">SEU ESPAÇO NO CONECTA</span><h1>Meu perfil <span className="wave">✳</span></h1><p>Personalize a sua história e escolha o que compartilhar.</p></div></div>
-   <div className={'conecta-profile-cover cover-'+details.cover_theme}>
+   <div className={'conecta-profile-cover cover-'+details.cover_theme} style={coverUrl?{backgroundImage:'linear-gradient(0deg,#17153498,#35226255),url('+JSON.stringify(coverUrl)+')'}:undefined}>
+     {coverUrl&&<span className="conecta-profile-cover-label">Capa personalizada</span>}
      <div className="conecta-profile-bio">
        <div className="conecta-profile-picture">
          {avatarUrl?<img src={avatarUrl} alt="Minha foto de perfil"/>:<span>{name[0]?.toUpperCase()||'C'}</span>}
@@ -147,6 +190,12 @@ export default function Profile(){
          <option value="classic">Clássico</option><option value="myspace">MySpace retrô</option><option value="minimal">Minimalista</option>
        </select></label>
        <LanguageSelect/>
+       <label className="field-label">Imagem de capa do perfil (JPG, PNG ou WebP, até 8 MB)
+         <input type="file" className="form-input" accept="image/jpeg,image/png,image/webp" disabled={coverSaving}
+           onChange={e=>{void uploadCover(e.target.files?.[0]||null);e.target.value='';}}/>
+       </label>
+       {coverPath&&<button type="button" className="btn btn-outline" disabled={coverSaving} onClick={()=>void removeCover()}><Trash2 size={16}/> Remover imagem da capa</button>}
+       <span className="small-note">{coverSaving?'Atualizando imagem de capa...':'Use uma foto ou imagem autoral; evite expor dados pessoais na capa.'}</span>
        <label className="field-label">Cor da capa<select className="form-input" value={details.cover_theme} onChange={e=>setDetails(v=>({...v,cover_theme:e.target.value as Details['cover_theme']}))}>{themes.map(t=><option key={t} value={t}>{t==='violet'?'Violeta':t==='aqua'?'Água':t==='pink'?'Rosa':t==='sunset'?'Pôr do sol':'Noite'}</option>)}</select></label>
        <div className="conecta-profile-emoji"><span>Emoji de assinatura: <strong>{details.favorite_emoji}</strong></span><EmojiButton label="Escolher emoji de assinatura" onSelect={emoji=>setDetails(v=>({...v,favorite_emoji:emoji}))}/></div>
        {error&&<p className="form-error" role="alert">{error}</p>}{notice&&<p className="form-success" role="status">{notice}</p>}
