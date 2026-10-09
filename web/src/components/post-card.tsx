@@ -9,6 +9,7 @@ import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {PollCard} from '@/components/poll-card';
 import {MentionInput,MentionText} from '@/components/mention-input';
+import {ReportContentButton} from '@/components/report-content-button';
 
 function ago(value: string) {
   const minutes = Math.max(0, Math.floor((Date.now()-new Date(value).getTime())/60000));
@@ -130,7 +131,7 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
           </button>)}
         </div>)}{parseMusicUrl(post.content)&&<MusicEmbed url={post.content}/>}<PollCard postId={post.id} userId={userId}/></div>
     <div className="post-stats"><span>{post.post_likes?.[0]?.count||0} curtidas</span><span>{post.post_comments?.[0]?.count||0} comentários</span></div>
-    <div className="post-actions"><button aria-pressed={liked} disabled={pendingLike} onClick={like} className={liked?'liked':''}><LikesIcon size={19} fill={liked?'currentColor':'none'}/> Curtir</button><button onClick={openComments}><MessageCircle size={19}/> Comentar</button><button onClick={share}><Share2 size={19}/> Compartilhar</button><button onClick={save} aria-pressed={saved} title="Salvar publicação"><Bookmark size={18} fill={saved?'currentColor':'none'}/> {saved?'Salvo':'Salvar'}</button></div>
+    <div className="post-actions"><button aria-pressed={liked} disabled={pendingLike} onClick={like} className={liked?'liked':''}><LikesIcon size={19} fill={liked?'currentColor':'none'}/> Curtir</button><button onClick={openComments}><MessageCircle size={19}/> Comentar</button><button onClick={share}><Share2 size={19}/> Compartilhar</button><button onClick={save} aria-pressed={saved} title="Salvar publicação"><Bookmark size={18} fill={saved?'currentColor':'none'}/> {saved?'Salvo':'Salvar'}</button>{post.author_id!==userId&&<ReportContentButton targetType="post" targetId={post.id} reporterId={userId} communityId={post.community_id}/>}</div>
     {notice && <div className="inline-notice" role="status">{notice}</div>}
     {activeMediaIndex!==null&&media[activeMediaIndex]&&<div className="media-lightbox" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setActiveMediaIndex(null);}}>
       <div role="dialog" aria-modal="true" aria-label="Visualização de mídia" className="media-lightbox-body">
