@@ -764,3 +764,10 @@
  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .conecta-widget-contacts button strong{font-size:12px}
 .conecta-widget-contacts button small{font-size:11px;color:var(--muted)}
+
+/* Group responsibility and safe exit. */
+.conecta-chat-owner-note{font-size:11px;color:var(--muted);padding:6px 13px;margin:0;
+ background:color-mix(in srgb,#9168ed 5%,var(--card))}
+.conecta-chat-leave{font-size:12px;white-space:nowrap}
+.conecta-chat-connections-list::-webkit-scrollbar{width:6px}
+.conecta-chat-connections-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:10px}
