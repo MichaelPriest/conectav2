@@ -31,7 +31,10 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
+      # GitHub ubuntu-latest already includes the Android SDK.
+      # Do not invoke deprecated sdkmanager 'tools' package installation.
+      - name: Verificar Android SDK do executor
+        run: test -d "$ANDROID_HOME" && echo "SDK Android: $ANDROID_HOME"
       - name: Instalar dependências
         run: npm install --no-audit --no-fund --no-package-lock
       - name: Conferir aplicação e TypeScript
