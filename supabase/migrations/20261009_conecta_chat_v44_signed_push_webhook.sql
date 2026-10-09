@@ -32,7 +32,7 @@ begin
  select v.decrypted_secret into target_secret from vault.decrypted_secrets v
   where v.name=secret_name limit 1;
  if target_secret is null or pg_catalog.length(target_secret)<32 then return new;end if;
- issued:=pg_catalog.floor(pg_catalog.extract(epoch from pg_catalog.clock_timestamp()))::bigint;
+ issued:=pg_catalog.floor(pg_catalog.date_part('epoch',pg_catalog.clock_timestamp()))::bigint;
  mac:=pg_catalog.encode(extensions.hmac(new.id::text||'.'||issued::text,
    target_secret,'sha256'),'hex');
  perform net.http_post(
