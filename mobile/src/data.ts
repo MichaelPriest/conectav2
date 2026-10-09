@@ -107,6 +107,18 @@ export async function requestPostModeration(id:string):Promise<void>{
 }
 
 /** Only rows allowed by Supabase comment RLS are returned. */
+export async function reportSafety(
+ userId:string,targetType:'post'|'message',targetId:string,reason:string,details:string
+):Promise<void>{
+ const description=details.trim().slice(0,350);
+ const text=(reason.trim()+(description?' — '+description:'')).slice(0,500);
+ if(!text||!targetId||!userId)throw new Error('Selecione um motivo para a denúncia.');
+ const {error}=await supabase.from('safety_reports').insert({
+  reporter_id:userId,target_type:targetType,target_id:targetId,reason:text
+ });
+ if(error)throw new Error(error.code==='23505'?'Você já denunciou esse conteúdo.':error.message);
+}
+
 export async function loadPostComments(postId:string):Promise<PostComment[]>{
  const {data,error}=await supabase.from('post_comments')
  .select('id,post_id,parent_id,author_id,body,moderation_status,created_at,profiles!post_comments_author_id_fkey(display_name,handle,avatar_path)')
