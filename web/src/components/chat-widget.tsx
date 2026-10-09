@@ -49,7 +49,7 @@ export function ChatWidget({userId}:{userId:string}){
    if(e){setError(e.message);return;}
    const ids=[...new Set((own||[]).map(m=>m.conversation_id))];if(!ids.length){setThreads([]);setTotalUnread(0);return;}
    const [conversations,members,unread,lastMessages]=await Promise.all([
-     db.from('conversations').select('id,title,created_at').in('id',ids).limit(150),
+     db.from('conversations').select('id,title,created_at,is_group').in('id',ids).limit(150),
      db.from('conversation_members').select('conversation_id,user_id').in('conversation_id',ids).limit(600),
      db.rpc('my_conversation_unread_counts'),
      db.rpc('my_latest_conversation_messages')
@@ -73,7 +73,7 @@ export function ChatWidget({userId}:{userId:string}){
    },0));
    const list:Thread[]=(conversations.data||[]).map(c=>{
      const participants=(members.data||[]).filter(m=>m.conversation_id===c.id&&m.user_id!==userId);
-     const group=participants.length>1;
+     const group=c.is_group;
      const otherNames=participants.map(p=>names.get(p.user_id)||'Conexão').join(', ');
      const recent=latestById.get(c.id);
      const preview=recent?(recent.deleted_at?'Mensagem apagada':
