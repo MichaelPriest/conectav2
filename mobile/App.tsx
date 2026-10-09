@@ -15,7 +15,7 @@ import {
  loadConnections,loadFeed,loadNotifications,loadPostComments,loadThreads,markNotifications,myLikes,
  publishTextPost,readConversation,sendMessage,sendPostComment,setLike,startChat,updateMyProfile,verifyAccess
 } from './src/data';
-import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,styles as s} from './src/ui';
+import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
 import {normalizeMedia,publishMediaPost} from './src/media';
 import type {SelectedMedia} from './src/media';
@@ -130,8 +130,8 @@ function PostCard({post,userId,liked,onLike,onComment}:{
   ? [...post.post_media].filter(x=>x.media_type==='image')
      .sort((a,b)=>a.position-b.position).map(x=>x.storage_path)
   : post.media_type==='image'&&post.media_path?[post.media_path]:[];
- const videoCount=post.post_media?.filter(x=>x.media_type==='video').length||
-  (post.media_type==='video'&&post.media_path?1:0);
+ const videoPath=post.post_media?.find(x=>x.media_type==='video')?.storage_path||
+  (post.media_type==='video'?post.media_path:null);
  const visibility=post.visibility==='private'?'🔒 Só eu':post.visibility==='friends'?'♡ Conexões':'◎ Público';
  return <View style={s.card}>
   <View style={[s.row,{gap:11}]}>
@@ -150,9 +150,7 @@ function PostCard({post,userId,liked,onLike,onComment}:{
    {post.content}
   </Text>
   {images.map(path=><Media key={path} path={path}/>)}
-   {videoCount>0&&<Pressable accessibilityRole="button" onPress={()=>void openOfficial('/post/'+post.id)}>
-    <Text style={[s.secondaryText,{marginTop:12}]}>▶ Ver vídeo no Conecta ↗</Text>
-   </Pressable>}
+  {!!videoPath&&<VideoMedia path={videoPath}/>} 
   <View style={s.separator}/>
   <View style={[s.row,{justifyContent:'space-between'}]}>
    <Pressable onPress={()=>onLike(post)} hitSlop={9}>
