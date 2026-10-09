@@ -124,3 +124,10 @@ são limitados a provedores HTTPS permitidos para prevenir SSRF, e o envio é
 best-effort dentro das cotas gratuitas do provedor e hospedagem. A entrega real
 de ponta a ponta exige validar o deploy com as chaves configuradas e uma
 assinatura real de navegador; testes de CI cobrem funções e regras de privacidade.
+
+### Controles no chat principal e prevenção de avisos duplicados
+
+O Web Push pode ser ativado no widget ou no cabeçalho do mensageiro completo.
+Se a aba conectada detectar uma inscrição Push existente neste dispositivo,
+não cria uma segunda notificação local da mesma mensagem; a notificação Web Push
+tem prioridade. Sem inscrição real, os avisos locais continuam disponíveis.

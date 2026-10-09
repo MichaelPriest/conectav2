@@ -4,7 +4,7 @@ import Link from 'next/link';
 import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Users,Paperclip,Mic,Square,X,Loader2,Pencil,Trash2,Check,CheckCheck,Reply,Smile,Pin,PinOff,BellOff,Bell,Settings2,UserPlus} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
-import {notifyChatMessageSent} from '@/components/chat-push-control';
+import {notifyChatMessageSent,ChatPushControl} from '@/components/chat-push-control';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {EmojiButton} from '@/components/emoji-button';
 import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
@@ -710,6 +710,7 @@ export default function Messages(){
             <Reply size={19}/></button>{current?.group?<span className="concept-round-icon violet"><Users size={20}/></span>:<ProfileAvatar person={current?.other}/>}
          <div><strong>{current?.group?(current.title||'Grupo'):current?.other?.display_name||'Conversa'}</strong>
          <small>{current?.group?current.participants.map(p=>p.display_name).join(', '):(current?.other?.handle?'@'+current.other.handle:'Mensagens privadas')}</small></div>
+         <ChatPushControl/>
          <button className="icon-btn" type="button"
              title={currentlyMuted?'Reativar indicador no chat':'Silenciar indicador no chat por 30 dias'}
              aria-label={currentlyMuted?'Reativar indicador':'Silenciar conversa'} disabled={settingsBusy}

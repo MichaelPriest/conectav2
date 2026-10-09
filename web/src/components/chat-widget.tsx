@@ -161,9 +161,15 @@ export function ChatWidget({userId}:{userId:string}){
          if(!row.id||row.sender_id===userId||!row.conversation_id||
            mutedRoomsRef.current.has(row.conversation_id)||lastAlertedRef.current===row.id)return;
          lastAlertedRef.current=row.id;
-         // Privacy: no DM text or sender identity in browser notifications.
-         try{new Notification('Conecta · Nova mensagem',{body:'Você recebeu uma mensagem.'});}
-         catch{/* OS notifications may be restricted in this browser */}
+         // A real browser Push subscription supersedes the local fallback.
+         void (async()=>{
+           try{
+             const registration='serviceWorker' in navigator?
+               await navigator.serviceWorker.getRegistration('/'):undefined;
+             if(await registration?.pushManager.getSubscription())return;
+             new Notification('Conecta · Nova mensagem',{body:'Você recebeu uma mensagem.'});
+           }catch{/* OS notifications may be restricted in this browser. */}
+         })();
        })
      .on('postgres_changes',{schema:'public',table:'conversation_members',event:'INSERT',
        filter:'user_id=eq.'+userId},()=>{void loadThreads();})
