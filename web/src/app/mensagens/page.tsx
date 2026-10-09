@@ -1,7 +1,7 @@
 'use client';
 import {FormEvent,useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
-import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Users,Paperclip,Mic,Square,X,Loader2,Pencil,Trash2,Check,CheckCheck} from 'lucide-react';
+import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Users,Paperclip,Mic,Square,X,Loader2,Pencil,Trash2,Check,CheckCheck,Reply,Smile} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {supabaseBrowser} from '@/lib/supabase/browser';
@@ -14,7 +14,10 @@ import {ReportContentButton} from '@/components/report-content-button';
 type Person={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Conversation={id:string;title:string|null;created_at:string;created_by:string};
 type MediaType='image'|'video'|'audio';
-type Message={id:string;sender_id:string;content:string;created_at:string;conversation_id:string;media_path:string|null;media_type:MediaType|null;edited_at:string|null;deleted_at:string|null};
+type Message={id:string;sender_id:string;content:string;created_at:string;conversation_id:string;media_path:string|null;media_type:MediaType|null;edited_at:string|null;deleted_at:string|null;reply_to:string|null};
+type MessageReaction={message_id:string;user_id:string;emoji:string;created_at:string};
+type SearchHit={id:string;sender_id:string;content:string;created_at:string};
+const REACTION_EMOJI=['❤️','👍','😂','😮','😢','👏'] as const;
 type MemberReceipt={user_id:string;last_read_at:string|null};
 const ALLOWED_MEDIA=['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','audio/webm','audio/ogg','audio/mp4','audio/mpeg'];
 const MAX_MEDIA_BYTES=50*1024*1024;
@@ -40,7 +43,7 @@ function MessageMedia({message}:{message:Message}){
  if(message.media_type==='audio')return <audio className="conecta-chat-audio" src={url} controls preload="metadata" aria-label="Mensagem de áudio"/>;
  return null;
 }
-type Thread=Conversation & {other:Person|null;participants:Person[];group:boolean;last:Message|null};
+type Thread=Conversation & {other:Person|null;participants:Person[];group:boolean;last:Message|null;unread:number};
 const PER_PAGE=60;
 
 export default function Messages(){
@@ -64,8 +67,16 @@ export default function Messages(){
  const [receipts,setReceipts]=useState<MemberReceipt[]>([]);
  const [editingId,setEditingId]=useState<string|null>(null),[editingText,setEditingText]=useState('');
  const [messageBusy,setMessageBusy]=useState(false);
+ const [replyTo,setReplyTo]=useState<Message|null>(null);
+ const [reactions,setReactions]=useState<MessageReaction[]>([]);
+ const [reactionOpen,setReactionOpen]=useState<string|null>(null);
+ const [searchOpen,setSearchOpen]=useState(false),[messageSearch,setMessageSearch]=useState('');
+ const [searchHits,setSearchHits]=useState<SearchHit[]>([]),[searchBusy,setSearchBusy]=useState(false);
+ const [searchError,setSearchError]=useState('');
+ const [highlighted,setHighlighted]=useState<string|null>(null);
  const [threadSearch,setThreadSearch]=useState('');
  const scrollRef=useRef<HTMLDivElement>(null);
+ const messageNodes=useRef<Record<string,HTMLElement|null>>({});
  useEffect(()=>{
    if(!attachment){setAttachmentPreview('');return;}
    const url=URL.createObjectURL(attachment);setAttachmentPreview(url);
@@ -140,19 +151,21 @@ export default function Messages(){
    const byId=new Map(people.map(p=>[p.id,p]));
    setFriends(friendIds.map(id=>byId.get(id)).filter((p):p is Person=>Boolean(p)));
    if(ids.length){
-     const [conversations,lastMessages]=await Promise.all([
+     const [conversations,lastMessages,unreadCounts]=await Promise.all([
        db.from('conversations').select('id,title,created_at,created_by').in('id',ids).order('created_at',{ascending:false}),
-       db.from('messages').select('id,conversation_id,sender_id,content,created_at,media_path,media_type,edited_at,deleted_at')
-         .in('conversation_id',ids).order('created_at',{ascending:false}).limit(200)
+       db.from('messages').select('id,conversation_id,sender_id,content,created_at,media_path,media_type,edited_at,deleted_at,reply_to')
+         .in('conversation_id',ids).order('created_at',{ascending:false}).limit(200),
+       db.rpc('my_conversation_unread_counts')
      ]);
      if(conversations.error||lastMessages.error)setError(conversations.error?.message||lastMessages.error?.message||'Não foi possível carregar chats.');
      const mostRecent=new Map<string,Message>();
      ((lastMessages.data||[]) as Message[]).forEach(m=>{if(!mostRecent.has(m.conversation_id))mostRecent.set(m.conversation_id,m);});
+     const countByConversation=new Map((unreadCounts.data||[]).map(x=>[x.conversation_id,Number(x.unread_count||0)]));
      const assembled=((conversations.data||[]) as Conversation[]).map(c=>{
        const participants=pairs.filter(p=>p.conversation_id===c.id&&p.user_id!==auth.user!.id)
          .map(p=>byId.get(p.user_id)).filter((p):p is Person=>Boolean(p));
        return {...c,other:participants[0]||null,participants,group:participants.length>1,
-         last:mostRecent.get(c.id)||null};
+         last:mostRecent.get(c.id)||null,unread:countByConversation.get(c.id)||0};
      });
      assembled.sort((a,b)=>new Date(b.last?.created_at||b.created_at).getTime()-new Date(a.last?.created_at||a.created_at).getTime());
      setThreads(assembled);
@@ -164,7 +177,7 @@ export default function Messages(){
    setLoadingMessages(true);
    const db=supabaseBrowser();
    const {data,error:e}=await db.from('messages')
-     .select('id,sender_id,content,created_at,conversation_id,media_path,media_type,edited_at,deleted_at')
+     .select('id,sender_id,content,created_at,conversation_id,media_path,media_type,edited_at,deleted_at,reply_to')
      .eq('conversation_id',id).order('created_at',{ascending:false})
      .range(older?messages.length:0,older?messages.length+PER_PAGE-1:PER_PAGE-1);
    if(e)setError(e.message);
@@ -172,6 +185,15 @@ export default function Messages(){
      const chronological=[...((data||[]) as Message[])].reverse();
      setMessages(current=>older?[...chronological,...current]:chronological);
      setHasOlder((data||[]).length===PER_PAGE);
+     const loadedIds=((data||[]) as Message[]).map(m=>m.id);
+     if(loadedIds.length){
+       const {data:reacted,error:reactionError}=await db.from('message_reactions')
+         .select('message_id,user_id,emoji,created_at').in('message_id',loadedIds);
+       if(reactionError)setError('Não foi possível carregar reações: '+reactionError.message);
+       else setReactions(previous=>older?
+         [...previous.filter(r=>!loadedIds.includes(r.message_id)),...((reacted||[]) as MessageReaction[])]:
+         (reacted||[]) as MessageReaction[]);
+     }else if(!older)setReactions([]);
    }
    setLoadingMessages(false);
  },[messages.length]);
@@ -180,17 +202,22 @@ export default function Messages(){
  useEffect(()=>{const name=new URLSearchParams(window.location.search).get('to');if(name)setRecipient(name);},[]);
  useEffect(()=>{
    if(!active)return;
-   setMessages([]);setReceipts([]);setEditingId(null);void loadMessages(active);
+   setMessages([]);setReceipts([]);setReactions([]);setEditingId(null);
+   setReplyTo(null);setReactionOpen(null);setSearchOpen(false);setMessageSearch('');
+   setSearchHits([]);setHighlighted(null);void loadMessages(active);
    void loadReceipts(active);
    const db=supabaseBrowser();
    const channel=db.channel('conecta-inbox-'+active).on('postgres_changes',
      {schema:'public',table:'messages',event:'*',filter:'conversation_id=eq.'+active},
      ()=>{void loadMessages(active);void loadThreads();}
    ).on('postgres_changes',
+     {schema:'public',table:'message_reactions',event:'*'},
+     ()=>{void loadMessages(active);}
+   ).on('postgres_changes',
      {schema:'public',table:'conversation_members',event:'UPDATE',filter:'conversation_id=eq.'+active},
      ()=>{void loadReceipts(active);}
    ).subscribe();
-   const sync=()=>{if(!document.hidden){void loadReceipts(active);}};
+   const sync=()=>{if(!document.hidden){void loadReceipts(active);void loadThreads();}};
    window.addEventListener('focus',sync);
    const receiptTimer=window.setInterval(sync,15000);
    return()=>{window.removeEventListener('focus',sync);window.clearInterval(receiptTimer);void db.removeChannel(channel);};
@@ -220,7 +247,7 @@ export default function Messages(){
      const {error:e}=await db.from('conversation_members')
        .update({last_read_at:new Date().toISOString()})
        .eq('conversation_id',conversationId).eq('user_id',userId);
-     if(!e&&alive)void loadReceipts(conversationId);
+     if(!e&&alive){void loadReceipts(conversationId);void loadThreads();}
    }
    void markRead();
    return()=>{alive=false;};
@@ -249,6 +276,7 @@ export default function Messages(){
    if(e)setError(e.message);
    else if(!data)setError('Não foi possível apagar a mensagem.');
    else{
+     if(replyTo?.id===message.id)setReplyTo(null);
      if(editingId===message.id){setEditingId(null);setEditingText('');}
      await loadMessages(active);await loadThreads();
      if(message.media_path){
@@ -328,10 +356,10 @@ export default function Messages(){
      }
      const {error:sendError}=await db.from('messages').insert({
        conversation_id:active,sender_id:auth.user.id,content:value,
-       media_path:uploadedPath||null,media_type:mediaType
+       media_path:uploadedPath||null,media_type:mediaType,reply_to:replyTo?.id||null
      });
      if(sendError)throw sendError;
-     setCompose('');setAttachment(null);await loadMessages(active);await loadThreads();
+     setCompose('');setAttachment(null);setReplyTo(null);await loadMessages(active);await loadThreads();
    }catch(e){
      if(uploadedPath)await db.storage.from('social-media').remove([uploadedPath]);
      setError(e instanceof Error?e.message:'Não foi possível enviar a mensagem.');
