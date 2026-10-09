@@ -34,11 +34,12 @@ export async function POST(request:NextRequest){
  if(/(?:material\s+de\s+abuso\s+sexual\s+infantil|csam)/i.test(content))
    return json({status:'pending',reason:'Necessária revisão humana especializada.'});
 
- const openaiKey=process.env.OPENAI_API_KEY;
- const workerUrl=process.env.CONEXA_MODERATION_WORKER_URL;
+ const engine=process.env.CONEXA_MODERATION_ENGINE||'local';
+ const openaiKey=engine==='openai'?process.env.OPENAI_API_KEY:null;
+ const workerUrl=engine==='worker'?process.env.CONEXA_MODERATION_WORKER_URL:null;
  const workerToken=process.env.CONEXA_MODERATION_WORKER_TOKEN;
  if(!openaiKey&&!workerUrl)return json({
-   status:'pending',reason:'Moderação humana necessária até a configuração de um provedor gratuito.'
+   status:'pending',reason:'Triagem de texto com modelo local maior requer um worker; aguardando revisão humana, sem API paga.'
  });
  try{
    let flagged:boolean,provider:string;
