@@ -1,6 +1,8 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {identityContext} from '@/lib/identity-server';
 import {classifyLocalImage} from '@/lib/open-source-image-moderation';
+import {screenTextAutomatically} from '@/lib/automatic-text-screen';
+import {screenVideoAutomatically} from '@/lib/automatic-video-screen';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -69,22 +71,40 @@ async function moderateWithOpenSourceWorker(
 
 
 async function moderateWithBundledModel(
- media:{path:string;type:MediaKind}[],
+ text:string,media:{path:string;type:MediaKind}[],
  admin:NonNullable<Awaited<ReturnType<typeof identityContext>>>['admin']
 ):Promise<ScanResult>{
- if(!media.length)throw new Error('text_needs_manual_review');
- if(media.length>5||media.some(item=>item.type!=='image'))throw new Error('unsupported_media');
- let flagged=false,notes:string[]=[];
+ const lexical=screenTextAutomatically(text);
+ if(!media.length)return {flagged:lexical.reviewRequired,
+  humanReview:lexical.reviewRequired,provider:lexical.engine,
+  reason:lexical.reason};
+ if(media.length>5)throw new Error('too_many_media');
+ let flagged=lexical.reviewRequired,reviewRequired=lexical.reviewRequired;
+ let notes=[lexical.reason];
  for(const [index,item] of media.entries()){
   const {data,error}=await admin.storage.from('social-media').download(item.path);
   if(error||!data)throw new Error('unable_to_fetch_media');
-  if(data.size>10*1024*1024||data.size===0)throw new Error('media_size_out_of_bounds');
-  const result=await classifyLocalImage(new Uint8Array(await data.arrayBuffer()));
-  flagged=flagged||result.flagged;
-  notes.push('Foto '+(index+1)+': '+result.reason);
+  if(item.type==='video'){
+   if(media.length!==1)throw new Error('mixed_video_gallery_requires_review');
+   const video=await screenVideoAutomatically(new Uint8Array(await data.arrayBuffer()));
+   flagged=flagged||video.flagged;
+   reviewRequired=reviewRequired||video.reviewRequired;
+   notes.push('Vídeo: '+video.reason);
+  }else{
+   if(data.size>10*1024*1024||data.size===0)throw new Error('media_size_out_of_bounds');
+   const result=await classifyLocalImage(new Uint8Array(await data.arrayBuffer()));
+   const cls=result.classification;
+   // Strict visual screen; any borderline/sexual imagery requires a person.
+   const visualRisk=cls.Porn+cls.Hentai+cls.Sexy*0.75;
+   const needsReview=result.flagged||visualRisk>=0.20;
+   reviewRequired=reviewRequired||needsReview;
+   flagged=flagged||result.flagged;
+   notes.push('Foto '+(index+1)+': '+
+     (needsReview?'Sinalizada para revisão humana':'Triagem visual local concluída'));
+  }
  }
- return {flagged,humanReview:true,provider:'nsfwjs-mobilenet-v2',
-  reason:notes.join(' | ').slice(0,490)};
+ return {flagged,humanReview:reviewRequired,
+  provider:'automatic-local-oss-v1',reason:notes.join(' | ').slice(0,490)};
 }
 
 export async function POST(request:NextRequest){
@@ -121,7 +141,7 @@ export async function POST(request:NextRequest){
  if(media.length===0&&row.media_path)
   media.push({path:row.media_path as string,type:row.media_type as MediaKind});
  if(media.length>5)return reply({status:'pending',error:'Número de mídias exige revisão manual.'},200);
- if(media.some(m=>m.type==='video')&&engine!=='worker')
+ if(media.some(m=>m.type==='video')&&engine==='openai')
   return reply({status:'pending',reason:'Vídeos aguardam análise de quadros e revisão humana.'});
  if(media.some(m=>m.type!=='image'&&m.type!=='video'))return reply({status:'pending'});
  if(media.some(m=>!m.path.startsWith(user.id+'/')))
@@ -133,9 +153,6 @@ export async function POST(request:NextRequest){
   return reply({status:'pending',reason:'Revisão de segurança especializada necessária.'});
  // Repo-based inference runs on the existing Next.js server when no paid/API worker is configured.
  // Text-only cases stay pending unless the pre-existing database rules allowed them.
- if(engine==='local'&&!media.length)
-  return reply({status:row.moderation_status,provider:'manual',
-    reason:'Textos sem classificador contextual permanecem sob as regras de revisão humana.'});
  const imageUrls:string[]=[];
  if(engine==='openai')for(const item of media){
   // A privately signed, short-lived URL is created only after verifying authorship.
@@ -147,7 +164,7 @@ export async function POST(request:NextRequest){
   const result=engine==='worker'?
     await moderateWithOpenSourceWorker(content,media,admin):
     engine==='openai'?await moderateWithFreeApi(content,imageUrls):
-    await moderateWithBundledModel(media,admin);
+    await moderateWithBundledModel(content,media,admin);
   const next=(result.flagged||result.humanReview)?'pending':'approved';
   const now=new Date().toISOString();
   if(kind==='post'&&row.community_id){
@@ -166,7 +183,7 @@ export async function POST(request:NextRequest){
    // Optimistic concurrency: content changes/extra media uploads cannot retain prior approval.
    let update=admin.from('posts').update({
      moderation_status:next,
-     moderation_reason:result.flagged?'Modelo local sinalizou conteúdo para revisão':result.humanReview?'Triagem local concluída; revisão humana complementar':'',
+     moderation_reason:result.reason?.slice(0,490)||(result.flagged?'Triagem automática sinalizou revisão humana':'Triagem automática concluída'),
      moderated_at:now,moderated_by:null,ai_checked_at:now,ai_provider:result.provider
    }).eq('id',id).eq('author_id',user.id).eq('content',content).is('ai_checked_at',null);
    if(row.media_path===null)update=update.is('media_path',null);
