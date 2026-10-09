@@ -43,6 +43,15 @@
           "supportsBackgroundPlayback": false,
           "supportsPictureInPicture": false
         }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "O Conecta utiliza o microfone somente quando você gravar uma mensagem de voz.",
+          "recordAudioAndroid": true,
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
       ]
     ]
   }
