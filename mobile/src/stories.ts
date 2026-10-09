@@ -59,8 +59,8 @@ export async function publishStory(
   }).select('id').single();
   if(error)throw error;
   createdId=data.id;
-  await requestContentModeration('story',createdId);
-  return createdId;
+  await requestContentModeration('story',data.id);
+  return data.id;
  }catch(err){
   // Never delete uploaded media while a committed story still refers to it.
   let rollbackFailed=false;
