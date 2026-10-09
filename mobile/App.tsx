@@ -19,6 +19,7 @@ import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,Vide
 import {formatDate,theme as t} from './src/theme';
 import {StoryRail} from './src/story-ui';
 import {AudioMessage,VoiceRecorder} from './src/voice-ui';
+import {sendChatMedia} from './src/chat-media';
 import {normalizeMedia,publishMediaPost} from './src/media';
 import type {SelectedMedia} from './src/media';
 
@@ -510,6 +511,22 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
   try{await sendMessage(active,userId,compose);setCompose('');await loadMessages(active);await loadInbox();}
   catch(e){setError(errorMessage(e));}finally{setBusy(false);}
  };
+ const attach=async(kind:'image'|'video')=>{
+  if(!active||busy)return;
+  setError('');
+  try{
+   const result=await ImagePicker.launchImageLibraryAsync({
+    mediaTypes:kind==='image'?['images']:['videos'],
+    allowsMultipleSelection:false,quality:1
+   });
+   if(result.canceled)return;
+   const chosen=normalizeMedia(result.assets)[0];
+   setBusy(true);
+   await sendChatMedia(active,userId,chosen);
+   await Promise.all([loadMessages(active),loadInbox()]);
+  }catch(e){setError(errorMessage(e));}
+  finally{setBusy(false);}
+ };
  const selected=threads.find(t=>t.id===active);
  if(active)return <KeyboardAvoidingView style={{flex:1}}
   behavior={Platform.OS==='ios'?'padding':undefined} keyboardVerticalOffset={12}>
@@ -530,9 +547,11 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     </Text>
     {!item.deleted_at&&item.media_path&&item.media_type?.startsWith('image')&&
       <Media path={item.media_path} height={175}/>}
-     {!item.deleted_at&&item.media_path&&item.media_type==='audio'&&
+     {!item.deleted_at&&item.media_path&&item.media_type==='video'&&
+      <VideoMedia path={item.media_path}/>}
+    {!item.deleted_at&&item.media_path&&item.media_type==='audio'&&
       <AudioMessage path={item.media_path}/>}
-    {!item.deleted_at&&item.media_path&&!item.media_type?.startsWith('image')&&item.media_type!=='audio'&&<Pressable onPress={()=>void openOfficial('/mensagens')}>
+    {!item.deleted_at&&item.media_path&&!item.media_type?.startsWith('image')&&item.media_type!=='audio'&&item.media_type!=='video'&&<Pressable onPress={()=>void openOfficial('/mensagens')}>
      <Text style={{color:item.sender_id===userId?'white':t.primary,fontSize:12,marginTop:4}}>
       Abrir anexo no Conecta ↗</Text></Pressable>}
     <Text style={{alignSelf:'flex-end',fontSize:10,color:item.sender_id===userId?'#E9DFFB':t.muted,marginTop:5}}>
@@ -544,6 +563,10 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
    ListEmptyComponent={<Loading text="Esta conversa ainda não tem mensagens."/>}/>
   <View style={{backgroundColor:'white',padding:12,borderTopWidth:1,borderTopColor:t.line}}>
    <Text accessibilityLiveRegion="polite" style={[s.muted,{textAlign:'right',marginBottom:5,color:messageLength>4000?t.danger:t.muted}]}>{messageLength}/4000</Text>
+   <View style={[s.row,{gap:8,flexWrap:'wrap',marginBottom:9}]}>
+    <Action secondary disabled={busy} label="▧ Foto" onPress={()=>void attach('image')}/>
+    <Action secondary disabled={busy} label="▶ Vídeo" onPress={()=>void attach('video')}/>
+   </View>
    <VoiceRecorder conversationId={active} userId={userId}
     onSent={()=>{void loadMessages(active);void loadInbox();}}/>
    <View style={[s.row,{gap:8}]}>
