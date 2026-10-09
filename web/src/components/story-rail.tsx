@@ -7,6 +7,7 @@ import {supabaseBrowser} from '@/lib/supabase/browser';
 import {optimizeImage} from '@/lib/media';
 import {requestContentModeration} from '@/lib/submit-moderation';
 import {ProfileAvatar} from '@/components/profile-avatar';
+import {ModerationAppealButton} from '@/components/moderation-appeal-button';
 import type {UserProfile} from '@/lib/types';
 
 type Story={
@@ -141,6 +142,7 @@ export function StoryRail({userId,profile}:{userId:string;profile:UserProfile|nu
          ?<video key={selected.id} src={signedUrl} autoPlay controls playsInline preload="metadata"/>
          :<img src={signedUrl} alt={selected.caption||'Story em foto'}/>}</div>
        {selected.caption&&<p className="conecta-story-caption">{selected.caption}</p>}
+       {selected.author_id===userId&&selected.moderation_status==='rejected'&&<ModerationAppealButton kind="story" targetId={selected.id}/>}
        <footer>{selected.profiles?.handle&&<Link href={'/p/'+selected.profiles.handle}>Ver perfil</Link>}
          {selected.author_id===userId&&<button type="button" disabled={deleting} onClick={()=>void removeStory()}><Trash2 size={16}/> Excluir</button>}
        </footer>
