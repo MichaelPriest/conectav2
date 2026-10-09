@@ -537,7 +537,7 @@ export default function Messages(){
                  aria-label={'Reação '+emoji+', '+messageReactions.filter(r=>r.emoji===emoji).length+' participantes'}>
                  {emoji} {messageReactions.filter(r=>r.emoji===emoji).length}</button>)}
             </div>}
-            {!own&&!m.deleted_at&&auth.user&&<ReportContentButton targetType="message" targetId={m.id} reporterId={auth.user.id}/>
+            {!own&&!m.deleted_at&&auth.user&&<ReportContentButton targetType="message" targetId={m.id} reporterId={auth.user.id}/>}
             {own&&!m.deleted_at&&<div className="conecta-chat-message-actions">
               {m.content&&<button type="button" disabled={messageBusy} title="Editar mensagem" aria-label="Editar mensagem" onClick={()=>{setEditingId(m.id);setEditingText(m.content);}}><Pencil size={13}/></button>}
               <button type="button" disabled={messageBusy} title="Apagar para todos" aria-label="Apagar mensagem" onClick={()=>void eraseMessage(m)}><Trash2 size={13}/></button>
