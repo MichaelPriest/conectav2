@@ -12,7 +12,7 @@ export function allowedChatPushEndpoint(raw:string):boolean{
       if(url.searchParams.size!==1||!url.searchParams.has('token'))return false;
       const token=url.searchParams.get('token');
       return typeof token==='string'&&token.length>=16&&token.length<=3072&&
-        new RegExp('^[A-Za-z0-9_+/=-]+
+        [...token].every(ch=>'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_+/=-'.includes(ch));
     }
     if(url.search)return false;
     return host==='fcm.googleapis.com'||host==='fcm-xm.googleapis.com'||
