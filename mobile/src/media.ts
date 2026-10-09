@@ -1,5 +1,6 @@
 import {File} from 'expo-file-system';
 import {randomUUID} from 'expo-crypto';
+import {ImageManipulator,SaveFormat} from 'expo-image-manipulator';
 import {normalizeMedia,MAX_MEDIA_BYTES} from './media-validation';
 import type {SelectedMedia} from './media-validation';
 export {normalizeMedia};
@@ -30,10 +31,32 @@ export async function publishMediaPost(
  let rollbackFailed=false;
  try{
   for(const [position,{media,file}] of files.entries()){
-   const storage_path=`${userId}/${randomUUID()}.${media.extension}`;
-   const payload=await file.arrayBuffer();
+   // Re-encode still photos to strip camera metadata (including potential GPS
+   // EXIF tags) and reduce bandwidth. Leave animated GIFs and videos intact.
+   let uploadFile=file;
+   let uploadMime=media.mimeType;
+   let extension=media.extension;
+   if(media.kind==='image'&&media.mimeType!=='image/gif'){
+    const context=ImageManipulator.manipulate(media.uri);
+    const longest=Math.max(media.width||0,media.height||0);
+    if(longest>2200){
+     if((media.width||0)>=(media.height||0))context.resize({width:2200,height:null});
+     else context.resize({width:null,height:2200});
+    }
+    const outputType=media.mimeType==='image/png'||media.mimeType==='image/webp'?
+     SaveFormat.PNG:SaveFormat.JPEG;
+    const rendered=await context.renderAsync();
+    const optimized=await rendered.saveAsync({format:outputType,compress:0.85});
+    uploadFile=new File(optimized.uri);
+    uploadMime=outputType===SaveFormat.PNG?'image/png':'image/jpeg';
+    extension=outputType===SaveFormat.PNG?'png':'jpg';
+    if(!uploadFile.exists||uploadFile.size<=0||uploadFile.size>MAX_MEDIA_BYTES)
+     throw new Error('A foto convertida excede 50 MB ou está indisponível.');
+   }
+   const storage_path=`${userId}/${randomUUID()}.${extension}`;
+   const payload=await uploadFile.arrayBuffer();
    const {error}=await supabase.storage.from('social-media').upload(storage_path,payload,{
-    contentType:media.mimeType,upsert:false
+    contentType:uploadMime,upsert:false
    });
    if(error)throw error;
    uploaded.push({storage_path,media_type:media.kind,position});
