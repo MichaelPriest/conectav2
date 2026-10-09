@@ -77,6 +77,8 @@ export default function Messages(){
  const [searchError,setSearchError]=useState('');
  const [highlighted,setHighlighted]=useState<string|null>(null);
  const [threadSearch,setThreadSearch]=useState('');
+ const [connectionSearch,setConnectionSearch]=useState('');
+ const [connectionsExpanded,setConnectionsExpanded]=useState(true);
  const [pins,setPins]=useState<PinnedMessage[]>([]);
  const [settingsOpen,setSettingsOpen]=useState(false);
  const [settingsTitle,setSettingsTitle]=useState('');
@@ -364,30 +366,31 @@ export default function Messages(){
    return()=>{alive=false;window.clearTimeout(timeout);};
  },[active,searchOpen,messageSearch]);
 
- async function begin(event:FormEvent){
-   event.preventDefault();
+ async function startDirectMessage(other:Person){
    if(!auth.user||creating)return;
-   const handle=recipient.trim().replace(/^@/,'').toLowerCase();
-   const other=friends.find(p=>p.handle===handle);
-   if(!other){setError('Para iniciar um chat, essa pessoa precisa ser uma amizade aceita.');return;}
-   if(other.id===auth.user.id){setError('Escolha uma pessoa diferente.');return;}
+   if(other.id===auth.user.id||!friends.some(friend=>friend.id===other.id)){
+     setError('Escolha uma conexão aceita.');return;
+   }
    setCreating(true);setError('');
    try{
-     const already=threads.find(t=>!t.group&&t.other?.id===other.id);
-     if(already){setActive(already.id);setRecipient('');return;}
-     // A single database transaction creates the conversation AND all memberships.
-     // If any RLS/friendship/block check rejects an invite, nothing is persisted.
+     const existing=threads.find(t=>!t.group&&t.other?.id===other.id);
+     if(existing){setActive(existing.id);setRecipient('');return;}
      const {data:id,error:e}=await supabaseBrowser().rpc('create_conversation_with_members',{
        _title:'Conversa privada',_other_user_ids:[other.id]
      });
      if(e)throw e;
      if(!id)throw new Error('A conversa não foi criada.');
-     setRecipient('');
-     await loadThreads();
-     setActive(id as string);
+     setRecipient('');await loadThreads();setActive(id as string);
    }catch(e){
-     setError(e instanceof Error?e.message:'Não foi possível criar a conversa.');
+     setError(e instanceof Error?e.message:'Não foi possível iniciar a conversa.');
    }finally{setCreating(false);}
+ }
+ async function begin(event:FormEvent){
+   event.preventDefault();
+   const handle=recipient.trim().replace(/^@/,'').toLowerCase();
+   const other=friends.find(p=>p.handle.toLowerCase()===handle);
+   if(!other){setError('Conexão não encontrada.');return;}
+   await startDirectMessage(other);
  }
 
  async function beginGroup(event:FormEvent){
@@ -493,6 +496,10 @@ export default function Messages(){
    else{setError('Usuário bloqueado. Para desbloquear, use o perfil público.');}
  }
  const filtered=threads.filter(t=>([t.title||'',t.other?.display_name||'',t.other?.handle||'',...t.participants.map(p=>p.display_name)].join(' ')).toLowerCase().includes(threadSearch.toLowerCase()));
+ const filteredConnections=friends.filter(person=>
+  (person.display_name+' '+person.handle).toLocaleLowerCase('pt-BR')
+   .includes(connectionSearch.trim().toLocaleLowerCase('pt-BR')))
+  .sort((a,b)=>a.display_name.localeCompare(b.display_name,'pt-BR'));
  const current=threads.find(t=>t.id===active);
  const currentlyMuted=Boolean(current?.mutedUntil&&Date.parse(current.mutedUntil)>Date.now());
  const canManageGroup=Boolean(current?.group&&current.created_by===auth.user?.id);
@@ -505,22 +512,52 @@ export default function Messages(){
      <aside className="conecta-chat-sidebar">
        <div className="feed-title"><h2>Caixa de entrada</h2><button className="icon-btn" title="Atualizar" onClick={()=>void loadThreads()}><RefreshCw size={18}/></button></div>
        <label className="searchbox"><Search size={17}/><input aria-label="Filtrar conversas" placeholder="Buscar conversa..." value={threadSearch} onChange={e=>setThreadSearch(e.target.value)}/></label>
-       <form onSubmit={begin} className="conecta-chat-new">
-         <select className="form-input" aria-label="Amizade para conversar" value={recipient} onChange={e=>setRecipient(e.target.value)} required>
-           <option value="">Nova conversa com...</option>
-           {friends.map(f=><option key={f.id} value={f.handle}>{f.display_name} (@{f.handle})</option>)}
-         </select>
-         <button className="btn btn-primary" type="submit" disabled={!recipient||creating}><Plus size={19}/></button>
-       </form>
+       <section className="conecta-chat-connections" aria-label="Lista de conexões">
+         <div className="conecta-chat-connections-heading">
+           <button className="conecta-chat-connections-toggle" type="button"
+             aria-expanded={connectionsExpanded} onClick={()=>setConnectionsExpanded(open=>!open)}>
+             <Users size={16}/><strong>Minhas conexões</strong>
+             <span className="conecta-chat-connections-count">{friends.length}</span>
+           </button>
+           <Link href="/explorar" title="Encontrar novas conexões" aria-label="Encontrar conexões"><UserPlus size={17}/></Link>
+         </div>
+         {connectionsExpanded&&<>
+           <label className="searchbox"><Search size={15}/>
+             <input aria-label="Buscar conexões por nome ou usuário" value={connectionSearch}
+               placeholder="Buscar nome ou @usuário" onChange={e=>setConnectionSearch(e.target.value)}/>
+           </label>
+           <div className="conecta-chat-connections-list" role="list">
+             {filteredConnections.map(person=><div className="conecta-chat-connection-item" role="listitem" key={person.id}>
+               <button type="button" className="conecta-chat-contact-button" disabled={creating}
+                 aria-label={'Conversar com '+person.display_name}
+                 onClick={()=>void startDirectMessage(person)}>
+                 <ProfileAvatar person={person} size="small"/>
+                 <span className="conecta-chat-contact-details">
+                   <strong>{person.display_name}</strong><small>@{person.handle}</small>
+                 </span><MessageCircle size={16}/></button>
+             </div>)}
+             {!loading&&filteredConnections.length===0&&<p className="small-note">
+               {friends.length?'Nenhuma conexão corresponde à pesquisa.':'Você ainda não tem conexões aceitas.'}
+             </p>}
+           </div>
+         </>}
+       </section>
+       {recipient&&<form className="conecta-chat-new" onSubmit={begin}>
+         <label htmlFor="conecta-recipient">Conversa solicitada</label>
+         <input id="conecta-recipient" className="form-input" value={recipient} readOnly/>
+         <button className="btn btn-primary" type="submit" disabled={creating}>Abrir conversa</button>
+       </form>}
        <button type="button" className="btn btn-outline" aria-expanded={groupOpen} onClick={()=>{setGroupOpen(open=>!open);setError('');}}><Users size={16}/> {groupOpen?'Fechar grupo':'Criar grupo'}</button>
        {groupOpen&&<form onSubmit={beginGroup} className="conecta-chat-new" style={{display:'grid',gap:10}}>
          <label htmlFor="group-title">Nome do grupo</label>
          <input id="group-title" className="form-input" value={groupTitle} onChange={e=>setGroupTitle(e.target.value)} maxLength={80} required placeholder="Ex.: Amigos da música"/>
          <fieldset style={{border:0,padding:0,margin:0,maxHeight:150,overflowY:'auto'}}>
            <legend>Selecione ao menos 2 amizades</legend>
-           {friends.map(f=><label key={f.id} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0'}}>
-             <input type="checkbox" checked={groupMembers.includes(f.id)} onChange={e=>setGroupMembers(current=>e.target.checked?[...current,f.id]:current.filter(id=>id!==f.id))}/>
-             {f.display_name} (@{f.handle})
+           {friends.map(person=><label key={person.id} className="conecta-chat-group-contact">
+             <input type="checkbox" checked={groupMembers.includes(person.id)}
+               onChange={e=>setGroupMembers(current=>e.target.checked?[...current,person.id]:current.filter(id=>id!==person.id))}/>
+             <ProfileAvatar person={person} size="small"/>
+             <span><strong>{person.display_name}</strong><small>@{person.handle}</small></span>
            </label>)}
          </fieldset>
          <button className="btn btn-primary" type="submit" disabled={creating||!groupTitle.trim()||groupMembers.length<2}>Criar conversa em grupo</button>
