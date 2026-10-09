@@ -5,6 +5,7 @@ import {
  StyleSheet,Text,TextInput,View
 } from 'react-native';
 import {StatusBar} from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {User} from '@supabase/supabase-js';
 import {SITE_URL,supabase} from './src/supabase';
 import type {ChatMessage,Community,Friendship,Notice,Post,Profile,Thread} from './src/models';
@@ -147,6 +148,34 @@ function FeedScreen({userId}:{userId:string}){
  const [text,setText]=useState(''),[visibility,setVisibility]=useState<'public'|'friends'|'private'>('public');
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [more,setMore]=useState(false),[loadingMore,setLoadingMore]=useState(false);
+ const [draftReady,setDraftReady]=useState(false);
+ const draftKey='conecta-mobile-feed-draft:'+userId;
+ useEffect(()=>{
+  let mounted=true;
+  setDraftReady(false);
+  void AsyncStorage.getItem(draftKey).then(raw=>{
+   if(!mounted)return;
+   if(raw){
+    try{
+     const draft=JSON.parse(raw) as {text?:unknown;visibility?:unknown};
+     if(typeof draft.text==='string')setText(draft.text.slice(0,3000));
+     if(draft.visibility==='public'||draft.visibility==='friends'||draft.visibility==='private')
+      setVisibility(draft.visibility);
+    }catch{/* Ignore corrupt local drafts. */}
+   }
+  }).catch(()=>{/* Drafts are optional offline convenience. */})
+   .finally(()=>{if(mounted)setDraftReady(true);});
+  return()=>{mounted=false;};
+ },[draftKey]);
+ useEffect(()=>{
+  if(!draftReady)return;
+  const timer=setTimeout(()=>{
+   const value=text?JSON.stringify({text,visibility}):null;
+   void (value?AsyncStorage.setItem(draftKey,value):AsyncStorage.removeItem(draftKey))
+    .catch(()=>{/* Storage errors must not block posting. */});
+  },400);
+  return()=>clearTimeout(timer);
+ },[draftKey,draftReady,text,visibility]);
  const postLength=text.trim().length;
  const validPost=postLength>0&&postLength<=3000;
  const load=useCallback(async(offset=0)=>{
