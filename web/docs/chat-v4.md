@@ -169,10 +169,27 @@ A chave primária de claim protege contra competição entre webhook e fallback
 do navegador.
 
 **Rollout seguro:** a configuração `app_private.chat_push_webhook_config.enabled`
-fica **false** por padrão. Não ative até verificar que a Vercel publicou este
-commit e que `CHAT_PUSH_WEBHOOK_SECRET` está configurado na hospedagem,
-com o mesmo segredo `conecta_chat_push_webhook` no Vault. Se o novo
+fica **false** por padrão. O endpoint poderá usar a hospedagem Render depois
+que o serviço validar VAPID, acesso administrativo ao Supabase e segredo HMAC,
+sem depender do deployment atrasado da Vercel. O mesmo segredo
+`conecta_chat_push_webhook` está no Vault. Se o novo
 deployment não estiver disponível, o caminho antigo do navegador continua
 como fallback, sem enviar mensagens HTTP a versões antigas do servidor.
 A entrega segue best-effort, sujeita a eventuais falhas de gateway/rede; o
 webhook do banco não substitui uma fila com novas tentativas.
+
+## Diagnóstico e endpoint do Render (09/10/2026)
+
+O serviço de homologação `conectav2-validacao.onrender.com` já possui as quatro
+variáveis Web Push/HMAC geradas e foi publicado no HEAD
+`cbeebd10` com build e deploy confirmados. O novo script
+`web/scripts/check-chat-push-startup.cjs` verifica ao iniciar:
+formato/par criptográfico VAPID, presença do assunto, presença da credencial
+administrativa, acesso real à tabela privada do Supabase (consulta sem leitura
+de linhas), e presença do segredo HMAC. Só escreve booleanos/status ao log
+privado do Render, sem imprimir ou armazenar tokens/chaves.
+
+Antes de ativar o webhook, revalidar o resultado do diagnóstico no deploy
+que contiver este script. A URL `https://conectav2-validacao.onrender.com/api/chat/push/webhook`
+passa a ser um destino permitido no gatilho do banco, mas o estado
+`enabled=false` deve permanecer até teste satisfatório.

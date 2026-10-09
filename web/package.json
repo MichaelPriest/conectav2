@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node scripts/prepare-human.cjs && next dev",
     "build": "node scripts/prepare-human.cjs && next build",
-    "start": "next start",
+    "start": "node scripts/check-chat-push-startup.cjs && next start",
     "typecheck": "tsc --noEmit",
     "test:profile": "node --test tests/profile-details.test.cjs",
     "test:human": "node --test tests/human-browser.test.cjs tests/liveness-challenge.test.cjs",
