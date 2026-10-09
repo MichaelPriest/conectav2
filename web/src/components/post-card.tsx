@@ -122,6 +122,10 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
   const LikesIcon=Heart;
   return <article className="post-card" id={'post-'+post.id}>
     <div className="post-head"><ProfileAvatar person={post.profiles}/><div className="post-meta"><strong>{post.profiles?.display_name||'Pessoa da comunidade'}</strong><span>@{post.profiles?.handle||'conecta'} · {ago(post.created_at)}</span></div><div className="post-privacy" title={post.visibility}>{post.visibility==='public'?<Globe2 size={16}/>:post.visibility==='friends'?<Users size={16}/>:<LockKeyhole size={16}/>}</div>{post.author_id===userId&&<button className="icon-btn subtle" onClick={remove} title="Excluir publicação" aria-label="Excluir publicação"><Trash2 size={17}/></button>}</div>
+    {post.moderation_status!=='approved'&&<div className="conecta-content-review" role="status">
+      <strong>{post.moderation_status==='rejected'?'Publicação não aprovada':'Publicação em análise'}</strong>
+      <span>{post.moderation_status==='rejected'?'Esta publicação não está disponível para outras pessoas.':'Você consegue visualizar este conteúdo enquanto ele é analisado. Ele ainda não aparece para outras pessoas.'}</span>
+    </div>}
     <div className="post-body">{post.content && <p><MentionText text={post.content}/></p>}{media.length>0 && (media.length===1 && media[0].type==='video'
       ? <div className="post-media"><video src={media[0].url} controls preload="metadata"/></div>
       : <div className={'post-gallery '+(media.length===1?'gallery-one':media.length===2?'gallery-two':'gallery-mosaic')}>
