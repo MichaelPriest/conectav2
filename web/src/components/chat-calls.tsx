@@ -1,6 +1,7 @@
 'use client';
 import {createContext,useCallback,useContext,useEffect,useRef,useState} from 'react';
-import {Phone,PhoneOff,Video,Mic,MicOff,VideoOff,Check,Loader2,Volume2,PhoneMissed} from 'lucide-react';
+import {Phone,PhoneOff,Video,Mic,MicOff,VideoOff,Check,Loader2,Volume2,VolumeX,BellRing,PhoneMissed} from 'lucide-react';
+import {ChatCallTones,DEFAULT_CALL_TONES,sanitizeCallTonePreferences,type CallTonePreferences} from '@/lib/chat-call-tones';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 
 type CallKind='audio'|'video';
@@ -28,6 +29,36 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
  const [micOn,setMicOn]=useState(true),[camOn,setCamOn]=useState(false);
  const [local,setLocal]=useState<MediaStream|null>(null),[remote,setRemote]=useState<MediaStream|null>(null);
  const [audioBlocked,setAudioBlocked]=useState(false);
+ const [ringtoneBlocked,setRingtoneBlocked]=useState(false);
+ const [tonePreferences,setTonePreferences]=useState<CallTonePreferences>(DEFAULT_CALL_TONES);
+ const tonePreferencesRef=useRef<CallTonePreferences>(DEFAULT_CALL_TONES);
+ const tonesRef=useRef<ChatCallTones|null>(null);
+ const connectedTonePlayed=useRef<string|null>(null);
+ const settingsKey='conecta-call-sounds:'+userId;
+ const getTones=useCallback(()=>{
+  if(!tonesRef.current){
+   tonesRef.current=new ChatCallTones(setRingtoneBlocked);
+   tonesRef.current.configure(tonePreferencesRef.current);
+  }
+  return tonesRef.current;
+ },[]);
+ const updateTonePreferences=(next:CallTonePreferences)=>{
+  const safe=sanitizeCallTonePreferences(next);
+  tonePreferencesRef.current=safe;setTonePreferences(safe);
+  tonesRef.current?.configure(safe);
+  try{localStorage.setItem(settingsKey,JSON.stringify(safe));}catch{}
+ };
+ useEffect(()=>{
+  try{
+   const saved=localStorage.getItem(settingsKey);
+   if(saved){
+    const prefs=sanitizeCallTonePreferences(JSON.parse(saved));
+    tonePreferencesRef.current=prefs;setTonePreferences(prefs);
+    tonesRef.current?.configure(prefs);
+   }
+  }catch{/* Browsers may disable local storage. */}
+  return()=>{tonesRef.current?.dispose();tonesRef.current=null;};
+ },[settingsKey]);
  const pcRef=useRef<RTCPeerConnection|null>(null),streamRef=useRef<MediaStream|null>(null);
  const sentOffer=useRef(false),sentAnswer=useRef(false),negotiating=useRef(false),querying=useRef(false);
  const localVideo=useRef<HTMLVideoElement|null>(null),remoteVideo=useRef<HTMLVideoElement|null>(null);
@@ -73,6 +104,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
  },[remote,current?.id]);
 
  const release=useCallback(()=>{
+  tonesRef.current?.stop();connectedTonePlayed.current=null;
   if(failureTimer.current!==null)window.clearTimeout(failureTimer.current);
   if(connectTimer.current!==null)window.clearTimeout(connectTimer.current);
   failureTimer.current=null;connectTimer.current=null;
@@ -90,8 +122,9 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
   const row=currentRef.current;
   if(!row||ended.current===row.id)return;
   ended.current=row.id;release();
+  tonesRef.current?.playEvent(row.callee_id===userId&&row.status==='ringing'&&!decline?'missed':'ended');
   await db.rpc('end_chat_call',{_id:row.id,_decline:decline});
- },[db,release]);
+ },[db,release,userId]);
  const acquire=useCallback(async(kind:CallKind)=>{
   if(!navigator.mediaDevices?.getUserMedia||!('RTCPeerConnection' in window))
    throw new Error('Este navegador não permite chamadas WebRTC.');
@@ -136,6 +169,11 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     failureTimer.current=null;
     if(connectTimer.current!==null)window.clearTimeout(connectTimer.current);
     connectTimer.current=null;setCallPhase('Conectada');setStatus('Conectada');
+    const activeId=currentRef.current?.id;
+    if(activeId&&connectedTonePlayed.current!==activeId){
+     connectedTonePlayed.current=activeId;
+     tonesRef.current?.playEvent('connected');
+    }
    }else if(pc.connectionState==='connecting')setStatus('Conectando…');
    else if(pc.connectionState==='failed'){
     setStatus('Falha na conexão P2P.');
@@ -150,6 +188,8 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
  const start=useCallback(async(conversationId:string,recipientId:string,recipientName:string,kind:CallKind)=>{
   if(currentRef.current||busyRef.current)return;
   busyRef.current=true;setBusy(true);setError('');setContact(recipientName);
+  // Prime audio while still in the user's click, before asking for media.
+  getTones().unlock();
   try{
    await acquire(kind);
    const {data,error:e}=await db.rpc('start_chat_call',{
@@ -162,13 +202,16 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
    lastRemoteCandidateId.current=0;bufferedRemoteCandidates.current=[];
    ended.current=null;currentRef.current=row;setCurrent(row);setStatus('Chamando…');
    setCallPhase('Aguardando a outra pessoa atender');
+   getTones().start('outgoing');
   }catch(e){release();setError(describe(e));}
   finally{busyRef.current=false;setBusy(false);}
- },[acquire,db,release,userId]);
+ },[acquire,db,release,userId,getTones]);
  const accept=useCallback(async()=>{
   const row=currentRef.current;
   if(!row||row.callee_id!==userId||busyRef.current)return;
   busyRef.current=true;setBusy(true);setError('');
+  tonesRef.current?.stop();
+  getTones().unlock();
   try{
    await acquire(row.kind);
    const {error:e}=await db.rpc('accept_chat_call',{_id:row.id});
@@ -180,7 +223,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
    setCallPhase('Atendida · aguardando oferta WebRTC');
   }catch(e){setError(describe(e));void end(true);}
   finally{busyRef.current=false;setBusy(false);}
- },[acquire,db,end,userId]);
+ },[acquire,db,end,userId,getTones]);
  const flushBufferedCandidates=useCallback(async(pc:RTCPeerConnection)=>{
   if(!pc.currentRemoteDescription)return;
   const buffered=bufferedRemoteCandidates.current.splice(0);
@@ -287,6 +330,8 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     // A previous pending fetch must not revive a call that has just ended.
     if(currentRef.current?.id!==row.id)return;
     const updated=data as CallRow;
+    if(row.status==='ringing'&&updated.status==='accepted'&&updated.caller_id===userId)
+      tonesRef.current?.stop();
     // A different tab accepted the same incoming call. Don't hang it up.
     if(updated.status==='accepted'&&updated.callee_id===userId&&!pcRef.current){
       release();return;
@@ -314,6 +359,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     ended.current=null;currentRef.current=incoming;setCurrent(incoming);
     setContact(person?.display_name||'Sua conexão');
     setStatus('Chamada recebida');
+    getTones().start('incoming');
     if(document.hidden&&typeof Notification!=='undefined'&&
        Notification.permission==='granted'&&notifiedIncoming.current!==incoming.id){
       notifiedIncoming.current=incoming.id;
@@ -327,7 +373,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     }
    }
   }finally{querying.current=false;}
- },[db,end,negotiate,receiveCandidates,userId,release]);
+ },[db,end,negotiate,receiveCandidates,userId,release,getTones]);
  useEffect(()=>{
   void check();void refreshMissed();
   // RLS protects events: each browser listens only to calls involving its user.
@@ -359,6 +405,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
      void db.rpc('end_chat_call',{_id:row.id,_decline:false});
    if(failureTimer.current!==null)window.clearTimeout(failureTimer.current);
    if(connectTimer.current!==null)window.clearTimeout(connectTimer.current);
+   tonesRef.current?.stop();
    pcRef.current?.close();streamRef.current?.getTracks().forEach(track=>track.stop());
   };
  },[db,check,refreshMissed,userId]);
@@ -385,6 +432,30 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     aria-label={incoming?'Chamada recebida':'Chamada de áudio ou vídeo'}>
     <small className="conecta-call-eyebrow">Conecta · {current.kind==='video'?'Vídeo':'Voz'}</small>
     <h2>{contact}</h2><p role="status">{status}</p>
+    <div className="conecta-call-sound-controls" aria-label="Sons da chamada">
+      <button type="button" className="conecta-call-sound-toggle"
+        aria-pressed={tonePreferences.enabled}
+        aria-label={tonePreferences.enabled?'Silenciar toques de chamada':'Ativar toques de chamada'}
+        onClick={()=>updateTonePreferences({...tonePreferences,enabled:!tonePreferences.enabled})}>
+        {tonePreferences.enabled?<BellRing size={16}/>:<VolumeX size={16}/>}
+        <span>{tonePreferences.enabled?'Toques ativados':'Toques silenciados'}</span>
+      </button>
+      <label className="conecta-call-sound-volume" htmlFor="conecta-call-volume">
+        Volume
+        <input id="conecta-call-volume" aria-label="Volume dos toques"
+          type="range" min="0" max="100" step="5"
+          value={Math.round(tonePreferences.volume*100)}
+          onChange={event=>updateTonePreferences({
+            ...tonePreferences,volume:Number(event.currentTarget.value)/100
+          })}/>
+        <small>{Math.round(tonePreferences.volume*100)}%</small>
+      </label>
+      {ringtoneBlocked&&tonePreferences.enabled&&
+        <button className="conecta-call-sound-unlock" type="button"
+          onClick={()=>getTones().unlock()}>
+          <Volume2 size={15}/> Ativar som do toque
+        </button>}
+    </div>
     {current.status==='accepted'&&<div className="conecta-call-diagnostic">
       <small>{callPhase}</small>
       <button type="button" className="conecta-call-diagnostic-toggle"

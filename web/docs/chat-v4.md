@@ -290,3 +290,14 @@ configurado; não interpretar CI de frontend como teste de áudio entre redes.
 - Cliente Supabase estável entre renders do componente de chamada.
 - A mídia segue P2P criptografada pelo navegador; não é armazenada.
 - Redes que bloqueiem P2P ainda podem precisar de Coturn hospedado.
+
+## Chat V4.13 — sons de chamadas
+Toques de áudio gerados localmente por Web Audio, sem serviços pagos nem
+arquivos protegidos por direitos autorais: toque de entrada com padrão triplo,
+tom de chamando para quem liga, aviso de conexão, encerramento e chamada
+não atendida. Sons interrompidos ao atender, encerrar, mudar de chamada ou
+desmontar a interface, evitando loops persistentes. Preferência de som e
+volume (0–100%) armazenada localmente por conta, acessível dentro da janela
+de chamada. Navegadores que bloqueiam reprodução automática recebem um
+botão explícito "Ativar som do toque" — nunca contornar a permissão do
+navegador. Toques não alteram a mídia WebRTC nem o áudio da pessoa chamada.
