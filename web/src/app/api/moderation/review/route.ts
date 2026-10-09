@@ -5,7 +5,7 @@ export const runtime='nodejs';
 export const dynamic='force-dynamic';
 type ContentKind='post'|'story';
 type MediaKind='image'|'video';
-type ScanResult={flagged:boolean;provider:string};
+type ScanResult={flagged:boolean;provider:string;humanReview?:boolean};
 function reply(data:unknown,status=200){
  return NextResponse.json(data,{status,headers:{'Cache-Control':'no-store'}});
 }
@@ -30,6 +30,40 @@ async function moderateWithFreeApi(text:string, images:string[]):Promise<ScanRes
  if(!data.results?.length||data.results.some(r=>typeof r.flagged!=='boolean'))
    throw new Error('provider_invalid');
  return {flagged:data.results.some(result=>result.flagged),provider:'omni-moderation-latest'};
+}
+
+
+async function moderateWithOpenSourceWorker(
+ text:string,media:{path:string;type:MediaKind}[],
+ admin:ReturnType<typeof import('@supabase/supabase-js').createClient>
+):Promise<ScanResult>{
+ const rawUrl=process.env.CONEXA_MODERATION_WORKER_URL;
+ const token=process.env.CONEXA_MODERATION_WORKER_TOKEN;
+ if(!rawUrl||!token)throw new Error('worker_unconfigured');
+ const url=new URL(rawUrl);
+ if(url.protocol!=='https:'||url.username||url.password||url.search||url.hash)
+  throw new Error('unsafe_worker_config');
+ const form=new FormData();
+ form.set('content',text);
+ for(const [i,item] of media.entries()){
+   const {data,error}=await admin.storage.from('social-media').download(item.path);
+   if(error||!data)throw new Error('cannot_download_media');
+   if(data.size>50*1024*1024)throw new Error('media_too_large');
+   form.append(item.type==='video'?'video':'images',data,
+     item.type==='video'?'sample-'+i+'.mp4':'sample-'+i+'.jpg');
+ }
+ const response=await fetch(new URL('/classify',url),{
+   method:'POST',headers:{Authorization:'Bearer '+token},body:form,
+   cache:'no-store',signal:AbortSignal.timeout(55000)
+ });
+ if(!response.ok)throw new Error('worker_unavailable');
+ const json=await response.json() as {flagged?:boolean;human_review?:boolean;engine?:string};
+ if(typeof json.flagged!=='boolean'||typeof json.human_review!=='boolean')
+  throw new Error('worker_invalid');
+ // The OSS worker detects only toxicity and nudity, not all abuse categories.
+ // Until a broad safety classifier exists, clean visual material still needs review.
+ return {flagged:json.flagged,provider:'opensource-'+String(json.engine||'worker').slice(0,40),
+   humanReview:media.length>0||json.human_review};
 }
 
 export async function POST(request:NextRequest){
@@ -62,7 +96,7 @@ export async function POST(request:NextRequest){
  if(media.length===0&&record.media_path)
   media.push({path:record.media_path as string,type:record.media_type as MediaKind});
  if(media.length>5)return reply({status:'pending',error:'Número de mídias exige revisão manual.'},200);
- if(media.some(m=>m.type==='video'))
+ if(media.some(m=>m.type==='video')&&!process.env.CONEXA_MODERATION_WORKER_URL)
   return reply({status:'pending',reason:'Vídeos aguardam análise de quadros e revisão humana.'});
  if(media.some(m=>m.type!=='image'))return reply({status:'pending'});
  if(media.some(m=>!m.path.startsWith(user.id+'/')))
@@ -72,25 +106,27 @@ export async function POST(request:NextRequest){
  // Escalate to trained human safeguarding instead.
  if(/(?:material\s+de\s+abuso\s+sexual\s+infantil|csam)/i.test(content))
   return reply({status:'pending',reason:'Revisão de segurança especializada necessária.'});
- if(!process.env.OPENAI_API_KEY)
+ if(!process.env.OPENAI_API_KEY&&!process.env.CONEXA_MODERATION_WORKER_URL)
   return reply({status:record.moderation_status,provider:'unconfigured',
     reason:'IA externa não configurada. Arquivos permanecem em revisão.'});
  const imageUrls:string[]=[];
- for(const item of media){
+ if(!process.env.CONEXA_MODERATION_WORKER_URL)for(const item of media){
   // A privately signed, short-lived URL is created only after verifying authorship.
   const {data,error}=await admin.storage.from('social-media').createSignedUrl(item.path,120);
   if(error||!data?.signedUrl)return reply({status:'pending',reason:'Não foi possível analisar o anexo.'});
   imageUrls.push(data.signedUrl);
  }
  try{
-  const result=await moderateWithFreeApi(content,imageUrls);
-  const next=result.flagged?'pending':'approved';
+  const result=process.env.CONEXA_MODERATION_WORKER_URL?
+    await moderateWithOpenSourceWorker(content,media,admin):
+    await moderateWithFreeApi(content,imageUrls);
+  const next=(result.flagged||result.humanReview)?'pending':'approved';
   const now=new Date().toISOString();
   if(kind==='post'){
    // Optimistic concurrency: content changes/extra media uploads cannot retain prior approval.
    let update=admin.from('posts').update({
      moderation_status:next,
-     moderation_reason:result.flagged?'IA sinalizou conteúdo para revisão humana':'',
+     moderation_reason:result.flagged?'IA sinalizou conteúdo para revisão humana':result.humanReview?'Aguardando revisão humana complementar':'',
      moderated_at:now,moderated_by:null,ai_checked_at:now,ai_provider:result.provider
    }).eq('id',id).eq('author_id',user.id).eq('content',content).is('ai_checked_at',null);
    if(record.media_path===null)update=update.is('media_path',null);
@@ -105,7 +141,8 @@ export async function POST(request:NextRequest){
    if(error||!updated)return reply({status:'pending',reason:'Story indisponível para revisão.'},409);
   }
   return reply({status:next,provider:result.provider,reason:result.flagged?
-    'Conteúdo encaminhado à revisão humana.':'Verificação automática concluída.'});
+    'Conteúdo sinalizado para revisão humana.':result.humanReview?
+    'Modelo gratuito executado. Revisão humana complementar necessária.':'Verificação automática concluída.'});
  }catch{
   return reply({status:'pending',reason:'Serviço de IA indisponível. O conteúdo segue em análise.'});
  }
