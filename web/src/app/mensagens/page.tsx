@@ -1,7 +1,7 @@
 'use client';
 import {FormEvent,useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
-import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Users,Paperclip,Mic,Square,X,Loader2} from 'lucide-react';
+import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Users,Paperclip,Mic,Square,X,Loader2,Pencil,Trash2,Check,CheckCheck} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {supabaseBrowser} from '@/lib/supabase/browser';
@@ -13,7 +13,8 @@ import {MentionInput,MentionText} from '@/components/mention-input';
 type Person={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Conversation={id:string;title:string|null;created_at:string;created_by:string};
 type MediaType='image'|'video'|'audio';
-type Message={id:string;sender_id:string;content:string;created_at:string;conversation_id:string;media_path:string|null;media_type:MediaType|null};
+type Message={id:string;sender_id:string;content:string;created_at:string;conversation_id:string;media_path:string|null;media_type:MediaType|null;edited_at:string|null;deleted_at:string|null};
+type MemberReceipt={user_id:string;last_read_at:string|null};
 const ALLOWED_MEDIA=['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','audio/webm','audio/ogg','audio/mp4','audio/mpeg'];
 const MAX_MEDIA_BYTES=50*1024*1024;
 function classifyMedia(type:string):MediaType{
@@ -59,6 +60,9 @@ export default function Messages(){
  const [creating,setCreating]=useState(false),[sending,setSending]=useState(false);
  const [loading,setLoading]=useState(true),[loadingMessages,setLoadingMessages]=useState(false);
  const [hasOlder,setHasOlder]=useState(false),[error,setError]=useState('');
+ const [receipts,setReceipts]=useState<MemberReceipt[]>([]);
+ const [editingId,setEditingId]=useState<string|null>(null),[editingText,setEditingText]=useState('');
+ const [messageBusy,setMessageBusy]=useState(false);
  const [threadSearch,setThreadSearch]=useState('');
  const scrollRef=useRef<HTMLDivElement>(null);
  useEffect(()=>{
@@ -137,7 +141,7 @@ export default function Messages(){
    if(ids.length){
      const [conversations,lastMessages]=await Promise.all([
        db.from('conversations').select('id,title,created_at,created_by').in('id',ids).order('created_at',{ascending:false}),
-       db.from('messages').select('id,conversation_id,sender_id,content,created_at,media_path,media_type')
+       db.from('messages').select('id,conversation_id,sender_id,content,created_at,media_path,media_type,edited_at,deleted_at')
          .in('conversation_id',ids).order('created_at',{ascending:false}).limit(200)
      ]);
      if(conversations.error||lastMessages.error)setError(conversations.error?.message||lastMessages.error?.message||'Não foi possível carregar chats.');
@@ -159,7 +163,7 @@ export default function Messages(){
    setLoadingMessages(true);
    const db=supabaseBrowser();
    const {data,error:e}=await db.from('messages')
-     .select('id,sender_id,content,created_at,conversation_id,media_path,media_type')
+     .select('id,sender_id,content,created_at,conversation_id,media_path,media_type,edited_at,deleted_at')
      .eq('conversation_id',id).order('created_at',{ascending:false})
      .range(older?messages.length:0,older?messages.length+PER_PAGE-1:PER_PAGE-1);
    if(e)setError(e.message);
@@ -175,13 +179,20 @@ export default function Messages(){
  useEffect(()=>{const name=new URLSearchParams(window.location.search).get('to');if(name)setRecipient(name);},[]);
  useEffect(()=>{
    if(!active)return;
-   setMessages([]);void loadMessages(active);
+   setMessages([]);setReceipts([]);setEditingId(null);void loadMessages(active);
+   void loadReceipts(active);
    const db=supabaseBrowser();
    const channel=db.channel('conecta-inbox-'+active).on('postgres_changes',
-     {schema:'public',table:'messages',event:'INSERT',filter:'conversation_id=eq.'+active},
+     {schema:'public',table:'messages',event:'*',filter:'conversation_id=eq.'+active},
      ()=>{void loadMessages(active);void loadThreads();}
+   ).on('postgres_changes',
+     {schema:'public',table:'conversation_members',event:'UPDATE',filter:'conversation_id=eq.'+active},
+     ()=>{void loadReceipts(active);}
    ).subscribe();
-   return()=>{void db.removeChannel(channel);};
+   const sync=()=>{if(!document.hidden){void loadReceipts(active);}};
+   window.addEventListener('focus',sync);
+   const receiptTimer=window.setInterval(sync,15000);
+   return()=>{window.removeEventListener('focus',sync);window.clearInterval(receiptTimer);void db.removeChannel(channel);};
    // loadMessages is called with latest list and via realtime, not a hook dependency to avoid resubscribing for every message.
    // eslint-disable-next-line react-hooks/exhaustive-deps
  },[active]);
@@ -190,6 +201,61 @@ export default function Messages(){
      scrollRef.current.scrollTop=scrollRef.current.scrollHeight;
    }
  },[loadingMessages,messages.length,hasOlder]);
+
+ const loadReceipts=useCallback(async(id:string)=>{
+   const {data,error:e}=await supabaseBrowser().from('conversation_members')
+     .select('user_id,last_read_at').eq('conversation_id',id);
+   if(!e)setReceipts((data||[]) as MemberReceipt[]);
+ },[]);
+
+ useEffect(()=>{
+   if(!active||!auth.user||!messages.length)return;
+   const last=messages[messages.length-1];
+   if(last.sender_id===auth.user.id||document.hidden||!document.hasFocus())return;
+   let alive=true;
+   async function markRead(){
+     const db=supabaseBrowser();
+     const {error:e}=await db.from('conversation_members')
+       .update({last_read_at:new Date().toISOString()})
+       .eq('conversation_id',active).eq('user_id',auth.user!.id);
+     if(!e&&alive)void loadReceipts(active);
+   }
+   void markRead();
+   return()=>{alive=false;};
+ },[active,auth.user,messages,loadReceipts]);
+
+ async function reviseMessage(id:string){
+   if(!active||!auth.user||messageBusy||!editingText.trim())return;
+   setMessageBusy(true);setError('');
+   const {data,error:e}=await supabaseBrowser().from('messages')
+     .update({content:editingText.trim()}).eq('id',id)
+     .eq('sender_id',auth.user.id).is('deleted_at',null)
+     .select('id').maybeSingle();
+   if(e)setError(e.message);
+   else if(!data)setError('A mensagem não pode mais ser editada.');
+   else{setEditingId(null);setEditingText('');await loadMessages(active);}
+   setMessageBusy(false);
+ }
+ async function eraseMessage(message:Message){
+   if(!active||!auth.user||messageBusy||message.sender_id!==auth.user.id)return;
+   if(!window.confirm('Apagar esta mensagem para todos os participantes?'))return;
+   setMessageBusy(true);setError('');
+   const {data,error:e}=await supabaseBrowser().from('messages')
+     .update({deleted_at:new Date().toISOString()}).eq('id',message.id)
+     .eq('sender_id',auth.user.id).is('deleted_at',null)
+     .select('id').maybeSingle();
+   if(e)setError(e.message);
+   else if(!data)setError('Não foi possível apagar a mensagem.');
+   else{
+     if(editingId===message.id){setEditingId(null);setEditingText('');}
+     await loadMessages(active);await loadThreads();
+     if(message.media_path){
+       const {error:storageError}=await supabaseBrowser().storage.from('social-media').remove([message.media_path]);
+       if(storageError)setError('Mensagem apagada. A limpeza do anexo precisa ser verificada.');
+     }
+   }
+   setMessageBusy(false);
+ }
 
  async function begin(event:FormEvent){
    event.preventDefault();
@@ -323,11 +389,31 @@ export default function Messages(){
        <div className="conecta-chat-log" ref={scrollRef} aria-live="polite">
          {hasOlder&&<button className="btn btn-outline" type="button" disabled={loadingMessages} onClick={()=>void loadMessages(active,true)}>Carregar mensagens anteriores</button>}
          {messages.length===0&&!loadingMessages&&<div className="empty-state"><MessageCircle size={30}/><h3>Uma nova conversa começa aqui.</h3><p>Respeite a privacidade e a vontade de quem participa.</p></div>}
-         {messages.map(m=><article key={m.id} className={'conecta-message '+(m.sender_id===auth.user?.id?'own':'other')}>
-           {m.content&&<p><MentionText text={m.content}/></p>}{m.content&&parseMusicUrl(m.content)&&<MusicEmbed url={m.content}/>}
-           <MessageMedia message={m}/>
-           <time>{new Date(m.created_at).toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})}</time>
-         </article>)}
+         {messages.map(m=>{
+          const own=m.sender_id===auth.user?.id;
+          const otherReceipts=receipts.filter(r=>r.user_id!==auth.user?.id);
+          const readCount=otherReceipts.filter(r=>r.last_read_at&&new Date(r.last_read_at).getTime()>=new Date(m.created_at).getTime()).length;
+          return <article key={m.id} className={'conecta-message '+(own?'own':'other')+(m.deleted_at?' conecta-message-deleted':'')}>
+           {editingId===m.id?<form className="conecta-chat-edit" onSubmit={e=>{e.preventDefault();void reviseMessage(m.id);}}>
+             <input className="form-input" aria-label="Editar mensagem" autoFocus maxLength={4000} required value={editingText}
+               onChange={e=>setEditingText(e.target.value)}/>
+             <div><button type="button" className="btn btn-outline" disabled={messageBusy} onClick={()=>setEditingId(null)}>Cancelar</button>
+               <button className="btn btn-primary" type="submit" disabled={messageBusy||!editingText.trim()}><Check size={15}/> Salvar</button></div>
+           </form>:<>
+            {m.content&&<p>{m.deleted_at?<em>Mensagem apagada</em>:<MentionText text={m.content}/>}</p>}
+            {!m.deleted_at&&m.content&&parseMusicUrl(m.content)&&<MusicEmbed url={m.content}/>}
+            {!m.deleted_at&&<MessageMedia message={m}/>}
+            <div className="conecta-chat-message-footer"><time>{new Date(m.created_at).toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})}</time>
+             {m.edited_at&&!m.deleted_at&&<small>editada</small>}
+             {own&&!m.deleted_at&&otherReceipts.length>0&&<span className="conecta-chat-receipt" title={readCount+' de '+otherReceipts.length+' participantes leram'}>{readCount===otherReceipts.length?<CheckCheck size={13}/>:<Check size={13}/>} {readCount===otherReceipts.length?'Lida':readCount>0?readCount+' leram':'Enviada'}</span>}
+            </div>
+            {own&&!m.deleted_at&&<div className="conecta-chat-message-actions">
+              {m.content&&<button type="button" disabled={messageBusy} title="Editar mensagem" aria-label="Editar mensagem" onClick={()=>{setEditingId(m.id);setEditingText(m.content);}}><Pencil size={13}/></button>}
+              <button type="button" disabled={messageBusy} title="Apagar para todos" aria-label="Apagar mensagem" onClick={()=>void eraseMessage(m)}><Trash2 size={13}/></button>
+            </div>}
+           </>}
+         </article>;
+         })}
        </div>
        {attachment&&<div className="conecta-chat-attachment-draft">
          {attachmentPreview&&(attachment.type.startsWith('image/')?<img src={attachmentPreview} alt="Prévia do anexo"/>:
