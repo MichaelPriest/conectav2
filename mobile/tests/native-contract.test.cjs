@@ -136,3 +136,16 @@ test('Chat media stays scoped to the signed-in conversation, with upload cleanup
  assert.match(app,/sendChatMedia\(active,userId,chosen\)/);
  assert.match(app,/VideoMedia path=\{item\.media_path\}/);
 });
+
+test('Profile media uses existing signed Supabase avatar and cover fields',()=>{
+ const profile=read('src/profile-media.ts');
+ assert.match(profile,/PROFILE_LIMIT=8\*1024\*1024/);
+ assert.match(profile,/session\.user\.id!==userId/);
+ assert.match(profile,/avatars':'covers'/);
+ assert.match(profile,/from\('profiles'\)/);
+ assert.match(profile,/from\('profile_details'\)/);
+ assert.match(profile,/ImageManipulator\.manipulate/);
+ assert.match(profile,/upsert\(\{user_id:userId,cover_path:path\}/);
+ assert.match(app,/changeProfilePhoto\(profile\.id,selected,kind\)/);
+ assert.match(app,/loadCover\(profile\.id\)/);
+});
