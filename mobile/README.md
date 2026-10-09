@@ -90,3 +90,12 @@ registro de tokens por dispositivo e disparo autorizado pelo backend.
 ## Diretriz de produto
 Evoluir o app e o site lado a lado, reusando as tabelas e regras de negócios
 existentes, sem duplicar Supabase nem criar permissões globais para o mobile.
+
+## Build Android sem uma conta Expo paga (GitHub Actions)
+Uma workflow manual `.github/workflows/conecta-android-apk.yml` executa
+Expo Prebuild + Gradle no GitHub e publica um APK de homologação nos artefatos
+da execução. Abra GitHub → Actions → **Conecta V2 · Android APK de testes** →
+Run workflow. Se aprovada, baixe o artefato `conecta-v2-android-apk-teste`.
+A compilação no runner usa a assinatura de desenvolvimento gerada pelo
+projeto, **nunca** certificados definitivos nem assinatura para loja.
+Só execute builds quando necessário para controlar os minutos do GitHub.

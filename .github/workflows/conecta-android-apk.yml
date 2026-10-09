@@ -1,0 +1,45 @@
+name: Conecta V2 · Android APK de testes
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android-apk:
+    name: Compilar APK instalável de homologação
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      CI: '1'
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/package.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Instalar dependências
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Conferir aplicação e TypeScript
+        run: npm test && npm run typecheck && npx expo install --check
+      - name: Gerar projeto nativo Android
+        run: npx expo prebuild --platform android --non-interactive --no-install
+      - name: Gerar APK release com assinatura local de teste (NÃO para Play Store)
+        run: cd android && chmod +x gradlew && ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Publicar artefato de teste
+        uses: actions/upload-artifact@v4
+        with:
+          name: conecta-v2-android-apk-teste
+          path: mobile/android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 14
