@@ -1,6 +1,6 @@
 import React,{useCallback,useEffect,useMemo,useState} from 'react';
 import {
- Alert,AppState,FlatList,KeyboardAvoidingView,Linking,Platform,Pressable,
+ Alert,AppState,FlatList,KeyboardAvoidingView,Linking,Platform,Pressable,Share,
  RefreshControl,SafeAreaView,ScrollView,StatusBar as NativeStatusBar,
  StyleSheet,Text,TextInput,View
 } from 'react-native';
@@ -131,8 +131,13 @@ function PostCard({post,userId,liked,onLike}:{
      {liked?'♥':'♡'} {count} curtidas
     </Text>
    </Pressable>
-   <Pressable onPress={()=>void openOfficial('/post/'+post.id)}>
+   <Pressable accessibilityRole="button" accessibilityLabel="Ver comentários" onPress={()=>void openOfficial('/post/'+post.id)}>
     <Text style={s.secondaryText}>◌ {comments} comentários ↗</Text>
+   </Pressable>
+   <Pressable accessibilityRole="button" accessibilityLabel="Compartilhar publicação"
+    onPress={()=>void Share.share({message:SITE_URL+'/post/'+encodeURIComponent(post.id)})
+     .catch(()=>Alert.alert('Compartilhamento indisponível','Não foi possível abrir o compartilhamento do dispositivo.'))}>
+    <Text style={s.secondaryText}>↗ Compartilhar</Text>
    </Pressable>
   </View>
  </View>;
