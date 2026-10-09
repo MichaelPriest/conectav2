@@ -9,6 +9,7 @@ export type UserProfile = {
 export type FeedPost = {
   id: string;
   author_id: string;
+  community_id: string | null;
   content: string;
   visibility: 'public' | 'friends' | 'private';
   media_path: string | null;
