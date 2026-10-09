@@ -198,6 +198,14 @@ export default function Messages(){
  },[messages.length]);
 
  useEffect(()=>{void loadThreads();},[loadThreads]);
+ useEffect(()=>{
+   if(!auth.user)return;
+   const db=supabaseBrowser();
+   const channel=db.channel('conecta-global-messages-'+auth.user.id)
+     .on('postgres_changes',{schema:'public',table:'messages',event:'INSERT'},
+       ()=>{void loadThreads();}).subscribe();
+   return()=>{void db.removeChannel(channel);};
+ },[auth.user,loadThreads]);
  useEffect(()=>{const name=new URLSearchParams(window.location.search).get('to');if(name)setRecipient(name);},[]);
  useEffect(()=>{
    if(!active)return;
@@ -208,7 +216,7 @@ export default function Messages(){
    const db=supabaseBrowser();
    const channel=db.channel('conecta-inbox-'+active).on('postgres_changes',
      {schema:'public',table:'messages',event:'*',filter:'conversation_id=eq.'+active},
-     ()=>{void loadMessages(active);void loadThreads();}
+     ()=>{void loadMessages(active);}
    ).on('postgres_changes',
      {schema:'public',table:'message_reactions',event:'*'},
      ()=>{void loadMessages(active);}
