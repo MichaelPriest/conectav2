@@ -48,3 +48,20 @@ test('Native chat sends real messages and uses secured membership RPC',()=>{
  assert.ok(data.includes("rpc('my_conversation_unread_counts')"));
  assert.ok(app.includes("filter:'conversation_id=eq.'+active"));
 });
+
+test('Native gallery and camera publish into the same secure post schema',()=>{
+ const media=read('src/media.ts');
+ const validation=read('src/media-validation.ts');
+ const appConfig=JSON.parse(read('app.json'));
+ assert.match(app,/ImagePicker\.launchImageLibraryAsync/);
+ assert.match(app,/ImagePicker\.launchCameraAsync/);
+ assert.match(app,/publishMediaPost\(/);
+ assert.match(media,/storage\.from\('social-media'\)\.upload\(/);
+ assert.match(media,/from\('post_media'\)\.insert\(/);
+ assert.match(media,/from\('posts'\)\.delete\(/);
+ assert.match(media,/storage\.from\('social-media'\)[\s\S]*?\.remove\(/);
+ assert.match(media,/requestPostModeration\(/);
+ assert.match(validation,/MAX_MEDIA_BYTES/);
+ assert.equal(appConfig.expo.plugins[0][0],'expo-image-picker');
+ assert.equal(appConfig.expo.plugins[0][1].microphonePermission,false);
+});
