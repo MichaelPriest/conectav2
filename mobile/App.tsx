@@ -339,11 +339,13 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     </Text>
    </View>}
    ListEmptyComponent={<Loading text="Esta conversa ainda não tem mensagens."/>}/>
-  <View style={[s.row,{backgroundColor:'white',padding:12,gap:8,
-    borderTopWidth:1,borderTopColor:t.line}]}>
-   <TextInput value={compose} onChangeText={setCompose} multiline
-    placeholder="Sua mensagem..." placeholderTextColor={t.muted} style={[s.input,{flex:1,maxHeight:120,marginVertical:0}]}/>
-   <Action label={busy?'...':'Enviar'} disabled={busy||!compose.trim()} onPress={()=>void send()}/>
+  <View style={{backgroundColor:'white',padding:12,borderTopWidth:1,borderTopColor:t.line}}>
+   <Text accessibilityLiveRegion="polite" style={[s.muted,{textAlign:'right',marginBottom:5,color:messageLength>4000?t.danger:t.muted}]}>{messageLength}/4000</Text>
+   <View style={[s.row,{gap:8}]}>
+    <TextInput accessibilityLabel="Sua mensagem" value={compose} onChangeText={setCompose} multiline
+     placeholder="Sua mensagem..." placeholderTextColor={t.muted} style={[s.input,{flex:1,maxHeight:120,marginVertical:0}]}/>
+    <Action label={busy?'...':'Enviar'} disabled={busy||!validMessage} onPress={()=>void send()}/>
+   </View>
   </View>
  </KeyboardAvoidingView>;
  return <FlatList style={s.screen} data={threads} keyExtractor={t=>t.id}
