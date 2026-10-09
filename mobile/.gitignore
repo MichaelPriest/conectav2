@@ -1,0 +1,12 @@
+node_modules/
+.expo/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.ipa
+*.apk
+*.aab
+ios/
+android/
