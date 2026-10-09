@@ -12,7 +12,8 @@
       "bundleIdentifier": "br.com.conectav2.app",
       "infoPlist": {
         "NSCameraUsageDescription": "A câmera será utilizada apenas quando você escolher capturar uma foto ou participar de uma videochamada.",
-        "NSMicrophoneUsageDescription": "O microfone será utilizado somente quando você iniciar mensagens de voz ou chamadas."
+        "NSMicrophoneUsageDescription": "O microfone será utilizado somente quando você iniciar mensagens de voz ou chamadas.",
+        "NSPhotoLibraryUsageDescription": "Selecione fotos e vídeos para compartilhar no Conecta."
       }
     },
     "android": {
@@ -24,6 +25,16 @@
     },
     "experiments": {
       "tsconfigPaths": true
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O Conecta acessa apenas as fotos e vídeos que você selecionar para publicar.",
+          "cameraPermission": "O Conecta utiliza a câmera apenas quando você escolher tirar uma foto.",
+          "microphonePermission": false
+        }
+      ]
+    ]
   }
 }
