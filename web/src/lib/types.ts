@@ -10,6 +10,8 @@ export type FeedPost = {
   id: string;
   author_id: string;
   community_id: string | null;
+  moderation_status: 'approved'|'pending'|'rejected';
+  moderation_reason?: string;
   content: string;
   visibility: 'public' | 'friends' | 'private';
   media_path: string | null;
