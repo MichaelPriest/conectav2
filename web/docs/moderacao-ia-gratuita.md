@@ -2,6 +2,17 @@
 
 **Estado da integração (09/10/2026):** fontes, rotas, banco e revisão humana implementados. **Não afirmar que os modelos estão ativos sem configurar um provedor.** A implantação do worker de ML não faz parte da instância web Render; usa infraestrutura própria com capacidade de CPU/RAM.
 
+## IA para texto e vídeo sem hospedagem adicional — revisão sob demanda
+
+Na **Central de Moderação**, com uma conta de moderador habilitada, os botões `Analisar texto localmente` e `Analisar 5 quadros do vídeo` carregam modelos **no navegador da pessoa moderadora**, somente quando acionados. O conteúdo não é enviado a uma API de inferência; somente os pesos públicos dos modelos são baixados.
+
+- **Texto multilíngue, incluindo português:** [Horizon-Labs/multilingual-toxicity-small](https://huggingface.co/Horizon-Labs/multilingual-toxicity-small), Apache 2.0, `@huggingface/transformers` com ONNX quantizado `q8` (aproximadamente 268 MB no primeiro carregamento). Mostra riscos como toxicidade, ameaças e insultos. O download inicial é significativo e dispositivos modestos podem ficar lentos ou falhar por memória/rede.
+- **Vídeo:** NSFWJS MIT analisa cinco quadros distribuídos na duração do vídeo, no navegador, a partir da prévia autorizada e assinada de curta duração. Não há upload de frames a terceiros. **Não é inspeção completa**, especialmente em vídeos longos, violência, abuso infantil e no áudio; a moderação humana continua obrigatória.
+- **Alternativa em servidor próprio no futuro:** [Detoxify](https://github.com/unitaryai/detoxify) (Apache 2.0) para português e [OpenNSFW2](https://github.com/bhky/opennsfw2) (MIT) para quadros de vídeo. Ambos requerem recursos de CPU/RAM, portanto não são executados automaticamente no Vercel Hobby.
+- Os resultados no navegador **não** modificam o banco nem substituem a validação de funções RPC/RLS. Uma pessoa mal-intencionada pode manipular resultados locais; por isso estes resultados são apenas sugestões para moderadores autorizados, não critérios de publicação.
+- A leitura de vídeo por canvas exige que a URL assinada permita CORS no navegador. Se ocorrer erro ou expirar a assinatura, o botão informa a falha e mantém a opção de revisão manual.
+- Áudio, narração e contexto conversacional ainda não são moderados automaticamente. Não inferir segurança a partir da ausência de sinal no modelo.
+
 ## Execução sem chaves pagas (padrão de outubro/2026)
 
 O Conecta integra [NSFWJS](https://github.com/infinitered/nsfwjs) **MIT** com [TensorFlow.js](https://github.com/tensorflow/tfjs) **Apache 2.0** e Sharp no lado do servidor. O modelo MobileNetV2 vem incluído no pacote npm (~3,5 MB), **não precisa baixar pesos de uma API nem de token**, analisa imagens de posts e Stories e identifica indícios de nudez/sexualidade (Porn, Hentai, Sexy, Neutral, Drawing). A inferência é executada por `web/src/lib/open-source-image-moderation.ts`, com cache do modelo em processo, normalização de imagens e limite de tamanho. O pipeline mantém a mídia sob revisão mesmo quando o modelo pontua como neutra porque **não é detector de violência, assédio, fraude, CSAM ou proteção infantil**.
