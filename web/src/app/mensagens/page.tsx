@@ -153,8 +153,7 @@ export default function Messages(){
    if(ids.length){
      const [conversations,lastMessages,unreadCounts]=await Promise.all([
        db.from('conversations').select('id,title,created_at,created_by').in('id',ids).order('created_at',{ascending:false}),
-       db.from('messages').select('id,conversation_id,sender_id,content,created_at,media_path,media_type,edited_at,deleted_at,reply_to')
-         .in('conversation_id',ids).order('created_at',{ascending:false}).limit(200),
+       db.rpc('my_latest_conversation_messages'),
        db.rpc('my_conversation_unread_counts')
      ]);
      if(conversations.error||lastMessages.error)setError(conversations.error?.message||lastMessages.error?.message||'Não foi possível carregar chats.');
