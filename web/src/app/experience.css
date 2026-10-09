@@ -488,3 +488,23 @@
 .conecta-message-deleted{opacity:.78}
 .conecta-message-deleted p{font-style:italic;color:var(--muted)}
 @media(hover:none){.conecta-chat-message-actions{opacity:1}}
+
+
+/* Reporting controls on the feed, conversations and floating widget. */
+.conecta-report-area{position:relative;display:inline-flex;align-items:center;flex-shrink:0;font-family:'DM Sans',sans-serif;text-align:left}
+.conecta-report-toggle{display:inline-flex;align-items:center;gap:5px;background:transparent;color:var(--muted);border:0;padding:7px 5px;border-radius:7px;font-size:11px;font-weight:700;white-space:nowrap;cursor:pointer}
+.conecta-report-toggle:hover,.conecta-report-toggle:focus-visible{background:#fff0f3;color:#a63856}
+.conecta-report-form{position:absolute;top:calc(100% + 7px);right:0;z-index:100;width:min(335px,calc(100vw - 55px));display:grid;gap:11px;padding:17px;background:var(--panel);color:var(--ink);border:1px solid var(--line);box-shadow:0 18px 45px #26233c2e;border-radius:15px}
+.conecta-report-form .conecta-report-header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.conecta-report-header strong{display:flex;align-items:center;gap:8px;font-size:13px}
+.conecta-report-header button{display:grid;place-items:center;border:0;background:transparent;color:var(--muted)}
+.conecta-report-form p{margin:0;color:var(--muted);font-weight:500;font-size:11px;line-height:1.5}
+.conecta-report-form label{display:grid;gap:5px;font-size:11px;color:var(--ink);font-weight:750}
+.conecta-report-form select,.conecta-report-form textarea{background:var(--panel);width:100%;font-size:12px;line-height:1.5;color:var(--ink);height:auto}
+.conecta-report-form textarea{resize:vertical}
+.conecta-report-form .btn{font-size:12px;justify-self:start;padding:9px 12px}
+.conecta-report-form .form-error{color:#af3357;font-weight:600}
+.conecta-report-sent{display:inline-flex;align-items:center;gap:4px;color:#23715b;font-weight:700;font-size:11px;padding:5px 0}
+.conecta-widget-message>.conecta-report-area{align-self:flex-start}
+.conecta-chat-message-actions{display:inline-flex}
+@media(max-width:700px){.conecta-report-form{width:min(315px,calc(100vw - 62px))}.conecta-v3-community-grid{min-width:0}}
