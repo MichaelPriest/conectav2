@@ -8,6 +8,7 @@ import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {PostCard} from '@/components/post-card';
 import {EmojiButton} from '@/components/emoji-button';
+import {MentionInput} from '@/components/mention-input';
 import {PollDraft,validatePoll} from '@/components/poll-draft';
 import {attachPoll} from '@/lib/create-poll';
 import {supabaseBrowser} from '@/lib/supabase/browser';
@@ -200,7 +201,7 @@ export default function CommunityDetail(){
       {member&&<section className="composer card">
         <div className="composer-top"><ProfileAvatar person={auth.profile}/><div><strong>Compartilhe com a comunidade</strong><span>Discussões, fotos, vídeos e enquetes</span></div></div>
         <form onSubmit={publish}>
-          <textarea rows={3} value={text} onChange={e=>setText(e.target.value)} maxLength={3000} placeholder={pollMode?'Qual é a pergunta da enquete?':'O que você gostaria de compartilhar?'}/>
+          <MentionInput rows={3} value={text} onChange={setText} maxLength={3000} placeholder={pollMode?'Qual é a pergunta da enquete?':'O que você gostaria de compartilhar? Marque com @usuário'}/>
           {pollMode&&<PollDraft question={text} options={pollOptions} onOptionsChange={setPollOptions} days={pollDays} onDaysChange={setPollDays}/>}
           {previews.length>0&&<div className="composer-preview-grid">{previews.map((p,index)=><div className="composer-preview-item" key={p.url}>
             {p.file.type.startsWith('video/')?<video src={p.url} controls preload="metadata"/>:<img src={p.url} alt={'Prévia '+(index+1)}/>}
