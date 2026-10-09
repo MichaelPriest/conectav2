@@ -6,6 +6,7 @@ import {AlertTriangle,ArrowLeft,Check,Clock,FileText,Flag,Inbox,Loader2,RefreshC
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {PendingContentPanel} from '@/components/pending-content-panel';
+import {PendingCommentsPanel} from '@/components/pending-comments-panel';
 
 type QueueItem={
  report_id:string;
@@ -147,6 +148,7 @@ export default function PlatformModeration(){
       <div className="panel"><AlertTriangle size={21}/><div><strong>Revisão humana</strong><small>Não há remoção ou aprovação automática nesta central</small></div></div>
      </div>
      <PendingContentPanel/>
+     <PendingCommentsPanel/>
      <div className="conecta-safety-filters" aria-label="Filtrar denúncias">
       {filters.map(f=><button key={f.id} type="button"
         aria-pressed={filter===f.id} className={filter===f.id?'active':''}
