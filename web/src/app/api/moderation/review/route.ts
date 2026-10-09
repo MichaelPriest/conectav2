@@ -35,7 +35,7 @@ async function moderateWithFreeApi(text:string, images:string[]):Promise<ScanRes
 
 async function moderateWithOpenSourceWorker(
  text:string,media:{path:string;type:MediaKind}[],
- admin:ReturnType<typeof import('@supabase/supabase-js').createClient>
+ admin:NonNullable<Awaited<ReturnType<typeof identityContext>>>['admin']
 ):Promise<ScanResult>{
  const rawUrl=process.env.CONEXA_MODERATION_WORKER_URL;
  const token=process.env.CONEXA_MODERATION_WORKER_TOKEN;
