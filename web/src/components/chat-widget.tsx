@@ -5,7 +5,7 @@ import {ArrowLeft,ExternalLink,MessageCircle,Send,X,Users,Loader2} from 'lucide-
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {MentionText} from '@/components/mention-input';
 type Thread={id:string;title:string;group:boolean;otherNames:string;lastAt:string};
-type Msg={id:string;conversation_id:string;sender_id:string;content:string;created_at:string;media_type:string|null};
+type Msg={id:string;conversation_id:string;sender_id:string;content:string;created_at:string;media_type:string|null;edited_at:string|null;deleted_at:string|null};
 export function ChatWidget({userId}:{userId:string}){
  const [open,setOpen]=useState(false),[threads,setThreads]=useState<Thread[]>([]);
  const [active,setActive]=useState<Thread|null>(null),[messages,setMessages]=useState<Msg[]>([]);
@@ -42,7 +42,7 @@ export function ChatWidget({userId}:{userId:string}){
  },[userId]);
  const loadMessages=useCallback(async(conversationId:string)=>{
    const {data,error:e}=await supabaseBrowser().from('messages')
-     .select('id,conversation_id,sender_id,content,created_at,media_type')
+     .select('id,conversation_id,sender_id,content,created_at,media_type,edited_at,deleted_at')
      .eq('conversation_id',conversationId).order('created_at',{ascending:false}).limit(50);
    if(e)setError(e.message);else setMessages([...(data||[])].reverse());
  },[]);
@@ -53,7 +53,7 @@ export function ChatWidget({userId}:{userId:string}){
    void loadMessages(active.id).finally(()=>{if(live)setLoading(false);});
    const db=supabaseBrowser();
    const channel=db.channel('conecta-widget-'+active.id)
-     .on('postgres_changes',{schema:'public',table:'messages',event:'INSERT',filter:'conversation_id=eq.'+active.id},
+     .on('postgres_changes',{schema:'public',table:'messages',event:'*',filter:'conversation_id=eq.'+active.id},
        ()=>{void loadMessages(active.id);}).subscribe();
    return()=>{live=false;void db.removeChannel(channel);};
  },[active,open,loadMessages]);
@@ -86,8 +86,9 @@ export function ChatWidget({userId}:{userId:string}){
          {loading&&<span className="small-note">Carregando...</span>}
          {!loading&&messages.length===0&&<p className="small-note">Conversa sem mensagens.</p>}
          {messages.map(m=><div key={m.id} className={'conecta-widget-message '+(m.sender_id===userId?'own':'')}>
-           {m.content?<p><MentionText text={m.content}/></p>:null}
-           {m.media_type&&<small>Anexo {m.media_type==='image'?'📷':m.media_type==='video'?'🎬':'🎤'} · <Link href="/mensagens">abrir no chat</Link></small>}
+           {m.content?<p>{m.deleted_at?<em>Mensagem apagada</em>:<MentionText text={m.content}/>}</p>:null}
+           {m.edited_at&&!m.deleted_at&&<small>editada</small>}
+           {!m.deleted_at&&m.media_type&&<small>Anexo {m.media_type==='image'?'📷':m.media_type==='video'?'🎬':'🎤'} · <Link href="/mensagens">abrir no chat</Link></small>}
          </div>)}
          <div ref={end}/>
        </div>
