@@ -472,3 +472,19 @@
 .conecta-support-resources a:hover{background:#edebfb}
 [data-calm-mode="1"] *,[data-calm-mode="1"] *::before,[data-calm-mode="1"] *::after{animation-duration:0s!important;transition-duration:0s!important;scroll-behavior:auto!important}
 @media(max-width:790px){.conecta-support-bottom{grid-template-columns:1fr}.conecta-support-cards{grid-template-columns:1fr}.conecta-support-intro-row{align-items:start;flex-direction:column}}
+
+
+/* Message controls: discreet editing/deletion and read indicators */
+.conecta-chat-message-footer{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.conecta-chat-message-footer time,.conecta-chat-message-footer small{font-size:10px;color:var(--muted)}
+.conecta-chat-receipt{display:flex;align-items:center;gap:3px;color:#8260d8;font-size:10px;font-weight:700}
+.conecta-chat-message-actions{display:flex;gap:4px;align-self:end;justify-content:flex-end;margin-top:5px;opacity:.75}
+.conecta-chat-message-actions button{display:grid;place-items:center;width:26px;height:25px;background:#ffffff88;border:1px solid #ffffff66;border-radius:7px;color:var(--muted);cursor:pointer}
+.conecta-chat-message-actions button:hover,.conecta-chat-message-actions button:focus-visible{background:#fff;color:#7b50e1}
+.conecta-chat-edit{display:grid;gap:7px;min-width:min(255px,65vw)}
+.conecta-chat-edit input{width:100%;min-width:0;background:#fff;color:var(--ink)}
+.conecta-chat-edit>div{display:flex;gap:6px;justify-content:end}
+.conecta-chat-edit>div .btn{padding:6px 9px;font-size:11px}
+.conecta-message-deleted{opacity:.78}
+.conecta-message-deleted p{font-style:italic;color:var(--muted)}
+@media(hover:none){.conecta-chat-message-actions{opacity:1}}
