@@ -666,3 +666,10 @@
  .conecta-chat-social-actions button{min-height:26px}
  .conecta-chat-reply-draft{padding:8px 11px}
 }
+
+/* Unread synchronization between the full inbox and floating widget. */
+.conecta-floating-chat .conecta-chat-fab{position:relative}
+.conecta-widget-unread{display:inline-grid;place-items:center;min-width:21px;height:21px;
+ padding:0 5px;background:#ef476f;color:#fff;font-size:11px;font-weight:800;
+ border-radius:999px;margin-left:4px;box-shadow:0 1px 6px rgba(0,0,0,.13)}
+.conecta-chat-widget-list>button .conecta-chat-unread{margin-left:auto;flex-shrink:0}
