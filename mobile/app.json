@@ -3,7 +3,7 @@
     "name": "Conecta",
     "slug": "conecta-v2",
     "scheme": "conecta",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -14,14 +14,16 @@
         "NSCameraUsageDescription": "A câmera será utilizada apenas quando você escolher capturar uma foto ou participar de uma videochamada.",
         "NSMicrophoneUsageDescription": "O microfone será utilizado somente quando você iniciar mensagens de voz ou chamadas.",
         "NSPhotoLibraryUsageDescription": "Selecione fotos e vídeos para compartilhar no Conecta."
-      }
+      },
+      "buildNumber": "2"
     },
     "android": {
       "package": "br.com.conectav2.app",
       "adaptiveIcon": {
         "backgroundColor": "#25194A"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "versionCode": 2
     },
     "experiments": {
       "tsconfigPaths": true
