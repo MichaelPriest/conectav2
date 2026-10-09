@@ -129,6 +129,7 @@ export function StoryRail({userId,profile}:{userId:string;profile:UserProfile|nu
        </div>
      </div>}
    </form>
+   <p className="small-note conecta-moderation-disclosure">Stories com fotos e vídeos ficam pendentes até verificação. Com IA externa habilitada, a mídia poderá ser analisada pelo provedor; vídeos continuam sujeitos a revisão humana.</p>
    {error&&<p role="alert" className="form-error">{error}</p>}
    {selected&&<div className="conecta-story-overlay" role="presentation">
      <section className="conecta-story-viewer" role="dialog" aria-modal="true" aria-label={'Story de '+(selected.profiles?.display_name||'usuário')}>
