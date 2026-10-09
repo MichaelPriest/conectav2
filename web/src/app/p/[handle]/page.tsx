@@ -11,7 +11,7 @@ import {supabaseBrowser} from '@/lib/supabase/browser';
 import type {UserProfile} from '@/lib/types';
 
 type Connection={id:string;requester_id:string;addressee_id:string;status:string};
-type Details={headline:string;city:string;website:string|null;music_url:string|null;interests:string[];favorite_emoji:string;cover_theme:string;mood_text:string;layout_style:string};
+type Details={headline:string;city:string;website:string|null;music_url:string|null;interests:string[];favorite_emoji:string;cover_theme:string;mood_text:string;layout_style:string;cover_path:string|null};
 
 export default function PublicProfile(){
  const auth=useAuthProfile();
@@ -19,6 +19,7 @@ export default function PublicProfile(){
  const [person,setPerson]=useState<UserProfile|null>(null);
  const [details,setDetails]=useState<Details|null>(null);
  const [avatarUrl,setAvatarUrl]=useState<string|null>(null);
+ const [coverUrl,setCoverUrl]=useState<string|null>(null);
  const [connection,setConnection]=useState<Connection|null>(null);
  const [blocked,setBlocked]=useState(false),[blockedBy,setBlockedBy]=useState(false);
  const [posts,setPosts]=useState(0),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
@@ -32,7 +33,7 @@ export default function PublicProfile(){
      setPerson(p as UserProfile|null);
      if(p){
        const [d,n,relation,block]=await Promise.all([
-         db.from('profile_details').select('headline,city,website,music_url,interests,favorite_emoji,cover_theme,mood_text,layout_style').eq('user_id',p.id).maybeSingle(),
+         db.from('profile_details').select('headline,city,website,music_url,interests,favorite_emoji,cover_theme,mood_text,layout_style,cover_path').eq('user_id',p.id).maybeSingle(),
          db.from('posts').select('id',{count:'exact',head:true}).eq('author_id',p.id),
          db.from('friendships').select('id,requester_id,addressee_id,status')
            .or('and(requester_id.eq.'+auth.user!.id+',addressee_id.eq.'+p.id+'),and(requester_id.eq.'+p.id+',addressee_id.eq.'+auth.user!.id+')').maybeSingle(),
@@ -40,7 +41,13 @@ export default function PublicProfile(){
            .or('and(blocker_id.eq.'+auth.user!.id+',blocked_id.eq.'+p.id+'),and(blocker_id.eq.'+p.id+',blocked_id.eq.'+auth.user!.id+')')
        ]);
        if(alive){
-         if(!d.error)setDetails(d.data as Details|null);
+         if(!d.error){
+           setDetails(d.data as Details|null);
+           if(d.data?.cover_path){
+             const {data:cover}=await db.storage.from('social-media').createSignedUrl(d.data.cover_path,3600);
+             if(alive)setCoverUrl(cover?.signedUrl||null);
+           }else setCoverUrl(null);
+         }
          setPosts(n.count||0);
          setConnection(relation.data as Connection|null);
          setBlocked(Boolean(block.data?.some(b=>b.blocker_id===auth.user!.id)));
@@ -102,7 +109,8 @@ export default function PublicProfile(){
    {error&&<p className="form-error" role="alert">{error}</p>}
    {loading?<div className="centered-loading">Carregando perfil...</div>:!person?
      <div className="empty-state card"><h2>Perfil não encontrado</h2><p>Essa pessoa pode ter alterado o nome de usuário.</p></div>:<>
-       <div className={'conecta-profile-cover cover-'+(details?.cover_theme||'violet')} style={{marginTop:18}}>
+       <div className={'conecta-profile-cover cover-'+(details?.cover_theme||'violet')}
+         style={{marginTop:18,...(coverUrl&&!blocked&&!blockedBy?{backgroundImage:'linear-gradient(0deg,#17153498,#35226255),url('+JSON.stringify(coverUrl)+')'}:{})}}>
          <div className="conecta-profile-bio">
            <div className="conecta-profile-picture">{avatarUrl?<img src={avatarUrl} alt={'Foto de '+person.display_name}/>:<span>{person.display_name[0]?.toUpperCase()}</span>}</div>
            <div><h1>{person.display_name} {details?.favorite_emoji}</h1><p>@{person.handle}{details?.headline?' · '+details.headline:''}</p><div className="stat-line"><span>{posts} publicações visíveis</span></div></div>
