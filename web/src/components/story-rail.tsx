@@ -5,12 +5,13 @@ import Link from 'next/link';
 import {Camera,Clock3,ImagePlus,Loader2,Plus,RefreshCw,Trash2,X} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {optimizeImage} from '@/lib/media';
+import {requestContentModeration} from '@/lib/submit-moderation';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import type {UserProfile} from '@/lib/types';
 
 type Story={
   id:string;author_id:string;caption:string;media_path:string;media_type:'image'|'video';
-  visibility:'public'|'friends'|'private';created_at:string;expires_at:string;
+  visibility:'public'|'friends'|'private';moderation_status:'approved'|'pending'|'rejected';created_at:string;expires_at:string;
   profiles:{display_name:string;handle:string;avatar_path:string|null}|null;
 };
 const VALID_TYPES=['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm'];
@@ -26,7 +27,7 @@ export function StoryRail({userId,profile}:{userId:string;profile:UserProfile|nu
  const picker=useRef<HTMLInputElement>(null);
  const refresh=useCallback(async()=>{
    const {data,error:e}=await supabaseBrowser().from('stories')
-     .select('id,author_id,caption,media_path,media_type,visibility,created_at,expires_at,profiles!stories_author_id_fkey(display_name,handle,avatar_path)')
+     .select('id,author_id,caption,media_path,media_type,visibility,moderation_status,created_at,expires_at,profiles!stories_author_id_fkey(display_name,handle,avatar_path)')
      .gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(80);
    if(e)setError('Não foi possível carregar os Stories: '+e.message);
    else{setStories((data||[]) as unknown as Story[]);setError('');}
@@ -70,11 +71,13 @@ export function StoryRail({userId,profile}:{userId:string;profile:UserProfile|nu
      const {error:uploadError}=await db.storage.from('social-media')
        .upload(uploadedPath,optimized,{contentType:optimized.type,upsert:false});
      if(uploadError)throw uploadError;
-     const {error:insertError}=await db.from('stories').insert({
+     const {data:created,error:insertError}=await db.from('stories').insert({
        author_id:userId,caption:caption.trim(),media_path:uploadedPath,
        media_type:optimized.type.startsWith('video/')?'video':'image',visibility
-     });
+     }).select('id').single();
      if(insertError)throw insertError;
+     const moderation=await requestContentModeration('story',created.id);
+     if(moderation.status==='pending')setError('Story recebido, aguardando revisão da mídia antes de ser exibido a outras pessoas.');
      setFile(null);setCaption('');setVisibility('friends');await refresh();
    }catch(e){
      if(uploadedPath)await db.storage.from('social-media').remove([uploadedPath]);
@@ -107,7 +110,7 @@ export function StoryRail({userId,profile}:{userId:string;profile:UserProfile|nu
      {stories.map(story=><button key={story.id} type="button" className="conecta-story-bubble" onClick={()=>void open(story)}
        title={'Story de '+(story.profiles?.display_name||'usuário')}>
        <span className="conecta-story-avatar"><ProfileAvatar person={story.profiles} size="large"/></span>
-       <span>{story.author_id===userId?'Você':story.profiles?.display_name||'Usuário'}</span>
+       <span>{story.author_id===userId?'Você':story.profiles?.display_name||'Usuário'}{story.moderation_status!=='approved'?' · Em revisão':''}</span>
      </button>)}
      {!loading&&stories.length===0&&<p className="small-note conecta-stories-empty">Nenhum Story ativo ainda. Compartilhe um momento.</p>}
    </div>
