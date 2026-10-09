@@ -104,3 +104,23 @@ test('Native Stories use the same 24h expiry, RLS and moderation as web',()=>{
  assert.match(ui,/requestCameraPermissionsAsync/);
  assert.match(app,/StoryRail userId=/);
 });
+
+test('Voice notes stay private and require explicit microphone consent',()=>{
+ const voice=read('src/voice.ts'),ui=read('src/voice-ui.tsx');
+ const config=JSON.parse(read('app.json'));
+ assert.match(voice,/getSession\(\)/);
+ assert.match(voice,/session\.user\.id!==userId/);
+ assert.match(voice,/from\('messages'\)\.insert\(/);
+ assert.match(voice,/media_type:'audio'/);
+ assert.match(voice,/storage\.from\('social-media'\)/);
+ assert.match(voice,/remove\(\[storage_path\]\)/);
+ assert.match(ui,/requestRecordingPermissionsAsync\(\)/);
+ assert.match(ui,/useAudioRecorder\(RecordingPresets\.HIGH_QUALITY\)/);
+ assert.match(ui,/useAudioPlayer\(url\)/);
+ assert.match(app,/VoiceRecorder conversationId=/);
+ assert.match(app,/AudioMessage path=/);
+ const plugin=config.expo.plugins.find(p=>p[0]==='expo-audio');
+ assert.ok(plugin);
+ assert.equal(plugin[1].enableBackgroundRecording,false);
+ assert.equal(plugin[1].enableBackgroundPlayback,false);
+});
