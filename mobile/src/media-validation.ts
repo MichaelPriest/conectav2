@@ -3,7 +3,7 @@ import type {ImagePickerAsset} from 'expo-image-picker';
 export type SelectedMedia={
  uri:string;mimeType:string;extension:string;kind:'image'|'video';size?:number;
 };
-const MAX_BYTES=50*1024*1024;
+export const MAX_MEDIA_BYTES=50*1024*1024;
 const MIME_EXT:Record<string,string>={
  'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif',
  'image/heic':'heic','image/heif':'heif',
@@ -26,7 +26,7 @@ export function normalizeMedia(assets:ImagePickerAsset[]):SelectedMedia[]{
   if(!extension||!(asset.type==='image'||asset.type==='video')||
     (asset.type==='image')!==mimeType.startsWith('image/'))
    throw new Error('Formato de mídia não aceito. Use JPG, PNG, WEBP, GIF, HEIC, MP4 ou MOV.');
-  if(asset.fileSize!==undefined&&(asset.fileSize<=0||asset.fileSize>MAX_BYTES))
+  if(asset.fileSize!==undefined&&(asset.fileSize<=0||asset.fileSize>MAX_MEDIA_BYTES))
    throw new Error('Cada mídia precisa ter no máximo 50 MB.');
   return {uri:asset.uri,mimeType,extension,kind:asset.type,size:asset.fileSize} as SelectedMedia;
  });
