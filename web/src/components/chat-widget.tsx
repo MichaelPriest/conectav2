@@ -1,7 +1,7 @@
 'use client';
 import {FormEvent,useCallback,useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
-import {ArrowLeft,ExternalLink,MessageCircle,Send,X,Users,Loader2,BellOff} from 'lucide-react';
+import {ArrowLeft,ExternalLink,MessageCircle,Send,X,Users,Loader2,BellOff,Bell} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
@@ -19,11 +19,37 @@ export function ChatWidget({userId}:{userId:string}){
  const [contacts,setContacts]=useState<Contact[]>([]);
  const [contactSearch,setContactSearch]=useState('');
  const [starting,setStarting]=useState<string|null>(null);
+ const [alertsEnabled,setAlertsEnabled]=useState(false);
+ const alertsEnabledRef=useRef(false);
+ const mutedRoomsRef=useRef<Set<string>>(new Set());
+ const lastAlertedRef=useRef<string|null>(null);
  const end=useRef<HTMLDivElement>(null);
  const typingIds=useChatTyping(open&&active?active.id:null,userId,text,open&&Boolean(active));
  useEffect(()=>{
-   try{setOpen(localStorage.getItem('conecta-chat-widget-open')==='1');}catch{}
+   try{
+     setOpen(localStorage.getItem('conecta-chat-widget-open')==='1');
+     const permitted=typeof Notification!=='undefined'&&Notification.permission==='granted';
+     const enabled=permitted&&localStorage.getItem('conecta-chat-browser-alerts')==='1';
+     setAlertsEnabled(enabled);alertsEnabledRef.current=enabled;
+   }catch{}
  },[]);
+ async function toggleBrowserAlerts(){
+   if(alertsEnabled){
+     alertsEnabledRef.current=false;setAlertsEnabled(false);
+     try{localStorage.setItem('conecta-chat-browser-alerts','0');}catch{}
+     return;
+   }
+   if(typeof Notification==='undefined'){
+     setError('Este navegador não suporta notificações locais.');return;
+   }
+   const permission=Notification.permission==='granted'?'granted':
+     await Notification.requestPermission();
+   if(permission!=='granted'){
+     setError('Permissão de notificações não concedida.');return;
+   }
+   alertsEnabledRef.current=true;setAlertsEnabled(true);
+   try{localStorage.setItem('conecta-chat-browser-alerts','1');}catch{}
+ }
  function toggle(next:boolean){
    setOpen(next);
    try{localStorage.setItem('conecta-chat-widget-open',next?'1':'0');}catch{}
@@ -67,6 +93,8 @@ export function ChatWidget({userId}:{userId:string}){
      if(!latestById.has(msg.conversation_id))latestById.set(msg.conversation_id,msg);
    }
    const mutedById=new Map((own||[]).map(m=>[m.conversation_id,m.muted_until]));
+   mutedRoomsRef.current=new Set([...mutedById.entries()]
+     .filter(([,until])=>until&&Date.parse(until)>Date.now()).map(([id])=>id));
    setTotalUnread([...unreadById.entries()].reduce((sum,[id,n])=>{
      const mutedUntil=mutedById.get(id);
      return sum+(mutedUntil&&Date.parse(mutedUntil)>Date.now()?0:n);
@@ -130,7 +158,19 @@ export function ChatWidget({userId}:{userId:string}){
    // RLS on messages means events are delivered only for joined conversations.
    const channel=db.channel('conecta-widget-inbox-'+userId)
      .on('postgres_changes',{schema:'public',table:'messages',event:'*'},
-       ()=>{void loadThreads();}).subscribe();
+       payload=>{
+         void loadThreads();
+         if(payload.eventType!=='INSERT'||!alertsEnabledRef.current||
+           typeof Notification==='undefined'||Notification.permission!=='granted'||
+           !document.hidden)return;
+         const row=payload.new as {id?:string;sender_id?:string;conversation_id?:string};
+         if(!row.id||row.sender_id===userId||!row.conversation_id||
+           mutedRoomsRef.current.has(row.conversation_id)||lastAlertedRef.current===row.id)return;
+         lastAlertedRef.current=row.id;
+         // Privacy: no DM text or sender identity in browser notifications.
+         try{new Notification('Conecta · Nova mensagem',{body:'Você recebeu uma mensagem.'});}
+         catch{/* OS notifications may be restricted in this browser */}
+       }).subscribe();
    const refresh=()=>{if(!document.hidden)void loadThreads();};
    window.addEventListener('focus',refresh);
    return()=>{window.removeEventListener('focus',refresh);void db.removeChannel(channel);};
@@ -173,6 +213,10 @@ export function ChatWidget({userId}:{userId:string}){
    <section className="conecta-chat-widget" aria-label="Chat flutuante">
      <header><button type="button" className="icon-btn" aria-label="Voltar às conversas" disabled={!active} onClick={()=>{setActive(null);setMessages([]);}}>{active?<ArrowLeft size={19}/>:<MessageCircle size={19}/>}</button>
        <strong>{active?active.title:'Conversas'}</strong>
+       <button className="icon-btn" type="button"
+         title={alertsEnabled?'Desativar avisos neste navegador':'Ativar avisos neste navegador'}
+         aria-label={alertsEnabled?'Desativar notificações':'Ativar notificações'} onClick={()=>void toggleBrowserAlerts()}>
+         {alertsEnabled?<Bell size={18}/>:<BellOff size={18}/>}</button>
        <Link href="/mensagens" aria-label="Abrir todas as mensagens" title="Abrir mensagens"><ExternalLink size={18}/></Link>
        <button className="icon-btn" type="button" aria-label="Fechar chat" onClick={()=>toggle(false)}><X size={20}/></button>
      </header>
