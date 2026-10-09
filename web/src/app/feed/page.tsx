@@ -12,6 +12,7 @@ import { optimizeImage } from '@/lib/media';
 import { hydratePostMedia } from '@/lib/post-media';
 import { FeaturedCommunities } from '@/components/featured-communities';
 import {DiscreetAdSlot} from '@/components/discreet-ad-slot';
+import {StoryRail} from '@/components/story-rail';
 import {EmojiButton} from '@/components/emoji-button';
 import {PollDraft,validatePoll} from '@/components/poll-draft';
 import {attachPoll} from '@/lib/create-poll';
@@ -133,6 +134,7 @@ export default function FeedPage() {
   return <GuardedPage profile={profile} loading={loading} error={error}>
     <div className="page-columns concept-feed-columns"><main className="content-column">
       <div className="page-heading concept-feed-heading"><div><span className="section-eyebrow">NOVAS HISTÓRIAS, NOVAS CONEXÕES</span><h1>Seu feed</h1><p>Novas histórias, pessoas e ideias para um mundo mais conectado.</p></div><span className="concept-feed-sparkle" aria-hidden="true">✦</span></div>
+      {user&&<StoryRail userId={user.id} profile={profile}/>}
       <section className="composer card concept-composer" id="composer">
         <div className="composer-top"><ProfileAvatar person={profile}/><div className="concept-composer-heading"><strong>{profile?.display_name ? 'Compartilhe um momento, '+profile.display_name.split(' ')[0] : 'O que você está pensando hoje?'}</strong><span>Uma boa história merece ser compartilhada.</span></div></div>
         <form onSubmit={publish}>
