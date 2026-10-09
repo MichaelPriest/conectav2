@@ -30,3 +30,12 @@ uma autorização de identidade ou idade.
 Referências oficiais:
 https://www.gov.br/pt-br/servicos/assinatura-eletronica
 https://www.gov.br/pt-br/servicos/realizar-validacao-de-assinaturas-eletronicas-validar
+
+## Avanço de etapas (2026-10-08)
+- GET desafio informa apenas quantidade de tentativas, não expõe nonce.
+- PDF obviamente sem ByteRange ou que não começa com %PDF- não gasta cota.
+- Resultado `integrity_checked` conduz à conferência no VALIDAR; **não** emite atestado.
+- Contas autodeclaradas adultas podem navegar à experiência básica já existente,
+  mas sem qualquer selo ou publicidade para adultos sem certificação.
+- Contas adolescentes continuam bloqueadas até aferição independente e vínculo de responsável.
+- Limite de 5 tentativas por declaração continua ativo; quando atingido, novo desafio conforme limite diário.

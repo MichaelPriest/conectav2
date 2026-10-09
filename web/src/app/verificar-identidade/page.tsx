@@ -110,6 +110,10 @@ export default function IdentityPage(){
       <p><strong>3. Assinatura:</strong> declaração individual assinada no gov.br, com conferência técnica do PDF e consulta ao VALIDAR.</p>
       <p><strong>4. Decisão:</strong> a confirmação de identidade e idade depende de verificação confiável da titularidade e situação documental.
          Para menores, também é necessário verificar o vínculo do responsável.</p>
+      {declaredBand==='18_plus'&&<div style={{margin:'16px 0'}}>
+        <Link className="btn btn-primary" href="/feed">Continuar para o Conecta (conta não verificada)</Link>
+        <p className="small-note">O acesso básico de contas adultas autodeclaradas não significa que a identidade ou a idade tenham sido oficialmente confirmadas.</p>
+      </div>}
       {declaredBand&&declaredBand!=='18_plus'&&
         <p className="form-error" role="status">A conta permanece protegida e sem publicação ou mensagens até termos um processo confiável de verificação de idade e responsável.</p>}
       <p className="small-note">Nenhum teste local, PDF com assinatura íntegra ou data declarada cria automaticamente um selo de conta verificada ou habilita recursos exclusivos para adultos.</p>
@@ -176,5 +180,5 @@ export default function IdentityPage(){
       </div>}
     </section>
     {documentMode==='cin'?<CinQrScanner/>:<LegacyRgScanner declaredBand={declaredBand}/>}
-    <GovBrSignatureFlow/><HumanCameraCheck/></main></GuardedPage>;
+    <GovBrSignatureFlow declaredBand={declaredBand}/><HumanCameraCheck/></main></GuardedPage>;
 }

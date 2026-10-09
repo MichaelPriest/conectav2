@@ -3,12 +3,12 @@ import {useCallback,useEffect,useRef,useState} from 'react';
 import {Download,FileSignature,Upload,ShieldAlert,ExternalLink,RefreshCw} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 
-type Challenge={id:string;expires_at:string;status:'issued'|'integrity_checked';created_at:string};
+type Challenge={id:string;expires_at:string;status:'issued'|'integrity_checked';created_at:string;attempt_count?:number};
 type Inspection={status:string;detail:string;identityVerified:false;ageVerified:false;officialVerificationRequired:true};
 const ASSINADOR='https://assinador.iti.br/';
 const VALIDAR='https://validar.iti.gov.br/';
 
-export function GovBrSignatureFlow(){
+export function GovBrSignatureFlow({declaredBand}:{declaredBand:string|null}){
  const [challenge,setChallenge]=useState<Challenge|null>(null);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
@@ -88,7 +88,11 @@ export function GovBrSignatureFlow(){
   }catch(err){setError(err instanceof Error?err.message:'Falha na analise do PDF.');}
   finally{setBusy(false);}
  }
- const isActive=challenge?.status==='issued'&&Date.parse(challenge.expires_at)>Date.now();
+ const attempts=challenge?.attempt_count??0;
+ const exhausted=attempts>=5;
+ const isActive=challenge?.status==='issued'&&Date.parse(challenge.expires_at)>Date.now()&&!exhausted;
+ const completed=result?.status==='integrity_checked';
+
  return <section className="panel" style={{marginTop:20}}>
   <div className="feed-title"><h2><FileSignature size={22} color="#7655da" style={{verticalAlign:'middle'}}/> Declaracao assinada pelo gov.br</h2>
    <span className="small-note">Opcao gratuita · Homologacao</span></div>
@@ -124,6 +128,11 @@ export function GovBrSignatureFlow(){
           <Download size={17}/> Baixar declaracao existente diretamente
         </a>}
     </div>
+    {challenge?.status==='issued'&&<p className={exhausted?'form-error':'small-note'} role="status">
+      Análises registradas nesta declaração: <strong>{Math.min(attempts,5)} de 5</strong>.
+      {exhausted?' Limite desta declaração alcançado. Gere uma nova declaração e assine o novo PDF.':
+        ' Se o envio falhar, verifique o resultado antes de tentar de novo.'}
+    </p>}
     <p className="small-note">Se "Gerar declaracao" nao baixar no seu celular, use
       "Baixar direto pelo navegador". Esta opcao usa um download HTTP tradicional.
       Caso a declaracao ja exista, a opcao de baixar novamente evita consumir outra tentativa.</p>
@@ -148,9 +157,26 @@ export function GovBrSignatureFlow(){
   </div>
   {info&&<p className="small-note" role="status">{info}</p>}
   {error&&<p className="form-error" role="alert">{error}</p>}
-  {result&&<p className={result.status==='integrity_checked'?'form-success':'small-note'} role="status">
-   {result.detail} <strong>Identidade civil e idade nao verificadas.</strong>
-  </p>}
+  {result&&<section className={completed?'form-success':'small-note'} role="status" style={{marginTop:14}}>
+    <strong>{completed?'Etapa técnica: integridade da assinatura conferida':'Pré-análise ainda não concluída'}</strong>
+    <p>{result.detail}</p>
+    <p><strong>Atenção: autoria gov.br, identidade civil e idade continuam não verificadas.</strong></p>
+    {completed&&<div style={{marginTop:12}}>
+      <p>Próximo passo: confira a autoria e a validade da assinatura no VALIDAR oficial.
+      A conferência no portal não é transmitida automaticamente ao Conecta.</p>
+      <a className="btn btn-outline" href={VALIDAR} target="_blank" rel="noopener noreferrer">
+       <ExternalLink size={17}/> Prosseguir para o VALIDAR</a>
+      {declaredBand==='18_plus'&&<a className="btn btn-primary" href="/feed" style={{marginLeft:8}}>
+        Continuar para o Conecta sem selo verificado</a>}
+      {declaredBand!=='18_plus'&&<p>Para contas adolescentes, as funções sociais permanecem restritas
+       até existir verificação independente da idade e, quando exigido, do responsável.</p>}
+    </div>}
+  </section>}
+  {declaredBand==='18_plus'&&<div style={{marginTop:16,display:'flex',flexWrap:'wrap',gap:12,alignItems:'center'}}>
+     <a className="btn btn-primary" href="/feed">Acessar Conecta sem identidade verificada</a>
+     <p className="small-note" style={{margin:0}}>O acesso básico não equivale à comprovação de maioridade,
+      não ativa anúncios e não gera selo de identidade.</p>
+   </div>}
   <div style={{marginTop:16}}>
    <p className="small-note"><ShieldAlert size={15} style={{verticalAlign:'middle'}}/>
     O PDF sera enviado temporariamente ao servidor para analise, mas nao sera armazenado.

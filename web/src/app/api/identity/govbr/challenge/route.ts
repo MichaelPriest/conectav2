@@ -7,7 +7,7 @@ export const dynamic='force-dynamic';
 const noStore={'Cache-Control':'private, no-store, max-age=0'};
 const deny=(error:string,status:number)=>NextResponse.json({error},{status,headers:noStore});
 
-type Row={id:string;nonce:string;expires_at:string;status:string;created_at:string};
+type Row={id:string;nonce:string;expires_at:string;status:string;created_at:string;attempt_count:number};
 
 function makePdf(pdf:Uint8Array,id:string,expiresAt:string){
  return new NextResponse(Buffer.from(pdf),{
@@ -23,7 +23,7 @@ export async function GET(request:NextRequest){
  const ctx=await identityUserContext(request);
  if(!ctx)return deny('Sua sessao expirou. Entre novamente para baixar a declaracao.',401);
  const {data,error}=await ctx.db.from('identity_signature_challenges')
-  .select('id,nonce,expires_at,status,created_at')
+  .select('id,nonce,expires_at,status,created_at,attempt_count')
   .eq('user_id',ctx.user.id).order('created_at',{ascending:false}).limit(1).maybeSingle();
  if(error)return deny('Falha ao buscar a declaracao no Supabase. Atualize sua sessao.',503);
  const active=data&&Date.parse(data.expires_at)>Date.now()?data as Row:null;
@@ -33,7 +33,7 @@ export async function GET(request:NextRequest){
   catch{return deny('O PDF nao pode ser reconstruido. Tente novamente.',503);}
  }
  return NextResponse.json({challenge:active?{
-  id:active.id,expires_at:active.expires_at,status:active.status,created_at:active.created_at
+  id:active.id,expires_at:active.expires_at,status:active.status,created_at:active.created_at,attempt_count:active.attempt_count
  }:null},{headers:noStore});
 }
 

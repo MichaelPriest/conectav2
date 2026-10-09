@@ -25,7 +25,17 @@ export async function POST(request:NextRequest){
  if(error||!data)return fail('Declaracao nao encontrada.',404);
  if(data.status!=='issued'||Date.parse(data.expires_at)<=Date.now())
   return fail('Declaracao ja analisada ou expirada. Gere outra se necessario.',409);
- if(data.attempt_count>=5)return fail('Limite de 5 tentativas esgotado.',429);
+ if(data.attempt_count>=5)return fail('Essa declaracao atingiu 5 analises. Gere uma nova declaracao e assine o novo PDF para continuar a pre-analise.',429);
+ const pdf=Buffer.from(await pdfFile.arrayBuffer());
+ // Reject obvious wrong file format before consuming an analysis attempt.
+ if(pdf.subarray(0,5).toString('ascii')!=='%PDF-')
+  return fail('O arquivo nao e um PDF valido. Baixe o documento assinado original no gov.br.',400);
+ if(!pdf.includes(Buffer.from('/ByteRange')))
+  return NextResponse.json({
+   status:'unsigned',
+   detail:'Este PDF nao possui assinatura digital PDF. Envie o arquivo assinado original gerado pelo gov.br, sem imprimir ou recriar o documento.',
+   officialVerificationRequired:true,identityVerified:false,ageVerified:false,documentStored:false
+  },{headers});
  const {data:attempt,error:attemptError}=await ctx.db.from('identity_signature_challenges')
    .update({attempt_count:data.attempt_count+1})
    .eq('id',id).eq('user_id',ctx.user.id).eq('status','issued')
@@ -36,7 +46,6 @@ export async function POST(request:NextRequest){
    return fail('Nao foi possivel registrar a analise. Atualize a pagina e tente novamente.',503);
  }
  if(!attempt)return fail('A declaracao foi alterada por outra requisicao. Atualize a pagina.',409);
- const pdf=Buffer.from(await pdfFile.arrayBuffer());
  const result=await inspectSignedStatement(pdf,challengeMarker(id,data.nonce));
  // Integrity is reported only for this request. A client-visible JWT cannot
  // grant an identity status or change the table's protected verification fields.

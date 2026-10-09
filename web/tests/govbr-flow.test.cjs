@@ -68,3 +68,17 @@ test('attempt counter migration rejects identity changes and uses valid SQL synt
  assert.match(route,/if\(!attempt\)/);
  assert.doesNotMatch(route,/Limite de tentativas ou concorrencia/);
 });
+
+test('PDF inspection quota is visible and unsigned files do not spend attempts',()=>{
+ const route=fs.readFileSync(path.join(__dirname,'../src/app/api/identity/govbr/inspect/route.ts'),'utf8');
+ const counter=route.indexOf(".update({attempt_count:");
+ const unsigned=route.indexOf("if(!pdf.includes(Buffer.from('/ByteRange')))");
+ assert.ok(unsigned>0 && counter>unsigned);
+ const get=fs.readFileSync(path.join(__dirname,'../src/app/api/identity/govbr/challenge/route.ts'),'utf8');
+ assert.match(get,/attempt_count:active\.attempt_count/);
+ const component=fs.readFileSync(path.join(__dirname,'../src/components/govbr-signature-flow.tsx'),'utf8');
+ assert.match(component,/Limite desta declaração alcançado/);
+ assert.match(component,/Próximo passo:/);
+ assert.match(component,/Continuar para o Conecta sem selo verificado/);
+ assert.doesNotMatch(route,/identity_verifications/);
+});
