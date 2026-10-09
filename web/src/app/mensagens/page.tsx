@@ -13,7 +13,7 @@ import {ReportContentButton} from '@/components/report-content-button';
 import {useChatTyping} from '@/lib/use-chat-typing';
 
 type Person={id:string;handle:string;display_name:string;avatar_path:string|null};
-type Conversation={id:string;title:string|null;created_at:string;created_by:string};
+type Conversation={id:string;title:string|null;created_at:string;created_by:string;is_group:boolean};
 type MediaType='image'|'video'|'audio';
 type Message={id:string;sender_id:string;content:string;created_at:string;conversation_id:string;media_path:string|null;media_type:MediaType|null;edited_at:string|null;deleted_at:string|null;reply_to:string|null};
 type MessageReaction={message_id:string;user_id:string;emoji:string;created_at:string};
@@ -83,6 +83,7 @@ export default function Messages(){
  const [settingsOpen,setSettingsOpen]=useState(false);
  const [settingsTitle,setSettingsTitle]=useState('');
  const [inviteFriend,setInviteFriend]=useState('');
+ const [transferOwner,setTransferOwner]=useState('');
  const [settingsBusy,setSettingsBusy]=useState(false);
  const typingIds=useChatTyping(active,auth.user?.id,compose,Boolean(active));
  const scrollRef=useRef<HTMLDivElement>(null);
@@ -162,7 +163,7 @@ export default function Messages(){
    setFriends(friendIds.map(id=>byId.get(id)).filter((p):p is Person=>Boolean(p)));
    if(ids.length){
      const [conversations,lastMessages,unreadCounts]=await Promise.all([
-       db.from('conversations').select('id,title,created_at,created_by').in('id',ids).order('created_at',{ascending:false}),
+       db.from('conversations').select('id,title,created_at,created_by,is_group').in('id',ids).order('created_at',{ascending:false}),
        db.rpc('my_latest_conversation_messages'),
        db.rpc('my_conversation_unread_counts')
      ]);
@@ -177,7 +178,7 @@ export default function Messages(){
      const assembled=((conversations.data||[]) as Conversation[]).map(c=>{
        const participants=pairs.filter(p=>p.conversation_id===c.id&&p.user_id!==auth.user!.id)
          .map(p=>byId.get(p.user_id)).filter((p):p is Person=>Boolean(p));
-       return {...c,other:participants[0]||null,participants,group:participants.length>1,
+       return {...c,other:participants[0]||null,participants,group:c.is_group,
          last:mostRecent.get(c.id)||null,unread:countByConversation.get(c.id)||0,mutedUntil:myPreferences.get(c.id)||null};
      });
      assembled.sort((a,b)=>new Date(b.last?.created_at||b.created_at).getTime()-new Date(a.last?.created_at||a.created_at).getTime());
@@ -243,7 +244,7 @@ export default function Messages(){
    setMessages([]);setReceipts([]);setReactions([]);setEditingId(null);
    setReplyTo(null);setReactionOpen(null);setSearchOpen(false);setMessageSearch('');
    setSearchHits([]);setHighlighted(null);
-   setPins([]);setSettingsOpen(false);setInviteFriend('');
+   setPins([]);setSettingsOpen(false);setInviteFriend('');setTransferOwner('');
    void loadPins(active);void loadMessages(active);
    void loadReceipts(active);
    const db=supabaseBrowser();
@@ -486,6 +487,27 @@ export default function Messages(){
    });
    if(e)setError('Não foi possível convidar: '+e.message);
    else{setInviteFriend('');await loadThreads();}
+   setSettingsBusy(false);
+ }
+ async function leaveCurrentGroup(){
+   if(!active||!current?.group||settingsBusy)return;
+   if(!confirm('Sair deste grupo? O histórico permanecerá para os outros participantes.'))return;
+   setSettingsBusy(true);setError('');
+   const {error:e}=await supabaseBrowser().rpc('leave_conversation_group',{_conversation:active});
+   if(e)setError('Não foi possível sair: '+e.message);
+   else{setActive(null);setMessages([]);setPins([]);await loadThreads();}
+   setSettingsBusy(false);
+ }
+ async function transferGroupOwnership(){
+   if(!active||!transferOwner||!canManageGroup||settingsBusy)return;
+   const chosen=current?.participants.find(p=>p.id===transferOwner);
+   if(!chosen||!confirm('Transferir a administração para '+chosen.display_name+'?'))return;
+   setSettingsBusy(true);setError('');
+   const {error:e}=await supabaseBrowser().rpc('transfer_conversation_group_owner',{
+     _conversation:active,_new_owner:chosen.id
+   });
+   if(e)setError('Não foi possível transferir: '+e.message);
+   else{setTransferOwner('');setSettingsOpen(false);await loadThreads();}
    setSettingsBusy(false);
  }
  async function block(){
