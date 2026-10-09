@@ -11,6 +11,7 @@ import {optimizeImage} from '@/lib/media';
 import {MentionInput,MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
 import {useChatTyping} from '@/lib/use-chat-typing';
+import {mergeChatPage,olderChatCursor} from '@/lib/chat-timeline';
 
 type Person={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Conversation={id:string;title:string|null;created_at:string;created_by:string;is_group:boolean};
@@ -88,6 +89,9 @@ export default function Messages(){
  const typingIds=useChatTyping(active,auth.user?.id,compose,Boolean(active));
  const scrollRef=useRef<HTMLDivElement>(null);
  const messageNodes=useRef<Record<string,HTMLElement|null>>({});
+ const activeRef=useRef(active);activeRef.current=active;
+ const messagesRef=useRef(messages);messagesRef.current=messages;
+ const loadingOlderRef=useRef(false);
  useEffect(()=>{
    if(!attachment){setAttachmentPreview('');return;}
    const url=URL.createObjectURL(attachment);setAttachmentPreview(url);
@@ -205,29 +209,41 @@ export default function Messages(){
       media_type:(byId.get(p.message_id)?.media_type||null) as MediaType|null})));
  },[]);
  const loadMessages=useCallback(async(id:string,older=false)=>{
+   const prior=messagesRef.current.filter(m=>m.conversation_id===id);
+   const cursor=older?olderChatCursor(prior,id):null;
+   if(older&&(!cursor||loadingOlderRef.current))return;
+   if(older)loadingOlderRef.current=true;
    setLoadingMessages(true);
-   const db=supabaseBrowser();
-   const {data,error:e}=await db.from('messages')
-     .select('id,sender_id,content,created_at,conversation_id,media_path,media_type,edited_at,deleted_at,reply_to')
-     .eq('conversation_id',id).order('created_at',{ascending:false})
-     .range(older?messages.length:0,older?messages.length+PER_PAGE-1:PER_PAGE-1);
-   if(e)setError(e.message);
-   else {
-     const chronological=[...((data||[]) as Message[])].reverse();
-     setMessages(current=>older?[...chronological,...current]:chronological);
-     setHasOlder((data||[]).length===PER_PAGE);
-     const loadedIds=((data||[]) as Message[]).map(m=>m.id);
+   try{
+     const db=supabaseBrowser();
+     let query=db.from('messages')
+       .select('id,sender_id,content,created_at,conversation_id,media_path,media_type,edited_at,deleted_at,reply_to')
+       .eq('conversation_id',id);
+     if(cursor)query=query.or(cursor);
+     const {data,error:e}=await query.order('created_at',{ascending:false})
+       .order('id',{ascending:false}).limit(PER_PAGE);
+     if(activeRef.current!==id)return;
+     if(e){setError(e.message);return;}
+     const incoming=(data||[]) as Message[];
+     setMessages(current=>mergeChatPage(current,incoming,id));
+     // Refreshes must not discard the pagination state or old messages.
+     if(older||!prior.length)setHasOlder(incoming.length===PER_PAGE);
+     const loadedIds=incoming.map(m=>m.id);
      if(loadedIds.length){
        const {data:reacted,error:reactionError}=await db.from('message_reactions')
          .select('message_id,user_id,emoji,created_at').in('message_id',loadedIds);
+       if(activeRef.current!==id)return;
        if(reactionError)setError('Não foi possível carregar reações: '+reactionError.message);
-       else setReactions(previous=>older?
-         [...previous.filter(r=>!loadedIds.includes(r.message_id)),...((reacted||[]) as MessageReaction[])]:
-         (reacted||[]) as MessageReaction[]);
-     }else if(!older)setReactions([]);
+       else setReactions(previous=>[
+         ...previous.filter(r=>!loadedIds.includes(r.message_id)),
+         ...((reacted||[]) as MessageReaction[])
+       ]);
+     }else if(!older&&prior.length===0)setReactions([]);
+   }finally{
+     if(older)loadingOlderRef.current=false;
+     if(activeRef.current===id)setLoadingMessages(false);
    }
-   setLoadingMessages(false);
- },[messages.length]);
+ },[]);
 
  useEffect(()=>{void loadThreads();},[loadThreads]);
  useEffect(()=>{
@@ -241,6 +257,7 @@ export default function Messages(){
  useEffect(()=>{const name=new URLSearchParams(window.location.search).get('to');if(name)setRecipient(name);},[]);
  useEffect(()=>{
    if(!active)return;
+   loadingOlderRef.current=false;
    setMessages([]);setReceipts([]);setReactions([]);setEditingId(null);
    setReplyTo(null);setReactionOpen(null);setSearchOpen(false);setMessageSearch('');
    setSearchHits([]);setHighlighted(null);

@@ -46,6 +46,8 @@ jobs:
         run: npm run test:moderation
       - name: Real automatic text/video moderation tests
         run: npm run test:automod
+      - name: Chat V4 timeline pagination regressions
+        run: node --test tests/chat-v4-timeline.test.cjs
       - name: Check TypeScript
         run: npm run typecheck
       - name: Regression tests for nullable profile details
