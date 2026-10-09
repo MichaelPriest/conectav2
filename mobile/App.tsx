@@ -9,11 +9,11 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {User} from '@supabase/supabase-js';
 import {SITE_URL,supabase} from './src/supabase';
-import type {ChatMessage,Community,Friendship,Notice,Post,Profile,Thread} from './src/models';
+import type {ChatMessage,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './src/models';
 import {
  changeConnection,changeMembership,clearMediaCache,loadChatMessages,loadCommunities,
- loadConnections,loadFeed,loadNotifications,loadThreads,markNotifications,myLikes,
- publishTextPost,readConversation,sendMessage,setLike,startChat,updateMyProfile,verifyAccess
+ loadConnections,loadFeed,loadNotifications,loadPostComments,loadThreads,markNotifications,myLikes,
+ publishTextPost,readConversation,sendMessage,sendPostComment,setLike,startChat,updateMyProfile,verifyAccess
 } from './src/data';
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
@@ -95,12 +95,37 @@ function Restricted({status,onRetry,onLogout}:{
  </View>;
 }
 
-function PostCard({post,userId,liked,onLike}:{
- post:Post;userId:string;liked:boolean;onLike:(post:Post)=>void
+function PostCard({post,userId,liked,onLike,onComment}:{
+ post:Post;userId:string;liked:boolean;onLike:(post:Post)=>void;
+ onComment:(postId:string)=>void;
 }){
  const author=post.profiles?.display_name||'Pessoa do Conecta';
  const count=post.post_likes?.[0]?.count||0;
  const comments=post.post_comments?.[0]?.count||0;
+ const [commentsOpen,setCommentsOpen]=useState(false);
+ const [commentRows,setCommentRows]=useState<PostComment[]>([]);
+ const [commentBody,setCommentBody]=useState('');
+ const [replyTo,setReplyTo]=useState<PostComment|null>(null);
+ const [sendingComment,setSendingComment]=useState(false);
+ const [commentError,setCommentError]=useState('');
+ const [loadingComments,setLoadingComments]=useState(false);
+ const toggleComments=async()=>{
+  if(commentsOpen){setCommentsOpen(false);setReplyTo(null);return;}
+  setCommentsOpen(true);setLoadingComments(true);setCommentError('');
+  try{setCommentRows(await loadPostComments(post.id));}
+  catch(e){setCommentError(errorMessage(e));}finally{setLoadingComments(false);}
+ };
+ const sendComment=async()=>{
+  if(sendingComment||!commentBody.trim()||commentBody.trim().length>1000)return;
+  setSendingComment(true);setCommentError('');
+  try{
+   await sendPostComment(post.id,userId,commentBody,replyTo?.id||null);
+   setCommentBody('');setReplyTo(null);
+   setCommentRows(await loadPostComments(post.id));
+   onComment(post.id);
+  }catch(e){setCommentError(errorMessage(e));}
+  finally{setSendingComment(false);}
+ };
  const images=post.post_media?.length
   ? [...post.post_media].filter(x=>x.media_type==='image')
      .sort((a,b)=>a.position-b.position).map(x=>x.storage_path)
@@ -135,8 +160,9 @@ function PostCard({post,userId,liked,onLike}:{
      {liked?'♥':'♡'} {count} curtidas
     </Text>
    </Pressable>
-   <Pressable accessibilityRole="button" accessibilityLabel="Ver comentários" onPress={()=>void openOfficial('/post/'+post.id)}>
-    <Text style={s.secondaryText}>◌ {comments} comentários ↗</Text>
+   <Pressable accessibilityRole="button" accessibilityLabel="Ver comentários"
+    accessibilityState={{expanded:commentsOpen}} onPress={()=>void toggleComments()}>
+    <Text style={s.secondaryText}>◌ {comments} comentários {commentsOpen?'⌃':'⌄'}</Text>
    </Pressable>
    <Pressable accessibilityRole="button" accessibilityLabel="Compartilhar publicação"
     onPress={()=>void Share.share({message:SITE_URL+'/post/'+encodeURIComponent(post.id)})
@@ -144,6 +170,46 @@ function PostCard({post,userId,liked,onLike}:{
     <Text style={s.secondaryText}>↗ Compartilhar</Text>
    </Pressable>
   </View>
+  {commentsOpen&&<View style={{marginTop:14,gap:10}}>
+   <Text style={s.primaryText}>Comentários e respostas</Text>
+   <ErrorNotice text={commentError}/>
+   {loadingComments?<Loading text="Carregando comentários..."/>:
+    commentRows.length===0?<Text style={s.muted}>Seja a primeira pessoa a comentar.</Text>:
+    commentRows.filter(item=>!item.parent_id).map(root=><View key={root.id} style={{
+     borderLeftWidth:2,borderLeftColor:t.line,paddingLeft:10,gap:6
+    }}>
+     <View style={[s.row,{gap:7}]}>
+      <Avatar path={root.profiles?.avatar_path} name={root.profiles?.display_name||'Pessoa'} size={27}/>
+      <Text style={s.primaryText}>{root.profiles?.display_name||'Pessoa'}</Text>
+     </View>
+     <Text style={{color:t.dark,fontSize:13}}>{root.body}</Text>
+     {root.moderation_status!=='approved'&&root.author_id===userId&&
+      <Text style={s.muted}>{root.moderation_status==='pending'?'Em análise':'Não aprovado'}</Text>}
+     {root.moderation_status==='approved'&&
+      <Pressable accessibilityRole="button" onPress={()=>setReplyTo(root)}>
+       <Text style={s.secondaryText}>↩ Responder</Text>
+      </Pressable>}
+     {commentRows.filter(reply=>reply.parent_id===root.id).map(reply=><View key={reply.id}
+      style={{marginLeft:15,paddingLeft:9,borderLeftWidth:1,borderColor:t.line,gap:4}}>
+      <Text style={s.primaryText}>{reply.profiles?.display_name||'Pessoa'}</Text>
+      <Text style={{fontSize:13,color:t.dark}}>{reply.body}</Text>
+      {reply.moderation_status!=='approved'&&reply.author_id===userId&&
+       <Text style={s.muted}>{reply.moderation_status==='pending'?'Em análise':'Não aprovado'}</Text>}
+     </View>)}
+    </View>)}
+   {replyTo&&<View style={[s.row,{justifyContent:'space-between'}]}>
+    <Text style={s.muted}>Respondendo a @{replyTo.profiles?.handle||'pessoa'}</Text>
+    <Pressable accessibilityRole="button" onPress={()=>setReplyTo(null)}>
+     <Text style={s.secondaryText}>Cancelar</Text>
+    </Pressable>
+   </View>}
+   <Field value={commentBody} onChangeText={setCommentBody}
+    placeholder={replyTo?'Escreva sua resposta...':'Escreva seu comentário...'}/>
+   <Text style={[s.muted,{textAlign:'right'}]}>{commentBody.trim().length}/1000</Text>
+   <Action label={sendingComment?'Enviando...':replyTo?'Enviar resposta':'Comentar'}
+    disabled={sendingComment||!commentBody.trim()||commentBody.trim().length>1000}
+    onPress={()=>void sendComment()}/>
+  </View>}
  </View>;
 }
 function FeedScreen({userId}:{userId:string}){
@@ -293,7 +359,9 @@ function FeedScreen({userId}:{userId:string}){
   refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void refresh()} tintColor={t.primary}/>}
   ListHeaderComponent={composer}
   renderItem={({item})=><PostCard post={item} userId={userId}
-   liked={liked.has(item.id)} onLike={post=>void toggleLike(post)}/>}
+   liked={liked.has(item.id)} onLike={post=>void toggleLike(post)}
+   onComment={postId=>setPosts(current=>current.map(p=>p.id===postId?
+    {...p,post_comments:[{count:(p.post_comments?.[0]?.count||0)+1}]}:p))}/>}
   ListEmptyComponent={!loading?<View style={s.empty}><Text style={s.primaryText}>Nenhuma publicação ainda</Text>
    <Text style={s.muted}>Novidades da sua rede aparecerão aqui.</Text></View>:<Loading/>}
   onEndReachedThreshold={0.4}
