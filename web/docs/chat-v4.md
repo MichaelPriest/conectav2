@@ -241,3 +241,19 @@ O widget flutuante, a lista de conexões e a caixa de entrada mostram um
 indicador verde discreto apenas quando o status pode ser observado de forma
 legítima. A opção persiste localmente por conta, não habilita para novos
 usuários sem ação explícita e não depende de servidor adicional pago.
+
+## Chat V4.9 — chamadas WebRTC entre duas conexões (09/10/2026)
+
+Chamadas opcionais de áudio e vídeo no chat completo e flutuante. Os botões
+ficam nas conversas privadas; o aviso de chamada recebida abre em qualquer
+página quando o Conecta está visível. A negociação usa a tabela privada por
+RLS `chat_calls` e RPCs com validação de sessão, amizade, bloqueios e
+participação exata de dois usuários. Modo juvenil protegido não permite
+ligações nesta versão. Microfone/câmera são solicitados no navegador;
+a mídia não é gravada no Supabase. O SDP da chamada é limpo ao encerrar.
+
+Esta primeira versão usa STUN público e ICE completo (não trickle) para
+simplificar a sinalização gratuita; algumas combinações de redes exigirão
+TURN. Chamadas com a aba fechada não são recebidas e ainda não há histórico
+ou recurso de chamadas em grupo. A interface permite aceitar, recusar,
+silenciar, desligar câmera e encerrar, sem serviço pago obrigatório.

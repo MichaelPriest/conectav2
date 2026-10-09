@@ -9,6 +9,7 @@ import {useChatTyping} from '@/lib/use-chat-typing';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {ChatPushControl,notifyChatMessageSent} from '@/components/chat-push-control';
 import {ChatOnlineStatus,ChatPresenceToggle} from '@/components/chat-presence';
+import {ChatCallButtons} from '@/components/chat-calls';
 type Thread={id:string;title:string;group:boolean;otherNames:string;otherId:string|null;other:Contact|null;lastAt:string;unread:number;preview:string;mutedUntil:string|null};
 type Contact={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Msg={id:string;conversation_id:string;sender_id:string;content:string;created_at:string;media_type:string|null;edited_at:string|null;deleted_at:string|null};
@@ -227,6 +228,7 @@ export function ChatWidget({userId}:{userId:string}){
          title={alertsEnabled?'Desativar avisos neste navegador':'Ativar avisos neste navegador'}
          aria-label={alertsEnabled?'Desativar notificações':'Ativar notificações'} onClick={()=>void toggleBrowserAlerts()}>
          {alertsEnabled?<Bell size={18}/>:<BellOff size={18}/>}</button>
+       {active&&!active.group&&<ChatCallButtons conversationId={active.id} calleeId={active.otherId} calleeName={active.title}/>}
        <ChatPushControl/>
        <Link href="/mensagens" aria-label="Abrir todas as mensagens" title="Abrir mensagens"><ExternalLink size={18}/></Link>
        <button className="icon-btn" type="button" aria-label="Fechar chat" onClick={()=>toggle(false)}><X size={20}/></button>

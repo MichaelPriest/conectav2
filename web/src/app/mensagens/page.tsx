@@ -13,6 +13,7 @@ import {MentionInput,MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
 import {useChatTyping} from '@/lib/use-chat-typing';
 import {ChatOnlineStatus,ChatPresenceToggle} from '@/components/chat-presence';
+import {ChatCallButtons} from '@/components/chat-calls';
 import {mergeChatPage,olderChatCursor} from '@/lib/chat-timeline';
 import {groupAccess,canRemoveGroupTarget} from '@/lib/chat-group-roles';
 
@@ -711,6 +712,7 @@ export default function Messages(){
             <Reply size={19}/></button>{current?.group?<span className="concept-round-icon violet"><Users size={20}/></span>:<ProfileAvatar person={current?.other}/>}
          <div><strong>{current?.group?(current.title||'Grupo'):current?.other?.display_name||'Conversa'} {!current?.group&&<ChatOnlineStatus userId={current?.other?.id} showText/>}</strong>
          <small>{current?.group?current.participants.map(p=>p.display_name).join(', '):(current?.other?.handle?'@'+current.other.handle:'Mensagens privadas')}</small></div>
+         {!current?.group&&<ChatCallButtons conversationId={current?.id} calleeId={current?.other?.id} calleeName={current?.other?.display_name}/>}
          <ChatPushControl/>
          <button className="icon-btn" type="button"
              title={currentlyMuted?'Reativar indicador no chat':'Silenciar indicador no chat por 30 dias'}
