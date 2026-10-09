@@ -12,11 +12,12 @@
 - [ ] Verificação e supervisão do responsável; fluxo de contestação, auditoria e retirada de proteção apenas após atestado confiável.
 - [ ] Aplicar controles de idade em todas as superfícies (mídia, reação, notificações, descoberta, convites, anexos e URLs), auditoria de RLS e testes reais.
 - [ ] Concluir LGPD: exportação, exclusão, retenção, direitos titulares e política de dados biométricos.
-- [ ] Moderador de texto/imagens/vídeos multilíngue e centralização das denúncias, sem falsas aprovações automáticas.
+- [x] Entrada de denúncias em publicações e mensagens privadas, com motivos, evidência textual limitada, RLS e proteção contra duplicidade. Corrigida política que permitia informar uma comunidade diferente da publicação; denúncias de comunidades continuam visíveis à equipe autorizada.
+- [ ] Painel administrativo central com triagem e decisões auditadas para denúncias gerais (a entrada funciona, mas ainda não há fila de revisão na interface), moderação de texto/imagem/vídeo multilíngue e política de retenção para evidências, sem falsas aprovações automáticas.
 
 ## Prioridade P1 — experiência social
 - [x] Comunidades oficiais, cargos, moderadores, recados, perfil estilo MySpace, enquetes, salvamentos, respostas e chat básico já iniciados/entregues.
-- [ ] Revisar bugs e fluxos completos de moderação, comunidades, perfis/álbuns e recados/depoimentos.
+- [ ] Revisar bugs e fluxos completos de moderação, comunidades, perfis/álbuns e recados/depoimentos. Há denúncia no feed/chat, mas falta revisão administrativa geral.
 - [x] Stories de foto/vídeo com visibilidade público/amigos/privado, leitura por RLS, exclusão pelo autor e expiração de visibilidade em 24 horas; faltam a limpeza física agendada dos arquivos e teste multiusuário real.
 - [ ] Círculos próximos, eventos e demais recursos nostálgicos.
 - [x] Conversas em grupo entre amizades aceitas; anexos privados de imagem, vídeo e áudio, mais gravação local de recados de voz em navegadores compatíveis.
