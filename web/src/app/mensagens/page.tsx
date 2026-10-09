@@ -287,6 +287,41 @@ export default function Messages(){
    setMessageBusy(false);
  }
 
+ async function reactToMessage(message:Message,emoji:string){
+   if(!auth.user||!active||message.conversation_id!==active||message.deleted_at||messageBusy)return;
+   const currentReaction=reactions.some(r=>r.message_id===message.id&&r.user_id===auth.user!.id&&r.emoji===emoji);
+   setMessageBusy(true);setError('');
+   const db=supabaseBrowser();
+   const result=currentReaction?
+     await db.from('message_reactions').delete().eq('message_id',message.id)
+       .eq('user_id',auth.user.id).eq('emoji',emoji):
+     await db.from('message_reactions').insert({message_id:message.id,user_id:auth.user.id,emoji});
+   if(result.error)setError('Não foi possível atualizar a reação: '+result.error.message);
+   else{
+     setReactions(old=>currentReaction?
+       old.filter(r=>!(r.message_id===message.id&&r.user_id===auth.user!.id&&r.emoji===emoji)):
+       [...old,{message_id:message.id,user_id:auth.user.id,emoji,created_at:new Date().toISOString()}]);
+   }
+   setReactionOpen(null);setMessageBusy(false);
+ }
+ useEffect(()=>{
+   if(!active||!searchOpen||messageSearch.trim().length<2){
+     setSearchHits([]);setSearchError('');setSearchBusy(false);return;
+   }
+   let alive=true;
+   const timeout=window.setTimeout(async()=>{
+     setSearchBusy(true);
+     const {data,error:e}=await supabaseBrowser().rpc('search_my_conversation_messages',{
+       _conversation:active,_term:messageSearch.trim(),_limit:40
+     });
+     if(!alive)return;
+     if(e){setSearchError('Busca indisponível: '+e.message);setSearchHits([]);}
+     else{setSearchError('');setSearchHits((data||[]) as SearchHit[]);}
+     setSearchBusy(false);
+   },320);
+   return()=>{alive=false;window.clearTimeout(timeout);};
+ },[active,searchOpen,messageSearch]);
+
  async function begin(event:FormEvent){
    event.preventDefault();
    if(!auth.user||creating)return;
