@@ -20,6 +20,7 @@ import {formatDate,theme as t} from './src/theme';
 import {StoryRail} from './src/story-ui';
 import {AudioMessage,VoiceRecorder} from './src/voice-ui';
 import {sendChatMedia} from './src/chat-media';
+import {changeProfilePhoto,loadCover} from './src/profile-media';
 import {normalizeMedia,publishMediaPost} from './src/media';
 import type {SelectedMedia} from './src/media';
 
@@ -683,6 +684,31 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
 }){
  const [name,setName]=useState(profile.display_name),[bio,setBio]=useState(profile.bio||'');
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [coverPath,setCoverPath]=useState<string|null>(null);
+ useEffect(()=>{
+  let alive=true;
+  void loadCover(profile.id).then(path=>{if(alive)setCoverPath(path);})
+   .catch(e=>{if(alive)setError(errorMessage(e));});
+  return()=>{alive=false;};
+ },[profile.id]);
+ const pickProfilePhoto=async(kind:'avatar'|'cover')=>{
+  if(busy)return;
+  setError('');
+  try{
+   const result=await ImagePicker.launchImageLibraryAsync({
+    mediaTypes:['images'],allowsMultipleSelection:false,quality:1
+   });
+   if(result.canceled)return;
+   const selected=normalizeMedia(result.assets)[0];
+   setBusy(true);
+   const outcome=await changeProfilePhoto(profile.id,selected,kind);
+   clearMediaCache();
+   if(outcome.profile)onUpdate(outcome.profile);
+   if(kind==='cover')setCoverPath(outcome.path);
+   Alert.alert('Imagem atualizada',kind==='avatar'?'Sua foto aparece no Conecta.':'Sua capa foi atualizada.');
+  }catch(e){setError(errorMessage(e));}
+  finally{setBusy(false);}
+ };
  const save=async()=>{
   setBusy(true);setError('');
   try{onUpdate(await updateMyProfile(profile.id,name,bio));
@@ -691,10 +717,21 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
  };
  return <ScrollView style={s.screen} contentContainerStyle={{paddingBottom:28}}>
   <Heading title="Meu perfil" subtitle="Seu espaço, suas histórias e sua identidade."/>
-  <View style={[s.card,{alignItems:'center',paddingVertical:24}]}>
+  <View style={[s.card,{alignItems:'center',paddingVertical:19}]}>
+   <View style={{width:'100%',borderRadius:16,overflow:'hidden',marginBottom:12}}>
+    {coverPath?<Media path={coverPath} height={140}/>:
+     <View style={[a.communityCover,{height:140,justifyContent:'center'}]}>
+      <Text style={{color:'#FFF',fontWeight:'900',fontSize:24}}>conecta ✳</Text>
+     </View>}
+   </View>
    <Avatar name={profile.display_name} path={profile.avatar_path} size={86}/>
    <Text style={[s.title,{marginTop:12,fontSize:22}]}>{profile.display_name}</Text>
    <Text style={s.muted}>@{profile.handle}</Text>
+   <View style={[s.row,{gap:7,marginTop:13,flexWrap:'wrap',justifyContent:'center'}]}>
+    <Action secondary disabled={busy} label="Alterar foto" onPress={()=>void pickProfilePhoto('avatar')}/>
+    <Action secondary disabled={busy} label="Alterar capa" onPress={()=>void pickProfilePhoto('cover')}/>
+   </View>
+   <Text style={[s.muted,{marginTop:8}]}>Fotos JPG, PNG ou WebP de até 8 MB.</Text>
   </View>
   <View style={s.card}>
    <Text style={s.primaryText}>Nome de exibição</Text>
@@ -703,7 +740,7 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
    <Field value={bio} onChangeText={setBio} placeholder="Conte algo sobre você..." multiline/>
    <ErrorNotice text={error}/>
    <Action disabled={busy} label={busy?'Salvando...':'Salvar perfil'} onPress={()=>void save()}/>
-   <Text style={[s.muted,{marginTop:10}]}>Capas, fotos e detalhes avançados podem ser alterados no Conecta Web.</Text>
+   <Text style={[s.muted,{marginTop:10}]}>Detalhes avançados de personalização continuam disponíveis no site.</Text>
   </View>
   <View style={s.card}>
    <Text style={[s.primaryText,{marginBottom:10}]}>Minha conta</Text>
