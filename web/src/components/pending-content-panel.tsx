@@ -12,6 +12,7 @@ export function PendingContentPanel(){
  const [items,setItems]=useState<Pending[]>([]);
  const [selected,setSelected]=useState<string|null>(null);
  const [preview,setPreview]=useState<Preview[]>([]);
+ const [aiNote,setAiNote]=useState<string|null>(null);
  const [rationale,setRationale]=useState('');
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false);
  const [loadingPreview,setLoadingPreview]=useState(false);
@@ -28,7 +29,13 @@ export function PendingContentPanel(){
 
  const current=items.find(item=>item.id===selected)||null;
  const show=useCallback(async(item:Pending)=>{
-  setSelected(item.id);setPreview([]);setRationale('');setError('');
+  setSelected(item.id);setPreview([]);setRationale('');setError('');setAiNote(null);
+  if(item.kind==='post'){
+   const {data:review}=await supabaseBrowser().from('posts')
+    .select('moderation_reason,ai_provider,ai_checked_at').eq('id',item.id).maybeSingle();
+   if(review?.ai_provider&&review.ai_checked_at)
+    setAiNote('Modelo '+review.ai_provider+': '+(review.moderation_reason||'Triagem concluída; verificar também outras categorias.'));
+  }
   if(!item.media_type)return;
   setLoadingPreview(true);
   try{
@@ -91,6 +98,11 @@ export function PendingContentPanel(){
        <small>Enviado em {new Date(current.created_at).toLocaleString('pt-BR')}</small>
      </div>
      <div className="conecta-content-moderation-text">{current.content_excerpt||'[Sem legenda]'}</div>
+     {aiNote&&<div className="conecta-content-review" role="status">
+       <strong><ShieldCheck size={15}/> Triagem por modelo de repositório</strong>
+       <span>{aiNote}</span>
+       <small>Esta pontuação não substitui a revisão de contexto por pessoa autorizada.</small>
+     </div>
      {loadingPreview&&<p className="small-note"><Loader2 className="spin" size={16}/> Carregando prévia...</p>}
      {current.media_type&&preview.length===0&&!loadingPreview&&
        <p className="small-note">Prévia indisponível. Não aprove sem conferir a mídia.</p>}
