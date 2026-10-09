@@ -159,7 +159,10 @@ export default function Messages(){
      if(conversations.error||lastMessages.error)setError(conversations.error?.message||lastMessages.error?.message||'Não foi possível carregar chats.');
      const mostRecent=new Map<string,Message>();
      ((lastMessages.data||[]) as Message[]).forEach(m=>{if(!mostRecent.has(m.conversation_id))mostRecent.set(m.conversation_id,m);});
-     const countByConversation=new Map((unreadCounts.data||[]).map(x=>[x.conversation_id,Number(x.unread_count||0)]));
+     const countByConversation=new Map<string,number>();
+     for(const row of (unreadCounts.data||[]) as {conversation_id:string;unread_count:number|string}[]){
+       countByConversation.set(row.conversation_id,Number(row.unread_count||0));
+     }
      const assembled=((conversations.data||[]) as Conversation[]).map(c=>{
        const participants=pairs.filter(p=>p.conversation_id===c.id&&p.user_id!==auth.user!.id)
          .map(p=>byId.get(p.user_id)).filter((p):p is Person=>Boolean(p));
@@ -296,17 +299,18 @@ export default function Messages(){
 
  async function reactToMessage(message:Message,emoji:string){
    if(!auth.user||!active||message.conversation_id!==active||message.deleted_at||messageBusy)return;
-   const currentReaction=reactions.some(r=>r.message_id===message.id&&r.user_id===auth.user!.id&&r.emoji===emoji);
+   const currentUserId=auth.user.id;
+   const currentReaction=reactions.some(r=>r.message_id===message.id&&r.user_id===currentUserId&&r.emoji===emoji);
    setMessageBusy(true);setError('');
    const db=supabaseBrowser();
    const result=currentReaction?
      await db.from('message_reactions').delete().eq('message_id',message.id)
-       .eq('user_id',auth.user.id).eq('emoji',emoji):
-     await db.from('message_reactions').insert({message_id:message.id,user_id:auth.user.id,emoji});
+       .eq('user_id',currentUserId).eq('emoji',emoji):
+     await db.from('message_reactions').insert({message_id:message.id,user_id:currentUserId,emoji});
    if(result.error)setError('Não foi possível atualizar a reação: '+result.error.message);
    else{
      setReactions(old=>currentReaction?
-       old.filter(r=>!(r.message_id===message.id&&r.user_id===auth.user!.id&&r.emoji===emoji)):
+       old.filter(r=>!(r.message_id===message.id&&r.user_id===currentUserId&&r.emoji===emoji)):
        [...old,{message_id:message.id,user_id:auth.user.id,emoji,created_at:new Date().toISOString()}]);
    }
    setReactionOpen(null);setMessageBusy(false);
