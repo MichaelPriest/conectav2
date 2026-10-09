@@ -1,11 +1,12 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {identityContext} from '@/lib/identity-server';
+import {classifyLocalImage} from '@/lib/open-source-image-moderation';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 type ContentKind='post'|'story';
 type MediaKind='image'|'video';
-type ScanResult={flagged:boolean;provider:string;humanReview?:boolean};
+type ScanResult={flagged:boolean;provider:string;humanReview?:boolean;reason?:string};
 function reply(data:unknown,status=200){
  return NextResponse.json(data,{status,headers:{'Cache-Control':'no-store'}});
 }
@@ -66,6 +67,26 @@ async function moderateWithOpenSourceWorker(
    humanReview:media.length>0||json.human_review};
 }
 
+
+async function moderateWithBundledModel(
+ media:{path:string;type:MediaKind}[],
+ admin:NonNullable<Awaited<ReturnType<typeof identityContext>>>['admin']
+):Promise<ScanResult>{
+ if(!media.length)throw new Error('text_needs_manual_review');
+ if(media.length>5||media.some(item=>item.type!=='image'))throw new Error('unsupported_media');
+ let flagged=false,notes:string[]=[];
+ for(const [index,item] of media.entries()){
+  const {data,error}=await admin.storage.from('social-media').download(item.path);
+  if(error||!data)throw new Error('unable_to_fetch_media');
+  if(data.size>10*1024*1024||data.size===0)throw new Error('media_size_out_of_bounds');
+  const result=await classifyLocalImage(new Uint8Array(await data.arrayBuffer()));
+  flagged=flagged||result.flagged;
+  notes.push('Foto '+(index+1)+': '+result.reason);
+ }
+ return {flagged,humanReview:true,provider:'nsfwjs-mobilenet-v2',
+  reason:notes.join(' | ').slice(0,490)};
+}
+
 export async function POST(request:NextRequest){
  const origin=request.headers.get('origin');
  if(origin&&origin!==new URL(request.url).origin)return reply({error:'Origem inválida.'},403);
@@ -109,9 +130,11 @@ export async function POST(request:NextRequest){
  // Escalate to trained human safeguarding instead.
  if(/(?:material\s+de\s+abuso\s+sexual\s+infantil|csam)/i.test(content))
   return reply({status:'pending',reason:'Revisão de segurança especializada necessária.'});
- if(!process.env.OPENAI_API_KEY&&!process.env.CONEXA_MODERATION_WORKER_URL)
-  return reply({status:row.moderation_status,provider:'unconfigured',
-    reason:'IA externa não configurada. Arquivos permanecem em revisão.'});
+ // Repo-based inference runs on the existing Next.js server when no paid/API worker is configured.
+ // Text-only cases stay pending unless the pre-existing database rules allowed them.
+ if(!process.env.OPENAI_API_KEY&&!process.env.CONEXA_MODERATION_WORKER_URL&&!media.length)
+  return reply({status:row.moderation_status,provider:'manual',
+    reason:'Textos sem classificador contextual permanecem sob as regras de revisão humana.'});
  const imageUrls:string[]=[];
  if(!process.env.CONEXA_MODERATION_WORKER_URL)for(const item of media){
   // A privately signed, short-lived URL is created only after verifying authorship.
@@ -122,7 +145,8 @@ export async function POST(request:NextRequest){
  try{
   const result=process.env.CONEXA_MODERATION_WORKER_URL?
     await moderateWithOpenSourceWorker(content,media,admin):
-    await moderateWithFreeApi(content,imageUrls);
+    process.env.OPENAI_API_KEY?await moderateWithFreeApi(content,imageUrls):
+    await moderateWithBundledModel(media,admin);
   const next=(result.flagged||result.humanReview)?'pending':'approved';
   const now=new Date().toISOString();
   if(kind==='post'&&row.community_id){
@@ -141,7 +165,7 @@ export async function POST(request:NextRequest){
    // Optimistic concurrency: content changes/extra media uploads cannot retain prior approval.
    let update=admin.from('posts').update({
      moderation_status:next,
-     moderation_reason:result.flagged?'IA sinalizou conteúdo para revisão humana':result.humanReview?'Aguardando revisão humana complementar':'',
+     moderation_reason:result.flagged?'Modelo local sinalizou conteúdo para revisão':result.humanReview?'Triagem local concluída; revisão humana complementar':'',
      moderated_at:now,moderated_by:null,ai_checked_at:now,ai_provider:result.provider
    }).eq('id',id).eq('author_id',user.id).eq('content',content).is('ai_checked_at',null);
    if(row.media_path===null)update=update.is('media_path',null);
@@ -155,9 +179,9 @@ export async function POST(request:NextRequest){
     .select('id').maybeSingle();
    if(error||!updated)return reply({status:'pending',reason:'Story indisponível para revisão.'},409);
   }
-  return reply({status:next,provider:result.provider,reason:result.flagged?
-    'Conteúdo sinalizado para revisão humana.':result.humanReview?
-    'Modelo gratuito executado. Revisão humana complementar necessária.':'Verificação automática concluída.'});
+  return reply({status:next,provider:result.provider,reason:result.reason||
+    (result.flagged?'Conteúdo sinalizado para revisão humana.':result.humanReview?
+     'Modelo gratuito executado. Revisão humana complementar necessária.':'Verificação automática concluída.')});
  }catch{
   return reply({status:'pending',reason:'Serviço de IA indisponível. O conteúdo segue em análise.'});
  }
