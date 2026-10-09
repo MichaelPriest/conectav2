@@ -20,9 +20,13 @@
 - [x] Stories de foto/vídeo com visibilidade público/amigos/privado, leitura por RLS, exclusão pelo autor e expiração de visibilidade em 24 horas; faltam a limpeza física agendada dos arquivos e teste multiusuário real.
 - [ ] Círculos próximos, eventos e demais recursos nostálgicos.
 - [x] Conversas em grupo entre amizades aceitas; anexos privados de imagem, vídeo e áudio, mais gravação local de recados de voz em navegadores compatíveis.
-- [ ] Edição/exclusão de mensagens, reações, recibos de leitura, chamada de voz/vídeo e testes multiusuário com controles para adolescentes.
+- [x] Edição de texto, exclusão lógica de mensagens e indicadores de leitura no chat: RLS com autorização do remetente, imutabilidade de identidade e carimbo de leitura no servidor. Interface do chat e widget sincronizados; testes end-to-end multiusuário continuam pendentes.
+- [ ] Reações às mensagens, chamadas de voz/vídeo, exclusão física agendada de anexos apagados e testes multiusuário com controles para adolescentes.
 - [ ] Acessibilidade e 10 idiomas completos (as traduções ainda são parciais). Stories e mensagens multimídia ainda têm textos fixos em português.
 - [ ] Testes reais multiusuário e testes mobile de todas as telas.
+
+- [x] Página inicial pública atualizada: apresenta recursos realmente implementados, comunidades oficiais, experiência nostálgica e acolhimento para mães atípicas, sem conteúdo fictício.
+- [x] Correção da dependência circular RLS em conversation_members e criação atômica de conversas/grupos; permanecem testes multiusuário completos no navegador.
 
 ## Prioridade P2 — monetização e lançamento
 - [x] Dois slots de publicidade discretos: desktop lateral e mobile após a sexta publicação.
