@@ -10,7 +10,7 @@ O Conecta integra [NSFWJS](https://github.com/infinitered/nsfwjs) **MIT** com [T
 - Não há cobrança por token de IA. A execução consome **CPU, RAM e invocações da hospedagem existente** e pode exceder limites de planos gratuitos sob volume grande. Não há garantia de hospedagem com custo zero.
 - O CI executa `npm run test:moderation` usando o **modelo verdadeiro**, sobre imagem neutra produzida durante o teste (sem mocks). Falhas do classificador nunca liberam mídia automaticamente.
 - Vídeos, áudios e textos complexos ainda exigem revisão humana no fluxo básico. O worker Python opcional tem modelos abertos maiores, mas necessita uma máquina para executá-los. Evitamos ativar modelos ONNX de centenas de MB em cada execução do Vercel Hobby sem ensaio real de consumo.
-- As rotas antigas com OpenAI/worker continuam compatíveis onde já estão configuradas, mas **chaves externas não são necessárias para a nova triagem visual local**.
+- O valor padrão de `CONEXA_MODERATION_ENGINE` é `local`, que utiliza NSFWJS para imagens. Para optar explicitamente por um worker, use `CONEXA_MODERATION_ENGINE=worker` e as variáveis de URL/token do worker. Para ativar a API opcional, use `CONEXA_MODERATION_ENGINE=openai` e `OPENAI_API_KEY`. Sem opt-in explícito, **nenhuma rota de publicação/comentário envia material a esses provedores**.
 
 ## Opções gratuitas verificadas
 1. **API OpenAI `omni-moderation-latest`**: moderação de texto e imagem gratuita **para usuários da API**; exige uma chave de API, conectividade e conformidade de privacidade. Algumas categorias só aceitam texto. **Não suporta vídeo ou áudio.** Proibido enviar material conhecido/suspeito de CSAM para o endpoint.
