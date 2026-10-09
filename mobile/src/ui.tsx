@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,Image,Pressable,StyleSheet,Text,TextInput,View} from 'react-native';
 import {VideoView,useVideoPlayer} from 'expo-video';
-import {signedMedia} from './data';
+import {reportSafety,signedMedia} from './data';
 import {theme as t} from './theme';
 export const styles=StyleSheet.create({
  page:{flex:1,backgroundColor:t.bg},screen:{flex:1,paddingHorizontal:18},
@@ -95,4 +95,52 @@ export function ErrorNotice({text}:{text:string}){
 export function Heading({title,subtitle}:{title:string;subtitle:string}){
  return <View style={{paddingVertical:17}}><Text style={styles.title}>{title}</Text>
  <Text style={styles.sub}>{subtitle}</Text></View>;
+}
+
+const REPORT_REASONS=[
+ 'Assédio ou intimidação','Discriminação ou capacitismo',
+ 'Exposição de informações pessoais','Conteúdo sexual inadequado',
+ 'Golpe, spam ou fraude','Outro risco à segurança'
+] as const;
+export function ReportContent({targetType,targetId,userId}:{
+ targetType:'post'|'message';targetId:string;userId:string;
+}){
+ const [open,setOpen]=useState(false);
+ const [reason,setReason]=useState<string>(REPORT_REASONS[0]);
+ const [details,setDetails]=useState('');
+ const [sent,setSent]=useState(false);
+ const [busy,setBusy]=useState(false);
+ const [error,setError]=useState('');
+ const submit=async()=>{
+  if(busy||sent)return;
+  setBusy(true);setError('');
+  try{
+   await reportSafety(userId,targetType,targetId,reason,details);
+   setSent(true);setOpen(false);setDetails('');
+  }catch(e){setError(e instanceof Error?e.message:'Não foi possível enviar sua denúncia.');}
+  finally{setBusy(false);}
+ };
+ if(sent)return <Text accessibilityRole="text" style={styles.muted}>✓ Denúncia recebida</Text>;
+ return <View style={{marginTop:8}}>
+  <Pressable accessibilityRole="button"
+   accessibilityLabel={targetType==='message'?'Denunciar mensagem':'Denunciar publicação'}
+   accessibilityState={{expanded:open}} onPress={()=>{setOpen(x=>!x);setError('');}}>
+   <Text style={styles.secondaryText}>⚑ Denunciar</Text>
+  </Pressable>
+  {open&&<View style={{padding:12,marginTop:8,backgroundColor:t.subtle,borderRadius:12,gap:8}}>
+   <Text style={styles.primaryText}>Enviar denúncia</Text>
+   <Text style={styles.muted}>A pessoa denunciada não recebe aviso. Nossa equipe analisará o conteúdo.</Text>
+   {REPORT_REASONS.map(item=><Pressable key={item} accessibilityRole="radio"
+    accessibilityState={{checked:reason===item}} onPress={()=>setReason(item)}
+    style={[styles.secondary,reason===item&&{backgroundColor:t.primary}]}>
+    <Text style={[styles.secondaryText,reason===item&&{color:'white'}]}>{item}</Text>
+   </Pressable>)}
+   <TextInput style={styles.input} value={details} onChangeText={setDetails}
+    accessibilityLabel="Informações adicionais" multiline maxLength={350}
+    placeholder="Detalhes opcionais, sem dados pessoais de crianças"/>
+   <ErrorNotice text={error}/>
+   <Action disabled={busy} label={busy?'Enviando...':'Enviar denúncia'} onPress={()=>void submit()}/>
+   <Action secondary label="Cancelar" onPress={()=>setOpen(false)}/>
+  </View>}
+ </View>;
 }
