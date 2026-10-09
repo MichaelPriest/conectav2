@@ -210,3 +210,18 @@ credencial/sessão ou cadastro não concluído e traz um botão para
 **testar o próprio dispositivo** (sem criar mensagem nem usuário fictício).
 Esse teste autentica o usuário e envia Web Push somente à sua
 própria inscrição persistida, com limitação por sessão do servidor.
+
+## Chat V4.7 — Render reverse proxy e erro "Origem inválida"
+
+O Next.js executado atrás do proxy HTTPS do Render pode receber `request.url`
+com host interno `localhost:10000`, enquanto o navegador envia
+`Origin: https://conectav2-validacao.onrender.com`. Comparar os dois hosts
+diretamente recusava a inscrição Push com HTTP 403. Corrigimos a verificação
+para aceitar apenas os **domínios públicos exatos** de homologação Render e
+produção Vercel, além do domínio adicional opcional
+`CHAT_PUSH_PUBLIC_ORIGIN` (HTTPS, sem caminho, configurado pelo servidor).
+URLs ou cabeçalhos `X-Forwarded-Host` fornecidos pelo cliente não autorizam
+origens arbitrárias; requisições `Sec-Fetch-Site: cross-site` são negadas.
+Endpoints continuam exigindo JWT autenticado e webhook continua com HMAC.
+Cobertura CI inclui host interno Render, site fraudulento, portas, subdomínios,
+local dev e Fetch Metadata. Não é necessária chave nova nem alteração no banco.

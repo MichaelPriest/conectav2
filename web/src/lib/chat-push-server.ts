@@ -2,6 +2,7 @@ import {createClient} from '@supabase/supabase-js';
 import type {NextRequest} from 'next/server';
 import {createHash} from 'node:crypto';
 import {allowedChatPushEndpoint,validChatPushKey,validChatPushSubject} from '@/lib/chat-web-push';
+import {allowedChatPushRequestOrigin} from '@/lib/chat-push-origin';
 
 export function chatPushReady():boolean{
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -16,8 +17,12 @@ export function chatPushEndpointHash(endpoint:string){
   return createHash('sha256').update(endpoint).digest('hex');
 }
 export function chatPushRequestAllowed(request:NextRequest):boolean{
-  const origin=request.headers.get('origin');
-  return !origin||origin===new URL(request.url).origin;
+  return allowedChatPushRequestOrigin({
+    requestUrl:request.url,
+    origin:request.headers.get('origin'),
+    fetchSite:request.headers.get('sec-fetch-site'),
+    extraTrustedOrigin:process.env.CHAT_PUSH_PUBLIC_ORIGIN
+  });
 }
 export async function chatPushContext(request:NextRequest){
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL;
