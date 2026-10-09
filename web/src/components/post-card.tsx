@@ -10,6 +10,7 @@ import {ProfileAvatar} from '@/components/profile-avatar';
 import {PollCard} from '@/components/poll-card';
 import {MentionInput,MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
+import {ModerationAppealButton} from '@/components/moderation-appeal-button';
 import {requestCommentModeration} from '@/lib/submit-moderation';
 
 function ago(value: string) {
@@ -133,6 +134,7 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
       <strong>{post.moderation_status==='rejected'?'Publicação não aprovada':'Publicação em análise'}</strong>
       <span>{post.moderation_status==='rejected'?'Esta publicação não está disponível para outras pessoas.':'Você consegue visualizar este conteúdo enquanto ele é analisado. Ele ainda não aparece para outras pessoas.'}</span>
     </div>}
+    {post.moderation_status==='rejected'&&post.author_id===userId&&<ModerationAppealButton kind="post" targetId={post.id}/>}
     <div className="post-body">{post.content && <p><MentionText text={post.content}/></p>}{media.length>0 && (media.length===1 && media[0].type==='video'
       ? <div className="post-media"><video src={media[0].url} controls preload="metadata"/></div>
       : <div className={'post-gallery '+(media.length===1?'gallery-one':media.length===2?'gallery-two':'gallery-mosaic')}>
@@ -164,12 +166,14 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
         <div className="comment">
           <ProfileAvatar person={root.profiles} size="tiny"/>
           <div><strong>{root.profiles?.display_name||'Pessoa'}</strong><p><MentionText text={root.body}/></p><small>{ago(root.created_at)}</small>{root.moderation_status!=='approved'&&<small className="conecta-comment-review">{root.moderation_status==='pending'?'Em análise · visível apenas a você e à moderação':'Comentário não aprovado'}</small>}
+            {root.moderation_status==='rejected'&&root.author_id===userId&&<ModerationAppealButton kind="comment" targetId={root.id}/>}
             {root.moderation_status==='approved'&&<button className="conecta-reply-link" type="button" onClick={()=>{setReplyTo(root);setComment('');}}><Reply size={14}/> Responder</button>}
           </div>
         </div>
         {comments.filter(cm=>cm.parent_id===root.id).map(reply=><div className="comment conecta-comment-reply" key={reply.id}>
           <ProfileAvatar person={reply.profiles} size="tiny"/>
-          <div><strong>{reply.profiles?.display_name||'Pessoa'}</strong><p><MentionText text={reply.body}/></p><small>{ago(reply.created_at)}</small>{reply.moderation_status!=='approved'&&<small className="conecta-comment-review">{reply.moderation_status==='pending'?'Em análise':'Resposta não aprovada'}</small>}</div>
+          <div><strong>{reply.profiles?.display_name||'Pessoa'}</strong><p><MentionText text={reply.body}/></p><small>{ago(reply.created_at)}</small>{reply.moderation_status!=='approved'&&<small className="conecta-comment-review">{reply.moderation_status==='pending'?'Em análise':'Resposta não aprovada'}</small>}
+            {reply.moderation_status==='rejected'&&reply.author_id===userId&&<ModerationAppealButton kind="comment" targetId={reply.id}/></div>
         </div>)}
       </div>)}
       {replyTo&&<div className="conecta-reply-to">Respondendo a @{replyTo.profiles?.handle||'pessoa'} <button type="button" onClick={()=>setReplyTo(null)}>Cancelar</button></div>}
