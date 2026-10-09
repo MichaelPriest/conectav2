@@ -8,6 +8,11 @@ export type Post={
  post_likes:{count:number}[];post_comments:{count:number}[];
  post_media:{storage_path:string;media_type:string;position:number}[];
 };
+export type PostComment={
+ id:string;post_id:string;parent_id:string|null;author_id:string;
+ body:string;moderation_status:'approved'|'pending'|'rejected';
+ created_at:string;profiles:{display_name:string;handle:string;avatar_path:string|null}|null;
+};
 export type Friendship={id:string;requester_id:string;addressee_id:string;status:string;created_at:string};
 export type Community={id:string;slug:string;name:string;description:string;cover_path:string|null;avatar_path:string|null;is_official:boolean};
 export type Notice={id:string;kind:string;created_at:string;read_at:string|null;entity_id:string|null;profiles:{display_name:string;handle:string}|null};
