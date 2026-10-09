@@ -260,15 +260,16 @@ export default function Messages(){
        ()=>{void loadThreads();})
      .on('postgres_changes',{schema:'public',table:'conversation_members',event:'INSERT',
        filter:'user_id=eq.'+auth.user.id},()=>{void loadThreads();})
-     .on('postgres_changes',{schema:'public',table:'conversation_members',event:'DELETE'},
-       ()=>{void loadThreads();})
      .on('postgres_changes',{schema:'public',table:'conversations',event:'UPDATE'},
        ()=>{void loadThreads();}).subscribe();
    const refresh=()=>{if(!document.hidden)void loadThreads();};
    window.addEventListener('focus',refresh);
    document.addEventListener('visibilitychange',refresh);
+   // DELETE events do not have row-level authorization in Postgres Changes.
+   // Periodic RLS-filtered refetch is safer than subscribing to DELETE metadata.
+   const membershipTimer=window.setInterval(refresh,45000);
    return()=>{window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);
-     void db.removeChannel(channel);};
+     window.clearInterval(membershipTimer);void db.removeChannel(channel);};
  },[auth.user,loadThreads]);
  useEffect(()=>{const name=new URLSearchParams(window.location.search).get('to');if(name)setRecipient(name);},[]);
  useEffect(()=>{

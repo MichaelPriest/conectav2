@@ -166,16 +166,16 @@ export function ChatWidget({userId}:{userId:string}){
        })
      .on('postgres_changes',{schema:'public',table:'conversation_members',event:'INSERT',
        filter:'user_id=eq.'+userId},()=>{void loadThreads();})
-     .on('postgres_changes',{schema:'public',table:'conversation_members',event:'DELETE'},
-       ()=>{void loadThreads();})
      .on('postgres_changes',{schema:'public',table:'conversations',event:'UPDATE'},
        ()=>{void loadThreads();})
      .subscribe();
    const refresh=()=>{if(!document.hidden){void loadThreads();void loadContacts();}};
    window.addEventListener('focus',refresh);
    document.addEventListener('visibilitychange',refresh);
+   // Membership removals are fetched through RLS, never through unfiltered DELETE events.
+   const membershipTimer=window.setInterval(refresh,45000);
    return()=>{window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);
-     void db.removeChannel(channel);};
+     window.clearInterval(membershipTimer);void db.removeChannel(channel);};
  },[loadThreads,loadContacts,userId]);
  useEffect(()=>{
    if(!open||!active)return;

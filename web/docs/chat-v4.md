@@ -45,3 +45,11 @@ e o widget recarregam as conversas em convites, remoções e atualizações do g
 revalidação ao voltar para a aba como fallback para eventos perdidos. A paginação conserva
 o histórico antigo durante novas mensagens e preserva a posição da leitura ao carregar
 mensagens anteriores.
+
+### Proteção contra divulgação por eventos DELETE
+
+Não há assinatura de `DELETE` em `conversation_members`: no Realtime, esses eventos
+não permitem validar o antigo registro via RLS. Entradas e atualizações chegam por
+eventos com checagem de acesso; saídas e remoções são reconciliadas por consulta
+protegida por RLS a cada 45 segundos quando a página está visível ou ao retornar
+para a aba. Isso prioriza a privacidade em vez de prometer entrega instantânea.
