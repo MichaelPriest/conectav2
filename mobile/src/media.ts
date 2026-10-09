@@ -1,6 +1,6 @@
 import {File} from 'expo-file-system';
 import {randomUUID} from 'expo-crypto';
-import {normalizeMedia} from './media-validation';
+import {normalizeMedia,MAX_MEDIA_BYTES} from './media-validation';
 import type {SelectedMedia} from './media-validation';
 export {normalizeMedia};
 export type {SelectedMedia};
@@ -21,7 +21,7 @@ export async function publishMediaPost(
  if(!session||session.user.id!==userId)throw new Error('Sua sessão expirou. Entre novamente.');
  const files=selected.map(media=>{
   const file=new File(media.uri);
-  if(!file.exists||file.size<=0||file.size>MAX_BYTES)
+  if(!file.exists||file.size<=0||file.size>MAX_MEDIA_BYTES)
    throw new Error('Uma mídia não está acessível ou excede 50 MB. Escolha novamente.');
   return {media,file};
  });
