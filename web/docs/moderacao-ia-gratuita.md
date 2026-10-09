@@ -2,6 +2,16 @@
 
 **Estado da integração (09/10/2026):** fontes, rotas, banco e revisão humana implementados. **Não afirmar que os modelos estão ativos sem configurar um provedor.** A implantação do worker de ML não faz parte da instância web Render; usa infraestrutura própria com capacidade de CPU/RAM.
 
+## Execução sem chaves pagas (padrão de outubro/2026)
+
+O Conecta integra [NSFWJS](https://github.com/infinitered/nsfwjs) **MIT** com [TensorFlow.js](https://github.com/tensorflow/tfjs) **Apache 2.0** e Sharp no lado do servidor. O modelo MobileNetV2 vem incluído no pacote npm (~3,5 MB), **não precisa baixar pesos de uma API nem de token**, analisa imagens de posts e Stories e identifica indícios de nudez/sexualidade (Porn, Hentai, Sexy, Neutral, Drawing). A inferência é executada por `web/src/lib/open-source-image-moderation.ts`, com cache do modelo em processo, normalização de imagens e limite de tamanho. O pipeline mantém a mídia sob revisão mesmo quando o modelo pontua como neutra porque **não é detector de violência, assédio, fraude, CSAM ou proteção infantil**.
+
+- Para funcionar no ambiente Vercel/Render, o servidor de aplicação precisa já possuir `SUPABASE_SERVICE_ROLE_KEY` **somente nas variáveis privadas do servidor**, além da URL e chave publicável. Sem esse segredo, a rota autenticada de classificação não pode acessar o banco com segurança nem registrar o resultado — ela não cria permissões artificiais no navegador.
+- Não há cobrança por token de IA. A execução consome **CPU, RAM e invocações da hospedagem existente** e pode exceder limites de planos gratuitos sob volume grande. Não há garantia de hospedagem com custo zero.
+- O CI executa `npm run test:moderation` usando o **modelo verdadeiro**, sobre imagem neutra produzida durante o teste (sem mocks). Falhas do classificador nunca liberam mídia automaticamente.
+- Vídeos, áudios e textos complexos ainda exigem revisão humana no fluxo básico. O worker Python opcional tem modelos abertos maiores, mas necessita uma máquina para executá-los. Evitamos ativar modelos ONNX de centenas de MB em cada execução do Vercel Hobby sem ensaio real de consumo.
+- As rotas antigas com OpenAI/worker continuam compatíveis onde já estão configuradas, mas **chaves externas não são necessárias para a nova triagem visual local**.
+
 ## Opções gratuitas verificadas
 1. **API OpenAI `omni-moderation-latest`**: moderação de texto e imagem gratuita **para usuários da API**; exige uma chave de API, conectividade e conformidade de privacidade. Algumas categorias só aceitam texto. **Não suporta vídeo ou áudio.** Proibido enviar material conhecido/suspeito de CSAM para o endpoint.
    - https://developers.openai.com/api/docs/guides/moderation
