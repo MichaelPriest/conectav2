@@ -12,7 +12,10 @@ Não usa um WebView como interface principal.
   A criação de conta permanece no cadastro web protegido (não inventar uma
   verificação nativa que não existe).
 - Feed real, com paginação, curtidas, exibição de mídias aprovadas e
-  publicação de texto pelo mesmo caminho de moderação do site.
+  publicação de texto, fotos (até cinco) ou vídeo (um por vez, até 50 MB),
+  seleção da galeria/câmera, visualização nativa de vídeo, rascunhos locais
+  separados por conta, compartilhamento nativo e favoritos salvos.
+  Comentários e respostas usam o fluxo de moderação do site.
 - Conexões: solicitações, aceitar, remover, descobrir e começar conversa,
   usando o RPC existente com verificação de amizade/participação.
 - Chat privado e em grupo: inbox, contadores, últimas mensagens, texto,
@@ -24,7 +27,7 @@ Não usa um WebView como interface principal.
 - Identidade visual Conecta para Android e iOS, navegação nativa inferior.
 
 **Não incluídos nesta etapa:** chamadas WebRTC nativas, mensagens de voz,
-upload de mídia/reels/stories, notificações push APNs/FCM, moderação
+publicação nativa de Reels/Stories, notificações push APNs/FCM, moderação
 administrativa mobile, e certificados de assinatura de distribuição. Os
 recursos web continuam disponíveis pelo site; não anunciar paridade total.
 
@@ -81,7 +84,11 @@ registro de tokens por dispositivo e disparo autorizado pelo backend.
 - Sem bypass de declaração etária; o banco segue com RLS, antiflood e filtros
   de moderação. Mesmo se a chamada de moderação falhar, uma publicação não
   deverá ser tornada pública pelo app.
-- Acesso à galeria é somente leitura via links assinados de curta duração.
+- Fotos e vídeos publicados são enviados pelo usuário autenticado para o bucket
+  `social-media` e vinculados a `posts` + `post_media`, sob as mesmas políticas
+  RLS e moderação do site. Em falhas tenta apagar dados parciais.
+- Leitura das mídias usa URLs assinadas de curta duração; as permissões da
+  câmera são solicitadas somente após uma ação do usuário.
 - O login na página web não compartilha automaticamente cookies com o app:
   após criar/verificar a conta no site, entrar com as mesmas credenciais no app.
 - Fotos de usuários e mensagens não são reproduzidas com dados fictícios.
@@ -99,3 +106,26 @@ Run workflow. Se aprovada, baixe o artefato `conecta-v2-android-apk-teste`.
 A compilação no runner usa a assinatura de desenvolvimento gerada pelo
 projeto, **nunca** certificados definitivos nem assinatura para loja.
 Só execute builds quando necessário para controlar os minutos do GitHub.
+
+## Roteiro de homologação — versão Alpha mobile
+
+1. Entre com uma conta **18+ verificada**, depois repita com perfil incompleto
+   para confirmar o bloqueio de cadastro e idade.
+2. Selecione 1 e 5 fotos, veja as prévias, publique e confirme imagens no
+   feed e no site usando a mesma conta. Tente 6 fotos ou arquivo acima de
+   50 MB: o app deve recusar.
+3. Publique um vídeo com legenda e reproduza no feed nativo; confirme a
+   disponibilidade na versão web. Repita com permissão de câmera negada.
+4. Comente uma publicação e responda outro comentário. Valide que comentários
+   pendentes de moderação não se tornam públicos por ação do aplicativo.
+5. Salve uma publicação e confirme a aba **Salvos**; remova e reabra a aba.
+6. Escreva uma publicação sem enviar, reinicie o aplicativo e valide o
+   rascunho. Envie ou descarte e confirme que o rascunho não reaparece.
+7. Troque de conta: o rascunho da conta anterior não deve ser exibido.
+8. Teste chat, conexões, notificações, perfil e logout; valide que conteúdo
+   privado não aparece após encerrar a sessão.
+9. Valide em aparelhos Android e iOS reais. A execução dos testes/TypeScript
+   no GitHub não substitui o teste do APK e nem equivale a build iOS assinada.
+
+As partes ainda disponíveis só no site devem permanecer acessíveis sem
+fingir que foram implementadas no aplicativo.
