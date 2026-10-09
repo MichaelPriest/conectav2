@@ -12,8 +12,8 @@ import {SITE_URL,supabase} from './src/supabase';
 import type {ChatMessage,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './src/models';
 import {
  changeConnection,changeMembership,clearMediaCache,loadChatMessages,loadCommunities,
- loadConnections,loadFeed,loadNotifications,loadPostComments,loadThreads,markNotifications,myLikes,
- publishTextPost,readConversation,sendMessage,sendPostComment,setLike,startChat,updateMyProfile,verifyAccess
+ loadConnections,loadFeed,loadNotifications,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
+ publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,startChat,updateMyProfile,verifyAccess
 } from './src/data';
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
@@ -95,8 +95,9 @@ function Restricted({status,onRetry,onLogout}:{
  </View>;
 }
 
-function PostCard({post,userId,liked,onLike,onComment}:{
- post:Post;userId:string;liked:boolean;onLike:(post:Post)=>void;
+function PostCard({post,userId,liked,saved,onLike,onSave,onComment}:{
+ post:Post;userId:string;liked:boolean;saved:boolean;
+ onLike:(post:Post)=>void;onSave:(post:Post)=>void;
  onComment:(postId:string)=>void;
 }){
  const author=post.profiles?.display_name||'Pessoa do Conecta';
@@ -152,7 +153,7 @@ function PostCard({post,userId,liked,onLike,onComment}:{
   {images.map(path=><Media key={path} path={path}/>)}
   {!!videoPath&&<VideoMedia path={videoPath}/>} 
   <View style={s.separator}/>
-  <View style={[s.row,{justifyContent:'space-between'}]}>
+  <View style={[s.row,{justifyContent:'space-between',flexWrap:'wrap',gap:9}]}>
    <Pressable onPress={()=>onLike(post)} hitSlop={9}>
     <Text style={[s.secondaryText,{color:liked?t.pink:t.primary,fontSize:13}]}>
      {liked?'♥':'♡'} {count} curtidas
@@ -161,6 +162,10 @@ function PostCard({post,userId,liked,onLike,onComment}:{
    <Pressable accessibilityRole="button" accessibilityLabel="Ver comentários"
     accessibilityState={{expanded:commentsOpen}} onPress={()=>void toggleComments()}>
     <Text style={s.secondaryText}>◌ {comments} comentários {commentsOpen?'⌃':'⌄'}</Text>
+   </Pressable>
+   <Pressable accessibilityRole="button" accessibilityLabel={saved?'Remover dos salvos':'Salvar publicação'}
+    accessibilityState={{selected:saved}} onPress={()=>onSave(post)}>
+    <Text style={[s.secondaryText,saved&&{color:t.pink}]}>{saved?'▣ Salvo':'▢ Salvar'}</Text>
    </Pressable>
    <Pressable accessibilityRole="button" accessibilityLabel="Compartilhar publicação"
     onPress={()=>void Share.share({message:SITE_URL+'/post/'+encodeURIComponent(post.id)})
@@ -212,6 +217,8 @@ function PostCard({post,userId,liked,onLike,onComment}:{
 }
 function FeedScreen({userId}:{userId:string}){
  const [posts,setPosts]=useState<Post[]>([]),[liked,setLiked]=useState<Set<string>>(new Set());
+ const [saved,setSaved]=useState<Set<string>>(new Set());
+ const [feedView,setFeedView]=useState<'all'|'saved'>('all');
  const [text,setText]=useState(''),[visibility,setVisibility]=useState<'public'|'friends'|'private'>('public');
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [more,setMore]=useState(false),[loadingMore,setLoadingMore]=useState(false);
@@ -249,12 +256,15 @@ function FeedScreen({userId}:{userId:string}){
  const postLength=text.trim().length;
  const validPost=(postLength>0||media.length>0)&&postLength<=3000;
  const load=useCallback(async(offset=0)=>{
-  const result=await loadFeed(offset);
-  const ownLikes=await myLikes(userId,result.items.map(x=>x.id));
-  setPosts(previous=>offset?[...previous.filter(p=>!result.items.some(x=>x.id===p.id)),...result.items]:result.items);
+  const result=feedView==='saved'?
+   {items:await loadSavedPosts(userId),more:false}:await loadFeed(offset);
+  const ids=result.items.map(x=>x.id);
+  const [ownLikes,ownSaved]=await Promise.all([myLikes(userId,ids),mySaved(userId,ids)]);
+  setPosts(previous=>offset?[...previous.filter(p=>!ids.includes(p.id)),...result.items]:result.items);
   setLiked(previous=>new Set([...(!offset?[]:Array.from(previous)),...Array.from(ownLikes)]));
+  setSaved(previous=>new Set([...(!offset?[]:Array.from(previous)),...Array.from(ownSaved)]));
   setMore(result.more);
- },[userId]);
+ },[userId,feedView]);
  const refresh=useCallback(async()=>{
   setLoading(true);setError('');
   try{await load(0);}catch(e){setError(errorMessage(e));}
@@ -302,9 +312,29 @@ function FeedScreen({userId}:{userId:string}){
     {...item,post_likes:[{count:Math.max(0,(item.post_likes?.[0]?.count||0)+(wasLiked?-1:1))}]}:item));
   }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
  };
+ const toggleSave=async(post:Post)=>{
+  if(busy)return;
+  setBusy(true);setError('');
+  const wasSaved=saved.has(post.id);
+  try{
+   await setSavedPost(post.id,userId,wasSaved);
+   setSaved(previous=>{const next=new Set(previous);
+    if(wasSaved)next.delete(post.id);else next.add(post.id);
+    return next;
+   });
+   if(wasSaved&&feedView==='saved')setPosts(previous=>previous.filter(p=>p.id!==post.id));
+  }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
+ };
  const composer=<View>
   <Heading title="Seu feed" subtitle="Compartilhe histórias e reencontre suas conexões."/>
-  <View style={s.card}>
+  <View style={[s.row,{gap:8,marginBottom:10}]}>
+   {([['all','Publicações'],['saved','Salvos']] as const).map(([key,label])=>
+    <Pressable key={key} accessibilityRole="tab" accessibilityState={{selected:feedView===key}}
+     onPress={()=>setFeedView(key)} style={[s.secondary,feedView===key&&{backgroundColor:t.primary}]}>
+     <Text style={[s.secondaryText,feedView===key&&{color:'#FFF'}]}>{label}</Text>
+    </Pressable>)}
+  </View>
+  {feedView==='all'&&<View style={s.card}>
    <Text style={[s.primaryText,{marginBottom:5}]}>No que você está pensando?</Text>
    <Field value={text} onChangeText={setText} placeholder="Conte algo para a sua rede..." multiline/>
     <Text accessibilityLiveRegion="polite" style={[s.muted,{textAlign:'right',marginBottom:10,color:postLength>3000?t.danger:t.muted}]}>{postLength}/3000 caracteres</Text>
@@ -350,20 +380,23 @@ function FeedScreen({userId}:{userId:string}){
    <Text style={[s.muted,{marginTop:8}]}>
     Até cinco fotos ou um vídeo de até 50 MB. Conteúdo sujeito às regras de moderação do Conecta.
    </Text>
-  </View>
+  </View>}
   <ErrorNotice text={error}/>
  </View>;
  return <FlatList style={s.screen} data={posts} keyExtractor={item=>item.id}
   refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void refresh()} tintColor={t.primary}/>}
   ListHeaderComponent={composer}
   renderItem={({item})=><PostCard post={item} userId={userId}
-   liked={liked.has(item.id)} onLike={post=>void toggleLike(post)}
+   liked={liked.has(item.id)} saved={saved.has(item.id)}
+   onLike={post=>void toggleLike(post)} onSave={post=>void toggleSave(post)}
    onComment={postId=>setPosts(current=>current.map(p=>p.id===postId?
     {...p,post_comments:[{count:(p.post_comments?.[0]?.count||0)+1}]}:p))}/>}
-  ListEmptyComponent={!loading?<View style={s.empty}><Text style={s.primaryText}>Nenhuma publicação ainda</Text>
-   <Text style={s.muted}>Novidades da sua rede aparecerão aqui.</Text></View>:<Loading/>}
+  ListEmptyComponent={!loading?<View style={s.empty}>
+   <Text style={s.primaryText}>{feedView==='saved'?'Nenhuma publicação salva':'Nenhuma publicação ainda'}</Text>
+   <Text style={s.muted}>{feedView==='saved'?'Use o botão Salvar nas publicações.':'Novidades da sua rede aparecerão aqui.'}</Text>
+  </View>:<Loading/>}
   onEndReachedThreshold={0.4}
-  onEndReached={()=>{if(loading||loadingMore||!more)return;setLoadingMore(true);
+  onEndReached={()=>{if(loading||loadingMore||!more||feedView==='saved')return;setLoadingMore(true);
    void load(posts.length).catch(e=>setError(errorMessage(e))).finally(()=>setLoadingMore(false));}}
   ListFooterComponent={loadingMore?<Loading/>:<View style={{height:20}}/>}/>;
 }
