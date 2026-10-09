@@ -8,6 +8,7 @@ import {supabaseBrowser} from '@/lib/supabase/browser';
 import {EmojiButton} from '@/components/emoji-button';
 import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
 import {optimizeImage} from '@/lib/media';
+import {MentionInput,MentionText} from '@/components/mention-input';
 
 type Person={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Conversation={id:string;title:string|null;created_at:string;created_by:string};
@@ -323,7 +324,7 @@ export default function Messages(){
          {hasOlder&&<button className="btn btn-outline" type="button" disabled={loadingMessages} onClick={()=>void loadMessages(active,true)}>Carregar mensagens anteriores</button>}
          {messages.length===0&&!loadingMessages&&<div className="empty-state"><MessageCircle size={30}/><h3>Uma nova conversa começa aqui.</h3><p>Respeite a privacidade e a vontade de quem participa.</p></div>}
          {messages.map(m=><article key={m.id} className={'conecta-message '+(m.sender_id===auth.user?.id?'own':'other')}>
-           {m.content&&<p>{m.content}</p>}{m.content&&parseMusicUrl(m.content)&&<MusicEmbed url={m.content}/>}
+           {m.content&&<p><MentionText text={m.content}/></p>}{m.content&&parseMusicUrl(m.content)&&<MusicEmbed url={m.content}/>}
            <MessageMedia message={m}/>
            <time>{new Date(m.created_at).toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})}</time>
          </article>)}
@@ -340,7 +341,7 @@ export default function Messages(){
          <button type="button" className={'icon-btn '+(recording?'recording':'')} aria-label={recording?'Parar gravação':'Gravar áudio'} title={recording?'Parar gravação':'Gravar recado de voz'} disabled={sending}
            onClick={()=>{if(recording)stopRecording();else void startRecording();}}>{recording?<Square size={19}/>:<Mic size={19}/>}</button>
          <EmojiButton onSelect={emoji=>setCompose(t=>(t+emoji).slice(0,4000))}/>
-         <input aria-label="Escrever mensagem" value={compose} onChange={e=>setCompose(e.target.value)} maxLength={4000} placeholder={recording?'Gravando áudio...':'Escreva uma mensagem...'}/>
+         <MentionInput as="input" label="Escrever mensagem" value={compose} onChange={setCompose} maxLength={4000} placeholder={recording?'Gravando áudio...':'Escreva uma mensagem ou marque @usuário...'}/>
          <button className="btn btn-primary" type="submit" disabled={sending||recording||(!compose.trim()&&!attachment)}>{sending?<Loader2 size={19} className="spin"/>:<Send size={19}/>}<span>Enviar</span></button>
        </form></>:<div className="conecta-chat-welcome"><MessageCircle size={37}/><h2>Boas conversas começam aqui.</h2><p>Selecione uma conversa ou escolha uma amizade para falar.</p></div>}
      </section>
