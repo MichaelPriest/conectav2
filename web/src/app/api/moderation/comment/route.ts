@@ -1,5 +1,6 @@
 import {NextRequest,NextResponse} from 'next/server';
 import {identityContext} from '@/lib/identity-server';
+import {screenTextAutomatically} from '@/lib/automatic-text-screen';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -20,7 +21,7 @@ export async function POST(request:NextRequest){
  if(!input.id||!uuid.test(input.id))return json({error:'ID inválido.'},400);
 
  const {data:comment,error}=await ctx.admin.from('post_comments')
-   .select('id,post_id,author_id,body,moderation_status,checked_at')
+   .select('id,post_id,parent_id,author_id,body,moderation_status,checked_at')
    .eq('id',input.id).maybeSingle();
  if(error||!comment)return json({error:'Comentário indisponível.'},404);
  if(comment.author_id!==ctx.user.id)return json({error:'Sem permissão.'},403);
@@ -35,6 +36,34 @@ export async function POST(request:NextRequest){
    return json({status:'pending',reason:'Necessária revisão humana especializada.'});
 
  const engine=process.env.CONEXA_MODERATION_ENGINE||'local';
+ if(engine==='local'){
+   // Automatic server-side PT-BR rule screening. Browser results are NEVER trusted.
+   // The larger neural text model is still available as human review assistance.
+   const verdict=screenTextAutomatically(content);
+   const {data:post}=await ctx.admin.from('posts').select('moderation_status')
+     .eq('id',comment.post_id).maybeSingle();
+   let parentApproved=true;
+   if(comment.parent_id){
+     const {data:parent}=await ctx.admin.from('post_comments')
+       .select('moderation_status').eq('id',comment.parent_id).maybeSingle();
+     parentApproved=parent?.moderation_status==='approved';
+   }
+   const allow=post?.moderation_status==='approved'&&parentApproved&&!verdict.reviewRequired;
+   const next=allow?'approved':'pending';
+   const {data:updated,error:e}=await ctx.admin.from('post_comments').update({
+      moderation_status:next,moderation_reason:allow?
+        'Triagem automática de texto PT-BR concluída':
+        post?.moderation_status!=='approved'||!parentApproved?
+        'Aguardando aprovação da publicação ou resposta anterior':verdict.reason,
+      ai_provider:verdict.engine,checked_at:new Date().toISOString()
+   }).eq('id',comment.id).eq('author_id',ctx.user.id)
+     .eq('body',comment.body).eq('moderation_status','pending')
+     .is('checked_at',null).select('id').maybeSingle();
+   if(e||!updated)return json({status:'pending',reason:'Conteúdo alterado durante análise; revisão necessária.'},409);
+   return json({status:next,reason:allow?
+     'Comentário aprovado automaticamente na triagem inicial.':
+     'Comentário sinalizado ou aguardando revisão.'});
+ }
  const openaiKey=engine==='openai'?process.env.OPENAI_API_KEY:null;
  const workerUrl=engine==='worker'?process.env.CONEXA_MODERATION_WORKER_URL:null;
  const workerToken=process.env.CONEXA_MODERATION_WORKER_TOKEN;
