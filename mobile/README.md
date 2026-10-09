@@ -26,6 +26,8 @@ Não usa um WebView como interface principal.
 - Stories nativos de até 24 horas: listagem, câmera/galeria, publicação,
   legenda, privacidade, visualização e exclusão pelo autor, com moderação
   no endpoint real do Conecta.
+- Reels nativos: aba de vídeos públicos, reprodução, curtidas e
+  compartilhamento por folha nativa; publicar vídeo permanece no Feed.
 - Comunidades: listagem, busca e participar/sair. Detalhes avançados são
   abertos pelo site no navegador.
 - Notificações: listagem, atualização em tempo real e marcar como lidas.
@@ -135,11 +137,13 @@ Só execute builds quando necessário para controlar os minutos do GitHub.
    sentidos (Android ↔ site). Confirme que negar microfone não grava nada,
    e que a gravação termina ou é descartada ao deixar a tela.
 10. Teste denúncias nativas de publicações e mensagens e a fila de moderação.
-11. Troque foto de perfil e capa pelo celular e confirme a mudança também no
+11. Abra Reels, reproduza e curta um vídeo público; confirme que vídeos
+    privados e de conexões não aparecem nesta seção.
+12. Troque foto de perfil e capa pelo celular e confirme a mudança também no
     site. Tente um arquivo maior que 8 MB para verificar a proteção.
-12. Teste chat, conexões, notificações, perfil e logout; valide que conteúdo
+13. Teste chat, conexões, notificações, perfil e logout; valide que conteúdo
    privado não aparece após encerrar a sessão.
-13. Valide em aparelhos Android e iOS reais. A execução dos testes/TypeScript
+14. Valide em aparelhos Android e iOS reais. A execução dos testes/TypeScript
    no GitHub não substitui o teste do APK e nem equivale a build iOS assinada.
 
 As partes ainda disponíveis só no site devem permanecer acessíveis sem
