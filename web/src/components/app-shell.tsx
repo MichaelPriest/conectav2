@@ -11,6 +11,7 @@ import { ConceptBrand } from '@/components/concept-brand';
 import {useLocale,LanguageSelect} from '@/lib/i18n';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {ChatWidget} from '@/components/chat-widget';
+import {disableChatPushDevice} from '@/components/chat-push-control';
 
 const navItems = [
   { label: 'Início', href: '/feed', icon: Home },
@@ -152,6 +153,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
   },[profile.id]);
 
   async function logout() {
+    try{await disableChatPushDevice();}catch{/* Prevent cross-account notifications even if push API is unavailable. */}
     await supabaseBrowser().auth.signOut();
     router.replace('/auth'); router.refresh();
   }

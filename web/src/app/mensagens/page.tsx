@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Users,Paperclip,Mic,Square,X,Loader2,Pencil,Trash2,Check,CheckCheck,Reply,Smile,Pin,PinOff,BellOff,Bell,Settings2,UserPlus} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
+import {notifyChatMessageSent} from '@/components/chat-push-control';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {EmojiButton} from '@/components/emoji-button';
 import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
@@ -494,11 +495,12 @@ export default function Messages(){
          .upload(uploadedPath,prepared,{contentType:prepared.type,upsert:false});
        if(uploadError)throw uploadError;
      }
-     const {error:sendError}=await db.from('messages').insert({
+     const {data:sent,error:sendError}=await db.from('messages').insert({
        conversation_id:active,sender_id:auth.user.id,content:value,
        media_path:uploadedPath||null,media_type:mediaType,reply_to:replyTo?.id||null
-     });
+     }).select('id').single();
      if(sendError)throw sendError;
+     if(sent?.id)void notifyChatMessageSent(sent.id);
      setCompose('');setAttachment(null);setReplyTo(null);await loadMessages(active);await loadThreads();
    }catch(e){
      if(uploadedPath)await db.storage.from('social-media').remove([uploadedPath]);

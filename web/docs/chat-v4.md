@@ -87,3 +87,40 @@ conversa privada existente (exatamente dois integrantes e `is_group=false`)
 e reutiliza o ID em vez de criar conversas duplicadas. Criação de grupos mantém
 o fluxo atômico anterior. Conversas duplicadas legadas não são apagadas e não
 sofrem merge automático para evitar perda de histórico.
+
+## Web Push opt-in — Chat V4.3 (gratuito, sem conteúdo privado)
+
+O mensageiro tem agora infraestrutura Web Push baseada em padrões abertos, Service Worker
+`/sw-chat-push.js` e biblioteca livre `web-push` (VAPID). Cada dispositivo
+assina individualmente, o servidor exige JWT autenticado para associá-lo e remove
+a inscrição ao desativar ou sair da conta. Um cadastro de outro usuário no mesmo
+dispositivo substitui a associação anterior ao mesmo endpoint. Não há acesso
+de usuários às chaves de inscrição pela Data API: elas ficam em tabela privada
+ao navegador, com RLS, disponíveis apenas ao backend service_role.
+
+Ao enviar uma mensagem, o remetente autentica sua chamada de dispatch por JWT;
+o backend confirma autoria, conversa, idade da mensagem, participação e bloqueios,
+respeita silenciamento e leitura já registrada. A chave primária por mensagem
+impede push repetido em múltiplas abas. O Service Worker apresenta exclusivamente
+`Conecta · Nova mensagem` / `Você recebeu uma nova mensagem.`. O backend não
+repassa texto de DM, nomes, IDs de conversa, fotos ou anexos a gateways push.
+
+**Ativação operacional necessária:** configurar no servidor a chave de serviço do
+Supabase, `WEB_PUSH_VAPID_PUBLIC_KEY`, `WEB_PUSH_VAPID_PRIVATE_KEY` e
+`WEB_PUSH_VAPID_SUBJECT=mailto:<email de contato>`. Gere as chaves uma única vez
+com `npx web-push generate-vapid-keys` e mantenha a privada apenas nas variáveis
+secretas do Render/Vercel (nunca no GitHub ou em `NEXT_PUBLIC_`).
+Com configuração incompleta, `GET /api/chat/push/config` retorna
+`{enabled:false,publicKey:null}`, e o controle de Push fica desabilitado,
+sem fingir envio. O navegador deve suportar Push API e contexto HTTPS; no
+iPhone/iPad o Web Push pode requerer instalação como app na tela inicial.
+
+**Limitações:** no primeiro estágio o envio de push é solicitado pelo navegador
+do *remetente* após a gravação da mensagem. O destinatário pode estar com o
+navegador fechado, mas, se o remetente desconectar antes do dispatch, a notificação
+não é garantida. O envio é at-most-once (não há fila/retries). Isso é distinto
+das notificações locais anteriores, que dependem de aba aberta. Os gateways de push
+são limitados a provedores HTTPS permitidos para prevenir SSRF, e o envio é
+best-effort dentro das cotas gratuitas do provedor e hospedagem. A entrega real
+de ponta a ponta exige validar o deploy com as chaves configuradas e uma
+assinatura real de navegador; testes de CI cobrem funções e regras de privacidade.

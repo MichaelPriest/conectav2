@@ -50,6 +50,8 @@ jobs:
         run: node --test tests/chat-v4-timeline.test.cjs
       - name: Chat V4 group role regressions
         run: node --test tests/chat-v4-group-permissions.test.cjs
+      - name: Privacy and Web Push regression tests
+        run: node --test tests/chat-web-push.test.cjs
       - name: Check TypeScript
         run: npm run typecheck
       - name: Regression tests for nullable profile details

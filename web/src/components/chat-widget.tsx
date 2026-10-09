@@ -7,6 +7,7 @@ import {MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
 import {useChatTyping} from '@/lib/use-chat-typing';
 import {ProfileAvatar} from '@/components/profile-avatar';
+import {ChatPushControl,notifyChatMessageSent} from '@/components/chat-push-control';
 type Thread={id:string;title:string;group:boolean;otherNames:string;otherId:string|null;other:Contact|null;lastAt:string;unread:number;preview:string;mutedUntil:string|null};
 type Contact={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Msg={id:string;conversation_id:string;sender_id:string;content:string;created_at:string;media_type:string|null;edited_at:string|null;deleted_at:string|null};
@@ -202,10 +203,10 @@ export function ChatWidget({userId}:{userId:string}){
  async function send(e:FormEvent){
    e.preventDefault();if(!active||sending||!text.trim())return;
    const content=text.trim();setSending(true);setError('');
-   const {error:e2}=await supabaseBrowser().from('messages').insert({
+   const {data:sent,error:e2}=await supabaseBrowser().from('messages').insert({
      conversation_id:active.id,sender_id:userId,content
-   });
-   if(e2)setError(e2.message);else{setText('');await loadMessages(active.id);}
+   }).select('id').single();
+   if(e2)setError(e2.message);else{setText('');if(sent?.id)void notifyChatMessageSent(sent.id);await loadMessages(active.id);}
    setSending(false);
  }
  return <div className="conecta-floating-chat">
@@ -219,6 +220,7 @@ export function ChatWidget({userId}:{userId:string}){
          title={alertsEnabled?'Desativar avisos neste navegador':'Ativar avisos neste navegador'}
          aria-label={alertsEnabled?'Desativar notificações':'Ativar notificações'} onClick={()=>void toggleBrowserAlerts()}>
          {alertsEnabled?<Bell size={18}/>:<BellOff size={18}/>}</button>
+       <ChatPushControl/>
        <Link href="/mensagens" aria-label="Abrir todas as mensagens" title="Abrir mensagens"><ExternalLink size={18}/></Link>
        <button className="icon-btn" type="button" aria-label="Fechar chat" onClick={()=>toggle(false)}><X size={20}/></button>
      </header>
