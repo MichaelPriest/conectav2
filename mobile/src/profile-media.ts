@@ -15,7 +15,8 @@ export async function loadCover(userId:string):Promise<string|null>{
 export async function changeProfilePhoto(
  userId:string,media:SelectedMedia,kind:'avatar'|'cover'
 ):Promise<{profile?:Profile;path:string}>{
- if(media.kind!=='image')throw new Error('Selecione uma imagem para o perfil.');
+ if(media.kind!=='image'||!['image/jpeg','image/png','image/webp'].includes(media.mimeType))
+  throw new Error('Foto de perfil: utilize JPG, PNG ou WebP.');
  if(media.size!==undefined&&media.size>PROFILE_LIMIT)
   throw new Error('Fotos de perfil e capa podem ter no máximo 8 MB.');
  const {data:{session}}=await supabase.auth.getSession();
