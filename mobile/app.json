@@ -34,6 +34,13 @@
           "cameraPermission": "O Conecta utiliza a câmera apenas quando você escolher tirar uma foto.",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": false,
+          "supportsPictureInPicture": false
+        }
       ]
     ]
   }
