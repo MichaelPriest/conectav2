@@ -1,10 +1,11 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {
- Alert,AppState,FlatList,KeyboardAvoidingView,Linking,Platform,Pressable,Share,
+ Alert,AppState,FlatList,Image,KeyboardAvoidingView,Linking,Platform,Pressable,Share,
  RefreshControl,SafeAreaView,ScrollView,StatusBar as NativeStatusBar,
  StyleSheet,Text,TextInput,View
 } from 'react-native';
 import {StatusBar} from 'expo-status-bar';
+import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {User} from '@supabase/supabase-js';
 import {SITE_URL,supabase} from './src/supabase';
@@ -16,6 +17,8 @@ import {
 } from './src/data';
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
+import {normalizeMedia,publishMediaPost} from './src/media';
+import type {SelectedMedia} from './src/media';
 
 type Tab='feed'|'connections'|'messages'|'communities'|'notifications'|'profile';
 const TABS:{tab:Tab;symbol:string;title:string}[]=[
@@ -149,6 +152,7 @@ function FeedScreen({userId}:{userId:string}){
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [more,setMore]=useState(false),[loadingMore,setLoadingMore]=useState(false);
  const [draftReady,setDraftReady]=useState(false);
+ const [media,setMedia]=useState<SelectedMedia[]>([]);
  const draftRevision=useRef(0);
  const draftKey='conecta-mobile-feed-draft:'+userId;
  useEffect(()=>{
@@ -179,7 +183,7 @@ function FeedScreen({userId}:{userId:string}){
   return()=>clearTimeout(timer);
  },[draftKey,draftReady,text,visibility]);
  const postLength=text.trim().length;
- const validPost=postLength>0&&postLength<=3000;
+ const validPost=(postLength>0||media.length>0)&&postLength<=3000;
  const load=useCallback(async(offset=0)=>{
   const result=await loadFeed(offset);
   const ownLikes=await myLikes(userId,result.items.map(x=>x.id));
@@ -193,12 +197,31 @@ function FeedScreen({userId}:{userId:string}){
   finally{setLoading(false);}
  },[load]);
  useEffect(()=>{void refresh();},[refresh]);
+ const pick=async(kind:'image'|'video'|'camera')=>{
+  if(busy)return;
+  setError('');
+  try{
+   if(kind==='camera'){
+    const permission=await ImagePicker.requestCameraPermissionsAsync();
+    if(!permission.granted)throw new Error('Permita o uso da câmera para tirar uma foto.');
+   }
+   const result=kind==='camera'
+    ?await ImagePicker.launchCameraAsync({mediaTypes:['images'],quality:1})
+    :await ImagePicker.launchImageLibraryAsync({
+      mediaTypes:kind==='video'?['videos']:['images'],
+      allowsMultipleSelection:kind==='image',selectionLimit:kind==='image'?5:1,
+      orderedSelection:true,quality:1
+     });
+   if(!result.canceled)setMedia(normalizeMedia(result.assets));
+  }catch(e){setError(errorMessage(e));}
+ };
  const publish=async()=>{
   if(!validPost||busy)return;
   setBusy(true);setError('');
   try{
-   await publishTextPost(userId,text,visibility);
-   setText('');
+   if(media.length)await publishMediaPost(userId,text,visibility,media);
+   else await publishTextPost(userId,text,visibility);
+   setText('');setMedia([]);
    await AsyncStorage.removeItem(draftKey).catch(()=>{});
    await refresh();
    Alert.alert('Publicação enviada','O conteúdo segue as mesmas regras de moderação do site.');
@@ -232,12 +255,37 @@ function FeedScreen({userId}:{userId:string}){
      </Text>
     </Pressable>)}
    </View>
-   {text.length>0&&<Pressable accessibilityRole="button" accessibilityLabel="Descartar rascunho" onPress={()=>{
-    setText('');void AsyncStorage.removeItem(draftKey).catch(()=>{});
+   <View style={[s.row,{gap:8,flexWrap:'wrap',marginBottom:12}]}>
+    <Action secondary disabled={busy} label="▧ Fotos" onPress={()=>void pick('image')}/>
+    <Action secondary disabled={busy} label="▶ Vídeo" onPress={()=>void pick('video')}/>
+    <Action secondary disabled={busy} label="◎ Câmera" onPress={()=>void pick('camera')}/>
+   </View>
+   {media.length>0&&<View style={{marginBottom:12}}>
+    <Text style={[s.primaryText,{marginBottom:8}]}>
+     {media.length} {media[0].kind==='video'?'vídeo selecionado':'foto(s) selecionada(s)'}
+    </Text>
+    <View style={[s.row,{gap:8,flexWrap:'wrap'}]}>
+     {media.map((item,index)=><View key={item.uri+'-'+index} style={{alignItems:'center',gap:5}}>
+      {item.kind==='image'
+       ?<Image source={{uri:item.uri}} style={{height:84,width:84,borderRadius:12}}/>
+       :<View style={[s.secondary,{height:84,width:116,justifyContent:'center'}]}>
+         <Text style={s.secondaryText}>▶ Vídeo</Text>
+        </View>}
+      <Pressable accessibilityRole="button" accessibilityLabel={'Remover mídia '+(index+1)}
+       onPress={()=>setMedia(previous=>previous.filter((_,i)=>i!==index))}>
+       <Text style={s.secondaryText}>Remover ×</Text>
+      </Pressable>
+     </View>)}
+    </View>
+   </View>}
+   {(text.length>0||media.length>0)&&<Pressable accessibilityRole="button" accessibilityLabel="Descartar rascunho" onPress={()=>{
+    setText('');setMedia([]);void AsyncStorage.removeItem(draftKey).catch(()=>{});
    }}><Text style={[s.secondaryText,{marginBottom:12}]}>Descartar rascunho</Text></Pressable>}
-   <Action label={busy?'Publicando...':'Publicar texto'} disabled={busy||!validPost}
-    onPress={()=>void publish()}/>
-   <Text style={[s.muted,{marginTop:8}]}>Fotos, vídeos, Stories e enquetes são acessíveis no site enquanto as telas nativas são ampliadas.</Text>
+   <Action label={busy?'Publicando...':media.length?'Publicar mídia':'Publicar texto'}
+    disabled={busy||!validPost} onPress={()=>void publish()}/>
+   <Text style={[s.muted,{marginTop:8}]}>
+    Até cinco fotos ou um vídeo de até 50 MB. Conteúdo sujeito às regras de moderação do Conecta.
+   </Text>
   </View>
   <ErrorNotice text={error}/>
  </View>;
