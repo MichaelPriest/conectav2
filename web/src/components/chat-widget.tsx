@@ -36,7 +36,10 @@ export function ChatWidget({userId}:{userId:string}){
    const otherIds=[...new Set((members.data||[]).filter(m=>m.user_id!==userId).map(m=>m.user_id))];
    const people=otherIds.length?await db.from('profiles').select('id,display_name').in('id',otherIds):{data:[],error:null};
    const names=new Map((people.data||[]).map(p=>[p.id,p.display_name]));
-   const unreadById=new Map((unread.data||[]).map(row=>[row.conversation_id,Number(row.unread_count||0)]));
+   const unreadById=new Map<string,number>();
+   for(const row of (unread.data||[]) as {conversation_id:string;unread_count:number|string}[]){
+     unreadById.set(row.conversation_id,Number(row.unread_count||0));
+   }
    const latestById=new Map<string,{content:string;created_at:string;media_type:string|null;deleted_at:string|null}>();
    for(const msg of lastMessages.data||[]){
      if(!latestById.has(msg.conversation_id))latestById.set(msg.conversation_id,msg);
