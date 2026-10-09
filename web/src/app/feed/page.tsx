@@ -12,6 +12,7 @@ import { optimizeImage } from '@/lib/media';
 import { hydratePostMedia } from '@/lib/post-media';
 import { FeaturedCommunities } from '@/components/featured-communities';
 import {DiscreetAdSlot} from '@/components/discreet-ad-slot';
+import {requestContentModeration} from '@/lib/submit-moderation';
 import {StoryRail} from '@/components/story-rail';
 import {EmojiButton} from '@/components/emoji-button';
 import {MentionInput} from '@/components/mention-input';
@@ -67,7 +68,7 @@ export default function FeedPage() {
     setLoadingFeed(true);setMessage('');
     const db=supabaseBrowser();
     const {data,error:queryError}=await db.from('posts')
-      .select('id,author_id,community_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
+      .select('id,author_id,community_id,moderation_status,moderation_reason,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
       .is('community_id',null).order('created_at',{ascending:false})
       .range(from,from+PAGE_SIZE-1);
     if(queryError){setMessage(queryError.message);setLoadingFeed(false);return;}
@@ -118,7 +119,9 @@ export default function FeedPage() {
         })));
         if(galleryError)throw galleryError;
       }
+      const moderation=await requestContentModeration('post',created.id);
       setText('');setFiles([]);setPollMode(false);setPollOptions(['','']);
+      if(moderation.status==='pending')setMessage('Publicação enviada. A mídia ou o conteúdo sinalizado está aguardando revisão e só aparece para você.');
       await fetchPosts();
     }catch(err){
       if(createdPostId){
