@@ -173,7 +173,7 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
         {comments.filter(cm=>cm.parent_id===root.id).map(reply=><div className="comment conecta-comment-reply" key={reply.id}>
           <ProfileAvatar person={reply.profiles} size="tiny"/>
           <div><strong>{reply.profiles?.display_name||'Pessoa'}</strong><p><MentionText text={reply.body}/></p><small>{ago(reply.created_at)}</small>{reply.moderation_status!=='approved'&&<small className="conecta-comment-review">{reply.moderation_status==='pending'?'Em análise':'Resposta não aprovada'}</small>}
-            {reply.moderation_status==='rejected'&&reply.author_id===userId&&<ModerationAppealButton kind="comment" targetId={reply.id}/></div>
+            {reply.moderation_status==='rejected'&&reply.author_id===userId&&<ModerationAppealButton kind="comment" targetId={reply.id}/>}</div>
         </div>)}
       </div>)}
       {replyTo&&<div className="conecta-reply-to">Respondendo a @{replyTo.profiles?.handle||'pessoa'} <button type="button" onClick={()=>setReplyTo(null)}>Cancelar</button></div>}
