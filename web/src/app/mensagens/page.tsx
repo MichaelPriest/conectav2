@@ -199,19 +199,22 @@ export default function Messages(){
    if(!other){setError('Para iniciar um chat, essa pessoa precisa ser uma amizade aceita.');return;}
    if(other.id===auth.user.id){setError('Escolha uma pessoa diferente.');return;}
    setCreating(true);setError('');
-   const already=threads.find(t=>!t.group&&t.other?.id===other.id);
-   if(already){setActive(already.id);setRecipient('');setCreating(false);return;}
-   const db=supabaseBrowser();
-   const {data:conversation,error:e}=await db.from('conversations')
-     .insert({created_by:auth.user.id,title:'Conversa privada'}).select('id').single();
-   if(e){setError(e.message);setCreating(false);return;}
-   const {error:membersError}=await db.from('conversation_members').insert([
-     {conversation_id:conversation.id,user_id:auth.user.id},
-     {conversation_id:conversation.id,user_id:other.id}
-   ]);
-   if(membersError){setError(membersError.message+' (não foi possível adicionar os participantes).');}
-   else{setActive(conversation.id);setRecipient('');await loadThreads();}
-   setCreating(false);
+   try{
+     const already=threads.find(t=>!t.group&&t.other?.id===other.id);
+     if(already){setActive(already.id);setRecipient('');return;}
+     // A single database transaction creates the conversation AND all memberships.
+     // If any RLS/friendship/block check rejects an invite, nothing is persisted.
+     const {data:id,error:e}=await supabaseBrowser().rpc('create_conversation_with_members',{
+       _title:'Conversa privada',_other_user_ids:[other.id]
+     });
+     if(e)throw e;
+     if(!id)throw new Error('A conversa não foi criada.');
+     setRecipient('');
+     await loadThreads();
+     setActive(id as string);
+   }catch(e){
+     setError(e instanceof Error?e.message:'Não foi possível criar a conversa.');
+   }finally{setCreating(false);}
  }
 
  async function beginGroup(event:FormEvent){
@@ -224,21 +227,18 @@ export default function Messages(){
      return;
    }
    setCreating(true);setError('');
-   const db=supabaseBrowser();
-   const {data:conversation,error:e}=await db.from('conversations')
-     .insert({created_by:auth.user.id,title}).select('id').single();
-   if(e){setError(e.message);setCreating(false);return;}
-   const {error:memberError}=await db.from('conversation_members').insert([
-     {conversation_id:conversation.id,user_id:auth.user.id},
-     ...participantIds.map(user_id=>({conversation_id:conversation.id,user_id}))
-   ]);
-   if(memberError){
-     setError('Não foi possível completar o grupo: '+memberError.message);
-   }else{
+   try{
+     const {data:id,error:e}=await supabaseBrowser().rpc('create_conversation_with_members',{
+       _title:title,_other_user_ids:participantIds
+     });
+     if(e)throw e;
+     if(!id)throw new Error('Não foi possível criar o grupo.');
      setGroupTitle('');setGroupMembers([]);setGroupOpen(false);
-     await loadThreads();setActive(conversation.id);
-   }
-   setCreating(false);
+     await loadThreads();
+     setActive(id as string);
+   }catch(e){
+     setError('Não foi possível completar o grupo: '+(e instanceof Error?e.message:'Erro ao adicionar participantes.'));
+   }finally{setCreating(false);}
  }
 
  async function send(e:FormEvent){
