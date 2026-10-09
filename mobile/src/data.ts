@@ -1,5 +1,5 @@
 import {SITE_URL,supabase} from './supabase';
-import type {AgeAccess,ChatMessage,Community,Friendship,Notice,Post,Profile,Thread} from './models';
+import type {AgeAccess,ChatMessage,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './models';
 
 // All reads and writes are executed as the signed-in user under the existing
 // server RLS, anti-flood triggers, moderation gates and age protection.
@@ -79,6 +79,32 @@ export async function requestPostModeration(id:string):Promise<void>{
    body:JSON.stringify({kind:'post',id})
   });
  }catch{/* Never bypass the database pending moderation state. */}
+}
+
+/** Only rows allowed by Supabase comment RLS are returned. */
+export async function loadPostComments(postId:string):Promise<PostComment[]>{
+ const {data,error}=await supabase.from('post_comments')
+ .select('id,post_id,parent_id,author_id,body,moderation_status,created_at,profiles!post_comments_author_id_fkey(display_name,handle,avatar_path)')
+ .eq('post_id',postId).order('created_at',{ascending:true}).limit(100);
+ if(error)throw error;
+ return (data||[]) as unknown as PostComment[];
+}
+export async function sendPostComment(postId:string,userId:string,body:string,parentId:string|null=null):Promise<void>{
+ const content=body.trim();
+ if(!content||content.length>1000)throw new Error('O comentário deve ter entre 1 e 1.000 caracteres.');
+ const {data,error}=await supabase.from('post_comments').insert({
+  post_id:postId,author_id:userId,body:content,parent_id:parentId
+ }).select('id').single();
+ if(error)throw error;
+ // Comments use a different moderation endpoint from posts, as on the web.
+ const {data:{session}}=await supabase.auth.getSession();
+ if(!session?.access_token)return;
+ try{
+  await fetch(SITE_URL+'/api/moderation/comment',{
+   method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
+   body:JSON.stringify({id:data.id})
+  });
+ }catch{/* Database comment quarantine remains authoritative. */}
 }
 
 export async function loadConnections(userId:string):Promise<{friends:Friendship[];people:Profile[]}>{
