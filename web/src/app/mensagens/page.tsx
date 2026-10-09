@@ -12,6 +12,7 @@ import {MentionInput,MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
 import {useChatTyping} from '@/lib/use-chat-typing';
 import {mergeChatPage,olderChatCursor} from '@/lib/chat-timeline';
+import {groupAccess,canRemoveGroupTarget} from '@/lib/chat-group-roles';
 
 type Person={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Conversation={id:string;title:string|null;created_at:string;created_by:string;is_group:boolean};
@@ -86,6 +87,9 @@ export default function Messages(){
  const [inviteFriend,setInviteFriend]=useState('');
  const [transferOwner,setTransferOwner]=useState('');
  const [settingsBusy,setSettingsBusy]=useState(false);
+ const [groupCoadmins,setGroupCoadmins]=useState<string[]>([]);
+ const [groupAllowsInvite,setGroupAllowsInvite]=useState(true);
+ const [groupAllowsRemove,setGroupAllowsRemove]=useState(false);
  const typingIds=useChatTyping(active,auth.user?.id,compose,Boolean(active));
  const scrollRef=useRef<HTMLDivElement>(null);
  const messageNodes=useRef<Record<string,HTMLElement|null>>({});
@@ -210,6 +214,15 @@ export default function Messages(){
       content:byId.get(p.message_id)?.content||'Anexo compartilhado',
       media_type:(byId.get(p.message_id)?.media_type||null) as MediaType|null})));
  },[]);
+ const loadGroupPermissions=useCallback(async(id:string)=>{
+   const {data,error:e}=await supabaseBrowser().rpc('get_conversation_group_permissions',{_conversation:id});
+   if(activeRef.current!==id)return;
+   if(e){setGroupCoadmins([]);setError('Permissões do grupo indisponíveis: '+e.message);return;}
+   const value=data as {coadmins?:string[];coadmins_can_invite?:boolean;coadmins_can_remove?:boolean}|null;
+   setGroupCoadmins(Array.isArray(value?.coadmins)?value.coadmins:[]);
+   setGroupAllowsInvite(value?.coadmins_can_invite===true);
+   setGroupAllowsRemove(value?.coadmins_can_remove===true);
+ },[]);
  const loadMessages=useCallback(async(id:string,older=false)=>{
    const prior=messagesRef.current.filter(m=>m.conversation_id===id);
    const cursor=older?olderChatCursor(prior,id):null;
@@ -281,6 +294,8 @@ export default function Messages(){
    setReplyTo(null);setReactionOpen(null);setSearchOpen(false);setMessageSearch('');
    setSearchHits([]);setHighlighted(null);
    setPins([]);setSettingsOpen(false);setInviteFriend('');setTransferOwner('');
+   setGroupCoadmins([]);setGroupAllowsInvite(false);setGroupAllowsRemove(false);
+   void loadGroupPermissions(active);
    void loadPins(active);void loadMessages(active);
    void loadReceipts(active);
    const db=supabaseBrowser();
@@ -297,7 +312,7 @@ export default function Messages(){
      {schema:'public',table:'conversation_members',event:'UPDATE',filter:'conversation_id=eq.'+active},
      ()=>{void loadReceipts(active);}
    ).subscribe();
-   const sync=()=>{if(!document.hidden){void loadReceipts(active);void loadThreads();}};
+   const sync=()=>{if(!document.hidden){void loadReceipts(active);void loadThreads();void loadGroupPermissions(active);}};
    window.addEventListener('focus',sync);
    const receiptTimer=window.setInterval(sync,15000);
    return()=>{window.removeEventListener('focus',sync);window.clearInterval(receiptTimer);void db.removeChannel(channel);};
@@ -524,6 +539,7 @@ export default function Messages(){
  async function inviteGroupFriend(){
    if(!active||!inviteFriend||settingsBusy)return;
    setSettingsBusy(true);setError('');
+   if(!groupAccess(auth.user?.id,current?.created_by,groupCoadmins,Boolean(current?.group),groupAllowsInvite,groupAllowsRemove).canInvite)return;
    const {error:e}=await supabaseBrowser().rpc('add_conversation_group_member',{
       _conversation:active,_friend:inviteFriend
    });
@@ -541,7 +557,8 @@ export default function Messages(){
    setSettingsBusy(false);
  }
  async function removeGroupMember(person:Person){
-   if(!active||!canManageGroup||settingsBusy||!current?.participants.some(p=>p.id===person.id))return;
+   if(!active||settingsBusy||!current?.participants.some(p=>p.id===person.id)||
+      !canRemoveGroupTarget(access,person.id,current?.created_by,groupCoadmins))return;
    if(!confirm('Remover '+person.display_name+' deste grupo? A pessoa perderá acesso às mensagens.'))return;
    setSettingsBusy(true);setError('');
    try{
@@ -549,8 +566,34 @@ export default function Messages(){
        _conversation:active,_member:person.id
      });
      if(e)throw e;
-     await loadThreads();
+     await loadThreads();await loadGroupPermissions(active);
    }catch(e){setError('Não foi possível remover integrante: '+(e instanceof Error?e.message:'Tente novamente.'));}
+   finally{setSettingsBusy(false);}
+ }
+ async function toggleGroupCoadmin(person:Person){
+   if(!active||!access.canManageAdmins||settingsBusy)return;
+   const enabled=!groupCoadmins.includes(person.id);
+   if(!confirm((enabled?'Promover ':'Retirar a administração de ')+person.display_name+'?'))return;
+   setSettingsBusy(true);setError('');
+   try{
+     const {error:e}=await supabaseBrowser().rpc('set_conversation_group_moderator',{
+       _conversation:active,_member:person.id,_enabled:enabled
+     });
+     if(e)throw e;
+     await loadGroupPermissions(active);
+   }catch(e){setError('Não foi possível alterar coadministrador: '+(e instanceof Error?e.message:'Tente novamente.'));}
+   finally{setSettingsBusy(false);}
+ }
+ async function saveGroupPermissions(nextInvite:boolean,nextRemove:boolean){
+   if(!active||!access.isOwner||settingsBusy)return;
+   setSettingsBusy(true);setError('');
+   try{
+     const {error:e}=await supabaseBrowser().rpc('set_conversation_group_permissions',{
+       _conversation:active,_can_invite:nextInvite,_can_remove:nextRemove
+     });
+     if(e)throw e;
+     await loadGroupPermissions(active);
+   }catch(e){setError('Não foi possível atualizar permissões: '+(e instanceof Error?e.message:'Tente novamente.'));}
    finally{setSettingsBusy(false);}
  }
  async function transferGroupOwnership(){
@@ -562,7 +605,7 @@ export default function Messages(){
      _conversation:active,_new_owner:chosen.id
    });
    if(e)setError('Não foi possível transferir: '+e.message);
-   else{setTransferOwner('');setSettingsOpen(false);await loadThreads();}
+   else{setTransferOwner('');setSettingsOpen(false);await loadThreads();await loadGroupPermissions(active);}
    setSettingsBusy(false);
  }
  async function block(){
@@ -579,7 +622,9 @@ export default function Messages(){
   .sort((a,b)=>a.display_name.localeCompare(b.display_name,'pt-BR'));
  const current=threads.find(t=>t.id===active);
  const currentlyMuted=Boolean(current?.mutedUntil&&Date.parse(current.mutedUntil)>Date.now());
- const canManageGroup=Boolean(current?.group&&current.created_by===auth.user?.id);
+ const access=groupAccess(auth.user?.id,current?.created_by,groupCoadmins,
+   Boolean(current?.group),groupAllowsInvite,groupAllowsRemove);
+ const canManageGroup=access.isOwner;
  const availableGroupFriends=friends.filter(friend=>
   friend.id!==auth.user?.id&&!current?.participants.some(member=>member.id===friend.id));
  const typingNames=typingIds.map(id=>current?.participants.find(p=>p.id===id)?.display_name||'Alguém');
@@ -666,7 +711,7 @@ export default function Messages(){
           {current?.group&&!canManageGroup&&<button type="button"
              className="btn btn-outline conecta-chat-leave" disabled={settingsBusy}
              onClick={()=>void leaveCurrentGroup()}>Sair do grupo</button>}
-          {canManageGroup&&<button className="icon-btn" type="button"
+          {(access.canInvite||access.canRemove||access.canManageAdmins)&&<button className="icon-btn" type="button"
              title="Configurações do grupo" aria-label="Configurações do grupo"
              aria-expanded={settingsOpen}
              onClick={()=>{setSettingsOpen(v=>!v);setSettingsTitle(current?.title||'');}}>
@@ -678,15 +723,15 @@ export default function Messages(){
           {current?.other&&!current.group&&<><Link className="icon-btn" title="Ver perfil" href={'/p/'+current.other.handle}><UserRound size={19}/></Link><button className="icon-btn" type="button" title="Bloquear usuário" onClick={block}><Shield size={19}/></button></>}
        </header>
        {
-         settingsOpen&&canManageGroup&&<section className="conecta-chat-group-settings" aria-label="Administrar grupo">
-          <form onSubmit={saveGroupSettings} className="conecta-chat-manage-row">
+         settingsOpen&&(access.canInvite||access.canRemove||access.canManageAdmins)&&<section className="conecta-chat-group-settings" aria-label="Administrar grupo">
+          {access.canRename&&<form onSubmit={saveGroupSettings} className="conecta-chat-manage-row">
             <label htmlFor="conecta-group-rename">Nome do grupo</label>
             <input id="conecta-group-rename" className="form-input" value={settingsTitle} maxLength={80}
                onChange={e=>setSettingsTitle(e.target.value)} required/>
             <button className="btn btn-outline" type="submit"
               disabled={settingsBusy||settingsTitle.trim().length<2}>Salvar nome</button>
-          </form>
-          <div className="conecta-chat-manage-row">
+          </form>}
+          {access.canInvite&&<div className="conecta-chat-manage-row">
             <label htmlFor="conecta-group-invite">Adicionar uma amizade</label>
             <select id="conecta-group-invite" className="form-input" value={inviteFriend}
               onChange={e=>setInviteFriend(e.target.value)}>
@@ -695,18 +740,32 @@ export default function Messages(){
             </select>
             <button className="btn btn-outline" type="button" disabled={!inviteFriend||settingsBusy}
               onClick={()=>void inviteGroupFriend()}><UserPlus size={15}/> Convidar</button>
-          </div>
+          </div>}
           <div className="conecta-chat-group-roster">
             <strong>Integrantes do grupo ({(current?.participants.length||0)+1})</strong>
             {current?.participants.map(person=><div className="conecta-chat-roster-member" key={person.id}>
               <ProfileAvatar person={person} size="small"/>
-              <span><strong>{person.display_name}</strong><small>@{person.handle}</small></span>
-              <button className="btn btn-outline" type="button" disabled={settingsBusy}
+              <span><strong>{person.display_name}</strong><small>@{person.handle}{groupCoadmins.includes(person.id)?' · Coadministrador':''}</small></span>
+              {access.canManageAdmins&&<button className="btn btn-outline" type="button" disabled={settingsBusy}
+                aria-label={(groupCoadmins.includes(person.id)?'Revogar coadmin de ':'Promover coadmin: ')+person.display_name}
+                onClick={()=>void toggleGroupCoadmin(person)}>
+                {groupCoadmins.includes(person.id)?'Revogar admin':'Tornar admin'}</button>}
+              {canRemoveGroupTarget(access,person.id,current?.created_by,groupCoadmins)&&
+                <button className="btn btn-outline" type="button" disabled={settingsBusy}
                 aria-label={'Remover '+person.display_name+' do grupo'}
-                onClick={()=>void removeGroupMember(person)}><Trash2 size={15}/> Remover</button>
+                onClick={()=>void removeGroupMember(person)}><Trash2 size={15}/> Remover</button>}
             </div>)}
           </div>
-          <div className="conecta-chat-manage-row">
+          {access.isOwner&&<div className="conecta-chat-group-permissions">
+            <strong>Permissões de coadministradores</strong>
+            <label><input type="checkbox" checked={groupAllowsInvite} disabled={settingsBusy}
+              onChange={event=>void saveGroupPermissions(event.target.checked,groupAllowsRemove)}/>
+              Podem convidar suas conexões</label>
+            <label><input type="checkbox" checked={groupAllowsRemove} disabled={settingsBusy}
+              onChange={event=>void saveGroupPermissions(groupAllowsInvite,event.target.checked)}/>
+              Podem remover integrantes comuns</label>
+          </div>}
+          {access.canTransfer&&<div className="conecta-chat-manage-row">
             <label htmlFor="conecta-group-transfer">Transferir administração</label>
             <select id="conecta-group-transfer" className="form-input" value={transferOwner}
               onChange={e=>setTransferOwner(e.target.value)}>
@@ -717,8 +776,8 @@ export default function Messages(){
             </select>
             <button type="button" className="btn btn-outline" disabled={!transferOwner||settingsBusy}
               onClick={()=>void transferGroupOwnership()}>Transferir</button>
-          </div>
-          <small>O novo administrador deve ser integrante, e a transferência exige confirmação.</small>
+          </div>}
+          <small>Somente o proprietário pode mudar administradores, renomear ou transferir o grupo. Um coadministrador nunca pode remover outro administrador.</small>
          </section>}
         {current?.group&&canManageGroup&&<p className="conecta-chat-owner-note">
           Para sair do grupo, transfira primeiro a administração.

@@ -48,6 +48,8 @@ jobs:
         run: npm run test:automod
       - name: Chat V4 timeline pagination regressions
         run: node --test tests/chat-v4-timeline.test.cjs
+      - name: Chat V4 group role regressions
+        run: node --test tests/chat-v4-group-permissions.test.cjs
       - name: Check TypeScript
         run: npm run typecheck
       - name: Regression tests for nullable profile details

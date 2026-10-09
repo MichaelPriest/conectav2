@@ -53,3 +53,17 @@ não permitem validar o antigo registro via RLS. Entradas e atualizações chega
 eventos com checagem de acesso; saídas e remoções são reconciliadas por consulta
 protegida por RLS a cada 45 segundos quando a página está visível ou ao retornar
 para a aba. Isso prioriza a privacidade em vez de prometer entrega instantânea.
+
+## Chat V4.1 — coadministradores e permissões
+
+O proprietário pode promover ou revogar coadministradores existentes. Pode controlar
+se eles convidam conexões aceitas (ativado inicialmente) e se removem integrantes comuns
+(desativado inicialmente). Mesmo quando habilitada a remoção, o coadministrador não pode
+remover o proprietário nem outros coadministradores, e não pode editar o título,
+promover integrantes nem transferir a propriedade. A tabela de permissões fica no
+schema privado `app_private`, com FK de exclusão em cascata à participação, sem
+escrita direta do navegador. As mudanças ocorrem por RPC autenticado, que valida
+participação, propriedade e configurações no banco com bloqueio por conversa.
+As restrições de amizade aceita, bloqueio, proteção de adolescentes e máximo 21
+membros seguem preservadas para todos os convites. A interface revalida as permissões
+após ações e ao retornar à aba.
