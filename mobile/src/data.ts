@@ -61,19 +61,24 @@ export async function publishTextPost(userId:string,content:string,visibility:'p
    author_id:userId,content:trimmed,visibility,media_path:null,media_type:null
  }).select('id').single();
  if(error)throw error;
- // Same authenticated moderation endpoint as the web. DB quarantine and
- // moderation triggers are authoritative, even when the endpoint is offline.
- const {data:{session}}=await supabase.auth.getSession();
- if(session?.access_token){
-  try{
-   await fetch(SITE_URL+'/api/moderation/review',{
-    method:'POST',
-    headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
-    body:JSON.stringify({kind:'post',id:data.id})
-   });
-  }catch{/* Never circumvent the database pending moderation state. */}
- }
+ await requestPostModeration(data.id);
  return data.id;
+}
+
+/**
+ * Invokes the same authenticated moderation route as the website.
+ * Database quarantine and moderation policies remain authoritative if offline.
+ */
+export async function requestPostModeration(id:string):Promise<void>{
+ const {data:{session}}=await supabase.auth.getSession();
+ if(!session?.access_token)return;
+ try{
+  await fetch(SITE_URL+'/api/moderation/review',{
+   method:'POST',
+   headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
+   body:JSON.stringify({kind:'post',id})
+  });
+ }catch{/* Never bypass the database pending moderation state. */}
 }
 
 export async function loadConnections(userId:string):Promise<{friends:Friendship[];people:Profile[]}>{
