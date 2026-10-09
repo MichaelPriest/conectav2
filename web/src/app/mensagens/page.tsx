@@ -608,6 +608,9 @@ export default function Messages(){
              title={currentlyMuted?'Reativar indicador no chat':'Silenciar indicador no chat por 30 dias'}
              aria-label={currentlyMuted?'Reativar indicador':'Silenciar conversa'} disabled={settingsBusy}
              onClick={()=>void toggleMute()}>{currentlyMuted?<BellOff size={18}/>:<Bell size={18}/>}</button>
+          {current?.group&&!canManageGroup&&<button type="button"
+             className="btn btn-outline conecta-chat-leave" disabled={settingsBusy}
+             onClick={()=>void leaveCurrentGroup()}>Sair do grupo</button>}
           {canManageGroup&&<button className="icon-btn" type="button"
              title="Configurações do grupo" aria-label="Configurações do grupo"
              aria-expanded={settingsOpen}
@@ -638,8 +641,23 @@ export default function Messages(){
             <button className="btn btn-outline" type="button" disabled={!inviteFriend||settingsBusy}
               onClick={()=>void inviteGroupFriend()}><UserPlus size={15}/> Convidar</button>
           </div>
-          <small>Somente quem criou o grupo pode alterar o nome ou convidar amizades aceitas.</small>
+          <div className="conecta-chat-manage-row">
+            <label htmlFor="conecta-group-transfer">Transferir administração</label>
+            <select id="conecta-group-transfer" className="form-input" value={transferOwner}
+              onChange={e=>setTransferOwner(e.target.value)}>
+              <option value="">Escolha um integrante...</option>
+              {current?.participants.map(person=><option key={person.id} value={person.id}>
+                {person.display_name} (@{person.handle})
+              </option>)}
+            </select>
+            <button type="button" className="btn btn-outline" disabled={!transferOwner||settingsBusy}
+              onClick={()=>void transferGroupOwnership()}>Transferir</button>
+          </div>
+          <small>O novo administrador deve ser integrante, e a transferência exige confirmação.</small>
          </section>}
+        {current?.group&&canManageGroup&&<p className="conecta-chat-owner-note">
+          Para sair do grupo, transfira primeiro a administração.
+        </p>}
         {pins.length>0&&<section className="conecta-chat-pins" aria-label="Mensagens fixadas">
           {pins.map(pin=><button type="button" key={pin.message_id}
              onClick={()=>{
