@@ -1,0 +1,45 @@
+name: Conecta V2 · Android and iOS app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/conecta-mobile.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/conecta-mobile.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: conecta-mobile-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  android-ios-shared:
+    name: Validate React Native iOS / Android
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/package.json
+      - name: Install exact mobile dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Verify native app contracts
+        run: npm test
+      - name: Typecheck native React code
+        run: npm run typecheck
+      - name: Validate Expo Android and iOS configuration
+        run: npx expo config --type public --json > /tmp/conecta-mobile-expo-config.json
+      - name: Check Expo dependency compatibility
+        run: npx expo install --check
