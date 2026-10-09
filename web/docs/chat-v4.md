@@ -77,3 +77,13 @@ a quantidade máxima de duas pessoas nas conversas privadas e a restrição de
 grupos que incluam contas no modo de proteção etária. A validação final é
 *adiada* para permitir o fluxo legítimo de criação de grupo (primeiro cria
 participantes e depois marca a conversa como grupo, tudo na mesma transação).
+
+## Chat V4.2 — evitar duplicação de conversas privadas
+
+O RPC `create_conversation_with_members` valida a amizade e o bloqueio mesmo
+ao localizar uma conversa já existente. Para um único destinatário, usa uma chave
+de bloqueio transacional independente da ordem dos dois usuários, procura a
+conversa privada existente (exatamente dois integrantes e `is_group=false`)
+e reutiliza o ID em vez de criar conversas duplicadas. Criação de grupos mantém
+o fluxo atômico anterior. Conversas duplicadas legadas não são apagadas e não
+sofrem merge automático para evitar perda de histórico.
