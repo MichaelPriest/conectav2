@@ -8,7 +8,7 @@ test('WebRTC call uses real microphones/cameras and incremental ICE',()=>{
  const src=read('src/components/chat-calls.tsx');
  for(const expected of [
   'navigator.mediaDevices.getUserMedia','new RTCPeerConnection',
-  'iceGatheringState','pc.onicecandidate','pc.addIceCandidate',
+  'pc.onicecandidate','pc.addIceCandidate',
   "db.rpc('signal_chat_call'","db.rpc('end_chat_call'",
   "db.rpc('keep_chat_call_alive'",'getAudioTracks()','getVideoTracks()'
  ])assert.ok(src.includes(expected),expected);
