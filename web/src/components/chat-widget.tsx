@@ -7,7 +7,7 @@ import {MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
 import {useChatTyping} from '@/lib/use-chat-typing';
 import {ProfileAvatar} from '@/components/profile-avatar';
-type Thread={id:string;title:string;group:boolean;otherNames:string;lastAt:string;unread:number;preview:string;mutedUntil:string|null};
+type Thread={id:string;title:string;group:boolean;otherNames:string;otherId:string|null;other:Contact|null;lastAt:string;unread:number;preview:string;mutedUntil:string|null};
 type Contact={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Msg={id:string;conversation_id:string;sender_id:string;content:string;created_at:string;media_type:string|null;edited_at:string|null;deleted_at:string|null};
 export function ChatWidget({userId}:{userId:string}){
@@ -82,8 +82,10 @@ export function ChatWidget({userId}:{userId:string}){
    ]);
    if(conversations.error||members.error){setError(conversations.error?.message||members.error?.message||'Falha ao carregar conversas.');return;}
    const otherIds=[...new Set((members.data||[]).filter(m=>m.user_id!==userId).map(m=>m.user_id))];
-   const people=otherIds.length?await db.from('profiles').select('id,display_name').in('id',otherIds):{data:[],error:null};
-   const names=new Map((people.data||[]).map(p=>[p.id,p.display_name]));
+   const people=otherIds.length?await db.from('profiles')
+     .select('id,handle,display_name,avatar_path').in('id',otherIds):{data:[],error:null};
+   const peopleById=new Map(((people.data||[]) as Contact[]).map(p=>[p.id,p]));
+   const names=new Map(((people.data||[]) as Contact[]).map(p=>[p.id,p.display_name]));
    const unreadById=new Map<string,number>();
    for(const row of (unread.data||[]) as {conversation_id:string;unread_count:number|string}[]){
      unreadById.set(row.conversation_id,Number(row.unread_count||0));
@@ -109,7 +111,9 @@ export function ChatWidget({userId}:{userId:string}){
          recent.media_type==='image'?'📷 Foto':recent.media_type==='video'?'🎬 Vídeo':
          recent.media_type==='audio'?'🎤 Áudio':'Mensagem')):'Comece a conversar';
      return {id:c.id,title:group?(c.title||'Grupo'):(otherNames||c.title||'Conversa'),
-       group,otherNames,lastAt:recent?.created_at||c.created_at,
+       group,otherNames,otherId:group?null:participants[0]?.user_id||null,
+       other:group?null:peopleById.get(participants[0]?.user_id)||null,
+       lastAt:recent?.created_at||c.created_at,
        unread:unreadById.get(c.id)||0,preview,mutedUntil:mutedById.get(c.id)||null};
    });
    setThreads(list.sort((a,b)=>b.lastAt.localeCompare(a.lastAt)));
@@ -126,19 +130,8 @@ export function ChatWidget({userId}:{userId:string}){
    setStarting(person.id);setError('');
    try{
      const db=supabaseBrowser();
-     const {data:own,error:membershipError}=await db.from('conversation_members')
-       .select('conversation_id').eq('user_id',userId).limit(150);
-     if(membershipError)throw membershipError;
-     let foundId:string|null=null;
-     for(const room of own||[]){
-       const {data:members,error:memberError}=await db.from('conversation_members')
-         .select('user_id').eq('conversation_id',room.conversation_id);
-       if(memberError)continue;
-       const ids=(members||[]).map(item=>item.user_id);
-       if(ids.length===2&&ids.includes(userId)&&ids.includes(person.id)){
-         foundId=room.conversation_id;break;
-       }
-     }
+     const existing=threads.find(t=>!t.group&&t.otherId===person.id);
+     let foundId:string|null=existing?.id||null;
      if(!foundId){
        const {data:id,error:e}=await db.rpc('create_conversation_with_members',{
           _title:'Conversa privada',_other_user_ids:[person.id]
@@ -149,7 +142,7 @@ export function ChatWidget({userId}:{userId:string}){
      await loadThreads();
      setActive({id:foundId,title:person.display_name,group:false,
        otherNames:person.display_name,lastAt:new Date().toISOString(),
-       unread:0,preview:'',mutedUntil:null});
+       unread:0,preview:'',mutedUntil:null,otherId:person.id,other:person});
    }catch(e){setError(e instanceof Error?e.message:'Não foi possível abrir a conversa.');}
    finally{setStarting(null);}
  }
@@ -222,7 +215,8 @@ export function ChatWidget({userId}:{userId:string}){
      </header>
      {!active?<div className="conecta-chat-widget-list">
        {threads.length===0?<div className="conecta-widget-empty"><MessageCircle size={26}/><p>Suas conversas aparecem aqui.</p></div>:
-         threads.map(t=><button key={t.id} type="button" onClick={()=>{setActive(t);setError('');}}><span className="conecta-widget-thread-icon">{t.group?<Users size={19}/>:<MessageCircle size={19}/>}</span>
+         threads.map(t=><button key={t.id} type="button" onClick={()=>{setActive(t);setError('');}}>{t.group?<span className="conecta-widget-thread-icon"><Users size={19}/></span>:
+            <ProfileAvatar person={t.other} size="small"/>}
            <span><strong>{t.title}</strong><small>{t.preview.slice(0,75)}</small></span>
            {t.mutedUntil&&Date.parse(t.mutedUntil)>Date.now()&&<BellOff size={13} aria-label="Conversa silenciada"/>}
            {t.unread>0&&<span className="conecta-chat-unread" aria-label={t.unread+' mensagens não lidas'}>{t.unread>99?'99+':t.unread}</span>}</button>)}
