@@ -30,7 +30,14 @@ export function useChatTyping(conversationId:string|null,userId:string|undefined
  },[conversationId,userId,enabled]);
 
  useEffect(()=>{
-  if(!conversationId||!userId||!enabled)return;
+  if(!conversationId||!userId||!enabled){
+   const last=previous.current;
+   if(last.conversationId&&last.wasTyping){
+    void supabaseBrowser().rpc('set_chat_typing',{_conversation:last.conversationId,_typing:false});
+   }
+   previous.current={conversationId:null,wasTyping:false,lastSent:0};
+   return;
+  }
   const typing=Boolean(text.trim())&&!document.hidden&&document.hasFocus();
   const old=previous.current;
   const switched=old.conversationId!==conversationId;
