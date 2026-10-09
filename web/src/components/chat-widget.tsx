@@ -30,8 +30,7 @@ export function ChatWidget({userId}:{userId:string}){
      db.from('conversations').select('id,title,created_at').in('id',ids).limit(150),
      db.from('conversation_members').select('conversation_id,user_id').in('conversation_id',ids).limit(600),
      db.rpc('my_conversation_unread_counts'),
-     db.from('messages').select('conversation_id,content,created_at,media_type,deleted_at')
-       .in('conversation_id',ids).order('created_at',{ascending:false}).limit(200)
+     db.rpc('my_latest_conversation_messages')
    ]);
    if(conversations.error||members.error){setError(conversations.error?.message||members.error?.message||'Falha ao carregar conversas.');return;}
    const otherIds=[...new Set((members.data||[]).filter(m=>m.user_id!==userId).map(m=>m.user_id))];
