@@ -88,6 +88,7 @@ export default function Messages(){
  const [transferOwner,setTransferOwner]=useState('');
  const [settingsBusy,setSettingsBusy]=useState(false);
  const [groupCoadmins,setGroupCoadmins]=useState<string[]>([]);
+ const [groupPermissionsFor,setGroupPermissionsFor]=useState<string|null>(null);
  const [groupAllowsInvite,setGroupAllowsInvite]=useState(true);
  const [groupAllowsRemove,setGroupAllowsRemove]=useState(false);
  const typingIds=useChatTyping(active,auth.user?.id,compose,Boolean(active));
@@ -219,6 +220,7 @@ export default function Messages(){
    if(activeRef.current!==id)return;
    if(e){setGroupCoadmins([]);setError('Permissões do grupo indisponíveis: '+e.message);return;}
    const value=data as {coadmins?:string[];coadmins_can_invite?:boolean;coadmins_can_remove?:boolean}|null;
+   setGroupPermissionsFor(id);
    setGroupCoadmins(Array.isArray(value?.coadmins)?value.coadmins:[]);
    setGroupAllowsInvite(value?.coadmins_can_invite===true);
    setGroupAllowsRemove(value?.coadmins_can_remove===true);
@@ -294,7 +296,7 @@ export default function Messages(){
    setReplyTo(null);setReactionOpen(null);setSearchOpen(false);setMessageSearch('');
    setSearchHits([]);setHighlighted(null);
    setPins([]);setSettingsOpen(false);setInviteFriend('');setTransferOwner('');
-   setGroupCoadmins([]);setGroupAllowsInvite(false);setGroupAllowsRemove(false);
+   setGroupPermissionsFor(null);setGroupCoadmins([]);setGroupAllowsInvite(false);setGroupAllowsRemove(false);
    void loadGroupPermissions(active);
    void loadPins(active);void loadMessages(active);
    void loadReceipts(active);
@@ -539,7 +541,7 @@ export default function Messages(){
  async function inviteGroupFriend(){
    if(!active||!inviteFriend||settingsBusy)return;
    setSettingsBusy(true);setError('');
-   if(!groupAccess(auth.user?.id,current?.created_by,groupCoadmins,Boolean(current?.group),groupAllowsInvite,groupAllowsRemove).canInvite)return;
+   if(!groupAccess(auth.user?.id,current?.created_by,visibleCoadmins,Boolean(current?.group),groupAllowsInvite,groupAllowsRemove).canInvite)return;
    const {error:e}=await supabaseBrowser().rpc('add_conversation_group_member',{
       _conversation:active,_friend:inviteFriend
    });
@@ -558,7 +560,7 @@ export default function Messages(){
  }
  async function removeGroupMember(person:Person){
    if(!active||settingsBusy||!current?.participants.some(p=>p.id===person.id)||
-      !canRemoveGroupTarget(access,person.id,current?.created_by,groupCoadmins))return;
+      !canRemoveGroupTarget(access,person.id,current?.created_by,visibleCoadmins))return;
    if(!confirm('Remover '+person.display_name+' deste grupo? A pessoa perderá acesso às mensagens.'))return;
    setSettingsBusy(true);setError('');
    try{
@@ -572,7 +574,7 @@ export default function Messages(){
  }
  async function toggleGroupCoadmin(person:Person){
    if(!active||!access.canManageAdmins||settingsBusy)return;
-   const enabled=!groupCoadmins.includes(person.id);
+   const enabled=!visibleCoadmins.includes(person.id);
    if(!confirm((enabled?'Promover ':'Retirar a administração de ')+person.display_name+'?'))return;
    setSettingsBusy(true);setError('');
    try{
@@ -622,8 +624,10 @@ export default function Messages(){
   .sort((a,b)=>a.display_name.localeCompare(b.display_name,'pt-BR'));
  const current=threads.find(t=>t.id===active);
  const currentlyMuted=Boolean(current?.mutedUntil&&Date.parse(current.mutedUntil)>Date.now());
- const access=groupAccess(auth.user?.id,current?.created_by,groupCoadmins,
-   Boolean(current?.group),groupAllowsInvite,groupAllowsRemove);
+ const visibleCoadmins=groupPermissionsFor===active?groupCoadmins:[];
+ const access=groupAccess(auth.user?.id,current?.created_by,visibleCoadmins,
+   Boolean(current?.group),groupPermissionsFor===active&&groupAllowsInvite,
+   groupPermissionsFor===active&&groupAllowsRemove);
  const canManageGroup=access.isOwner;
  const availableGroupFriends=friends.filter(friend=>
   friend.id!==auth.user?.id&&!current?.participants.some(member=>member.id===friend.id));
@@ -745,12 +749,12 @@ export default function Messages(){
             <strong>Integrantes do grupo ({(current?.participants.length||0)+1})</strong>
             {current?.participants.map(person=><div className="conecta-chat-roster-member" key={person.id}>
               <ProfileAvatar person={person} size="small"/>
-              <span><strong>{person.display_name}</strong><small>@{person.handle}{groupCoadmins.includes(person.id)?' · Coadministrador':''}</small></span>
+              <span><strong>{person.display_name}</strong><small>@{person.handle}{visibleCoadmins.includes(person.id)?' · Coadministrador':''}</small></span>
               {access.canManageAdmins&&<button className="btn btn-outline" type="button" disabled={settingsBusy}
-                aria-label={(groupCoadmins.includes(person.id)?'Revogar coadmin de ':'Promover coadmin: ')+person.display_name}
+                aria-label={(visibleCoadmins.includes(person.id)?'Revogar coadmin de ':'Promover coadmin: ')+person.display_name}
                 onClick={()=>void toggleGroupCoadmin(person)}>
-                {groupCoadmins.includes(person.id)?'Revogar admin':'Tornar admin'}</button>}
-              {canRemoveGroupTarget(access,person.id,current?.created_by,groupCoadmins)&&
+                {visibleCoadmins.includes(person.id)?'Revogar admin':'Tornar admin'}</button>}
+              {canRemoveGroupTarget(access,person.id,current?.created_by,visibleCoadmins)&&
                 <button className="btn btn-outline" type="button" disabled={settingsBusy}
                 aria-label={'Remover '+person.display_name+' do grupo'}
                 onClick={()=>void removeGroupMember(person)}><Trash2 size={15}/> Remover</button>}

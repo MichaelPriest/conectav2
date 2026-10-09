@@ -67,3 +67,13 @@ participação, propriedade e configurações no banco com bloqueio por conversa
 As restrições de amizade aceita, bloqueio, proteção de adolescentes e máximo 21
 membros seguem preservadas para todos os convites. A interface revalida as permissões
 após ações e ao retornar à aba.
+
+## Integridade das conversas
+
+Além da validação nos RPCs, um par de gatilhos protege a tabela de participantes
+contra alterações diretas via API: antes de inserir, a conversa é bloqueada
+transacionalmente; ao concluir a transação, valida-se o teto de 21 participantes,
+a quantidade máxima de duas pessoas nas conversas privadas e a restrição de
+grupos que incluam contas no modo de proteção etária. A validação final é
+*adiada* para permitir o fluxo legítimo de criação de grupo (primeiro cria
+participantes e depois marca a conversa como grupo, tudo na mesma transação).
