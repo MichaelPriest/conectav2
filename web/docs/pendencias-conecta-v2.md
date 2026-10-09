@@ -17,9 +17,11 @@
 ## Prioridade P1 — experiência social
 - [x] Comunidades oficiais, cargos, moderadores, recados, perfil estilo MySpace, enquetes, salvamentos, respostas e chat básico já iniciados/entregues.
 - [ ] Revisar bugs e fluxos completos de moderação, comunidades, perfis/álbuns e recados/depoimentos.
-- [ ] Stories, círculos próximos, eventos, compartilhamento de música legalmente autorizado, funcionalidades únicas de nostalgia.
-- [ ] Chat em grupo, anexos, edição/exclusão, reações, recibos, áudio e vídeo com proteção parental.
-- [ ] Acessibilidade e 10 idiomas completos (as traduções ainda são parciais).
+- [x] Stories de foto/vídeo com visibilidade público/amigos/privado, leitura por RLS, exclusão pelo autor e expiração de visibilidade em 24 horas; faltam a limpeza física agendada dos arquivos e teste multiusuário real.
+- [ ] Círculos próximos, eventos e demais recursos nostálgicos.
+- [x] Conversas em grupo entre amizades aceitas; anexos privados de imagem, vídeo e áudio, mais gravação local de recados de voz em navegadores compatíveis.
+- [ ] Edição/exclusão de mensagens, reações, recibos de leitura, chamada de voz/vídeo e testes multiusuário com controles para adolescentes.
+- [ ] Acessibilidade e 10 idiomas completos (as traduções ainda são parciais). Stories e mensagens multimídia ainda têm textos fixos em português.
 - [ ] Testes reais multiusuário e testes mobile de todas as telas.
 
 ## Prioridade P2 — monetização e lançamento
