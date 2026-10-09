@@ -313,7 +313,7 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  if(active)return <KeyboardAvoidingView style={{flex:1}}
   behavior={Platform.OS==='ios'?'padding':undefined} keyboardVerticalOffset={12}>
   <View style={[s.header,{justifyContent:'flex-start',gap:14}]}>
-   <Pressable onPress={()=>setActive(null)} hitSlop={12}><Text style={{color:t.primary,fontSize:21}}>‹</Text></Pressable>
+   <Pressable accessibilityRole="button" accessibilityLabel="Voltar para conversas" onPress={()=>setActive(null)} hitSlop={12}><Text style={{color:t.primary,fontSize:21}}>‹</Text></Pressable>
    <Avatar path={selected?.other?.avatar_path} name={selected?.title||'Conversa'} size={36}/>
    <View style={s.grow}><Text numberOfLines={1} style={s.primaryText}>{selected?.title||'Conversa'}</Text>
     <Text style={s.muted}>{selected?.group?'Grupo do Conecta':'Chat privado e seguro'}</Text></View>
@@ -327,7 +327,9 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     <Text style={{color:item.sender_id===userId?'white':t.dark,fontSize:14,lineHeight:20}}>
      {item.deleted_at?'Mensagem apagada':item.content||'Mídia compartilhada'}
     </Text>
-    {item.media_path&&<Pressable onPress={()=>void openOfficial('/mensagens')}>
+    {!item.deleted_at&&item.media_path&&item.media_type?.startsWith('image')&&
+      <Media path={item.media_path} height={175}/>}
+     {!item.deleted_at&&item.media_path&&!item.media_type?.startsWith('image')&&<Pressable onPress={()=>void openOfficial('/mensagens')}>
      <Text style={{color:item.sender_id===userId?'white':t.primary,fontSize:12,marginTop:4}}>
       Abrir anexo no Conecta ↗</Text></Pressable>}
     <Text style={{alignSelf:'flex-end',fontSize:10,color:item.sender_id===userId?'#E9DFFB':t.muted,marginTop:5}}>
