@@ -9,6 +9,7 @@ import {EmojiButton} from '@/components/emoji-button';
 import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
 import {optimizeImage} from '@/lib/media';
 import {MentionInput,MentionText} from '@/components/mention-input';
+import {ReportContentButton} from '@/components/report-content-button';
 
 type Person={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Conversation={id:string;title:string|null;created_at:string;created_by:string};
@@ -408,6 +409,7 @@ export default function Messages(){
              {m.edited_at&&!m.deleted_at&&<small>editada</small>}
              {own&&!m.deleted_at&&otherReceipts.length>0&&<span className="conecta-chat-receipt" title={readCount+' de '+otherReceipts.length+' participantes leram'}>{readCount===otherReceipts.length?<CheckCheck size={13}/>:<Check size={13}/>} {readCount===otherReceipts.length?'Lida':readCount>0?readCount+' leram':'Enviada'}</span>}
             </div>
+            {!own&&!m.deleted_at&&auth.user&&<ReportContentButton targetType="message" targetId={m.id} reporterId={auth.user.id}/>}
             {own&&!m.deleted_at&&<div className="conecta-chat-message-actions">
               {m.content&&<button type="button" disabled={messageBusy} title="Editar mensagem" aria-label="Editar mensagem" onClick={()=>{setEditingId(m.id);setEditingText(m.content);}}><Pencil size={13}/></button>}
               <button type="button" disabled={messageBusy} title="Apagar para todos" aria-label="Apagar mensagem" onClick={()=>void eraseMessage(m)}><Trash2 size={13}/></button>
