@@ -1,5 +1,6 @@
 import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,Image,Pressable,StyleSheet,Text,TextInput,View} from 'react-native';
+import {VideoView,useVideoPlayer} from 'expo-video';
 import {signedMedia} from './data';
 import {theme as t} from './theme';
 export const styles=StyleSheet.create({
@@ -45,6 +46,26 @@ export function Media({path,height=185}:{path:string|null|undefined;height?:numb
  if(!url)return null;
  return <Image accessibilityLabel="Mídia da publicação" accessibilityRole="image" source={{uri:url}} resizeMode="cover"
  style={{width:'100%',height,borderRadius:15,marginTop:12}}/>;
+}
+function InlineVideo({url,height}:{url:string;height:number}){
+ const player=useVideoPlayer(url);
+ return <VideoView player={player} nativeControls fullscreenOptions={{enable:true}}
+  style={{width:'100%',height,borderRadius:14,marginTop:10}}/>;
+}
+export function VideoMedia({path}:{path:string|null|undefined}){
+ const [url,setUrl]=useState<string|null>(null);
+ const [activated,setActivated]=useState(false);
+ useEffect(()=>{
+  let active=true;setUrl(null);setActivated(false);
+  void signedMedia(path).then(value=>{if(active)setUrl(value);});
+  return()=>{active=false;};
+ },[path]);
+ if(!path)return null;
+ return <View style={{marginTop:10}}>
+  {!activated?<Action secondary label="▶ Assistir vídeo" onPress={()=>setActivated(true)}/>:
+   url?<InlineVideo url={url} height={240}/>:
+    <Text style={styles.muted}>Não foi possível carregar o vídeo autorizado.</Text>}
+ </View>;
 }
 export function Action({label,onPress,secondary=false,disabled=false}:{
  label:string;onPress:()=>void;secondary?:boolean;disabled?:boolean
