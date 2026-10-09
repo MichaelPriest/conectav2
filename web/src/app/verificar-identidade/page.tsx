@@ -33,6 +33,7 @@ export default function IdentityPage(){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [declaredBand,setDeclaredBand]=useState<string|null>(null);
+  const [documentMode,setDocumentMode]=useState<'cin'|'old-rg'>('cin');
 
   const token=useCallback(async()=>{
     const {data:{session}}=await supabaseBrowser().auth.getSession();
@@ -150,5 +151,30 @@ export default function IdentityPage(){
       </button>
       <p className="fineprint" style={{textAlign:'left'}}>O leitor QR Code e o Human abaixo são apenas ferramentas experimentais. Nenhuma conclusão local libera acesso adulto ou altera o cadastro de idade.</p>
     </section>
-  <GovBrSignatureFlow/><CinQrScanner/><HumanCameraCheck/></main></GuardedPage>;
+  
+    <section className="panel" style={{marginTop:20}}>
+      <div className="feed-title"><h2>Qual documento você possui?</h2></div>
+      <div className="row" style={{gap:10,flexWrap:'wrap'}} role="group" aria-label="Tipo de documento">
+        <button type="button" className={documentMode==='cin'?'btn btn-primary':'btn btn-outline'}
+          aria-pressed={documentMode==='cin'} onClick={()=>setDocumentMode('cin')}>
+          Nova CIN com QR Code</button>
+        <button type="button" className={documentMode==='old-rg'?'btn btn-primary':'btn btn-outline'}
+          aria-pressed={documentMode==='old-rg'} onClick={()=>setDocumentMode('old-rg')}>
+          RG antigo</button>
+      </div>
+      {documentMode==='old-rg'&&<div style={{marginTop:14}}>
+        <p><strong>O RG antigo também é aceito para iniciar a pré-triagem.</strong>
+          Como os modelos antigos não possuem QR Code nacional padronizado,
+          a conferência não pode usar o leitor de CIN.</p>
+        <p className="small-note">Alternativa gratuita: teste Human de movimentos guiados,
+          declaração assinada via gov.br e eventual conferência documental assistida.
+          Nenhuma dessas ações confirma automaticamente a autenticidade do RG, a
+          titularidade ou a data de nascimento.</p>
+        <p className="small-note">Ainda não solicitamos foto do RG antigo neste fluxo
+          porque falta um canal de análise documental seguro e autorizado.
+          Não envie RG, CPF ou outros dados pessoais por mensagens ou comentários.</p>
+      </div>}
+    </section>
+    {documentMode==='cin'&&<CinQrScanner/>}
+    <GovBrSignatureFlow/><HumanCameraCheck/></main></GuardedPage>;
 }

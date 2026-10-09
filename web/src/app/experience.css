@@ -317,3 +317,15 @@
 .conecta-cin-result.checked{border-color:#b7dbc9;background:#f0fbf5}
 .conecta-cin-result.caution{border-color:#ecd4af;background:#fff9ed}
 .conecta-cin-result p{margin:5px 0}.conecta-cin-result strong{color:#34304b}
+
+
+/* Feedback while on-device Human models load; webcam remains cancellable. */
+.human-loading-indicator{position:absolute;left:12px;right:12px;bottom:12px;
+  padding:9px 12px;background:rgba(22,26,44,.83);color:white;text-align:center;
+  border-radius:10px;font-size:12px;pointer-events:none}
+.human-challenge-progress{display:grid;gap:8px;margin:13px 0;padding:13px;
+  background:var(--panel,#fff);border:1px solid #ebe6fc;border-radius:12px}
+.human-challenge-progress progress{width:100%;accent-color:#8057f6;height:10px}
+.human-challenge-progress p{font-size:13px;margin:0}
+.human-diagnostics summary{font-size:12px;cursor:pointer;color:var(--muted,#7a829e);margin:10px 0}
+.human-camera-panel .human-video-wrap video{object-fit:cover;transform:scaleX(-1)}
