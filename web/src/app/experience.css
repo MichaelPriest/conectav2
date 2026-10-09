@@ -673,3 +673,15 @@
  padding:0 5px;background:#ef476f;color:#fff;font-size:11px;font-weight:800;
  border-radius:999px;margin-left:4px;box-shadow:0 1px 6px rgba(0,0,0,.13)}
 .conecta-chat-widget-list>button .conecta-chat-unread{margin-left:auto;flex-shrink:0}
+
+/* Mobile messenger: treat inbox and selected conversation as separate screens. */
+.conecta-chat-mobile-back{display:none}
+@media(max-width:690px){
+ .conecta-chat-layout.conecta-chat-has-active>.conecta-chat-sidebar{display:none}
+ .conecta-chat-layout:not(.conecta-chat-has-active)>.conecta-chat-main{display:none}
+ .conecta-chat-layout:not(.conecta-chat-has-active)>.conecta-chat-sidebar{
+   max-height:none;border-bottom:0;min-height:440px}
+ .conecta-chat-mobile-back{display:inline-flex;flex-shrink:0}
+ .conecta-chat-main{min-height:min(680px,calc(100dvh - 125px))}
+ .conecta-chat-log{max-height:calc(100dvh - 270px);min-height:280px}
+}
