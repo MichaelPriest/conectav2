@@ -75,17 +75,20 @@ export async function POST(request:NextRequest){
  try{body=await request.json();}catch{return reply({error:'Dados inválidos.'},400);}
  if(!validId(body.id)||(body.kind!=='post'&&body.kind!=='story'))return reply({error:'Conteúdo inválido.'},400);
  const {user,admin}=context,kind=body.kind,id=body.id!;
- const table=kind==='post'?'posts':'stories';
- const {data:record,error:fetchError}=await admin.from(table)
-  .select(kind==='post'?'id,author_id,content,media_path,media_type,moderation_status,ai_checked_at,community_id':'id,author_id,caption,media_path,media_type,moderation_status,expires_at')
-  .eq('id',id).maybeSingle();
+ const {data:record,error:fetchError}=kind==='post'
+  ?await admin.from('posts').select('id,author_id,content,media_path,media_type,moderation_status,ai_checked_at,community_id').eq('id',id).maybeSingle()
+  :await admin.from('stories').select('id,author_id,caption,media_path,media_type,moderation_status,expires_at').eq('id',id).maybeSingle();
  if(fetchError||!record)return reply({error:'Conteúdo não encontrado.'},404);
- if(record.author_id!==user.id)return reply({error:'Você não pode moderar o conteúdo de terceiros.'},403);
- if(kind==='story'&&new Date(record.expires_at as string).getTime()<Date.now())
+ const row=record as {
+  author_id:string;content?:string;caption?:string;expires_at?:string;
+  moderation_status:string;ai_checked_at?:string|null;media_path:string|null;media_type:MediaKind|null;
+ };
+ if(row.author_id!==user.id)return reply({error:'Você não pode moderar o conteúdo de terceiros.'},403);
+ if(kind==='story'&&new Date(row.expires_at as string).getTime()<Date.now())
   return reply({status:'expired'},200);
- if(kind==='post'&&record.ai_checked_at)return reply({status:record.moderation_status,alreadyChecked:true});
- if(record.moderation_status==='rejected')return reply({status:'rejected'},200);
- const content=kind==='post'?String(record.content||''):String(record.caption||'');
+ if(kind==='post'&&row.ai_checked_at)return reply({status:row.moderation_status,alreadyChecked:true});
+ if(row.moderation_status==='rejected')return reply({status:'rejected'},200);
+ const content=kind==='post'?String(row.content||''):String(row.caption||'');
  const media:{path:string;type:MediaKind}[]=[];
  if(kind==='post'){
   const {data:gallery,error:galleryError}=await admin.from('post_media').select('storage_path,media_type')
@@ -93,8 +96,8 @@ export async function POST(request:NextRequest){
   if(galleryError)return reply({status:'pending',error:'Arquivo ainda não foi verificado.'},503);
   for(const g of gallery||[])media.push({path:g.storage_path,type:g.media_type as MediaKind});
  }
- if(media.length===0&&record.media_path)
-  media.push({path:record.media_path as string,type:record.media_type as MediaKind});
+ if(media.length===0&&row.media_path)
+  media.push({path:row.media_path as string,type:row.media_type as MediaKind});
  if(media.length>5)return reply({status:'pending',error:'Número de mídias exige revisão manual.'},200);
  if(media.some(m=>m.type==='video')&&!process.env.CONEXA_MODERATION_WORKER_URL)
   return reply({status:'pending',reason:'Vídeos aguardam análise de quadros e revisão humana.'});
@@ -107,7 +110,7 @@ export async function POST(request:NextRequest){
  if(/(?:material\s+de\s+abuso\s+sexual\s+infantil|csam)/i.test(content))
   return reply({status:'pending',reason:'Revisão de segurança especializada necessária.'});
  if(!process.env.OPENAI_API_KEY&&!process.env.CONEXA_MODERATION_WORKER_URL)
-  return reply({status:record.moderation_status,provider:'unconfigured',
+  return reply({status:row.moderation_status,provider:'unconfigured',
     reason:'IA externa não configurada. Arquivos permanecem em revisão.'});
  const imageUrls:string[]=[];
  if(!process.env.CONEXA_MODERATION_WORKER_URL)for(const item of media){
@@ -129,14 +132,14 @@ export async function POST(request:NextRequest){
      moderation_reason:result.flagged?'IA sinalizou conteúdo para revisão humana':result.humanReview?'Aguardando revisão humana complementar':'',
      moderated_at:now,moderated_by:null,ai_checked_at:now,ai_provider:result.provider
    }).eq('id',id).eq('author_id',user.id).eq('content',content).is('ai_checked_at',null);
-   if(record.media_path===null)update=update.is('media_path',null);
-   else update=update.eq('media_path',record.media_path);
+   if(row.media_path===null)update=update.is('media_path',null);
+   else update=update.eq('media_path',row.media_path);
    const {data:updated,error}=await update.select('id,moderation_status').maybeSingle();
    if(error||!updated)return reply({status:'pending',reason:'Conteúdo alterado durante análise; verifique novamente.'},409);
   }else{
    const {data:updated,error}=await admin.from('stories').update({moderation_status:next})
     .eq('id',id).eq('author_id',user.id).eq('caption',content)
-    .eq('media_path',record.media_path).eq('moderation_status','pending')
+    .eq('media_path',row.media_path).eq('moderation_status','pending')
     .select('id').maybeSingle();
    if(error||!updated)return reply({status:'pending',reason:'Story indisponível para revisão.'},409);
   }
