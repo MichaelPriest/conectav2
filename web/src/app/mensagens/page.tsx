@@ -1,5 +1,5 @@
 'use client';
-import {FormEvent,useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {FormEvent,useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
 import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Users,Paperclip,Mic,Square,X,Loader2,Pencil,Trash2,Check,CheckCheck,Reply,Smile,Pin,PinOff,BellOff,Bell,Settings2,UserPlus} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
@@ -92,6 +92,8 @@ export default function Messages(){
  const activeRef=useRef(active);activeRef.current=active;
  const messagesRef=useRef(messages);messagesRef.current=messages;
  const loadingOlderRef=useRef(false);
+ const followLatestRef=useRef(true);
+ const scrollAnchorRef=useRef<{conversationId:string;height:number;top:number}|null>(null);
  useEffect(()=>{
    if(!attachment){setAttachmentPreview('');return;}
    const url=URL.createObjectURL(attachment);setAttachmentPreview(url);
@@ -212,7 +214,11 @@ export default function Messages(){
    const prior=messagesRef.current.filter(m=>m.conversation_id===id);
    const cursor=older?olderChatCursor(prior,id):null;
    if(older&&(!cursor||loadingOlderRef.current))return;
-   if(older)loadingOlderRef.current=true;
+   if(older){
+     loadingOlderRef.current=true;
+     const node=scrollRef.current;
+     scrollAnchorRef.current=node?{conversationId:id,height:node.scrollHeight,top:node.scrollTop}:null;
+   }
    setLoadingMessages(true);
    try{
      const db=supabaseBrowser();
@@ -223,7 +229,7 @@ export default function Messages(){
      const {data,error:e}=await query.order('created_at',{ascending:false})
        .order('id',{ascending:false}).limit(PER_PAGE);
      if(activeRef.current!==id)return;
-     if(e){setError(e.message);return;}
+     if(e){scrollAnchorRef.current=null;setError(e.message);return;}
      const incoming=(data||[]) as Message[];
      setMessages(current=>mergeChatPage(current,incoming,id));
      // Refreshes must not discard the pagination state or old messages.
@@ -251,13 +257,25 @@ export default function Messages(){
    const db=supabaseBrowser();
    const channel=db.channel('conecta-global-messages-'+auth.user.id)
      .on('postgres_changes',{schema:'public',table:'messages',event:'INSERT'},
+       ()=>{void loadThreads();})
+     .on('postgres_changes',{schema:'public',table:'conversation_members',event:'INSERT',
+       filter:'user_id=eq.'+auth.user.id},()=>{void loadThreads();})
+     .on('postgres_changes',{schema:'public',table:'conversation_members',event:'DELETE'},
+       ()=>{void loadThreads();})
+     .on('postgres_changes',{schema:'public',table:'conversations',event:'UPDATE'},
        ()=>{void loadThreads();}).subscribe();
-   return()=>{void db.removeChannel(channel);};
+   const refresh=()=>{if(!document.hidden)void loadThreads();};
+   window.addEventListener('focus',refresh);
+   document.addEventListener('visibilitychange',refresh);
+   return()=>{window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);
+     void db.removeChannel(channel);};
  },[auth.user,loadThreads]);
  useEffect(()=>{const name=new URLSearchParams(window.location.search).get('to');if(name)setRecipient(name);},[]);
  useEffect(()=>{
    if(!active)return;
    loadingOlderRef.current=false;
+   followLatestRef.current=true;
+   scrollAnchorRef.current=null;
    setMessages([]);setReceipts([]);setReactions([]);setEditingId(null);
    setReplyTo(null);setReactionOpen(null);setSearchOpen(false);setMessageSearch('');
    setSearchHits([]);setHighlighted(null);
@@ -285,11 +303,17 @@ export default function Messages(){
    // loadMessages is called with latest list and via realtime, not a hook dependency to avoid resubscribing for every message.
    // eslint-disable-next-line react-hooks/exhaustive-deps
  },[active]);
- useEffect(()=>{
-   if(!loadingMessages && messages.length && scrollRef.current && !hasOlder){
-     scrollRef.current.scrollTop=scrollRef.current.scrollHeight;
+ useLayoutEffect(()=>{
+   const node=scrollRef.current;
+   if(!active||!node)return;
+   const anchor=scrollAnchorRef.current;
+   if(anchor?.conversationId===active){
+     node.scrollTop=anchor.top+node.scrollHeight-anchor.height;
+     scrollAnchorRef.current=null;
+   }else if(followLatestRef.current){
+     node.scrollTop=node.scrollHeight;
    }
- },[loadingMessages,messages.length,hasOlder]);
+ },[active,messages]);
 
  const loadReceipts=useCallback(async(id:string)=>{
    const {data,error:e}=await supabaseBrowser().from('conversation_members')
@@ -733,7 +757,11 @@ export default function Messages(){
           </div>}
           {messageSearch.trim().length<2&&<p className="small-note">Digite pelo menos duas letras. A busca respeita a privacidade dos participantes.</p>}
         </section>}
-        <div className="conecta-chat-log" ref={scrollRef} aria-live="polite">
+        <div className="conecta-chat-log" ref={scrollRef} aria-live="polite"
+         onScroll={event=>{
+           const node=event.currentTarget;
+           followLatestRef.current=node.scrollHeight-node.scrollTop-node.clientHeight<96;
+         }}>
          {hasOlder&&<button className="btn btn-outline" type="button" disabled={loadingMessages} onClick={()=>void loadMessages(active,true)}>Carregar mensagens anteriores</button>}
          {messages.length===0&&!loadingMessages&&<div className="empty-state"><MessageCircle size={30}/><h3>Uma nova conversa começa aqui.</h3><p>Respeite a privacidade e a vontade de quem participa.</p></div>}
          {messages.map(m=>{

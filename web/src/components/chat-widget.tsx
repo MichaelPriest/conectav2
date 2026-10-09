@@ -163,11 +163,20 @@ export function ChatWidget({userId}:{userId:string}){
          // Privacy: no DM text or sender identity in browser notifications.
          try{new Notification('Conecta · Nova mensagem',{body:'Você recebeu uma mensagem.'});}
          catch{/* OS notifications may be restricted in this browser */}
-       }).subscribe();
-   const refresh=()=>{if(!document.hidden)void loadThreads();};
+       })
+     .on('postgres_changes',{schema:'public',table:'conversation_members',event:'INSERT',
+       filter:'user_id=eq.'+userId},()=>{void loadThreads();})
+     .on('postgres_changes',{schema:'public',table:'conversation_members',event:'DELETE'},
+       ()=>{void loadThreads();})
+     .on('postgres_changes',{schema:'public',table:'conversations',event:'UPDATE'},
+       ()=>{void loadThreads();})
+     .subscribe();
+   const refresh=()=>{if(!document.hidden){void loadThreads();void loadContacts();}};
    window.addEventListener('focus',refresh);
-   return()=>{window.removeEventListener('focus',refresh);void db.removeChannel(channel);};
- },[loadThreads,userId]);
+   document.addEventListener('visibilitychange',refresh);
+   return()=>{window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh);
+     void db.removeChannel(channel);};
+ },[loadThreads,loadContacts,userId]);
  useEffect(()=>{
    if(!open||!active)return;
    let live=true;setLoading(true);

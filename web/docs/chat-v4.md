@@ -37,3 +37,11 @@ pelo RPC `remove_conversation_group_member` com autenticação obrigatória, ver
 propriedade, identidade de grupo e participação atual; membros comuns não podem remover
 outras pessoas. A operação remove a participação e o indicador de digitação, mas não apaga
 o histórico para os demais integrantes. Ainda não há coadministradores.
+
+## Sincronização entre dispositivos
+
+Alterações de membros e títulos/grupos são publicadas no Supabase Realtime. O chat principal
+e o widget recarregam as conversas em convites, remoções e atualizações do grupo, com
+revalidação ao voltar para a aba como fallback para eventos perdidos. A paginação conserva
+o histórico antigo durante novas mensagens e preserva a posição da leitura ao carregar
+mensagens anteriores.
