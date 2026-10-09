@@ -1,6 +1,6 @@
 'use client';
 
-import {FormEvent,useCallback,useEffect,useState} from 'react';
+import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import {AlertTriangle,ArrowLeft,Check,Clock,FileText,Flag,Inbox,Loader2,RefreshCw,ShieldCheck,UserRound,X} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
@@ -99,8 +99,7 @@ export default function PlatformModeration(){
   return()=>{window.removeEventListener('focus',reload);window.clearInterval(timer);};
  },[role,load]);
 
- async function decide(event:FormEvent,decision:'start_review'|'resolve'|'dismiss'){
-   event.preventDefault();
+ async function decide(decision:'start_review'|'resolve'|'dismiss'){
    if(!selected||!role||busy)return;
    if(decision!=='start_review'&&rationale.trim().length<10){
      setError('Registre uma justificativa com pelo menos 10 caracteres.');
@@ -189,7 +188,7 @@ export default function PlatformModeration(){
           <small>Visualização restrita e limitada ao material denunciado. Não abre histórico completo do chat nem concede acesso a outras conversas.</small>
          </div>
          {item.target_type==='post'&&<Link className="rail-link" href={'/post/'+item.target_id}>Abrir publicação, se ainda estiver disponível <ArrowLeft size={15}/></Link>}
-         <form className="conecta-safety-decision" onSubmit={e=>{void decide(e,item.status==='pending'?'start_review':'resolve');}}>
+         <div className="conecta-safety-decision">
           <h3>Registrar decisão</h3>
           <label className="field-label">Justificativa para encerramento
            <textarea className="form-input" value={rationale} rows={3} maxLength={500}
@@ -197,16 +196,16 @@ export default function PlatformModeration(){
             onChange={e=>setRationale(e.target.value)} disabled={busy||item.status==='resolved'||item.status==='dismissed'}/>
           </label>
           {item.status==='pending'&&<button className="btn btn-outline" type="button" disabled={busy}
-            onClick={e=>{void decide(e as unknown as FormEvent,'start_review');}}>
+            onClick={()=>void decide('start_review')}>
             <Clock size={16}/> Iniciar análise
           </button>}
           {(item.status==='pending'||item.status==='reviewing')&&<div className="conecta-safety-decision-buttons">
-           <button type="button" className="btn btn-primary" disabled={busy||rationale.trim().length<10} onClick={e=>{void decide(e as unknown as FormEvent,'resolve');}}><Check size={16}/> Resolver</button>
-           <button type="button" className="btn btn-outline" disabled={busy||rationale.trim().length<10} onClick={e=>{void decide(e as unknown as FormEvent,'dismiss');}}><X size={16}/> Arquivar</button>
+           <button type="button" className="btn btn-primary" disabled={busy||rationale.trim().length<10} onClick={()=>void decide('resolve')}><Check size={16}/> Resolver</button>
+           <button type="button" className="btn btn-outline" disabled={busy||rationale.trim().length<10} onClick={()=>void decide('dismiss')}><X size={16}/> Arquivar</button>
           </div>}
           {['resolved','dismissed'].includes(item.status)&&<p className="small-note">Este caso foi encerrado. O histórico permanece para auditoria.</p>}
           <small>Resolver ou arquivar uma denúncia registra a decisão; não oculta nem exclui automaticamente a publicação ou mensagem.</small>
-         </form>
+         </div>
          <div className="conecta-safety-history"><h3>Histórico de decisões</h3>
           {historyLoading?<p className="small-note">Carregando histórico...</p>:history.length===0?<p className="small-note">Nenhuma decisão registrada neste caso.</p>:
            history.map(record=><article key={record.id}>
