@@ -46,7 +46,7 @@ export default function CommunityDetail(){
  const fetchPosts=useCallback(async(id:string,from=0,append=false)=>{
    const db=supabaseBrowser();
    const {data,error:e}=await db.from('posts')
-    .select('id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
+    .select('id,author_id,community_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
     .eq('community_id',id).order('created_at',{ascending:false}).range(from,from+PAGE_SIZE-1);
    if(e){setError(e.message);return;}
    const rows=(data||[]) as unknown as FeedPost[];
