@@ -27,6 +27,8 @@ export type FeedPost = {
 
 export type PostComment = {
   id: string;
+  moderation_status: 'approved' | 'pending' | 'rejected';
+  moderation_reason?: string;
   post_id: string;
   parent_id: string | null;
   author_id: string;
