@@ -33,13 +33,38 @@ export async function signedMedia(path:string|null|undefined):Promise<string|nul
 }
 export function clearMediaCache(){signedCache.clear();}
 
+const POST_FIELDS='id,author_id,community_id,content,visibility,moderation_status,created_at,media_path,media_type,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)';
 export async function loadFeed(offset=0):Promise<{items:Post[];more:boolean}>{
  const {data,error}=await supabase.from('posts')
- .select('id,author_id,community_id,content,visibility,moderation_status,created_at,media_path,media_type,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
+ .select(POST_FIELDS)
  .is('community_id',null).order('created_at',{ascending:false}).range(offset,offset+14);
  if(error)throw error;
  const items=(data||[]) as unknown as Post[];
  return {items,more:items.length===15};
+}
+export async function loadSavedPosts(userId:string):Promise<Post[]>{
+ const {data:saved,error:savedError}=await supabase.from('saved_posts')
+  .select('post_id').eq('user_id',userId).limit(100);
+ if(savedError)throw savedError;
+ const ids=[...new Set((saved||[]).map(item=>item.post_id))];
+ if(!ids.length)return [];
+ const {data,error}=await supabase.from('posts').select(POST_FIELDS)
+  .in('id',ids).order('created_at',{ascending:false});
+ if(error)throw error;
+ return (data||[]) as unknown as Post[];
+}
+export async function mySaved(userId:string,postIds:string[]):Promise<Set<string>>{
+ if(!postIds.length)return new Set();
+ const {data,error}=await supabase.from('saved_posts').select('post_id')
+  .eq('user_id',userId).in('post_id',postIds);
+ if(error)throw error;
+ return new Set((data||[]).map(item=>item.post_id));
+}
+export async function setSavedPost(postId:string,userId:string,currentlySaved:boolean):Promise<void>{
+ const {error}=currentlySaved?await supabase.from('saved_posts').delete()
+  .eq('user_id',userId).eq('post_id',postId):
+  await supabase.from('saved_posts').insert({user_id:userId,post_id:postId});
+ if(error)throw error;
 }
 export async function myLikes(userId:string,postIds:string[]):Promise<Set<string>>{
  if(postIds.length===0)return new Set();
