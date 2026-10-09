@@ -10,8 +10,14 @@ type CallContext={busy:boolean;hasCall:boolean;error:string;
  missedCount:number;acknowledgeMissed:()=>void;
  start:(conversationId:string,recipientId:string,recipientName:string,kind:CallKind)=>Promise<void>};
 const Context=createContext<CallContext|null>(null);
-const config:RTCConfiguration={iceServers:[{urls:'stun:stun.l.google.com:19302'}]};
-const intervalMs=12000;
+// Public STUN endpoints only; relaying traffic requires an authenticated TURN account.
+const config:RTCConfiguration={iceServers:[{urls:[
+  'stun:stun.cloudflare.com:3478',
+  'stun:stun.l.google.com:19302'
+]}]};
+const intervalMs=1800;
+const idlePollMs=12000;
+const negotiationTimeoutMs=47000;
 const describe=(e:unknown)=>e instanceof Error?e.message:'Não foi possível realizar a chamada.';
 
 async function iceComplete(pc:RTCPeerConnection){
@@ -38,6 +44,11 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
  const ended=useRef<string|null>(null);
  const notifiedIncoming=useRef<string|null>(null);
  const failureTimer=useRef<number|null>(null);
+ const connectTimer=useRef<number|null>(null);
+ const lastIdlePoll=useRef(0);
+ const [iceState,setIceState]=useState<RTCIceConnectionState>('new');
+ const [callPhase,setCallPhase]=useState('Aguardando atendimento');
+ const [technical,setTechnical]=useState(false);
  const [missedCount,setMissedCount]=useState(0);
  const missedAckKey='conecta-call-missed-ack:'+userId;
  const refreshMissed=useCallback(async()=>{
@@ -69,11 +80,13 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
 
  const release=useCallback(()=>{
   if(failureTimer.current!==null)window.clearTimeout(failureTimer.current);
-  failureTimer.current=null;
+  if(connectTimer.current!==null)window.clearTimeout(connectTimer.current);
+  failureTimer.current=null;connectTimer.current=null;
   pcRef.current?.close();pcRef.current=null;
   streamRef.current?.getTracks().forEach(track=>track.stop());streamRef.current=null;
   setLocal(null);setRemote(null);setAudioBlocked(false);
   setMicOn(true);setCamOn(false);setStatus('Chamando…');
+  setIceState('new');setCallPhase('Aguardando atendimento');setTechnical(false);
   sentOffer.current=false;sentAnswer.current=false;negotiating.current=false;
   currentRef.current=null;setCurrent(null);busyRef.current=false;setBusy(false);
  },[]);
@@ -91,6 +104,16 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
   });
   streamRef.current=media;setLocal(media);setMicOn(true);setCamOn(kind==='video');
   const pc=new RTCPeerConnection(config);pcRef.current=pc;
+  pc.oniceconnectionstatechange=()=>{
+    setIceState(pc.iceConnectionState);
+    if(pc.iceConnectionState==='checking')setStatus('Verificando conexão entre navegadores…');
+    if(pc.iceConnectionState==='connected'||pc.iceConnectionState==='completed'){
+      setStatus('Conectada');
+      if(connectTimer.current!==null)window.clearTimeout(connectTimer.current);
+      connectTimer.current=null;
+    }
+    if(pc.iceConnectionState==='failed')setStatus('Não foi possível conectar a rede P2P.');
+  };
   media.getTracks().forEach(track=>pc.addTrack(track,media));
   pc.ontrack=e=>{
    if(e.streams[0])setRemote(e.streams[0]);
@@ -101,7 +124,9 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
   pc.onconnectionstatechange=()=>{
    if(pc.connectionState==='connected'){
     if(failureTimer.current!==null)window.clearTimeout(failureTimer.current);
-    failureTimer.current=null;setStatus('Conectada');
+    failureTimer.current=null;
+    if(connectTimer.current!==null)window.clearTimeout(connectTimer.current);
+    connectTimer.current=null;setCallPhase('Conectada');setStatus('Conectada');
    }else if(pc.connectionState==='connecting')setStatus('Conectando…');
    else if(pc.connectionState==='failed'){
     setStatus('Falha na conexão P2P.');
@@ -126,6 +151,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     callee_id:recipientId,kind,status:'ringing',offer_sdp:null,answer_sdp:null,
     expires_at:new Date(Date.now()+65000).toISOString()};
    ended.current=null;currentRef.current=row;setCurrent(row);setStatus('Chamando…');
+   setCallPhase('Aguardando a outra pessoa atender');
   }catch(e){release();setError(describe(e));}
   finally{busyRef.current=false;setBusy(false);}
  },[acquire,db,release,userId]);
@@ -139,25 +165,44 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
    if(e)throw e;
    const changed={...row,status:'accepted' as const,
     expires_at:new Date(Date.now()+120000).toISOString()};
-   currentRef.current=changed;setCurrent(changed);setStatus('Conectando…');
+   currentRef.current=changed;setCurrent(changed);
+   setStatus('Aguardando a oferta de conexão…');
+   setCallPhase('Atendida · aguardando oferta WebRTC');
   }catch(e){setError(describe(e));void end(true);}
   finally{busyRef.current=false;setBusy(false);}
  },[acquire,db,end,userId]);
  const negotiate=useCallback(async(row:CallRow)=>{
   const pc=pcRef.current;
   if(!pc||negotiating.current||row.status!=='accepted')return;
+  if(connectTimer.current===null&&pc.connectionState!=='connected'){
+    connectTimer.current=window.setTimeout(()=>{
+      const live=pcRef.current;
+      if(live!==pc||live.connectionState==='connected')return;
+      let reason='';
+      if(!live.localDescription)reason='A oferta WebRTC não foi preparada.';
+      else if(!live.remoteDescription)reason='A resposta WebRTC não chegou ao seu navegador.';
+      else reason='A negociação foi recebida, mas esta rede não conseguiu estabelecer o caminho P2P. É necessário TURN em algumas redes.';
+      setError(reason);void end();
+    },negotiationTimeoutMs);
+  }
   negotiating.current=true;
   try{
    if(row.caller_id===userId&&!sentOffer.current){
     sentOffer.current=true;
+    setStatus('Preparando a oferta de conexão…');
+    setCallPhase('Oferta WebRTC sendo preparada');
     await pc.setLocalDescription(await pc.createOffer());
     await iceComplete(pc);
     const sdp=pc.localDescription?.sdp;
     if(!sdp)throw Error('Oferta WebRTC vazia.');
     const {error:e}=await db.rpc('signal_chat_call',{_id:row.id,_kind:'offer',_sdp:sdp});
     if(e)throw e;
+    setStatus('Oferta enviada · aguardando resposta…');
+    setCallPhase('Oferta entregue ao Supabase');
    }else if(row.callee_id===userId&&row.offer_sdp&&!sentAnswer.current){
     sentAnswer.current=true;
+    setStatus('Recebi a oferta · preparando resposta…');
+    setCallPhase('Oferta recebida');
     await pc.setRemoteDescription({type:'offer',sdp:row.offer_sdp});
     await pc.setLocalDescription(await pc.createAnswer());
     await iceComplete(pc);
@@ -165,8 +210,12 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     if(!sdp)throw Error('Resposta WebRTC vazia.');
     const {error:e}=await db.rpc('signal_chat_call',{_id:row.id,_kind:'answer',_sdp:sdp});
     if(e)throw e;
+    setStatus('Resposta enviada · verificando rede…');
+    setCallPhase('Resposta entregue ao Supabase');
    }else if(row.caller_id===userId&&row.answer_sdp&&!pc.currentRemoteDescription){
+    setCallPhase('Resposta WebRTC recebida');
     await pc.setRemoteDescription({type:'answer',sdp:row.answer_sdp});
+    setStatus('Oferta e resposta recebidas · verificando rede…');
    }
   }catch(e){setError(describe(e));void end();}
   finally{negotiating.current=false;}
@@ -234,7 +283,15 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     .on('postgres_changes',{schema:'public',table:'chat_calls',event:'*',
       filter:'caller_id=eq.'+userId},()=>{void check();})
     .subscribe();
-  const timer=window.setInterval(()=>{void check();},intervalMs);
+  // Frequent checks only while a call is active; 12s idle fallback avoids
+  // unnecessary reads for all connected users. Realtime remains primary.
+  const timer=window.setInterval(()=>{
+    if(currentRef.current){void check();return;}
+    const now=Date.now();
+    if(now-lastIdlePoll.current>=idlePollMs){
+      lastIdlePoll.current=now;void check();
+    }
+  },intervalMs);
   const missedTimer=window.setInterval(()=>{void refreshMissed();},90000);
   const visibility=()=>{if(!document.hidden){void check();void refreshMissed();}};
   document.addEventListener('visibilitychange',visibility);
@@ -247,6 +304,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
    if(row&&(row.caller_id===userId||Boolean(pcRef.current)))
      void db.rpc('end_chat_call',{_id:row.id,_decline:false});
    if(failureTimer.current!==null)window.clearTimeout(failureTimer.current);
+   if(connectTimer.current!==null)window.clearTimeout(connectTimer.current);
    pcRef.current?.close();streamRef.current?.getTracks().forEach(track=>track.stop());
   };
  },[db,check,refreshMissed,userId]);
@@ -273,6 +331,21 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     aria-label={incoming?'Chamada recebida':'Chamada de áudio ou vídeo'}>
     <small className="conecta-call-eyebrow">Conecta · {current.kind==='video'?'Vídeo':'Voz'}</small>
     <h2>{contact}</h2><p role="status">{status}</p>
+    {current.status==='accepted'&&<div className="conecta-call-diagnostic">
+      <small>{callPhase}</small>
+      <button type="button" className="conecta-call-diagnostic-toggle"
+        aria-expanded={technical} onClick={()=>setTechnical(value=>!value)}>
+        {technical?'Ocultar diagnóstico':'Ver diagnóstico de conexão'}
+      </button>
+      {technical&&<div className="conecta-call-debug" role="status">
+        <span>Atendida: sim</span>
+        <span>Oferta: {current.offer_sdp?'recebida':'aguardando'}</span>
+        <span>Resposta: {current.answer_sdp?'recebida':'aguardando'}</span>
+        <span>ICE: {iceState}</span>
+        <span>Conexão: {pcRef.current?.connectionState||'não iniciada'}</span>
+        <span>Servidor TURN: não configurado</span>
+      </div>}
+    </div>}
     <video ref={remoteVideo} autoPlay playsInline
      className="conecta-call-remote" style={current.kind==='video'?undefined:{display:'none'}}
      aria-label="Transmissão remota"/>

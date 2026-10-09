@@ -94,3 +94,7 @@
 .conecta-chat-missed:hover{background:#ffe4eb}
 .conecta-chat-missed span{font-size:16px;line-height:1;padding-left:3px}
 .conecta-chat-widget-list>.conecta-chat-missed{margin:10px 12px 0}
+
+.conecta-call-diagnostic{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--muted);width:100%}
+.conecta-call-diagnostic-toggle{border:0;background:transparent;color:var(--brand);font-size:11px;text-decoration:underline;cursor:pointer}
+.conecta-call-debug{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));text-align:left;gap:5px;padding:9px;width:100%;border:1px solid var(--line);border-radius:9px;color:var(--ink);font-size:11px}

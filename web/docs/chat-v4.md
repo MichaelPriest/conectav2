@@ -270,3 +270,14 @@ silenciar, desligar câmera e encerrar, sem serviço pago obrigatório.
   previamente concedida e página aberta em segundo plano.
 - SDP nunca fica acessível a terceiros: RLS restringe participantes com
   amizade aceita e sem bloqueios. STUN é grátis mas não substitui TURN.
+
+## Chat V4.11 — diagnóstico de conexão sem prender em “Conectando”
+O problema relatado em teste real exigiu instrumentação visual para separar
+sinalização de rede. A nova interface mostra etapas oferta/resposta e estado
+ICE, sem expor IPs, SDP ou mídia. Quando um peer não conecta após 47 segundos,
+o componente libera as trilhas de áudio/vídeo e mostra o motivo (sinalização
+ausente ou rede sem caminho P2P). Chamadas em andamento fazem fallback de
+consulta a cada 1,8 segundo; sem chamada, a verificação é cada 12 segundos,
+mantendo Supabase Realtime principal. STUN Cloudflare gratuito complementa
+Google. Redes NAT/firewall restritivas exigem TURN autenticado, ainda não
+configurado; não interpretar CI de frontend como teste de áudio entre redes.
