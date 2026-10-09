@@ -2,6 +2,18 @@
 
 **Estado da integração (09/10/2026):** fontes, rotas, banco e revisão humana implementados. **Não afirmar que os modelos estão ativos sem configurar um provedor.** A implantação do worker de ML não faz parte da instância web Render; usa infraestrutura própria com capacidade de CPU/RAM.
 
+## Moderação AUTOMÁTICA ao publicar (sem clicar em Analisar)
+
+O envio de comentários, posts, fotos, Stories, Reels e vídeos já chama as rotas `/api/moderation/comment` e `/api/moderation/review` depois de salvar. No modo padrão `CONEXA_MODERATION_ENGINE=local` (ou variável ausente), o servidor autenticado executa a triagem e registra o resultado no Supabase sem cliques da equipe:
+
+- **Texto PT-BR**: [profanity-br](https://github.com/Vhs4/profanity-br), MIT, núcleo **determinístico**, sem chamadas externas. Detecta ataques e xingamentos e soma regras conservadoras para ameaça, golpes, links, dados pessoais e conteúdo sensível. **Isto não é IA contextual**: resultados inconclusivos vão para revisão humana. Comentários simples são aprovados automaticamente apenas se o post e, no caso de resposta, o comentário pai também estiverem aprovados.
+- **Imagem**: classificador NSFWJS (MIT) no servidor. Fotografias sem sinais de risco visual passam pela triagem inicial; suspeitas ou ambíguas ficam na fila. Este detector só verifica classes NSFW.
+- **Vídeo**: [ffmpeg-static](https://github.com/eugeneware/ffmpeg-static) + FFmpeg 6.1.1 extraem **até cinco quadros do arquivo real no Supabase**, e NSFWJS pontua cada quadro. A aprovação inicial automática só ocorre com amostragem completa e pontuações visuais baixas; indícios de risco retêm o vídeo. Conteúdo maior que **24 MB** ou **45 segundos**, quadros inválidos, erro de decodificação e tempo limite => `pending` para revisão.
+- **Proteções de banco**: regras de quarentena anteriores continuam; novo trigger em `post_media` invalida aprovação ao inserir mídia adicional. Não é possível liberar conteúdo pelo navegador manipulando um campo de status.
+- **Privacidade e segurança**: a análise automática é executada no servidor sobre o arquivo real, não sobre thumbnails enviados pelo próprio usuário. A mídia não é enviada a API de IA externa no modo `local`. Não há chave de API paga.
+- **Limites reais**: cinco quadros não detectam todas as cenas; áudio, coerção, golpes visuais, contexto discriminatório e material de abuso sexual infantil requerem mecanismos especializados. Moderadores continuam essenciais para denúncias, ambiguidades, recursos e incidentes graves. O servidor atual é gratuito, mas CPU, banda, memória e timeout são limitados. Não prometer análise completa de todo vídeo, principalmente acima do limite.
+- **CI obrigatório**: `npm run test:automod` roda triagem lexical PT-BR e geração/extração de vídeo real com FFmpeg e NSFWJS (vídeo sintético inofensivo, **sem mocks**). Se falhar, a alteração não deve ser publicada.
+
 ## IA para texto e vídeo sem hospedagem adicional — revisão sob demanda
 
 Na **Central de Moderação**, com uma conta de moderador habilitada, os botões `Analisar texto localmente` e `Analisar 5 quadros do vídeo` carregam modelos **no navegador da pessoa moderadora**, somente quando acionados. O conteúdo não é enviado a uma API de inferência; somente os pesos públicos dos modelos são baixados.
