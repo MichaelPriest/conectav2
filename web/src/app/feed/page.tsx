@@ -14,6 +14,7 @@ import { FeaturedCommunities } from '@/components/featured-communities';
 import {DiscreetAdSlot} from '@/components/discreet-ad-slot';
 import {StoryRail} from '@/components/story-rail';
 import {EmojiButton} from '@/components/emoji-button';
+import {MentionInput} from '@/components/mention-input';
 import {PollDraft,validatePoll} from '@/components/poll-draft';
 import {attachPoll} from '@/lib/create-poll';
 import {BarChart3} from 'lucide-react';
@@ -138,7 +139,7 @@ export default function FeedPage() {
       <section className="composer card concept-composer" id="composer">
         <div className="composer-top"><ProfileAvatar person={profile}/><div className="concept-composer-heading"><strong>{profile?.display_name ? 'Compartilhe um momento, '+profile.display_name.split(' ')[0] : 'O que você está pensando hoje?'}</strong><span>Uma boa história merece ser compartilhada.</span></div></div>
         <form onSubmit={publish}>
-          <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="No que você está pensando hoje?" maxLength={3000} rows={3}/>
+          <MentionInput value={text} onChange={setText} placeholder="No que você está pensando hoje? Marque amigos com @usuário" maxLength={3000} rows={3}/>
           {pollMode&&<PollDraft question={text} options={pollOptions} onOptionsChange={setPollOptions} days={pollDays} onDaysChange={setPollDays}/>}
           {files.length>0&&<div className="concept-attachment">
             <div className={'composer-preview-grid '+(files.length>1?'multiple':'')}>
