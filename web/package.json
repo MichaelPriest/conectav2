@@ -12,7 +12,8 @@
     "test:cin": "node --test tests/cin-qr.test.cjs",
     "test:govbr": "node --test tests/govbr-flow.test.cjs",
     "test:origin": "node --test tests/identity-origin.test.cjs",
-    "test:legacy-rg": "node --test tests/legacy-rg-ocr.test.cjs"
+    "test:legacy-rg": "node --test tests/legacy-rg-ocr.test.cjs",
+    "test:completion": "node --test tests/identity-completion.test.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",

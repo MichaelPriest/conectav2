@@ -8,6 +8,7 @@ import {HumanCameraCheck} from '@/components/human-camera-check';
 import {CinQrScanner} from '@/components/cin-qr-scanner';
 import {LegacyRgScanner} from '@/components/legacy-rg-scanner';
 import {GovBrSignatureFlow} from '@/components/govbr-signature-flow';
+import {IdentityCompletion} from '@/components/identity-completion';
 
 type Result={
   configured?:boolean;
@@ -180,5 +181,5 @@ export default function IdentityPage(){
       </div>}
     </section>
     {documentMode==='cin'?<CinQrScanner/>:<LegacyRgScanner declaredBand={declaredBand}/>}
-    <GovBrSignatureFlow declaredBand={declaredBand}/><HumanCameraCheck/></main></GuardedPage>;
+    <GovBrSignatureFlow declaredBand={declaredBand}/><HumanCameraCheck/><IdentityCompletion/></main></GuardedPage>;
 }
