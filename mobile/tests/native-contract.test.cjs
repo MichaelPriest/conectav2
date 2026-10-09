@@ -124,3 +124,15 @@ test('Voice notes stay private and require explicit microphone consent',()=>{
  assert.equal(plugin[1].enableBackgroundRecording,false);
  assert.equal(plugin[1].enableBackgroundPlayback,false);
 });
+
+test('Chat media stays scoped to the signed-in conversation, with upload cleanup',()=>{
+ const media=read('src/chat-media.ts');
+ assert.match(media,/session\.user\.id!==userId/);
+ assert.match(media,/storage\.from\('social-media'\)/);
+ assert.match(media,/messages\/\${randomUUID\(\)}/);
+ assert.match(media,/media_type:media\.kind/);
+ assert.match(media,/from\('messages'\)\.insert\(/);
+ assert.match(media,/remove\(\[path\]\)/);
+ assert.match(app,/sendChatMedia\(active,userId,chosen\)/);
+ assert.match(app,/VideoMedia path=\{item\.media_path\}/);
+});
