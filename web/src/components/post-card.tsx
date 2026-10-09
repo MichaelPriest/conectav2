@@ -8,6 +8,7 @@ import {EmojiButton} from '@/components/emoji-button';
 import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {PollCard} from '@/components/poll-card';
+import {MentionInput,MentionText} from '@/components/mention-input';
 
 function ago(value: string) {
   const minutes = Math.max(0, Math.floor((Date.now()-new Date(value).getTime())/60000));
@@ -120,7 +121,7 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
   const LikesIcon=Heart;
   return <article className="post-card" id={'post-'+post.id}>
     <div className="post-head"><ProfileAvatar person={post.profiles}/><div className="post-meta"><strong>{post.profiles?.display_name||'Pessoa da comunidade'}</strong><span>@{post.profiles?.handle||'conecta'} · {ago(post.created_at)}</span></div><div className="post-privacy" title={post.visibility}>{post.visibility==='public'?<Globe2 size={16}/>:post.visibility==='friends'?<Users size={16}/>:<LockKeyhole size={16}/>}</div>{post.author_id===userId&&<button className="icon-btn subtle" onClick={remove} title="Excluir publicação" aria-label="Excluir publicação"><Trash2 size={17}/></button>}</div>
-    <div className="post-body">{post.content && <p>{post.content}</p>}{media.length>0 && (media.length===1 && media[0].type==='video'
+    <div className="post-body">{post.content && <p><MentionText text={post.content}/></p>}{media.length>0 && (media.length===1 && media[0].type==='video'
       ? <div className="post-media"><video src={media[0].url} controls preload="metadata"/></div>
       : <div className={'post-gallery '+(media.length===1?'gallery-one':media.length===2?'gallery-two':'gallery-mosaic')}>
           {media.slice(0,3).map((item,index)=><button key={item.path||index} className="post-gallery-item" type="button" onClick={()=>setActiveMediaIndex(index)} aria-label={'Abrir imagem '+(index+1)+' de '+media.length}>
@@ -150,19 +151,19 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
       {comments.filter(cm=>!cm.parent_id).map(root=><div className="conecta-comment-thread" key={root.id}>
         <div className="comment">
           <ProfileAvatar person={root.profiles} size="tiny"/>
-          <div><strong>{root.profiles?.display_name||'Pessoa'}</strong><p>{root.body}</p><small>{ago(root.created_at)}</small>
+          <div><strong>{root.profiles?.display_name||'Pessoa'}</strong><p><MentionText text={root.body}/></p><small>{ago(root.created_at)}</small>
             <button className="conecta-reply-link" type="button" onClick={()=>{setReplyTo(root);setComment('');}}><Reply size={14}/> Responder</button>
           </div>
         </div>
         {comments.filter(cm=>cm.parent_id===root.id).map(reply=><div className="comment conecta-comment-reply" key={reply.id}>
           <ProfileAvatar person={reply.profiles} size="tiny"/>
-          <div><strong>{reply.profiles?.display_name||'Pessoa'}</strong><p>{reply.body}</p><small>{ago(reply.created_at)}</small></div>
+          <div><strong>{reply.profiles?.display_name||'Pessoa'}</strong><p><MentionText text={reply.body}/></p><small>{ago(reply.created_at)}</small></div>
         </div>)}
       </div>)}
       {replyTo&&<div className="conecta-reply-to">Respondendo a @{replyTo.profiles?.handle||'pessoa'} <button type="button" onClick={()=>setReplyTo(null)}>Cancelar</button></div>}
       <form onSubmit={submitComment} className="comment-form">
         <EmojiButton onSelect={emoji=>setComment(current=>(current+emoji).slice(0,1000))}/>
-        <input aria-label={replyTo?'Escreva sua resposta':'Seu comentário'} placeholder={replyTo?'Escreva uma resposta...':'Escreva um comentário...'} maxLength={1000} required value={comment} onChange={e=>setComment(e.target.value)}/>
+        <MentionInput as="input" label={replyTo?'Escreva sua resposta':'Seu comentário'} placeholder={replyTo?'Escreva uma resposta e use @usuário...':'Escreva um comentário e use @usuário...'} maxLength={1000} required value={comment} onChange={setComment}/>
         <button type="submit" disabled={sending||!comment.trim()} className="icon-btn primary-circle" title={replyTo?'Responder':'Comentar'}><Send size={19}/></button>
       </form>
     </section>}
