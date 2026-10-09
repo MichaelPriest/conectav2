@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Bell, Bookmark, Compass, Clapperboard, Home, LogOut, Menu, MessageCircle, Moon, Plus, Search, Settings, Sun, Users, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Bell, Bookmark, Compass, Clapperboard, Home, LogOut, Menu, MessageCircle, Moon, Plus, Search, Settings, Sun, Users, X, PanelLeftClose, PanelLeftOpen, HeartHandshake } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/lib/types';
 import { supabaseBrowser } from '@/lib/supabase/browser';
@@ -17,6 +17,7 @@ const navItems = [
   { label: 'Explorar', href: '/explorar', icon: Compass },
   { label: 'Reels', href: '/reels', icon: Clapperboard },
   { label: 'Comunidades', href: '/comunidades', icon: Users },
+  { label: 'Acolhimento', href: '/acolhimento', icon: HeartHandshake },
   { label: 'Conexões', href: '/conexoes', icon: Users },
   { label: 'Notificações', href: '/notificacoes', icon: Bell },
   { label: 'Mensagens', href: '/mensagens', icon: MessageCircle },
@@ -88,6 +89,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
     setDark(selected);
     document.documentElement.dataset.theme = selected ? 'dark' : 'light';
     setSidebarCollapsed(window.localStorage.getItem('conecta-sidebar-collapsed')==='1');
+    document.documentElement.dataset.calmMode=window.localStorage.getItem('conecta-calm-mode')==='1'?'1':'0';
   }, []);
 
   function toggleSidebar(){
@@ -149,8 +151,8 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
       <div className="sidebar-top"><ConceptBrand href="/feed"/><button type="button" className="icon-btn conecta-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed?"Expandir menu lateral":"Recolher menu lateral"} title={sidebarCollapsed?"Expandir menu lateral":"Recolher menu lateral"} aria-expanded={!sidebarCollapsed}>{sidebarCollapsed?<PanelLeftOpen size={20}/>:<PanelLeftClose size={20}/>}</button><button className="icon-btn close-mobile" type="button" aria-label="Fechar navegação" onClick={() => setMobileNav(false)}><X size={20}/></button></div>
       <div className="sidebar-section-label">MENU · {t('language')}</div>
       <nav className="nav-links" aria-label="Principal">
-        {navItems.map(({label,href,icon:Icon}) => <Link key={href} href={href} title={t(({'Início':'home','Explorar':'explore','Reels':'reels','Comunidades':'communities','Conexões':'connections','Notificações':'notifications','Mensagens':'messages','Perfil':'profile','Publicar':'post'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')} onClick={()=>setMobileNav(false)} aria-current={pathname===href?'page':undefined} className={'nav-link '+(pathname===href?'nav-active':'')}>
-          <Icon size={20} strokeWidth={1.9}/><span>{t(({'Início':'home','Explorar':'explore','Reels':'reels','Comunidades':'communities','Conexões':'connections','Notificações':'notifications','Mensagens':'messages','Perfil':'profile','Publicar':'post'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')}</span>
+        {navItems.map(({label,href,icon:Icon}) => <Link key={href} href={href} title={t(({'Início':'home','Explorar':'explore','Reels':'reels','Comunidades':'communities','Acolhimento':'support','Conexões':'connections','Notificações':'notifications','Mensagens':'messages','Perfil':'profile','Publicar':'post'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')} onClick={()=>setMobileNav(false)} aria-current={pathname===href?'page':undefined} className={'nav-link '+(pathname===href?'nav-active':'')}>
+          <Icon size={20} strokeWidth={1.9}/><span>{t(({'Início':'home','Explorar':'explore','Reels':'reels','Comunidades':'communities','Acolhimento':'support','Conexões':'connections','Notificações':'notifications','Mensagens':'messages','Perfil':'profile','Publicar':'post'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')}</span>
           {label==='Notificações' && unread>0 && <span className="concept-nav-count">{unread>99?'99+':unread}</span>}
         </Link>)}
       </nav>
