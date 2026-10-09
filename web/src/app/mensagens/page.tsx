@@ -1,16 +1,42 @@
 'use client';
 import {FormEvent,useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
-import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Music2,Trash2,ArrowLeft,Users} from 'lucide-react';
+import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Users,Paperclip,Mic,Square,X,Loader2} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {EmojiButton} from '@/components/emoji-button';
 import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
+import {optimizeImage} from '@/lib/media';
 
 type Person={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Conversation={id:string;title:string|null;created_at:string;created_by:string};
-type Message={id:string;sender_id:string;content:string;created_at:string;conversation_id:string};
+type MediaType='image'|'video'|'audio';
+type Message={id:string;sender_id:string;content:string;created_at:string;conversation_id:string;media_path:string|null;media_type:MediaType|null};
+const ALLOWED_MEDIA=['image/jpeg','image/png','image/webp','image/gif','video/mp4','video/webm','audio/webm','audio/ogg','audio/mp4','audio/mpeg'];
+const MAX_MEDIA_BYTES=50*1024*1024;
+function classifyMedia(type:string):MediaType{
+ if(type.startsWith('image/'))return 'image';
+ if(type.startsWith('video/'))return 'video';
+ return 'audio';
+}
+function MessageMedia({message}:{message:Message}){
+ const [url,setUrl]=useState(''),[error,setError]=useState('');
+ useEffect(()=>{
+   if(!message.media_path)return;
+   let alive=true;
+   void supabaseBrowser().storage.from('social-media').createSignedUrl(message.media_path,1800)
+     .then(({data,error:e})=>{if(!alive)return;if(e||!data?.signedUrl)setError('Mídia indisponível.');else setUrl(data.signedUrl);});
+   return()=>{alive=false;};
+ },[message.media_path]);
+ if(!message.media_path)return null;
+ if(error)return <small role="alert">{error}</small>;
+ if(!url)return <small>Carregando anexo...</small>;
+ if(message.media_type==='image')return <img className="conecta-chat-attachment" src={url} alt="Imagem compartilhada na conversa" loading="lazy"/>;
+ if(message.media_type==='video')return <video className="conecta-chat-attachment" src={url} controls preload="metadata" playsInline/>;
+ if(message.media_type==='audio')return <audio className="conecta-chat-audio" src={url} controls preload="metadata" aria-label="Mensagem de áudio"/>;
+ return null;
+}
 type Thread=Conversation & {other:Person|null;participants:Person[];group:boolean;last:Message|null};
 const PER_PAGE=60;
 
@@ -24,11 +50,62 @@ export default function Messages(){
  const [groupOpen,setGroupOpen]=useState(false),[groupTitle,setGroupTitle]=useState('');
  const [groupMembers,setGroupMembers]=useState<string[]>([]);
  const [compose,setCompose]=useState('');
+ const [attachment,setAttachment]=useState<File|null>(null),[attachmentPreview,setAttachmentPreview]=useState('');
+ const [recording,setRecording]=useState(false);
+ const filePicker=useRef<HTMLInputElement>(null),recorder=useRef<MediaRecorder|null>(null);
+ const audioStream=useRef<MediaStream|null>(null),audioChunks=useRef<Blob[]>([]);
+ const recordLimit=useRef<number|null>(null);
  const [creating,setCreating]=useState(false),[sending,setSending]=useState(false);
  const [loading,setLoading]=useState(true),[loadingMessages,setLoadingMessages]=useState(false);
  const [hasOlder,setHasOlder]=useState(false),[error,setError]=useState('');
  const [threadSearch,setThreadSearch]=useState('');
  const scrollRef=useRef<HTMLDivElement>(null);
+ useEffect(()=>{
+   if(!attachment){setAttachmentPreview('');return;}
+   const url=URL.createObjectURL(attachment);setAttachmentPreview(url);
+   return()=>URL.revokeObjectURL(url);
+ },[attachment]);
+ useEffect(()=>()=>{if(recordLimit.current!==null)window.clearTimeout(recordLimit.current);
+   if(recorder.current){recorder.current.onstop=null;if(recorder.current.state==='recording')recorder.current.stop();}
+   audioStream.current?.getTracks().forEach(track=>track.stop());
+ },[]);
+ function chooseAttachment(event:React.ChangeEvent<HTMLInputElement>){
+   const selected=event.target.files?.[0];event.target.value='';
+   if(!selected)return;
+   if(!ALLOWED_MEDIA.includes(selected.type)){setError('Formato não permitido. Envie imagem, MP4, WebM ou áudio compatível.');return;}
+   if(selected.size>MAX_MEDIA_BYTES){setError('O limite por anexo é de 50 MB.');return;}
+   setAttachment(selected);setError('');
+ }
+ async function startRecording(){
+   if(recording||sending)return;
+   if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined'){
+     setError('A gravação de voz não está disponível neste navegador.');return;
+   }
+   try{
+     const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+     audioStream.current=stream;audioChunks.current=[];
+     const preferred=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg']
+       .find(type=>MediaRecorder.isTypeSupported(type));
+     const instance=new MediaRecorder(stream,preferred?{mimeType:preferred}:undefined);
+     recorder.current=instance;
+     instance.ondataavailable=event=>{if(event.data.size)audioChunks.current.push(event.data);};
+     instance.onstop=()=>{
+       if(recordLimit.current!==null){window.clearTimeout(recordLimit.current);recordLimit.current=null;}
+       stream.getTracks().forEach(track=>track.stop());audioStream.current=null;setRecording(false);
+       const mime=instance.mimeType.split(';')[0]||'audio/webm';
+       const ext=mime==='audio/mp4'?'m4a':mime==='audio/ogg'?'ogg':'webm';
+       const recordingFile=new File(audioChunks.current,'audio-'+Date.now()+'.'+ext,{type:mime});
+       if(recordingFile.size>0&&recordingFile.size<=MAX_MEDIA_BYTES&&ALLOWED_MEDIA.includes(mime))setAttachment(recordingFile);
+       else setError('Não foi possível preparar o áudio gravado.');
+     };
+     instance.start(250);setRecording(true);setError('');
+     recordLimit.current=window.setTimeout(()=>{if(instance.state==='recording')instance.stop();},60000);
+   }catch(e){audioStream.current?.getTracks().forEach(track=>track.stop());audioStream.current=null;
+     setError(e instanceof Error?e.message:'Sem permissão para usar o microfone.');
+   }
+ }
+ function stopRecording(){if(recorder.current?.state==='recording')recorder.current.stop();}
+
 
  const loadThreads=useCallback(async()=>{
    if(!auth.user)return;
@@ -59,7 +136,7 @@ export default function Messages(){
    if(ids.length){
      const [conversations,lastMessages]=await Promise.all([
        db.from('conversations').select('id,title,created_at,created_by').in('id',ids).order('created_at',{ascending:false}),
-       db.from('messages').select('id,conversation_id,sender_id,content,created_at')
+       db.from('messages').select('id,conversation_id,sender_id,content,created_at,media_path,media_type')
          .in('conversation_id',ids).order('created_at',{ascending:false}).limit(200)
      ]);
      if(conversations.error||lastMessages.error)setError(conversations.error?.message||lastMessages.error?.message||'Não foi possível carregar chats.');
@@ -81,7 +158,7 @@ export default function Messages(){
    setLoadingMessages(true);
    const db=supabaseBrowser();
    const {data,error:e}=await db.from('messages')
-     .select('id,sender_id,content,created_at,conversation_id')
+     .select('id,sender_id,content,created_at,conversation_id,media_path,media_type')
      .eq('conversation_id',id).order('created_at',{ascending:false})
      .range(older?messages.length:0,older?messages.length+PER_PAGE-1:PER_PAGE-1);
    if(e)setError(e.message);
@@ -164,15 +241,32 @@ export default function Messages(){
  }
 
  async function send(e:FormEvent){
-   e.preventDefault();if(!active||!auth.user||!compose.trim()||sending)return;
+   e.preventDefault();if(!active||!auth.user||(!compose.trim()&&!attachment)||sending||recording)return;
    setSending(true);setError('');
-   const value=compose.trim();
-   const {error:sendError}=await supabaseBrowser().from('messages').insert({
-     conversation_id:active,sender_id:auth.user.id,content:value
-   });
-   if(sendError)setError(sendError.message);
-   else{setCompose('');await loadMessages(active);await loadThreads();}
-   setSending(false);
+   const value=compose.trim(),db=supabaseBrowser();let uploadedPath='';
+   try{
+     let mediaType:MediaType|null=null;
+     if(attachment){
+       if(!ALLOWED_MEDIA.includes(attachment.type)||attachment.size>MAX_MEDIA_BYTES)
+         throw new Error('Arquivo inválido ou maior que 50 MB.');
+       const prepared=attachment.type.startsWith('image/')?await optimizeImage(attachment):attachment;
+       mediaType=classifyMedia(prepared.type);
+       const extension=prepared.name.split('.').pop()?.toLowerCase()||'bin';
+       uploadedPath=auth.user.id+'/messages/'+crypto.randomUUID()+'.'+extension;
+       const {error:uploadError}=await db.storage.from('social-media')
+         .upload(uploadedPath,prepared,{contentType:prepared.type,upsert:false});
+       if(uploadError)throw uploadError;
+     }
+     const {error:sendError}=await db.from('messages').insert({
+       conversation_id:active,sender_id:auth.user.id,content:value,
+       media_path:uploadedPath||null,media_type:mediaType
+     });
+     if(sendError)throw sendError;
+     setCompose('');setAttachment(null);await loadMessages(active);await loadThreads();
+   }catch(e){
+     if(uploadedPath)await db.storage.from('social-media').remove([uploadedPath]);
+     setError(e instanceof Error?e.message:'Não foi possível enviar a mensagem.');
+   }finally{setSending(false);}
  }
 
  async function block(){
@@ -215,7 +309,7 @@ export default function Messages(){
        {!loading&&filtered.length===0&&<p className="small-note">Nenhuma conversa encontrada.</p>}
        <div className="conecta-chat-threads">{filtered.map(t=><button key={t.id} className={'conecta-chat-thread '+(t.id===active?'active':'')} onClick={()=>setActive(t.id)}>
          {t.group?<span className="concept-round-icon violet"><Users size={18}/></span>:<ProfileAvatar person={t.other}/>}
-         <span><strong>{t.group?(t.title||'Grupo'):t.other?.display_name||'Conversa privada'}</strong><small>{t.group?(t.participants.length+1)+' membros':('@'+(t.other?.handle||'contato'))} · {t.last?.content?.slice(0,55)||'Comece a conversar'}</small></span>
+         <span><strong>{t.group?(t.title||'Grupo'):t.other?.display_name||'Conversa privada'}</strong><small>{t.group?(t.participants.length+1)+' membros':('@'+(t.other?.handle||'contato'))} · {t.last?.content?.slice(0,55)||(t.last?.media_type==='image'?'📷 Foto':t.last?.media_type==='video'?'🎬 Vídeo':t.last?.media_type==='audio'?'🎤 Áudio':'Comece a conversar')}</small></span>
          <time>{new Date(t.last?.created_at||t.created_at).toLocaleDateString('pt-BR')}</time>
        </button>)}</div>
      </aside>
@@ -229,14 +323,25 @@ export default function Messages(){
          {hasOlder&&<button className="btn btn-outline" type="button" disabled={loadingMessages} onClick={()=>void loadMessages(active,true)}>Carregar mensagens anteriores</button>}
          {messages.length===0&&!loadingMessages&&<div className="empty-state"><MessageCircle size={30}/><h3>Uma nova conversa começa aqui.</h3><p>Respeite a privacidade e a vontade de quem participa.</p></div>}
          {messages.map(m=><article key={m.id} className={'conecta-message '+(m.sender_id===auth.user?.id?'own':'other')}>
-           <p>{m.content}</p>{parseMusicUrl(m.content)&&<MusicEmbed url={m.content}/>}
+           {m.content&&<p>{m.content}</p>}{m.content&&parseMusicUrl(m.content)&&<MusicEmbed url={m.content}/>}
+           <MessageMedia message={m}/>
            <time>{new Date(m.created_at).toLocaleString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})}</time>
          </article>)}
        </div>
+       {attachment&&<div className="conecta-chat-attachment-draft">
+         {attachmentPreview&&(attachment.type.startsWith('image/')?<img src={attachmentPreview} alt="Prévia do anexo"/>:
+           attachment.type.startsWith('video/')?<video src={attachmentPreview} controls preload="metadata"/>:
+           <audio src={attachmentPreview} controls preload="metadata"/>)}
+         <span>{attachment.name}</span><button type="button" className="icon-btn" aria-label="Remover anexo" onClick={()=>setAttachment(null)}><X size={17}/></button>
+       </div>}
        <form className="conecta-chat-write" onSubmit={send}>
+         <input type="file" ref={filePicker} hidden accept={ALLOWED_MEDIA.join(',')} onChange={chooseAttachment} aria-label="Anexar arquivo"/>
+         <button type="button" className="icon-btn" aria-label="Anexar imagem, vídeo ou áudio" title="Anexar arquivo" disabled={sending||recording} onClick={()=>filePicker.current?.click()}><Paperclip size={19}/></button>
+         <button type="button" className={'icon-btn '+(recording?'recording':'')} aria-label={recording?'Parar gravação':'Gravar áudio'} title={recording?'Parar gravação':'Gravar recado de voz'} disabled={sending}
+           onClick={()=>{if(recording)stopRecording();else void startRecording();}}>{recording?<Square size={19}/>:<Mic size={19}/>}</button>
          <EmojiButton onSelect={emoji=>setCompose(t=>(t+emoji).slice(0,4000))}/>
-         <input aria-label="Escrever mensagem" value={compose} onChange={e=>setCompose(e.target.value)} maxLength={4000} placeholder="Escreva uma mensagem..."/>
-         <button className="btn btn-primary" type="submit" disabled={sending||!compose.trim()}><Send size={19}/><span>Enviar</span></button>
+         <input aria-label="Escrever mensagem" value={compose} onChange={e=>setCompose(e.target.value)} maxLength={4000} placeholder={recording?'Gravando áudio...':'Escreva uma mensagem...'}/>
+         <button className="btn btn-primary" type="submit" disabled={sending||recording||(!compose.trim()&&!attachment)}>{sending?<Loader2 size={19} className="spin"/>:<Send size={19}/>}<span>Enviar</span></button>
        </form></>:<div className="conecta-chat-welcome"><MessageCircle size={37}/><h2>Boas conversas começam aqui.</h2><p>Selecione uma conversa ou escolha uma amizade para falar.</p></div>}
      </section>
    </div>
