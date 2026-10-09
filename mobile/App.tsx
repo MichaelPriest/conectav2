@@ -120,7 +120,10 @@ function PostCard({post,userId,liked,onLike}:{
   <Text style={[s.primaryText,{fontSize:14,fontWeight:'400',lineHeight:22,marginTop:12}]}>
    {post.content}
   </Text>
-  <Media path={mainMedia}/>
+  {images.map(path=><Media key={path} path={path}/>)}
+   {videoCount>0&&<Pressable accessibilityRole="button" onPress={()=>void openOfficial('/post/'+post.id)}>
+    <Text style={[s.secondaryText,{marginTop:12}]}>▶ Ver vídeo no Conecta ↗</Text>
+   </Pressable>}
   <View style={s.separator}/>
   <View style={[s.row,{justifyContent:'space-between'}]}>
    <Pressable onPress={()=>onLike(post)} hitSlop={9}>
