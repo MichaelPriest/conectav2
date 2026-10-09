@@ -40,7 +40,7 @@ function runFfmpeg(executable:string,args:string[],timeout=18000):Promise<string
   child.on('error',err=>finish(err));
   child.on('close',code=>{
    // FFmpeg -i without an output intentionally exits 1.
-   if(args.at(-1)==='-i')finish();
+   if(args.at(-2)==='-i')finish();
    else if(code===0)finish();
    else finish(new Error('FFmpeg could not decode this file'));
   });
