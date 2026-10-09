@@ -411,7 +411,7 @@ export default function Messages(){
  const current=threads.find(t=>t.id===active);
  return <GuardedPage {...auth}><main className="section-page">
    <div className="page-heading"><div><span className="section-eyebrow">MENSAGENS REAIS · AMIZADES ACEITAS</span><h1>Conversas <span className="wave">✳</span></h1><p>Troque mensagens privadas, músicas e emojis com suas amizades.</p></div></div>
-   <div className="conecta-chat-layout card">
+   <div className={'conecta-chat-layout card'+(active?' conecta-chat-has-active':'')}>
      <aside className="conecta-chat-sidebar">
        <div className="feed-title"><h2>Caixa de entrada</h2><button className="icon-btn" title="Atualizar" onClick={()=>void loadThreads()}><RefreshCw size={18}/></button></div>
        <label className="searchbox"><Search size={17}/><input aria-label="Filtrar conversas" placeholder="Buscar conversa..." value={threadSearch} onChange={e=>setThreadSearch(e.target.value)}/></label>
@@ -447,7 +447,10 @@ export default function Messages(){
        </button>)}</div>
      </aside>
      <section className="conecta-chat-main">
-       {active?<><header className="conecta-chat-head">{current?.group?<span className="concept-round-icon violet"><Users size={20}/></span>:<ProfileAvatar person={current?.other}/>}
+       {active?<><header className="conecta-chat-head">
+          <button type="button" className="icon-btn conecta-chat-mobile-back"
+            aria-label="Voltar à lista de conversas" onClick={()=>setActive(null)}>
+            <Reply size={19}/></button>{current?.group?<span className="concept-round-icon violet"><Users size={20}/></span>:<ProfileAvatar person={current?.other}/>}
          <div><strong>{current?.group?(current.title||'Grupo'):current?.other?.display_name||'Conversa'}</strong>
          <small>{current?.group?current.participants.map(p=>p.display_name).join(', '):(current?.other?.handle?'@'+current.other.handle:'Mensagens privadas')}</small></div>
          <button className="icon-btn" type="button" title={searchOpen?'Fechar busca':'Buscar nesta conversa'}
