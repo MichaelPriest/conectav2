@@ -14,11 +14,12 @@
 - [ ] Concluir LGPD: exportação, exclusão, retenção, direitos titulares e política de dados biométricos.
 - [x] Entrada de denúncias em publicações e mensagens privadas, com motivos, evidência textual limitada, RLS e proteção contra duplicidade. Corrigida política que permitia informar uma comunidade diferente da publicação; denúncias de comunidades continuam visíveis à equipe autorizada.
 - [x] Central administrativa de moderação geral: fila protegida por cargo separado das comunidades, filtros, registro de análise/decisões com justificativa, histórico auditável e contagem de denúncias por autor. Configuração explícita de equipe ainda pendente; não há autoatribuição de administrador.
-- [ ] Moderação automatizada de texto/imagem/vídeo multilíngue, remoção administrativa de conteúdo, recursos/contestações, escalonamento e política de retenção de evidências, sem falsas aprovações automáticas.
+- [x] Pipeline inicial gratuito de moderação: quarentena de novas mídias em posts/Stories via RLS, verificação autenticada por API gratuita de texto/foto se configurada, worker open-source de toxicidade/NSFW/quadros de vídeo, fila de revisão humana de mídia na central (aprovar/rejeitar + trilha auditável). Não afirmar que o worker esteja ativo até instalar/configurar a máquina ou a chave de API.
+- [ ] Moderação automatizada realmente completa em todas as superfícies: comentários, DMs/áudio mediante privacidade/consentimento, avatares e capas, OCR, semântica multimodal/português, remoção administrativa, apelações/contestações, escalonamento de incidentes, política de retenção e validação de acurácia/bias, sem falsas aprovações automáticas.
 
 ## Prioridade P1 — experiência social
 - [x] Comunidades oficiais, cargos, moderadores, recados, perfil estilo MySpace, enquetes, salvamentos, respostas e chat básico já iniciados/entregues.
-- [ ] Revisar bugs e fluxos completos de moderação, comunidades, perfis/álbuns e recados/depoimentos. Há denúncia no feed/chat, mas falta revisão administrativa geral.
+- [ ] Revisar bugs e fluxos completos de moderação, comunidades, perfis/álbuns e recados/depoimentos. Denúncias gerais e conteúdo de feed/Stories pendentes têm fila, mas faltam testes reais em múltiplas contas e revisão de todas as superfícies.
 - [x] Stories de foto/vídeo com visibilidade público/amigos/privado, leitura por RLS, exclusão pelo autor e expiração de visibilidade em 24 horas; faltam a limpeza física agendada dos arquivos e teste multiusuário real.
 - [ ] Círculos próximos, eventos e demais recursos nostálgicos.
 - [x] Conversas em grupo entre amizades aceitas; anexos privados de imagem, vídeo e áudio, mais gravação local de recados de voz em navegadores compatíveis.
