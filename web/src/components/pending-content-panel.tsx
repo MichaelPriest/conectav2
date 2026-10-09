@@ -2,6 +2,7 @@
 import {useCallback,useEffect,useState} from 'react';
 import {CheckCircle,Clock,Eye,Image as ImageIcon,Loader2,RefreshCcw,ShieldCheck,XCircle} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
+import {LocalAIReview} from '@/components/local-ai-review';
 
 type Pending={
  id:string;kind:'post'|'story';author_handle:string|null;content_excerpt:string;
@@ -111,6 +112,8 @@ export function PendingContentPanel(){
         <img key={index} src={m.url} alt={'Mídia '+(index+1)+' sob revisão'}/>:
         <video key={index} src={m.url} controls playsInline preload="metadata" aria-label={'Vídeo '+(index+1)+' sob revisão'}/>)}
      </div>}
+     <LocalAIReview itemKey={current.kind+current.id} text={current.content_excerpt}
+       videoUrl={preview.find(m=>m.type==='video')?.url}/>
      <label className="field-label">Justificativa obrigatória
        <textarea className="form-input" rows={3} maxLength={500} value={rationale}
         onChange={e=>setRationale(e.target.value)} placeholder="Descreva os motivos da sua decisão (mínimo 10 caracteres)." disabled={busy}/>
