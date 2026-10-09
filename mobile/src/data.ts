@@ -94,16 +94,19 @@ export async function publishTextPost(userId:string,content:string,visibility:'p
  * Invokes the same authenticated moderation route as the website.
  * Database quarantine and moderation policies remain authoritative if offline.
  */
-export async function requestPostModeration(id:string):Promise<void>{
+export async function requestContentModeration(kind:'post'|'story',id:string):Promise<void>{
  const {data:{session}}=await supabase.auth.getSession();
  if(!session?.access_token)return;
  try{
   await fetch(SITE_URL+'/api/moderation/review',{
    method:'POST',
    headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
-   body:JSON.stringify({kind:'post',id})
+   body:JSON.stringify({kind,id})
   });
  }catch{/* Never bypass the database pending moderation state. */}
+}
+export async function requestPostModeration(id:string):Promise<void>{
+ return requestContentModeration('post',id);
 }
 
 /** Only rows allowed by Supabase comment RLS are returned. */
