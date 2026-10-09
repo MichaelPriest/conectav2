@@ -213,12 +213,13 @@ export default function Messages(){
    const last=messages[messages.length-1];
    if(last.sender_id===auth.user.id||document.hidden||!document.hasFocus())return;
    let alive=true;
+   const conversationId=active,userId=auth.user.id;
    async function markRead(){
      const db=supabaseBrowser();
      const {error:e}=await db.from('conversation_members')
        .update({last_read_at:new Date().toISOString()})
-       .eq('conversation_id',active).eq('user_id',auth.user!.id);
-     if(!e&&alive)void loadReceipts(active);
+       .eq('conversation_id',conversationId).eq('user_id',userId);
+     if(!e&&alive)void loadReceipts(conversationId);
    }
    void markRead();
    return()=>{alive=false;};
