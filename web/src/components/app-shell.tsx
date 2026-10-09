@@ -103,14 +103,33 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
 
   useEffect(() => {
     let active = true;
+    const db = supabaseBrowser();
+    let channel: ReturnType<typeof db.channel> | null = null;
     async function updateUnread() {
-      const { data: { user } } = await supabaseBrowser().auth.getUser();
+      const { data: { user } } = await db.auth.getUser();
       if (!user || !active) return;
-      const {count} = await supabaseBrowser().from('notifications').select('id', {count: 'exact', head: true}).eq('recipient_id',user.id).is('read_at',null);
-      if (active) setUnread(count || 0);
+      const {count,error:e} = await db.from('notifications').select('id', {count:'exact',head:true})
+        .eq('recipient_id',user.id).is('read_at',null);
+      if (active && !e) setUnread(count || 0);
     }
-    void updateUnread();
-    return () => { active=false; };
+    async function subscribe() {
+      const {data:{user}} = await db.auth.getUser();
+      if (!active || !user) return;
+      channel = db.channel('conecta-shell-notifications-'+user.id)
+        .on('postgres_changes',{schema:'public',table:'notifications',event:'*',filter:'recipient_id=eq.'+user.id},
+          ()=>{void updateUnread();}).subscribe();
+      void updateUnread();
+    }
+    void subscribe();
+    const onFocus=()=>{void updateUnread();};
+    window.addEventListener('focus',onFocus);
+    const timer=window.setInterval(()=>{if(!document.hidden)void updateUnread();},30000);
+    return ()=>{
+      active=false;
+      window.removeEventListener('focus',onFocus);
+      window.clearInterval(timer);
+      if(channel)void db.removeChannel(channel);
+    };
   }, [pathname]);
 
   async function logout() {
