@@ -25,11 +25,15 @@ async function inspect(){
       const db=createClient(env.NEXT_PUBLIC_SUPABASE_URL,key,{
         auth:{persistSession:false,autoRefreshToken:false}
       });
-      const result=await Promise.race([
-        db.from('chat_push_subscriptions').select('endpoint_hash',{count:'exact',head:true}),
-        new Promise(resolve=>setTimeout(()=>resolve({error:new Error('timeout')}),5500))
-      ]);
-      databaseAccess=result.error?'unavailable':'verified';
+      // Bounded API probe; cancel the timer so it never delays Next.js startup.
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),5000);
+      try{
+        const result=await db.from('chat_push_subscriptions')
+          .select('endpoint_hash',{count:'exact',head:true})
+          .abortSignal(controller.signal);
+        databaseAccess=result.error?'unavailable':'verified';
+      }finally{clearTimeout(timer);}
     }catch{databaseAccess='unavailable';}
   }
   console.info('[conecta-chat-push] '+JSON.stringify({
