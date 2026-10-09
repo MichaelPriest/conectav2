@@ -131,3 +131,25 @@ O Web Push pode ser ativado no widget ou no cabeçalho do mensageiro completo.
 Se a aba conectada detectar uma inscrição Push existente neste dispositivo,
 não cria uma segunda notificação local da mesma mensagem; a notificação Web Push
 tem prioridade. Sem inscrição real, os avisos locais continuam disponíveis.
+
+### Ativação de chaves Web Push (10/10/2026)
+
+As três variáveis `WEB_PUSH_VAPID_*` foram configuradas como variáveis
+protegidas na Vercel de produção, em conjunto com
+`SUPABASE_SERVICE_ROLE_KEY` que já existia neste projeto.
+O assunto VAPID é `https://conectav2-validacao.onrender.com`, formato
+HTTPS válido segundo o padrão; `mailto:` também é aceito. A variável
+`SUPABASE_SECRET_KEY` (novo padrão `sb_secret_`) é compatível com o
+backend, preservando a antiga chave service_role como fallback.
+Não colocar os valores secretos em commits, prints ou mensagens.
+
+O aplicativo confirma no banco que a inscrição pertence à conta
+autenticada antes de mostrar a opção como ativa; isso evita um
+falso status de sucesso ao alternar contas no mesmo navegador.
+O envio de aviso ao servidor usa `keepalive` como melhora
+de confiabilidade durante navegação da aba.
+
+O Render ainda exige a configuração do mesmo par no ambiente do serviço
+e um novo deploy. O par não deve ser regenerado separadamente para
+cada hospedagem: isso invalidaria assinaturas existentes quando o
+domínio fosse atendido por servidores diferentes.

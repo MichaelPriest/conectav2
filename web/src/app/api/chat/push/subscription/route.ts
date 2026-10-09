@@ -4,6 +4,18 @@ import {allowedChatPushEndpoint} from '@/lib/chat-web-push';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const response=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'no-store'}});
+export async function GET(request:NextRequest){
+  if(!chatPushRequestAllowed(request))return response({error:'Origem inválida.'},403);
+  const ctx=await chatPushContext(request);
+  if(!ctx)return response({error:'Push indisponível ou sessão inválida.'},401);
+  const endpoint=request.nextUrl.searchParams.get('endpoint');
+  if(!endpoint||!allowedChatPushEndpoint(endpoint))return response({enabled:false});
+  const {data,error}=await ctx.admin.from('chat_push_subscriptions')
+    .select('endpoint_hash').eq('endpoint_hash',chatPushEndpointHash(endpoint))
+    .eq('user_id',ctx.user.id).maybeSingle();
+  if(error)return response({error:'Não foi possível consultar este dispositivo.'},503);
+  return response({enabled:Boolean(data)});
+}
 export async function POST(request:NextRequest){
   if(!chatPushRequestAllowed(request))return response({error:'Origem inválida.'},403);
   if(Number(request.headers.get('content-length')||0)>8192)return response({error:'Payload inválido.'},413);

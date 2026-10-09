@@ -24,3 +24,16 @@ export function chatPushShouldNotify(member:{
     (!member.muted_until||Date.parse(member.muted_until)<=now) &&
     (!member.last_read_at||Date.parse(member.last_read_at)<Date.parse(createdAt));
 }
+
+/** RFC 8292 VAPID requires an identifiable mailto: or HTTPS contact. */
+export function validChatPushSubject(value:string|undefined):boolean{
+ if(!value||value.length>512)return false;
+ try{
+   const url=new URL(value);
+   if(url.protocol==='mailto:')return Boolean(url.pathname.includes('@')&&
+     !url.search&&!url.hash);
+   if(url.protocol==='https:')return Boolean(url.hostname&&!url.username&&!url.password&&
+     !url.hash&&!url.search&&!url.port);
+   return false;
+ }catch{return false;}
+}

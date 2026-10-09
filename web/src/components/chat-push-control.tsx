@@ -36,7 +36,7 @@ export async function notifyChatMessageSent(messageId:string){
   try{
     await fetch('/api/chat/push/dispatch',{method:'POST',
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+await bearer()},
-      body:JSON.stringify({messageId}),cache:'no-store'});
+      body:JSON.stringify({messageId}),cache:'no-store',keepalive:true});
   }catch{/* Message delivery is independent from push delivery. */}
 }
 export function ChatPushControl(){
@@ -58,7 +58,14 @@ export function ChatPushControl(){
         setPublicKey(config.publicKey);
         const existing=await navigator.serviceWorker.getRegistration('/');
         const current=await existing?.pushManager.getSubscription();
-        if(live)setState(current?'active':'inactive');
+        if(!current){if(live)setState('inactive');return;}
+        const token=await bearer();
+        const status=await fetch('/api/chat/push/subscription?endpoint='+encodeURIComponent(current.endpoint),{
+          headers:{Authorization:'Bearer '+token},cache:'no-store'
+        });
+        if(!status.ok)throw new Error('Não foi possível verificar este dispositivo.');
+        const result=await status.json() as {enabled?:boolean};
+        if(live)setState(result.enabled?'active':'inactive');
       }catch{if(live)setState('unconfigured');}
     }
     void inspect();
@@ -77,7 +84,8 @@ export function ChatPushControl(){
       const permission=Notification.permission==='granted'?'granted':await Notification.requestPermission();
       if(permission!=='granted')throw new Error('Permissão não concedida.');
       const registration=await deviceRegistration();
-      const subscription=await registration.pushManager.subscribe({
+      const existing=await registration.pushManager.getSubscription();
+      const subscription=existing||await registration.pushManager.subscribe({
         userVisibleOnly:true,applicationServerKey:vapidBytes(publicKey)
       });
       const res=await fetch('/api/chat/push/subscription',{method:'POST',
