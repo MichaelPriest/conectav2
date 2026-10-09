@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {ArrowLeft,ExternalLink,MessageCircle,Send,X,Users,Loader2} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {MentionText} from '@/components/mention-input';
+import {ReportContentButton} from '@/components/report-content-button';
 type Thread={id:string;title:string;group:boolean;otherNames:string;lastAt:string};
 type Msg={id:string;conversation_id:string;sender_id:string;content:string;created_at:string;media_type:string|null;edited_at:string|null;deleted_at:string|null};
 export function ChatWidget({userId}:{userId:string}){
@@ -89,6 +90,7 @@ export function ChatWidget({userId}:{userId:string}){
            {m.content?<p>{m.deleted_at?<em>Mensagem apagada</em>:<MentionText text={m.content}/>}</p>:null}
            {m.edited_at&&!m.deleted_at&&<small>editada</small>}
            {!m.deleted_at&&m.media_type&&<small>Anexo {m.media_type==='image'?'📷':m.media_type==='video'?'🎬':'🎤'} · <Link href="/mensagens">abrir no chat</Link></small>}
+           {m.sender_id!==userId&&!m.deleted_at&&<ReportContentButton targetType="message" targetId={m.id} reporterId={userId}/>}
          </div>)}
          <div ref={end}/>
        </div>
