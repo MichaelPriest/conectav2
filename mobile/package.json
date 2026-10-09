@@ -22,7 +22,8 @@
     "expo-image-picker": "~57.0.17",
     "expo-file-system": "~57.0.7",
     "expo-crypto": "~57.0.3",
-    "expo-video": "~57.0.5"
+    "expo-video": "~57.0.5",
+    "expo-image-manipulator": "~57.0.21"
   },
   "devDependencies": {
     "@types/react": "19.2.7",
