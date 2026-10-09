@@ -121,7 +121,7 @@ export default function Messages(){
    if(!other){setError('Para iniciar um chat, essa pessoa precisa ser uma amizade aceita.');return;}
    if(other.id===auth.user.id){setError('Escolha uma pessoa diferente.');return;}
    setCreating(true);setError('');
-   const already=threads.find(t=>t.other?.id===other.id);
+   const already=threads.find(t=>!t.group&&t.other?.id===other.id);
    if(already){setActive(already.id);setRecipient('');setCreating(false);return;}
    const db=supabaseBrowser();
    const {data:conversation,error:e}=await db.from('conversations')
@@ -215,7 +215,7 @@ export default function Messages(){
        {!loading&&filtered.length===0&&<p className="small-note">Nenhuma conversa encontrada.</p>}
        <div className="conecta-chat-threads">{filtered.map(t=><button key={t.id} className={'conecta-chat-thread '+(t.id===active?'active':'')} onClick={()=>setActive(t.id)}>
          {t.group?<span className="concept-round-icon violet"><Users size={18}/></span>:<ProfileAvatar person={t.other}/>}
-         <span><strong>{t.group?(t.title||'Grupo'):t.other?.display_name||'Conversa privada'}</strong><small>{t.group?t.participants.length+' participantes':('@'+(t.other?.handle||'contato'))} · {t.last?.content?.slice(0,55)||'Comece a conversar'}</small></span>
+         <span><strong>{t.group?(t.title||'Grupo'):t.other?.display_name||'Conversa privada'}</strong><small>{t.group?(t.participants.length+1)+' membros':('@'+(t.other?.handle||'contato'))} · {t.last?.content?.slice(0,55)||'Comece a conversar'}</small></span>
          <time>{new Date(t.last?.created_at||t.created_at).toLocaleDateString('pt-BR')}</time>
        </button>)}</div>
      </aside>
