@@ -1,11 +1,12 @@
 'use client';
 import {FormEvent,useCallback,useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
-import {ArrowLeft,ExternalLink,MessageCircle,Send,X,Users,Loader2} from 'lucide-react';
+import {ArrowLeft,ExternalLink,MessageCircle,Send,X,Users,Loader2,BellOff} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
-type Thread={id:string;title:string;group:boolean;otherNames:string;lastAt:string;unread:number;preview:string};
+import {useChatTyping} from '@/lib/use-chat-typing';
+type Thread={id:string;title:string;group:boolean;otherNames:string;lastAt:string;unread:number;preview:string;mutedUntil:string|null};
 type Msg={id:string;conversation_id:string;sender_id:string;content:string;created_at:string;media_type:string|null;edited_at:string|null;deleted_at:string|null};
 export function ChatWidget({userId}:{userId:string}){
  const [open,setOpen]=useState(false),[threads,setThreads]=useState<Thread[]>([]);
@@ -14,6 +15,7 @@ export function ChatWidget({userId}:{userId:string}){
  const [error,setError]=useState('');
  const [totalUnread,setTotalUnread]=useState(0);
  const end=useRef<HTMLDivElement>(null);
+ const typingIds=useChatTyping(open&&active?active.id:null,userId,text,open&&Boolean(active));
  useEffect(()=>{
    try{setOpen(localStorage.getItem('conecta-chat-widget-open')==='1');}catch{}
  },[]);
@@ -23,7 +25,7 @@ export function ChatWidget({userId}:{userId:string}){
  }
  const loadThreads=useCallback(async()=>{
    const db=supabaseBrowser();
-   const {data:own,error:e}=await db.from('conversation_members').select('conversation_id').eq('user_id',userId).limit(150);
+   const {data:own,error:e}=await db.from('conversation_members').select('conversation_id,muted_until').eq('user_id',userId).limit(150);
    if(e){setError(e.message);return;}
    const ids=[...new Set((own||[]).map(m=>m.conversation_id))];if(!ids.length){setThreads([]);setTotalUnread(0);return;}
    const [conversations,members,unread,lastMessages]=await Promise.all([
@@ -44,7 +46,11 @@ export function ChatWidget({userId}:{userId:string}){
    for(const msg of lastMessages.data||[]){
      if(!latestById.has(msg.conversation_id))latestById.set(msg.conversation_id,msg);
    }
-   setTotalUnread([...unreadById.values()].reduce((sum,n)=>sum+n,0));
+   const mutedById=new Map((own||[]).map(m=>[m.conversation_id,m.muted_until]));
+   setTotalUnread([...unreadById.entries()].reduce((sum,[id,n])=>{
+     const mutedUntil=mutedById.get(id);
+     return sum+(mutedUntil&&Date.parse(mutedUntil)>Date.now()?0:n);
+   },0));
    const list:Thread[]=(conversations.data||[]).map(c=>{
      const participants=(members.data||[]).filter(m=>m.conversation_id===c.id&&m.user_id!==userId);
      const group=participants.length>1;
@@ -56,7 +62,7 @@ export function ChatWidget({userId}:{userId:string}){
          recent.media_type==='audio'?'🎤 Áudio':'Mensagem')):'Comece a conversar';
      return {id:c.id,title:group?(c.title||'Grupo'):(otherNames||c.title||'Conversa'),
        group,otherNames,lastAt:recent?.created_at||c.created_at,
-       unread:unreadById.get(c.id)||0,preview};
+       unread:unreadById.get(c.id)||0,preview,mutedUntil:mutedById.get(c.id)||null};
    });
    setThreads(list.sort((a,b)=>b.lastAt.localeCompare(a.lastAt)));
  },[userId]);
@@ -122,6 +128,7 @@ export function ChatWidget({userId}:{userId:string}){
        {threads.length===0?<div className="conecta-widget-empty"><MessageCircle size={26}/><p>Suas conversas aparecem aqui.</p><Link href="/mensagens">Iniciar conversa</Link></div>:
          threads.map(t=><button key={t.id} type="button" onClick={()=>{setActive(t);setError('');}}><span className="conecta-widget-thread-icon">{t.group?<Users size={19}/>:<MessageCircle size={19}/>}</span>
            <span><strong>{t.title}</strong><small>{t.preview.slice(0,75)}</small></span>
+           {t.mutedUntil&&Date.parse(t.mutedUntil)>Date.now()&&<BellOff size={13} aria-label="Conversa silenciada"/>}
            {t.unread>0&&<span className="conecta-chat-unread" aria-label={t.unread+' mensagens não lidas'}>{t.unread>99?'99+':t.unread}</span>}</button>)}
        <Link className="conecta-widget-new" href="/mensagens">Nova conversa ou grupo <ExternalLink size={14}/></Link>
      </div>:
@@ -136,6 +143,10 @@ export function ChatWidget({userId}:{userId:string}){
          </div>)}
          <div ref={end}/>
        </div>
+       {typingIds.length>0&&<small className="conecta-chat-typing" role="status">
+         <span className="conecta-typing-dots"><i/><i/><i/></span>
+         {typingIds.length>1?'Pessoas estão digitando':'Alguém está digitando'}...
+        </small>}
        <form onSubmit={send} className="conecta-widget-compose"><input aria-label="Escrever no chat flutuante" maxLength={4000} value={text} onChange={e=>setText(e.target.value)} placeholder="Sua mensagem..."/>
          <button type="submit" disabled={sending||!text.trim()} aria-label="Enviar mensagem">{sending?<Loader2 size={19} className="spin"/>:<Send size={19}/>}</button></form></>}
      {error&&<p className="form-error" role="alert">{error}</p>}
