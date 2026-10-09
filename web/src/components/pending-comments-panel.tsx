@@ -3,6 +3,7 @@
 import {useCallback,useEffect,useState} from 'react';
 import {Check,Clock3,MessageCircle,RefreshCw,ShieldCheck,X} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
+import {LocalAIReview} from '@/components/local-ai-review';
 
 type Comment={
  comment_id:string;post_id:string;community_id:string|null;author_handle:string|null;
@@ -65,6 +66,7 @@ export function PendingCommentsPanel({communityId}:{communityId?:string}){
     {!chosen?<div className="conecta-safety-empty"><MessageCircle size={29}/><strong>Selecione um comentário</strong><p>Leia o texto e registre a decisão.</p></div>:<>
      <strong>Comentário de @{chosen.author_handle||'usuário'}</strong>
      <div className="conecta-content-moderation-text">{chosen.body}</div>
+     <LocalAIReview itemKey={chosen.comment_id} text={chosen.body}/>
      <label className="field-label">Justificativa para decisão
       <textarea className="form-input" rows={3} maxLength={500} value={reason} onChange={e=>setReason(e.target.value)}
        disabled={busy} placeholder="Descreva o motivo da decisão (mínimo 10 caracteres)."/>
