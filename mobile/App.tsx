@@ -272,6 +272,8 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  const [active,setActive]=useState<string|null>(initialId);
  const [messages,setMessages]=useState<ChatMessage[]>([]);
  const [compose,setCompose]=useState(''),[busy,setBusy]=useState(false);
+ const messageLength=compose.trim().length;
+ const validMessage=messageLength>0&&messageLength<=4000;
  const [loading,setLoading]=useState(true),[error,setError]=useState('');
  const loadInbox=useCallback(async()=>{
   try{setThreads(await loadThreads(userId));setError('');}
@@ -304,7 +306,7 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
   return()=>{clearInterval(timer);void supabase.removeChannel(channel);};
  },[active,loadMessages]);
  const send=async()=>{
-  if(!active||!compose.trim()||busy)return;
+  if(!active||!validMessage||busy)return;
   setBusy(true);setError('');
   try{await sendMessage(active,userId,compose);setCompose('');await loadMessages(active);await loadInbox();}
   catch(e){setError(errorMessage(e));}finally{setBusy(false);}
