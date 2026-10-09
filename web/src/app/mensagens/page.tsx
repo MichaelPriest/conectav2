@@ -531,7 +531,9 @@ export default function Messages(){
        <div className="conecta-chat-threads">{filtered.map(t=><button key={t.id} className={'conecta-chat-thread '+(t.id===active?'active':'')} onClick={()=>setActive(t.id)}>
          {t.group?<span className="concept-round-icon violet"><Users size={18}/></span>:<ProfileAvatar person={t.other}/>}
          <span><strong>{t.group?(t.title||'Grupo'):t.other?.display_name||'Conversa privada'}</strong><small>{t.group?(t.participants.length+1)+' membros':('@'+(t.other?.handle||'contato'))} · {t.last?.content?.slice(0,55)||(t.last?.media_type==='image'?'📷 Foto':t.last?.media_type==='video'?'🎬 Vídeo':t.last?.media_type==='audio'?'🎤 Áudio':'Comece a conversar')}</small></span>
-         <span className="conecta-chat-thread-meta"><time>{new Date(t.last?.created_at||t.created_at).toLocaleDateString('pt-BR')}</time>
+         <span className="conecta-chat-thread-meta">
+           {t.mutedUntil&&Date.parse(t.mutedUntil)>Date.now()&&<BellOff size={13} aria-label="Conversa silenciada"/>}
+           <time>{new Date(t.last?.created_at||t.created_at).toLocaleDateString('pt-BR')}</time>
           {t.unread>0&&<span className="conecta-chat-unread" aria-label={t.unread+' mensagens não lidas'}>
              {t.unread>99?'99+':t.unread}</span>}</span>
        </button>)}</div>
@@ -543,13 +545,53 @@ export default function Messages(){
             <Reply size={19}/></button>{current?.group?<span className="concept-round-icon violet"><Users size={20}/></span>:<ProfileAvatar person={current?.other}/>}
          <div><strong>{current?.group?(current.title||'Grupo'):current?.other?.display_name||'Conversa'}</strong>
          <small>{current?.group?current.participants.map(p=>p.display_name).join(', '):(current?.other?.handle?'@'+current.other.handle:'Mensagens privadas')}</small></div>
-         <button className="icon-btn" type="button" title={searchOpen?'Fechar busca':'Buscar nesta conversa'}
+         <button className="icon-btn" type="button"
+             title={currentlyMuted?'Reativar indicador no chat':'Silenciar indicador no chat por 30 dias'}
+             aria-label={currentlyMuted?'Reativar indicador':'Silenciar conversa'} disabled={settingsBusy}
+             onClick={()=>void toggleMute()}>{currentlyMuted?<BellOff size={18}/>:<Bell size={18}/>}</button>
+          {canManageGroup&&<button className="icon-btn" type="button"
+             title="Configurações do grupo" aria-label="Configurações do grupo"
+             aria-expanded={settingsOpen}
+             onClick={()=>{setSettingsOpen(v=>!v);setSettingsTitle(current?.title||'');}}>
+             <Settings2 size={18}/></button>}
+          <button className="icon-btn" type="button" title={searchOpen?'Fechar busca':'Buscar nesta conversa'}
             aria-label="Buscar mensagens nesta conversa" aria-expanded={searchOpen}
             onClick={()=>{setSearchOpen(open=>!open);setMessageSearch('');setSearchHits([]);}}>
             <Search size={18}/></button>
           {current?.other&&!current.group&&<><Link className="icon-btn" title="Ver perfil" href={'/p/'+current.other.handle}><UserRound size={19}/></Link><button className="icon-btn" type="button" title="Bloquear usuário" onClick={block}><Shield size={19}/></button></>}
        </header>
-       {searchOpen&&<section className="conecta-chat-search-panel" aria-label="Buscar mensagens antigas">
+       {
+         settingsOpen&&canManageGroup&&<section className="conecta-chat-group-settings" aria-label="Administrar grupo">
+          <form onSubmit={saveGroupSettings} className="conecta-chat-manage-row">
+            <label htmlFor="conecta-group-rename">Nome do grupo</label>
+            <input id="conecta-group-rename" className="form-input" value={settingsTitle} maxLength={80}
+               onChange={e=>setSettingsTitle(e.target.value)} required/>
+            <button className="btn btn-outline" type="submit"
+              disabled={settingsBusy||settingsTitle.trim().length<2}>Salvar nome</button>
+          </form>
+          <div className="conecta-chat-manage-row">
+            <label htmlFor="conecta-group-invite">Adicionar uma amizade</label>
+            <select id="conecta-group-invite" className="form-input" value={inviteFriend}
+              onChange={e=>setInviteFriend(e.target.value)}>
+              <option value="">Escolha um contato...</option>
+              {availableGroupFriends.map(p=><option key={p.id} value={p.id}>{p.display_name} (@{p.handle})</option>)}
+            </select>
+            <button className="btn btn-outline" type="button" disabled={!inviteFriend||settingsBusy}
+              onClick={()=>void inviteGroupFriend()}><UserPlus size={15}/> Convidar</button>
+          </div>
+          <small>Somente quem criou o grupo pode alterar o nome ou convidar amizades aceitas.</small>
+         </section>}
+        {pins.length>0&&<section className="conecta-chat-pins" aria-label="Mensagens fixadas">
+          {pins.map(pin=><button type="button" key={pin.message_id}
+             onClick={()=>{
+               const node=messageNodes.current[pin.message_id];
+               if(node){setHighlighted(pin.message_id);node.scrollIntoView({behavior:'smooth',block:'center'});}
+               else setError('Esta mensagem é antiga. Carregue mensagens anteriores para localizá-la.');
+             }}>
+             <Pin size={13}/><span>{pin.content.slice(0,130)||'Anexo fixado'}</span>
+          </button>)}
+        </section>}
+        {searchOpen&&<section className="conecta-chat-search-panel" aria-label="Buscar mensagens antigas">
           <label className="searchbox"><Search size={17}/>
             <input autoFocus value={messageSearch} maxLength={100}
               placeholder="Pesquisar mensagens nesta conversa..."
@@ -612,6 +654,11 @@ export default function Messages(){
             {!m.deleted_at&&<div className="conecta-chat-social-actions">
               <button type="button" disabled={messageBusy} title="Responder a esta mensagem"
                 onClick={()=>{setReplyTo(m);setEditingId(null);}}><Reply size={14}/> Responder</button>
+              {(!current?.group||canManageGroup)&&<button type="button" disabled={settingsBusy}
+                title={pins.some(p=>p.message_id===m.id)?'Desafixar mensagem':'Fixar mensagem'}
+                onClick={()=>void togglePin(m.id)}>
+               {pins.some(p=>p.message_id===m.id)?<PinOff size={14}/>:<Pin size={14}/>}
+               {pins.some(p=>p.message_id===m.id)?'Desafixar':'Fixar'}</button>}
               <button type="button" disabled={messageBusy} title="Reagir com emoji"
                 aria-expanded={reactionOpen===m.id}
                 onClick={()=>setReactionOpen(x=>x===m.id?null:m.id)}><Smile size={14}/> Reagir</button>
@@ -644,7 +691,11 @@ export default function Messages(){
            <audio src={attachmentPreview} controls preload="metadata"/>)}
          <span>{attachment.name}</span><button type="button" className="icon-btn" aria-label="Remover anexo" onClick={()=>setAttachment(null)}><X size={17}/></button>
        </div>}
-       {replyTo&&<div className="conecta-chat-reply-draft" role="status">
+       {typingNames.length>0&&<div className="conecta-chat-typing" role="status" aria-live="polite">
+          <span className="conecta-typing-dots"><i/><i/><i/></span>
+          {typingNames.slice(0,2).join(', ')} {typingNames.length>1?'estão digitando':'está digitando'}...
+        </div>}
+        {replyTo&&<div className="conecta-chat-reply-draft" role="status">
           <Reply size={16}/><span><strong>Respondendo a uma mensagem</strong>
             <small>{replyTo.deleted_at?'Mensagem apagada':replyTo.content?.slice(0,130)||'Anexo compartilhado'}</small>
           </span><button type="button" className="icon-btn" title="Cancelar resposta" onClick={()=>setReplyTo(null)}><X size={17}/></button>
