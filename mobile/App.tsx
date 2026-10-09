@@ -17,6 +17,7 @@ import {
 } from './src/data';
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
+import {StoryRail} from './src/story-ui';
 import {normalizeMedia,publishMediaPost} from './src/media';
 import type {SelectedMedia} from './src/media';
 
@@ -328,6 +329,7 @@ function FeedScreen({userId}:{userId:string}){
  };
  const composer=<View>
   <Heading title="Seu feed" subtitle="Compartilhe histórias e reencontre suas conexões."/>
+  <StoryRail userId={userId}/>
   <View style={[s.row,{gap:8,marginBottom:10}]}>
    {([['all','Publicações'],['saved','Salvos']] as const).map(([key,label])=>
     <Pressable key={key} accessibilityRole="tab" accessibilityState={{selected:feedView===key}}
