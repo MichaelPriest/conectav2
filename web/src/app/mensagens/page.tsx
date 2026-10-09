@@ -1,7 +1,7 @@
 'use client';
 import {FormEvent,useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
-import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Music2,Trash2,ArrowLeft} from 'lucide-react';
+import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Music2,Trash2,ArrowLeft,Users} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {supabaseBrowser} from '@/lib/supabase/browser';
@@ -11,7 +11,7 @@ import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
 type Person={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Conversation={id:string;title:string|null;created_at:string;created_by:string};
 type Message={id:string;sender_id:string;content:string;created_at:string;conversation_id:string};
-type Thread=Conversation & {other:Person|null;last:Message|null};
+type Thread=Conversation & {other:Person|null;participants:Person[];group:boolean;last:Message|null};
 const PER_PAGE=60;
 
 export default function Messages(){
@@ -21,6 +21,8 @@ export default function Messages(){
  const [active,setActive]=useState<string|null>(null);
  const [messages,setMessages]=useState<Message[]>([]);
  const [recipient,setRecipient]=useState('');
+ const [groupOpen,setGroupOpen]=useState(false),[groupTitle,setGroupTitle]=useState('');
+ const [groupMembers,setGroupMembers]=useState<string[]>([]);
  const [compose,setCompose]=useState('');
  const [creating,setCreating]=useState(false),[sending,setSending]=useState(false);
  const [loading,setLoading]=useState(true),[loadingMessages,setLoadingMessages]=useState(false);
@@ -63,11 +65,12 @@ export default function Messages(){
      if(conversations.error||lastMessages.error)setError(conversations.error?.message||lastMessages.error?.message||'Não foi possível carregar chats.');
      const mostRecent=new Map<string,Message>();
      ((lastMessages.data||[]) as Message[]).forEach(m=>{if(!mostRecent.has(m.conversation_id))mostRecent.set(m.conversation_id,m);});
-     const assembled=((conversations.data||[]) as Conversation[]).map(c=>({
-       ...c,
-       other:byId.get(pairs.find(p=>p.conversation_id===c.id&&p.user_id!==auth.user!.id)?.user_id||'')||null,
-       last:mostRecent.get(c.id)||null
-     }));
+     const assembled=((conversations.data||[]) as Conversation[]).map(c=>{
+       const participants=pairs.filter(p=>p.conversation_id===c.id&&p.user_id!==auth.user!.id)
+         .map(p=>byId.get(p.user_id)).filter((p):p is Person=>Boolean(p));
+       return {...c,other:participants[0]||null,participants,group:participants.length>1,
+         last:mostRecent.get(c.id)||null};
+     });
      assembled.sort((a,b)=>new Date(b.last?.created_at||b.created_at).getTime()-new Date(a.last?.created_at||a.created_at).getTime());
      setThreads(assembled);
    }else setThreads([]);
@@ -133,6 +136,33 @@ export default function Messages(){
    setCreating(false);
  }
 
+ async function beginGroup(event:FormEvent){
+   event.preventDefault();
+   if(!auth.user||creating)return;
+   const title=groupTitle.trim().slice(0,80);
+   const participantIds=[...new Set(groupMembers)].filter(id=>friends.some(f=>f.id===id));
+   if(!title||participantIds.length<2){
+     setError('Informe o nome do grupo e selecione pelo menos duas amizades aceitas.');
+     return;
+   }
+   setCreating(true);setError('');
+   const db=supabaseBrowser();
+   const {data:conversation,error:e}=await db.from('conversations')
+     .insert({created_by:auth.user.id,title}).select('id').single();
+   if(e){setError(e.message);setCreating(false);return;}
+   const {error:memberError}=await db.from('conversation_members').insert([
+     {conversation_id:conversation.id,user_id:auth.user.id},
+     ...participantIds.map(user_id=>({conversation_id:conversation.id,user_id}))
+   ]);
+   if(memberError){
+     setError('Não foi possível completar o grupo: '+memberError.message);
+   }else{
+     setGroupTitle('');setGroupMembers([]);setGroupOpen(false);
+     await loadThreads();setActive(conversation.id);
+   }
+   setCreating(false);
+ }
+
  async function send(e:FormEvent){
    e.preventDefault();if(!active||!auth.user||!compose.trim()||sending)return;
    setSending(true);setError('');
@@ -152,7 +182,7 @@ export default function Messages(){
    if(e)setError(e.message);
    else{setError('Usuário bloqueado. Para desbloquear, use o perfil público.');}
  }
- const filtered=threads.filter(t=>((t.other?.display_name||'')+' '+(t.other?.handle||'')).toLowerCase().includes(threadSearch.toLowerCase()));
+ const filtered=threads.filter(t=>([t.title||'',t.other?.display_name||'',t.other?.handle||'',...t.participants.map(p=>p.display_name)].join(' ')).toLowerCase().includes(threadSearch.toLowerCase()));
  const current=threads.find(t=>t.id===active);
  return <GuardedPage {...auth}><main className="section-page">
    <div className="page-heading"><div><span className="section-eyebrow">MENSAGENS REAIS · AMIZADES ACEITAS</span><h1>Conversas <span className="wave">✳</span></h1><p>Troque mensagens privadas, músicas e emojis com suas amizades.</p></div></div>
@@ -167,19 +197,33 @@ export default function Messages(){
          </select>
          <button className="btn btn-primary" type="submit" disabled={!recipient||creating}><Plus size={19}/></button>
        </form>
+       <button type="button" className="btn btn-outline" aria-expanded={groupOpen} onClick={()=>{setGroupOpen(open=>!open);setError('');}}><Users size={16}/> {groupOpen?'Fechar grupo':'Criar grupo'}</button>
+       {groupOpen&&<form onSubmit={beginGroup} className="conecta-chat-new" style={{display:'grid',gap:10}}>
+         <label htmlFor="group-title">Nome do grupo</label>
+         <input id="group-title" className="form-input" value={groupTitle} onChange={e=>setGroupTitle(e.target.value)} maxLength={80} required placeholder="Ex.: Amigos da música"/>
+         <fieldset style={{border:0,padding:0,margin:0,maxHeight:150,overflowY:'auto'}}>
+           <legend>Selecione ao menos 2 amizades</legend>
+           {friends.map(f=><label key={f.id} style={{display:'flex',alignItems:'center',gap:8,padding:'4px 0'}}>
+             <input type="checkbox" checked={groupMembers.includes(f.id)} onChange={e=>setGroupMembers(current=>e.target.checked?[...current,f.id]:current.filter(id=>id!==f.id))}/>
+             {f.display_name} (@{f.handle})
+           </label>)}
+         </fieldset>
+         <button className="btn btn-primary" type="submit" disabled={creating||!groupTitle.trim()||groupMembers.length<2}>Criar conversa em grupo</button>
+       </form>}
        {loading?<p className="small-note">Carregando amizades e conversas...</p>:null}
        {!loading&&friends.length===0&&<p className="small-note">Adicione e aceite amizades antes de iniciar uma conversa. <Link className="rail-link" href="/explorar">Explorar pessoas</Link></p>}
        {!loading&&filtered.length===0&&<p className="small-note">Nenhuma conversa encontrada.</p>}
        <div className="conecta-chat-threads">{filtered.map(t=><button key={t.id} className={'conecta-chat-thread '+(t.id===active?'active':'')} onClick={()=>setActive(t.id)}>
-         <ProfileAvatar person={t.other}/>
-         <span><strong>{t.other?.display_name||'Conversa privada'}</strong><small>@{t.other?.handle||'contato'} · {t.last?.content?.slice(0,55)||'Comece a conversar'}</small></span>
+         {t.group?<span className="concept-round-icon violet"><Users size={18}/></span>:<ProfileAvatar person={t.other}/>}
+         <span><strong>{t.group?(t.title||'Grupo'):t.other?.display_name||'Conversa privada'}</strong><small>{t.group?t.participants.length+' participantes':('@'+(t.other?.handle||'contato'))} · {t.last?.content?.slice(0,55)||'Comece a conversar'}</small></span>
          <time>{new Date(t.last?.created_at||t.created_at).toLocaleDateString('pt-BR')}</time>
        </button>)}</div>
      </aside>
      <section className="conecta-chat-main">
-       {active?<><header className="conecta-chat-head"><ProfileAvatar person={current?.other}/>
-         <div><strong>{current?.other?.display_name||'Conversa'}</strong><small>{current?.other?.handle?'@'+current.other.handle:'Mensagens privadas'}</small></div>
-         {current?.other&&<><Link className="icon-btn" title="Ver perfil" href={'/p/'+current.other.handle}><UserRound size={19}/></Link><button className="icon-btn" type="button" title="Bloquear usuário" onClick={block}><Shield size={19}/></button></>}
+       {active?<><header className="conecta-chat-head">{current?.group?<span className="concept-round-icon violet"><Users size={20}/></span>:<ProfileAvatar person={current?.other}/>}
+         <div><strong>{current?.group?(current.title||'Grupo'):current?.other?.display_name||'Conversa'}</strong>
+         <small>{current?.group?current.participants.map(p=>p.display_name).join(', '):(current?.other?.handle?'@'+current.other.handle:'Mensagens privadas')}</small></div>
+         {current?.other&&!current.group&&<><Link className="icon-btn" title="Ver perfil" href={'/p/'+current.other.handle}><UserRound size={19}/></Link><button className="icon-btn" type="button" title="Bloquear usuário" onClick={block}><Shield size={19}/></button></>}
        </header>
        <div className="conecta-chat-log" ref={scrollRef} aria-live="polite">
          {hasOlder&&<button className="btn btn-outline" type="button" disabled={loadingMessages} onClick={()=>void loadMessages(active,true)}>Carregar mensagens anteriores</button>}
