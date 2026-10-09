@@ -149,3 +149,13 @@ test('Profile media uses existing signed Supabase avatar and cover fields',()=>{
  assert.match(app,/changeProfilePhoto\(profile\.id,selected,kind\)/);
  assert.match(app,/loadCover\(profile\.id\)/);
 });
+
+test('Reels browse the same public moderated video posts as web',()=>{
+ const reels=read('src/reels-ui.tsx');
+ assert.match(data,/loadPublicReels/);
+ assert.match(data,/\.eq\('visibility','public'\)\.eq\('media_type','video'\)/);
+ assert.match(reels,/loadPublicReels\(\)/);
+ assert.match(reels,/VideoMedia path=\{path\}/);
+ assert.match(reels,/setLike\(post\.id,userId,wasLiked\)/);
+ assert.match(app,/tab==='reels'/);
+});
