@@ -13,7 +13,8 @@
 - [ ] Aplicar controles de idade em todas as superfícies (mídia, reação, notificações, descoberta, convites, anexos e URLs), auditoria de RLS e testes reais.
 - [ ] Concluir LGPD: exportação, exclusão, retenção, direitos titulares e política de dados biométricos.
 - [x] Entrada de denúncias em publicações e mensagens privadas, com motivos, evidência textual limitada, RLS e proteção contra duplicidade. Corrigida política que permitia informar uma comunidade diferente da publicação; denúncias de comunidades continuam visíveis à equipe autorizada.
-- [ ] Painel administrativo central com triagem e decisões auditadas para denúncias gerais (a entrada funciona, mas ainda não há fila de revisão na interface), moderação de texto/imagem/vídeo multilíngue e política de retenção para evidências, sem falsas aprovações automáticas.
+- [x] Central administrativa de moderação geral: fila protegida por cargo separado das comunidades, filtros, registro de análise/decisões com justificativa, histórico auditável e contagem de denúncias por autor. Configuração explícita de equipe ainda pendente; não há autoatribuição de administrador.
+- [ ] Moderação automatizada de texto/imagem/vídeo multilíngue, remoção administrativa de conteúdo, recursos/contestações, escalonamento e política de retenção de evidências, sem falsas aprovações automáticas.
 
 ## Prioridade P1 — experiência social
 - [x] Comunidades oficiais, cargos, moderadores, recados, perfil estilo MySpace, enquetes, salvamentos, respostas e chat básico já iniciados/entregues.
