@@ -518,3 +518,71 @@
 .post-actions .conecta-report-form .btn{background:var(--brand);color:#fff;padding:9px 12px}
 .post-actions .conecta-report-form .conecta-report-header button{padding:4px;background:transparent;color:var(--muted)}
 @media(max-width:420px){.post-actions{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+
+/* Platform moderation — restricted queue, review decisions and audit */
+.conecta-safety-center{max-width:1330px}
+.conecta-safety-center .page-heading{display:flex;gap:14px;justify-content:space-between;align-items:center}
+.conecta-safety-center .page-heading h1{display:flex;align-items:center;gap:10px}
+.conecta-safety-loading,.conecta-safety-unauthorized{display:grid;justify-items:start;gap:14px;padding:35px;max-width:650px}
+.conecta-safety-loading{display:flex;align-items:center}
+.conecta-safety-unauthorized>svg{color:var(--brand)}
+.conecta-safety-unauthorized h2{margin:0}
+.conecta-safety-unauthorized p{color:var(--muted);margin:0}
+.conecta-safety-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:20px 0 16px}
+.conecta-safety-overview>.panel{display:flex;align-items:center;gap:13px;padding:18px}
+.conecta-safety-overview>.panel>svg{color:var(--brand);flex-shrink:0}
+.conecta-safety-overview>.panel>div{display:grid;gap:4px}
+.conecta-safety-overview strong{font-size:15px}
+.conecta-safety-overview small{font-size:11px;color:var(--muted);line-height:1.5}
+.conecta-safety-filters{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+.conecta-safety-filters button{border:1px solid var(--line);background:var(--panel);color:var(--muted);display:flex;align-items:center;gap:6px;border-radius:10px;font-weight:750;font-size:11px;padding:10px 12px;cursor:pointer}
+.conecta-safety-filters button.active{background:#e9e3ff;border-color:#d2c3f8;color:#6545d4}
+.conecta-safety-filters button:last-child{margin-left:auto}
+.conecta-safety-layout{display:grid;grid-template-columns:minmax(0,.93fr) minmax(0,1.2fr);align-items:start;gap:16px}
+.conecta-safety-layout>.panel{min-height:360px;padding:22px}
+.conecta-safety-inbox{display:grid;gap:9px}
+.conecta-safety-inbox>h2{font-size:17px;margin:0 0 7px}
+.conecta-safety-inbox>.small-note{display:flex;align-items:center;gap:8px}
+.conecta-safety-list-item{padding:15px;border:1px solid var(--line);border-radius:12px;display:grid;gap:8px;text-align:left;background:var(--panel);color:var(--ink);cursor:pointer;min-width:0}
+.conecta-safety-list-item:hover,.conecta-safety-list-item.selected{border-color:#a991ee;background:#f8f5ff}
+.conecta-safety-list-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.conecta-safety-list-heading strong{display:flex;align-items:center;gap:6px;font-size:12px}
+.conecta-safety-status{display:inline-flex;align-items:center;border:1px solid #dedcf0;border-radius:25px;padding:4px 8px;font-size:10px;font-weight:800;background:#f4f2ff;color:#6953bb;white-space:nowrap}
+.conecta-safety-status.pending{background:#fff4da;color:#8c6517;border-color:#f9e0ae}
+.conecta-safety-status.reviewing{background:#e4eeff;color:#3d6da5;border-color:#c9d9fa}
+.conecta-safety-status.resolved{background:#e4f7ed;color:#276949;border-color:#c9e8d7}
+.conecta-safety-status.dismissed{background:#f1f1f5;color:#646779;border-color:#e5e5ec}
+.conecta-safety-reason{color:var(--ink);font-size:12px;line-height:1.55;overflow-wrap:anywhere}
+.conecta-safety-meta{display:flex;gap:5px;align-items:center;flex-wrap:wrap;color:var(--muted);font-size:10px}
+.conecta-safety-empty{display:grid;justify-items:center;text-align:center;gap:12px;margin:auto;padding:40px 18px;color:var(--muted);min-height:235px;align-content:center}
+.conecta-safety-empty>svg{color:#8e6ee9}
+.conecta-safety-empty h2,.conecta-safety-empty strong{color:var(--ink);margin:0}
+.conecta-safety-empty p{margin:0;max-width:350px}
+.conecta-safety-detail-content{display:grid;gap:17px}
+.conecta-safety-detail-content h2{margin:0;font-size:20px}
+.conecta-safety-detail-heading{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:9px}
+.conecta-safety-detail-heading small{color:var(--muted)}
+.conecta-safety-facts{display:grid;gap:8px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.conecta-safety-facts>div{border:1px solid var(--line);border-radius:10px;display:grid;gap:5px;padding:11px;min-width:0}
+.conecta-safety-facts>div>span{font-size:10px;color:var(--muted)}
+.conecta-safety-facts strong{display:flex;align-items:center;gap:5px;font-size:11px;overflow-wrap:anywhere}
+.conecta-safety-evidence{padding:17px;border:1px solid var(--line);border-radius:13px;background:#f9f8ff}
+.conecta-safety-evidence strong{display:block;font-size:12px;margin:8px 0 6px}
+.conecta-safety-evidence p{font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.conecta-safety-evidence blockquote{background:#fff;border-left:3px solid #b99cf7;border-radius:5px;padding:13px;margin:9px 0;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.conecta-safety-evidence small{font-size:10px;line-height:1.5;color:var(--muted)}
+.conecta-safety-decision{display:grid;gap:11px;padding-top:9px;border-top:1px solid var(--line)}
+.conecta-safety-decision>h3{margin:0;font-size:15px}
+.conecta-safety-decision textarea{resize:vertical}
+.conecta-safety-decision>.btn{justify-self:start}
+.conecta-safety-decision-buttons{display:flex;flex-wrap:wrap;gap:9px}
+.conecta-safety-decision>small{font-size:10px;line-height:1.5;color:var(--muted)}
+.conecta-safety-history{display:grid;gap:9px;border-top:1px solid var(--line);padding-top:16px}
+.conecta-safety-history h3{font-size:15px;margin:0}
+.conecta-safety-history article{display:grid;gap:6px;padding:13px;background:#f9f8fe;border:1px solid var(--line);border-radius:10px}
+.conecta-safety-history article span{font-size:12px;font-weight:800}
+.conecta-safety-history article small{color:var(--muted);font-size:10px}
+.conecta-safety-history article p{margin:0;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:900px){.conecta-safety-layout{grid-template-columns:1fr}.conecta-safety-overview{grid-template-columns:1fr 1fr}.conecta-safety-layout>.panel{min-height:0}}
+@media(max-width:580px){.conecta-safety-overview{grid-template-columns:1fr}.conecta-safety-facts{grid-template-columns:1fr}.conecta-safety-center .page-heading{align-items:flex-start;flex-wrap:wrap}.conecta-safety-filters button:last-child{margin-left:0}.conecta-safety-layout>.panel{padding:14px}}
