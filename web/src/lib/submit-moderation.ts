@@ -30,3 +30,23 @@ export async function requestContentModeration(kind:'post'|'story',id:string):Pr
   return currentModerationStatus(kind,id);
  }
 }
+
+
+/** Submit a new comment for real server-side text moderation, or leave pending. */
+export async function requestCommentModeration(id:string):Promise<ModerationFeedback>{
+ try{
+  const db=supabaseBrowser();
+  const {data:{session}}=await db.auth.getSession();
+  if(!session?.access_token)return {status:'pending',reason:'Comentário aguardando revisão.'};
+  const response=await fetch('/api/moderation/comment',{
+   method:'POST',headers:{
+    'Content-Type':'application/json',
+    Authorization:'Bearer '+session.access_token
+   },body:JSON.stringify({id}),cache:'no-store',credentials:'same-origin'
+  });
+  if(!response.ok)return {status:'pending',reason:'Comentário aguardando revisão.'};
+  const payload=await response.json() as ModerationFeedback;
+  return payload.status==='approved'||payload.status==='pending'||payload.status==='rejected'
+    ?payload:{status:'pending',reason:'Comentário aguardando revisão.'};
+ }catch{return {status:'pending',reason:'Comentário aguardando revisão.'};}
+}
