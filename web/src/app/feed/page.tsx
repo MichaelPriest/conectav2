@@ -166,6 +166,7 @@ export default function FeedPage() {
             <div className="concept-composer-submit"><select aria-label="Privacidade da publicação" value={privacy} onChange={e=>setPrivacy(e.target.value as typeof privacy)}><option value="public">Público</option><option value="friends">Amigos</option><option value="private">Só eu</option></select><button className="btn btn-primary" type="submit" disabled={busy||(!text.trim()&&files.length===0)}>{busy?<Loader2 className="spin" size={17}/>:<Send size={17}/>} Publicar</button></div>
           </div>
         </form>
+        <p className="small-note conecta-moderation-disclosure">Fotos, vídeos e textos sinalizados passam por triagem e podem aguardar revisão humana. Quando a moderação externa estiver ativada, mídia e texto publicados poderão ser avaliados por um provedor de IA. Evite compartilhar dados sensíveis de crianças.</p>
         {message&&<p role="alert" className="form-error">{message}</p>}
       </section>
       <div className="feed-title concept-feed-title"><h2>Publicações recentes</h2><span>Mais recentes primeiro</span></div>
