@@ -14,7 +14,8 @@
     "test:origin": "node --test tests/identity-origin.test.cjs",
     "test:legacy-rg": "node --test tests/legacy-rg-ocr.test.cjs",
     "test:completion": "node --test tests/identity-completion.test.cjs",
-    "test:moderation": "node --test tests/oss-moderation-safety.test.cjs"
+    "test:moderation": "node --test tests/oss-moderation-safety.test.cjs",
+    "test:automod": "node --test tests/automatic-moderation.test.cjs"
   },
   "dependencies": {
     "@huggingface/transformers": "3.8.1",
@@ -24,10 +25,12 @@
     "@vladmandic/human": "3.3.6",
     "@zxing/browser": "0.2.1",
     "emoji-picker-react": "4.22.3",
+    "ffmpeg-static": "5.3.0",
     "lucide-react": "0.468.0",
     "next": "16.4.0",
     "nsfwjs": "4.2.0",
     "pdf-lib": "1.17.1",
+    "profanity-br": "0.1.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "sharp": "0.34.4",
