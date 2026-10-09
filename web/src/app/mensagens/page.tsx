@@ -1,7 +1,7 @@
 'use client';
 import {FormEvent,useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import Link from 'next/link';
-import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Users,Paperclip,Mic,Square,X,Loader2,Pencil,Trash2,Check,CheckCheck,Reply,Smile} from 'lucide-react';
+import {MessageCircle,Plus,Send,RefreshCw,Search,UserRound,Shield,Users,Paperclip,Mic,Square,X,Loader2,Pencil,Trash2,Check,CheckCheck,Reply,Smile,Pin,PinOff,BellOff,Bell,Settings2,UserPlus} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {supabaseBrowser} from '@/lib/supabase/browser';
@@ -10,6 +10,7 @@ import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
 import {optimizeImage} from '@/lib/media';
 import {MentionInput,MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
+import {useChatTyping} from '@/lib/use-chat-typing';
 
 type Person={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Conversation={id:string;title:string|null;created_at:string;created_by:string};
@@ -43,7 +44,8 @@ function MessageMedia({message}:{message:Message}){
  if(message.media_type==='audio')return <audio className="conecta-chat-audio" src={url} controls preload="metadata" aria-label="Mensagem de áudio"/>;
  return null;
 }
-type Thread=Conversation & {other:Person|null;participants:Person[];group:boolean;last:Message|null;unread:number};
+type Thread=Conversation & {other:Person|null;participants:Person[];group:boolean;last:Message|null;unread:number;mutedUntil:string|null};
+type PinnedMessage={message_id:string;pinned_at:string;content:string;media_type:MediaType|null};
 const PER_PAGE=60;
 
 export default function Messages(){
@@ -75,6 +77,12 @@ export default function Messages(){
  const [searchError,setSearchError]=useState('');
  const [highlighted,setHighlighted]=useState<string|null>(null);
  const [threadSearch,setThreadSearch]=useState('');
+ const [pins,setPins]=useState<PinnedMessage[]>([]);
+ const [settingsOpen,setSettingsOpen]=useState(false);
+ const [settingsTitle,setSettingsTitle]=useState('');
+ const [inviteFriend,setInviteFriend]=useState('');
+ const [settingsBusy,setSettingsBusy]=useState(false);
+ const typingIds=useChatTyping(active,auth.user?.id,compose,Boolean(active));
  const scrollRef=useRef<HTMLDivElement>(null);
  const messageNodes=useRef<Record<string,HTMLElement|null>>({});
  useEffect(()=>{
@@ -128,7 +136,7 @@ export default function Messages(){
    if(!auth.user)return;
    const db=supabaseBrowser();
    const [membership,connections]=await Promise.all([
-     db.from('conversation_members').select('conversation_id,user_id').eq('user_id',auth.user.id),
+     db.from('conversation_members').select('conversation_id,user_id,muted_until').eq('user_id',auth.user.id),
      db.from('friendships').select('requester_id,addressee_id').eq('status','accepted')
        .or('requester_id.eq.'+auth.user.id+',addressee_id.eq.'+auth.user.id)
    ]);
@@ -163,11 +171,12 @@ export default function Messages(){
      for(const row of (unreadCounts.data||[]) as {conversation_id:string;unread_count:number|string}[]){
        countByConversation.set(row.conversation_id,Number(row.unread_count||0));
      }
+     const myPreferences=new Map((membership.data||[]).map(m=>[m.conversation_id,m.muted_until]));
      const assembled=((conversations.data||[]) as Conversation[]).map(c=>{
        const participants=pairs.filter(p=>p.conversation_id===c.id&&p.user_id!==auth.user!.id)
          .map(p=>byId.get(p.user_id)).filter((p):p is Person=>Boolean(p));
        return {...c,other:participants[0]||null,participants,group:participants.length>1,
-         last:mostRecent.get(c.id)||null,unread:countByConversation.get(c.id)||0};
+         last:mostRecent.get(c.id)||null,unread:countByConversation.get(c.id)||0,mutedUntil:myPreferences.get(c.id)||null};
      });
      assembled.sort((a,b)=>new Date(b.last?.created_at||b.created_at).getTime()-new Date(a.last?.created_at||a.created_at).getTime());
      setThreads(assembled);
@@ -175,6 +184,23 @@ export default function Messages(){
    setLoading(false);
  },[auth.user]);
 
+ const loadPins=useCallback(async(id:string)=>{
+   const db=supabaseBrowser();
+   const {data,error:e}=await db.from('conversation_pins')
+     .select('message_id,pinned_at').eq('conversation_id',id)
+     .order('pinned_at',{ascending:false}).limit(3);
+   if(e){setError('Mensagens fixadas indisponíveis: '+e.message);return;}
+   const rows=data||[];
+   if(!rows.length){setPins([]);return;}
+   const {data:messages,error:messageError}=await db.from('messages')
+     .select('id,content,media_type,deleted_at').in('id',rows.map(p=>p.message_id));
+   if(messageError){setError(messageError.message);return;}
+   const byId=new Map((messages||[]).map(m=>[m.id,m]));
+   setPins(rows.filter(p=>byId.has(p.message_id)&&!byId.get(p.message_id)?.deleted_at)
+    .map(p=>({message_id:p.message_id,pinned_at:p.pinned_at,
+      content:byId.get(p.message_id)?.content||'Anexo compartilhado',
+      media_type:(byId.get(p.message_id)?.media_type||null) as MediaType|null})));
+ },[]);
  const loadMessages=useCallback(async(id:string,older=false)=>{
    setLoadingMessages(true);
    const db=supabaseBrowser();
@@ -214,7 +240,9 @@ export default function Messages(){
    if(!active)return;
    setMessages([]);setReceipts([]);setReactions([]);setEditingId(null);
    setReplyTo(null);setReactionOpen(null);setSearchOpen(false);setMessageSearch('');
-   setSearchHits([]);setHighlighted(null);void loadMessages(active);
+   setSearchHits([]);setHighlighted(null);
+   setPins([]);setSettingsOpen(false);setInviteFriend('');
+   void loadPins(active);void loadMessages(active);
    void loadReceipts(active);
    const db=supabaseBrowser();
    const channel=db.channel('conecta-inbox-'+active).on('postgres_changes',
@@ -223,6 +251,9 @@ export default function Messages(){
    ).on('postgres_changes',
      {schema:'public',table:'message_reactions',event:'*'},
      ()=>{void loadMessages(active);}
+   ).on('postgres_changes',
+     {schema:'public',table:'conversation_pins',event:'*',filter:'conversation_id=eq.'+active},
+     ()=>{void loadPins(active);}
    ).on('postgres_changes',
      {schema:'public',table:'conversation_members',event:'UPDATE',filter:'conversation_id=eq.'+active},
      ()=>{void loadReceipts(active);}
@@ -412,6 +443,48 @@ export default function Messages(){
    }finally{setSending(false);}
  }
 
+ async function togglePin(messageId:string){
+   if(!active||settingsBusy)return;
+   setSettingsBusy(true);setError('');
+   const {error:e}=await supabaseBrowser().rpc('toggle_conversation_pin',{
+     _conversation:active,_message:messageId
+   });
+   if(e)setError('Não foi possível fixar a mensagem: '+e.message);
+   else await loadPins(active);
+   setSettingsBusy(false);
+ }
+ async function toggleMute(){
+   if(!active||!auth.user||settingsBusy)return;
+   setSettingsBusy(true);setError('');
+   const entry=threads.find(t=>t.id===active);
+   const muted=Boolean(entry?.mutedUntil&&Date.parse(entry.mutedUntil)>Date.now());
+   const {error:e}=await supabaseBrowser().from('conversation_members')
+     .update({muted_until:muted?null:new Date(Date.now()+30*86400_000).toISOString()})
+     .eq('conversation_id',active).eq('user_id',auth.user.id);
+   if(e)setError('Não foi possível silenciar: '+e.message);
+   else await loadThreads();
+   setSettingsBusy(false);
+ }
+ async function saveGroupSettings(event:FormEvent){
+   event.preventDefault();if(!active||settingsBusy||!settingsTitle.trim())return;
+   setSettingsBusy(true);setError('');
+   const {error:e}=await supabaseBrowser().rpc('rename_conversation_group',{
+     _conversation:active,_title:settingsTitle.trim()
+   });
+   if(e)setError('Falha ao renomear grupo: '+e.message);
+   else{await loadThreads();setSettingsOpen(false);}
+   setSettingsBusy(false);
+ }
+ async function inviteGroupFriend(){
+   if(!active||!inviteFriend||settingsBusy)return;
+   setSettingsBusy(true);setError('');
+   const {error:e}=await supabaseBrowser().rpc('add_conversation_group_member',{
+      _conversation:active,_friend:inviteFriend
+   });
+   if(e)setError('Não foi possível convidar: '+e.message);
+   else{setInviteFriend('');await loadThreads();}
+   setSettingsBusy(false);
+ }
  async function block(){
    const person=threads.find(t=>t.id===active)?.other;
    if(!person||!auth.user||!confirm('Bloquear @'+person.handle+'? Vocês não poderão trocar novas mensagens até o desbloqueio.'))return;
@@ -421,6 +494,11 @@ export default function Messages(){
  }
  const filtered=threads.filter(t=>([t.title||'',t.other?.display_name||'',t.other?.handle||'',...t.participants.map(p=>p.display_name)].join(' ')).toLowerCase().includes(threadSearch.toLowerCase()));
  const current=threads.find(t=>t.id===active);
+ const currentlyMuted=Boolean(current?.mutedUntil&&Date.parse(current.mutedUntil)>Date.now());
+ const canManageGroup=Boolean(current?.group&&current.created_by===auth.user?.id);
+ const availableGroupFriends=friends.filter(friend=>
+  friend.id!==auth.user?.id&&!current?.participants.some(member=>member.id===friend.id));
+ const typingNames=typingIds.map(id=>current?.participants.find(p=>p.id===id)?.display_name||'Alguém');
  return <GuardedPage {...auth}><main className="section-page">
    <div className="page-heading"><div><span className="section-eyebrow">MENSAGENS REAIS · AMIZADES ACEITAS</span><h1>Conversas <span className="wave">✳</span></h1><p>Troque mensagens privadas, músicas e emojis com suas amizades.</p></div></div>
    <div className={'conecta-chat-layout card'+(active?' conecta-chat-has-active':'')}>
