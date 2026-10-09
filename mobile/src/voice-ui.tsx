@@ -46,6 +46,7 @@ export function VoiceRecorder({conversationId,userId,onSent}:{
  const recorder=useAudioRecorder(RecordingPresets.HIGH_QUALITY);
  const status=useAudioRecorderState(recorder);
  const busy=useRef(false);
+ const recordingRef=useRef(false);
  const [sending,setSending]=useState(false),[error,setError]=useState('');
  const [recording,setRecording]=useState(false);
  const stop=async(send:boolean)=>{
@@ -62,7 +63,7 @@ export function VoiceRecorder({conversationId,userId,onSent}:{
     onSent();
    }
   }catch(e){setError(describe(e));}
-  finally{busy.current=false;setSending(false);setRecording(false);}
+  finally{recordingRef.current=false;busy.current=false;setSending(false);setRecording(false);}
  };
  const start=async()=>{
   if(busy.current||recording||sending)return;
@@ -73,6 +74,7 @@ export function VoiceRecorder({conversationId,userId,onSent}:{
    await setAudioModeAsync({allowsRecording:true,playsInSilentMode:true});
    await recorder.prepareToRecordAsync();
    recorder.record();
+   recordingRef.current=true;
    setRecording(true);
   }catch(e){
    setError(describe(e));await setAudioModeAsync({allowsRecording:false}).catch(()=>{});
@@ -88,9 +90,9 @@ export function VoiceRecorder({conversationId,userId,onSent}:{
  useEffect(()=>{
   if(recording&&status.durationMillis>=60000&&!busy.current)void stop(true);
  },[recording,status.durationMillis]);
- useEffect(()=>()=>{if(recording)void recorder.stop().catch(()=>{});
+ useEffect(()=>()=>{if(recordingRef.current)void recorder.stop().catch(()=>{});
   void setAudioModeAsync({allowsRecording:false}).catch(()=>{});
- },[recording,recorder]);
+ },[recorder]);
  return <View style={{gap:5}}>
   {recording?<View style={[s.row,{gap:8,flexWrap:'wrap'}]}>
    <Text style={{color:t.danger,fontWeight:'700'}}>● Gravando {clock(status.durationMillis/1000)} / 1:00</Text>
