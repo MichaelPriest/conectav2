@@ -18,7 +18,13 @@ test('Same Supabase backend and real signed-in data',()=>{
  assert.ok(config.includes('opdlxxrcdsxqmlhgayfm.supabase.co'));
  assert.ok(config.includes('createClient('));
  assert.ok(config.includes('autoRefreshToken:true'));
- assert.ok(!/service_role|sb_secret_/.test(config));
+ // Reject privileged credentials in executable configuration; comments can
+ // legitimately explain that service-role secrets must NEVER be used.
+ const executable=config.replace(/\/\*[^]*?\*\//g,'')
+  .split('\\n').filter(line=>!line.trim().startsWith('//')).join('\\n');
+ assert.ok(!/sb_secret_[A-Za-z0-9_]+/.test(executable));
+ assert.ok(!/EXPO_PUBLIC_(SERVICE_ROLE|SECRET_KEY)/.test(executable));
+ assert.match(executable,/sb_publishable_[A-Za-z0-9_-]+/);
  for(const name of ['loadFeed','loadThreads','loadConnections','loadCommunities','loadNotifications']){
   assert.ok(app.includes(name),name);
  }
