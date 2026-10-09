@@ -7,11 +7,13 @@ on:
     paths:
       - 'web/**'
       - 'supabase/**'
+      - 'moderation-worker/**'
       - '.github/workflows/conecta-v2.yml'
   pull_request:
     paths:
       - 'web/**'
       - 'supabase/**'
+      - 'moderation-worker/**'
       - '.github/workflows/conecta-v2.yml'
   workflow_dispatch:
 
@@ -38,6 +40,8 @@ jobs:
           cache-dependency-path: web/package.json
       - name: Install pinned dependencies
         run: npm install --no-audit --no-fund --no-package-lock
+      - name: Compile open-source moderation worker
+        run: python3 -m py_compile ../moderation-worker/server.py
       - name: Check TypeScript
         run: npm run typecheck
       - name: Regression tests for nullable profile details
