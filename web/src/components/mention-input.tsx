@@ -53,7 +53,7 @@ export function MentionInput({value,onChange,placeholder,rows=3,maxLength=3000,r
      if(!matches.length||!currentMention(value,e.currentTarget.selectionStart??0))return;
      if(e.key==='ArrowDown'){e.preventDefault();setActive(i=>(i+1)%matches.length);}
      if(e.key==='ArrowUp'){e.preventDefault();setActive(i=>(i-1+matches.length)%matches.length);}
-     if(e.key==='Enter'&&as==='textarea' || e.key==='Tab'&&matches.length){
+     if(e.key==='Enter'||e.key==='Tab'){
        e.preventDefault();choose(matches[active]||matches[0]);
      }
      if(e.key==='Escape')setMatches([]);
