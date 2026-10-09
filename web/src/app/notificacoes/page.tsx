@@ -12,10 +12,10 @@ type Notice = {
 };
 const labels:Record<string,string>={
   like:'curtiu sua publicação',comment:'comentou sua publicação',
-  friend_request:'enviou uma solicitação de amizade',friend_accept:'aceitou sua amizade',
+  friend_request:'enviou uma solicitação de amizade',friend_accept:'aceitou sua amizade',mention:'mencionou você em uma publicação',
   community:'interagiu em uma comunidade'
 };
-const icons:Record<string,typeof Bell>={like:Heart,comment:MessageCircle,friend_request:UserPlus,friend_accept:Users,community:Users};
+const icons:Record<string,typeof Bell>={like:Heart,comment:MessageCircle,friend_request:UserPlus,friend_accept:Users,community:Users,mention:MessageCircle};
 
 export default function Notifications() {
   const auth=useAuthProfile();
@@ -74,7 +74,7 @@ export default function Notifications() {
       <section className="empty-state card"><span className="concept-empty-illustration"><Bell size={34}/></span><h3>{filter==='unread'?'Nenhuma notificação não lida':'Tudo em dia!'}</h3><p>{filter==='unread'?'Todas as notificações estão marcadas como lidas.':'Quando alguém interagir com você, as notificações aparecerão aqui.'}</p><Link href="/explorar" className="btn btn-primary">Descobrir pessoas</Link></section>:
       <div className="notification-list">{visible.map(item=>{
         const Icon=icons[item.kind]||Bell;
-        const href=(item.kind==='like'||item.kind==='comment')&&item.entity_id
+        const href=(item.kind==='like'||item.kind==='comment'||item.kind==='mention')&&item.entity_id
           ? '/post/'+item.entity_id
           : item.kind==='friend_request'||item.kind==='friend_accept'
           ? '/conexoes'
