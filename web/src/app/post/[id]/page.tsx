@@ -22,7 +22,7 @@ export default function PostDetail(){
     setLoading(true);setError('');
     const db=supabaseBrowser();
     const {data,error:queryError}=await db.from('posts')
-      .select('id,author_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
+      .select('id,author_id,community_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
       .eq('id',params.id).maybeSingle();
     if(queryError){setError(queryError.message);setLoading(false);return;}
     if(!data){setPost(null);setLoading(false);return;}
