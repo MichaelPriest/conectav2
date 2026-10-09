@@ -86,8 +86,11 @@ create or replace function public.end_chat_call(_id uuid,_decline boolean defaul
 returns void language plpgsql security definer set search_path='' as $$
 declare me uuid:=(select auth.uid());
 begin
- update public.chat_calls set status=case when _decline and callee_id=me and
-  status='ringing' then 'declined' else 'ended' end,
+ update public.chat_calls set status=case
+  when _decline and callee_id=me and status='ringing' then 'declined'
+  when status='ringing' and (expires_at<=now() or
+    (caller_id=me and created_at<now()-interval '8 seconds')) then 'missed'
+  else 'ended' end,
   offer_sdp=null,answer_sdp=null,expires_at=now(),updated_at=now()
  where id=_id and status in ('ringing','accepted') and (caller_id=me or callee_id=me);
  delete from public.chat_call_ice_candidates where call_id=_id
