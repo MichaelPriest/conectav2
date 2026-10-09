@@ -9,7 +9,9 @@ test('real calls listen to scoped Supabase Realtime events with polling fallback
  const s=read('src/components/chat-calls.tsx');
  assert.ok(s.includes("filter:'callee_id=eq.'+userId"));
  assert.ok(s.includes("filter:'caller_id=eq.'+userId"));
- assert.ok(s.includes('intervalMs=12000'));
+ assert.ok(s.includes('idlePollMs=12000'));
+ assert.ok(s.includes('intervalMs=1800'));
+ assert.ok(s.includes('if(currentRef.current){void check();return;}'));
  assert.ok(s.includes('db.removeChannel(channel)'));
  assert.ok(s.includes("Notification.permission==='granted'"));
 });
