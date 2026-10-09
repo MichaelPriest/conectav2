@@ -10,6 +10,7 @@ import {ProfileAvatar} from '@/components/profile-avatar';
 import {PollCard} from '@/components/poll-card';
 import {MentionInput,MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
+import {requestCommentModeration} from '@/lib/submit-moderation';
 
 function ago(value: string) {
   const minutes = Math.max(0, Math.floor((Date.now()-new Date(value).getTime())/60000));
@@ -80,7 +81,7 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
     if (commentsOpen) {setCommentsOpen(false);return;}
     setCommentsOpen(true);
     const { data, error } = await supabaseBrowser().from('post_comments')
-      .select('id,post_id,parent_id,author_id,body,created_at,profiles!post_comments_author_id_fkey(display_name,handle,avatar_path)')
+      .select('id,post_id,parent_id,author_id,body,moderation_status,moderation_reason,created_at,profiles!post_comments_author_id_fkey(display_name,handle,avatar_path)')
       .eq('post_id',post.id).order('created_at',{ascending:true}).limit(100);
     if(error) setNotice('Não foi possível carregar os comentários.');
     else setComments((data||[]) as unknown as PostComment[]);
@@ -91,10 +92,16 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
     if(!comment.trim()||sending)return;
     setSending(true);setNotice('');
     const db=supabaseBrowser();
-    const {error}=await db.from('post_comments').insert({post_id:post.id,author_id:userId,body:comment.trim(),parent_id:replyTo?.id||null});
+    const {data:created,error}=await db.from('post_comments')
+      .insert({post_id:post.id,author_id:userId,body:comment.trim(),parent_id:replyTo?.id||null})
+      .select('id').single();
     if(error) {setNotice(error.message);setSending(false);return;}
+    const moderation=await requestCommentModeration(created.id);
+    setNotice(moderation.status==='pending'?
+      'Comentário recebido e aguardando análise antes de aparecer para outras pessoas.':
+      moderation.status==='rejected'?'Comentário não aprovado.':'Comentário publicado.');
     setComment('');setReplyTo(null);setSending(false);
-    const {data}=await db.from('post_comments').select('id,post_id,author_id,body,created_at,profiles!post_comments_author_id_fkey(display_name,handle,avatar_path)').eq('post_id',post.id).order('created_at',{ascending:true}).limit(100);
+    const {data}=await db.from('post_comments').select('id,post_id,parent_id,author_id,body,moderation_status,moderation_reason,created_at,profiles!post_comments_author_id_fkey(display_name,handle,avatar_path)').eq('post_id',post.id).order('created_at',{ascending:true}).limit(100);
     setComments((data||[]) as unknown as PostComment[]);
     await refresh();
   }
@@ -156,13 +163,13 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
       {comments.filter(cm=>!cm.parent_id).map(root=><div className="conecta-comment-thread" key={root.id}>
         <div className="comment">
           <ProfileAvatar person={root.profiles} size="tiny"/>
-          <div><strong>{root.profiles?.display_name||'Pessoa'}</strong><p><MentionText text={root.body}/></p><small>{ago(root.created_at)}</small>
-            <button className="conecta-reply-link" type="button" onClick={()=>{setReplyTo(root);setComment('');}}><Reply size={14}/> Responder</button>
+          <div><strong>{root.profiles?.display_name||'Pessoa'}</strong><p><MentionText text={root.body}/></p><small>{ago(root.created_at)}</small>{root.moderation_status!=='approved'&&<small className="conecta-comment-review">{root.moderation_status==='pending'?'Em análise · visível apenas a você e à moderação':'Comentário não aprovado'}</small>}
+            {root.moderation_status==='approved'&&<button className="conecta-reply-link" type="button" onClick={()=>{setReplyTo(root);setComment('');}}><Reply size={14}/> Responder</button>}
           </div>
         </div>
         {comments.filter(cm=>cm.parent_id===root.id).map(reply=><div className="comment conecta-comment-reply" key={reply.id}>
           <ProfileAvatar person={reply.profiles} size="tiny"/>
-          <div><strong>{reply.profiles?.display_name||'Pessoa'}</strong><p><MentionText text={reply.body}/></p><small>{ago(reply.created_at)}</small></div>
+          <div><strong>{reply.profiles?.display_name||'Pessoa'}</strong><p><MentionText text={reply.body}/></p><small>{ago(reply.created_at)}</small>{reply.moderation_status!=='approved'&&<small className="conecta-comment-review">{reply.moderation_status==='pending'?'Em análise':'Resposta não aprovada'}</small>}</div>
         </div>)}
       </div>)}
       {replyTo&&<div className="conecta-reply-to">Respondendo a @{replyTo.profiles?.handle||'pessoa'} <button type="button" onClick={()=>setReplyTo(null)}>Cancelar</button></div>}
