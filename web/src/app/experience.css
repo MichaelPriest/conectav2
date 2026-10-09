@@ -720,3 +720,47 @@
  .conecta-chat-manage-row .btn{justify-self:start}
  .conecta-chat-pins button{max-width:70%}
 }
+
+
+/* Chat connections: actual accepted friendships with profile pictures, names and handles */
+.conecta-chat-connections{display:grid;gap:9px;margin:10px 0;padding:12px 10px;
+ border:1px solid var(--line);border-radius:15px;background:color-mix(in srgb,var(--card) 92%,#9473ed)}
+.conecta-chat-connections-heading{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.conecta-chat-connections-heading>a{display:grid;place-items:center;padding:6px;color:var(--muted);border-radius:8px}
+.conecta-chat-connections-heading>a:hover{color:var(--ink);background:var(--line)}
+.conecta-chat-connections-toggle{border:0;background:transparent;display:flex;align-items:center;
+ gap:7px;cursor:pointer;color:var(--ink);font-size:13px;text-align:left}
+.conecta-chat-connections-count{display:inline-grid;place-items:center;min-width:19px;
+ height:19px;background:var(--line);border-radius:999px;font-size:11px;padding:0 5px}
+.conecta-chat-connections .searchbox{margin:0}
+.conecta-chat-connections-list{display:grid;gap:3px;max-height:260px;overflow-y:auto;overscroll-behavior:contain}
+.conecta-chat-connection-item{min-width:0}
+.conecta-chat-contact-button{width:100%;background:transparent;border:0;color:var(--ink);
+ display:flex;align-items:center;gap:9px;padding:7px 6px;text-align:left;
+ border-radius:10px;cursor:pointer;min-width:0}
+.conecta-chat-contact-button:hover,.conecta-chat-contact-button:focus-visible{
+ background:color-mix(in srgb,#9368ed 13%,var(--card))}
+.conecta-chat-contact-button>.avatar{flex-shrink:0}
+.conecta-chat-contact-button>svg:last-child{color:var(--muted);margin-left:auto;flex-shrink:0}
+.conecta-chat-contact-details{display:grid;gap:2px;flex:1;min-width:0}
+.conecta-chat-contact-details strong,.conecta-chat-contact-details small{
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.conecta-chat-contact-details strong{font-size:13px;font-weight:650}
+.conecta-chat-contact-details small{font-size:11px;color:var(--muted)}
+.conecta-chat-group-contact{display:flex;align-items:center;gap:9px;padding:7px 5px;cursor:pointer;
+ border-radius:9px}
+.conecta-chat-group-contact:hover{background:color-mix(in srgb,#9368ed 10%,var(--card))}
+.conecta-chat-group-contact>.avatar{flex-shrink:0}
+.conecta-chat-group-contact>span:last-child{display:grid;gap:2px;min-width:0}
+.conecta-chat-group-contact strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conecta-chat-group-contact small{font-size:11px;color:var(--muted)}
+.conecta-widget-contacts{display:grid;gap:5px;padding:9px 12px;border-top:1px solid var(--line)}
+.conecta-widget-contacts-title{font-size:12px;color:var(--muted);font-weight:700}
+.conecta-widget-contacts button{display:flex;align-items:center;gap:8px;border:0;
+ background:transparent;color:var(--ink);padding:6px;border-radius:9px;text-align:left;cursor:pointer}
+.conecta-widget-contacts button:hover{background:color-mix(in srgb,#9368ed 12%,var(--card))}
+.conecta-widget-contacts button span:nth-child(2){display:grid;flex:1;min-width:0}
+.conecta-widget-contacts button strong,.conecta-widget-contacts button small{
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.conecta-widget-contacts button strong{font-size:12px}
+.conecta-widget-contacts button small{font-size:11px;color:var(--muted)}
