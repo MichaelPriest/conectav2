@@ -15,7 +15,7 @@ import {
  loadConnections,loadFeed,loadNotifications,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
  publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,startChat,updateMyProfile,verifyAccess
 } from './src/data';
-import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,VideoMedia,styles as s} from './src/ui';
+import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
 import {normalizeMedia,publishMediaPost} from './src/media';
 import type {SelectedMedia} from './src/media';
@@ -173,6 +173,7 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onComment}:{
     <Text style={s.secondaryText}>↗ Compartilhar</Text>
    </Pressable>
   </View>
+  {post.author_id!==userId&&<ReportContent targetType="post" targetId={post.id} userId={userId}/>}
   {commentsOpen&&<View style={{marginTop:14,gap:10}}>
    <Text style={s.primaryText}>Comentários e respostas</Text>
    <ErrorNotice text={commentError}/>
@@ -532,6 +533,8 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     <Text style={{alignSelf:'flex-end',fontSize:10,color:item.sender_id===userId?'#E9DFFB':t.muted,marginTop:5}}>
      {new Date(item.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
     </Text>
+    {!item.deleted_at&&item.sender_id!==userId&&
+     <ReportContent targetType="message" targetId={item.id} userId={userId}/>} 
    </View>}
    ListEmptyComponent={<Loading text="Esta conversa ainda não tem mensagens."/>}/>
   <View style={{backgroundColor:'white',padding:12,borderTopWidth:1,borderTopColor:t.line}}>
