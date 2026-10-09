@@ -219,6 +219,7 @@ export default function CommunityDetail(){
             <button type="submit" className="btn btn-primary" disabled={busy||(!text.trim()&&!files.length)}><Send size={17}/> Publicar</button>
           </div>
         </form>
+        <p className="small-note conecta-moderation-disclosure">Mídias e textos sinalizados podem aguardar a revisão da equipe da comunidade. Com IA externa habilitada, o conteúdo publicado poderá ser processado por esse serviço.</p>
       </section>}
       {!member&&<div className="panel"><MessageCircle size={22}/><p>Participe para compartilhar suas publicações.</p></div>}
       <div className="feed-title" style={{marginTop:22}}><h2>Publicações da comunidade</h2></div>
