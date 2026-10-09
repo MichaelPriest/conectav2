@@ -96,6 +96,7 @@ export async function POST(request:NextRequest){
  try{body=await request.json();}catch{return reply({error:'Dados inválidos.'},400);}
  if(!validId(body.id)||(body.kind!=='post'&&body.kind!=='story'))return reply({error:'Conteúdo inválido.'},400);
  const {user,admin}=context,kind=body.kind,id=body.id!;
+ const engine=process.env.CONEXA_MODERATION_ENGINE||'local';
  const {data:record,error:fetchError}=kind==='post'
   ?await admin.from('posts').select('id,author_id,content,media_path,media_type,moderation_status,ai_checked_at,community_id').eq('id',id).maybeSingle()
   :await admin.from('stories').select('id,author_id,caption,media_path,media_type,moderation_status,expires_at').eq('id',id).maybeSingle();
@@ -120,7 +121,7 @@ export async function POST(request:NextRequest){
  if(media.length===0&&row.media_path)
   media.push({path:row.media_path as string,type:row.media_type as MediaKind});
  if(media.length>5)return reply({status:'pending',error:'Número de mídias exige revisão manual.'},200);
- if(media.some(m=>m.type==='video')&&!process.env.CONEXA_MODERATION_WORKER_URL)
+ if(media.some(m=>m.type==='video')&&engine!=='worker')
   return reply({status:'pending',reason:'Vídeos aguardam análise de quadros e revisão humana.'});
  if(media.some(m=>m.type!=='image'&&m.type!=='video'))return reply({status:'pending'});
  if(media.some(m=>!m.path.startsWith(user.id+'/')))
@@ -132,20 +133,20 @@ export async function POST(request:NextRequest){
   return reply({status:'pending',reason:'Revisão de segurança especializada necessária.'});
  // Repo-based inference runs on the existing Next.js server when no paid/API worker is configured.
  // Text-only cases stay pending unless the pre-existing database rules allowed them.
- if(!process.env.OPENAI_API_KEY&&!process.env.CONEXA_MODERATION_WORKER_URL&&!media.length)
+ if(engine==='local'&&!media.length)
   return reply({status:row.moderation_status,provider:'manual',
     reason:'Textos sem classificador contextual permanecem sob as regras de revisão humana.'});
  const imageUrls:string[]=[];
- if(!process.env.CONEXA_MODERATION_WORKER_URL)for(const item of media){
+ if(engine==='openai')for(const item of media){
   // A privately signed, short-lived URL is created only after verifying authorship.
   const {data,error}=await admin.storage.from('social-media').createSignedUrl(item.path,120);
   if(error||!data?.signedUrl)return reply({status:'pending',reason:'Não foi possível analisar o anexo.'});
   imageUrls.push(data.signedUrl);
  }
  try{
-  const result=process.env.CONEXA_MODERATION_WORKER_URL?
+  const result=engine==='worker'?
     await moderateWithOpenSourceWorker(content,media,admin):
-    process.env.OPENAI_API_KEY?await moderateWithFreeApi(content,imageUrls):
+    engine==='openai'?await moderateWithFreeApi(content,imageUrls):
     await moderateWithBundledModel(media,admin);
   const next=(result.flagged||result.humanReview)?'pending':'approved';
   const now=new Date().toISOString();
