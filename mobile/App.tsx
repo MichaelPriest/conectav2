@@ -97,8 +97,12 @@ function PostCard({post,userId,liked,onLike}:{
  const author=post.profiles?.display_name||'Pessoa do Conecta';
  const count=post.post_likes?.[0]?.count||0;
  const comments=post.post_comments?.[0]?.count||0;
- const mainMedia=post.post_media?.find(x=>x.media_type==='image')?.storage_path||
-  (post.media_type==='image'?post.media_path:null);
+ const images=post.post_media?.length
+  ? [...post.post_media].filter(x=>x.media_type==='image')
+     .sort((a,b)=>a.position-b.position).map(x=>x.storage_path)
+  : post.media_type==='image'&&post.media_path?[post.media_path]:[];
+ const videoCount=post.post_media?.filter(x=>x.media_type==='video').length||
+  (post.media_type==='video'&&post.media_path?1:0);
  const visibility=post.visibility==='private'?'🔒 Só eu':post.visibility==='friends'?'♡ Conexões':'◎ Público';
  return <View style={s.card}>
   <View style={[s.row,{gap:11}]}>
