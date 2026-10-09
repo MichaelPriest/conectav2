@@ -32,7 +32,7 @@ export function Avatar({path,name,size=44}:{path?:string|null;name:string;size?:
  useEffect(()=>{let active=true;setUrl(null);void signedMedia(path).then(u=>{if(active)setUrl(u);});
  return()=>{active=false;};},[path]);
  const box={width:size,height:size,borderRadius:size/2};
- if(url)return <Image accessibilityLabel={name} source={{uri:url}} style={box}/>;
+ if(url)return <Image accessibilityLabel={name} accessibilityRole="image" source={{uri:url}} style={box}/>;
  return <View style={[box,{backgroundColor:t.subtle,alignItems:'center',
   justifyContent:'center',borderWidth:1,borderColor:t.line}]}>
   <Text style={{color:t.primary,fontWeight:'900',fontSize:size*0.34}}>{(name||'?').slice(0,2).toUpperCase()}</Text>
@@ -43,13 +43,13 @@ export function Media({path,height=185}:{path:string|null|undefined;height?:numb
  useEffect(()=>{let active=true;setUrl(null);void signedMedia(path).then(u=>{if(active)setUrl(u);});
  return()=>{active=false;};},[path]);
  if(!url)return null;
- return <Image source={{uri:url}} resizeMode="cover"
+ return <Image accessibilityLabel="Mídia da publicação" accessibilityRole="image" source={{uri:url}} resizeMode="cover"
  style={{width:'100%',height,borderRadius:15,marginTop:12}}/>;
 }
 export function Action({label,onPress,secondary=false,disabled=false}:{
  label:string;onPress:()=>void;secondary?:boolean;disabled?:boolean
 }){
- return <Pressable disabled={disabled} onPress={onPress}
+ return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onPress={onPress}
  style={[secondary?styles.secondary:styles.button,disabled&&{opacity:0.5}]}>
   <Text style={secondary?styles.secondaryText:styles.buttonText}>{label}</Text>
  </Pressable>;
@@ -58,7 +58,7 @@ export function Field({value,onChangeText,placeholder,multiline=false,secureText
  value:string;onChangeText:(next:string)=>void;placeholder:string;
  multiline?:boolean;secureTextEntry?:boolean
 }){
- return <TextInput value={value} onChangeText={onChangeText} placeholder={placeholder}
+ return <TextInput accessibilityLabel={placeholder} value={value} onChangeText={onChangeText} placeholder={placeholder}
  placeholderTextColor="#9288A2" multiline={multiline} secureTextEntry={secureTextEntry}
  style={[styles.input,multiline&&{minHeight:100,textAlignVertical:'top'}]}
  autoCapitalize={secureTextEntry?'none':'sentences'}/>;
