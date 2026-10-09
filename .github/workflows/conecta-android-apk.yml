@@ -1,5 +1,9 @@
 name: Conecta V2 · Android APK de testes
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/conecta-android-apk.yml'
   workflow_dispatch:
 
 permissions:
