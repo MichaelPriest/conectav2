@@ -6,6 +6,7 @@ import {ArrowLeft,Check,ShieldAlert,ShieldCheck,Trash2,Users,X} from 'lucide-rea
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {supabaseBrowser} from '@/lib/supabase/browser';
+import {PendingCommentsPanel} from '@/components/pending-comments-panel';
 
 type Post={id:string;author_id:string;content:string;moderation_status:string;created_at:string;profiles:{display_name:string;handle:string;avatar_path:string|null}|null};
 type Member={user_id:string};
@@ -93,7 +94,7 @@ export default function ModerationPanel(){
     {notice&&<p className="form-success">{notice}</p>}
     {loading?<p>Carregando moderação...</p>:!authorized?
        <section className="panel"><ShieldAlert size={25}/><h2>Somente equipe autorizada</h2><p>O proprietário, os administradores e os moderadores podem acessar esta área.</p></section>:
-       <div className="conecta-moderation-layout">
+       <><PendingCommentsPanel communityId={community.id}/><div className="conecta-moderation-layout">
         <section className="panel">
          <h2>Fila de aprovação ({queue.length})</h2>
          {queue.length===0?<p className="small-note">Nenhuma publicação aguardando decisão.</p>:
@@ -143,6 +144,6 @@ export default function ModerationPanel(){
            </div>)}</div>
          </section>
         </div>
-       </div>}
+       </div></>}
   </main></GuardedPage>;
 }
