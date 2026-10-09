@@ -81,3 +81,13 @@ test('Native comments, bookmarks and inline videos use actual authorized databas
  assert.match(ui,/signedMedia\(path\)/);
  assert.ok(appConfig.expo.plugins.some(plugin=>plugin[0]==='expo-video'));
 });
+
+test('Native safety reporting uses same RLS-protected web workflow',()=>{
+ const ui=read('src/ui.tsx');
+ assert.match(data,/from\('safety_reports'\)\.insert\(/);
+ assert.match(data,/reporter_id:userId,target_type:targetType,target_id:targetId/);
+ assert.match(app,/ReportContent targetType="post"/);
+ assert.match(app,/ReportContent targetType="message"/);
+ assert.match(ui,/Assédio ou intimidação/);
+ assert.match(ui,/Exposição de informações pessoais/);
+});
