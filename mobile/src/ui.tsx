@@ -4,10 +4,10 @@ import {signedMedia} from './data';
 import {theme as t} from './theme';
 export const styles=StyleSheet.create({
  page:{flex:1,backgroundColor:t.bg},screen:{flex:1,paddingHorizontal:18},
- title:{fontSize:26,fontWeight:'900',color:t.dark,letterSpacing:-0.7},
+ title:{fontSize:28,fontWeight:'900',color:t.dark,letterSpacing:-0.9},
  sub:{fontSize:13,color:t.muted,lineHeight:19,marginTop:5},
- card:{backgroundColor:t.surface,borderRadius:20,padding:16,
-  marginVertical:7,borderColor:t.line,borderWidth:1},
+ card:{backgroundColor:t.surface,borderRadius:22,padding:17,
+  marginVertical:8,borderColor:t.line,borderWidth:1,elevation:2},
  row:{flexDirection:'row',alignItems:'center'},
  grow:{flex:1},
  primaryText:{fontSize:15,fontWeight:'800',color:t.dark},
@@ -32,7 +32,7 @@ export function Avatar({path,name,size=44}:{path?:string|null;name:string;size?:
  useEffect(()=>{let active=true;setUrl(null);void signedMedia(path).then(u=>{if(active)setUrl(u);});
  return()=>{active=false;};},[path]);
  const box={width:size,height:size,borderRadius:size/2};
- if(url)return <Image source={{uri:url}} style={box}/>;
+ if(url)return <Image accessibilityLabel={name} source={{uri:url}} style={box}/>;
  return <View style={[box,{backgroundColor:t.subtle,alignItems:'center',
   justifyContent:'center',borderWidth:1,borderColor:t.line}]}>
   <Text style={{color:t.primary,fontWeight:'900',fontSize:size*0.34}}>{(name||'?').slice(0,2).toUpperCase()}</Text>
