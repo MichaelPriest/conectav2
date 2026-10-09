@@ -225,3 +225,19 @@ origens arbitrárias; requisições `Sec-Fetch-Site: cross-site` são negadas.
 Endpoints continuam exigindo JWT autenticado e webhook continua com HMAC.
 Cobertura CI inclui host interno Render, site fraudulento, portas, subdomínios,
 local dev e Fetch Metadata. Não é necessária chave nova nem alteração no banco.
+
+## Chat V4.8 — online opcional, limitado às conexões
+
+Presença online é opt-in por conta neste navegador (botão **Mostrar online**).
+Somente amizades **aceitas** e **não bloqueadas** podem visualizar um status
+recente. A fonte é `chat_user_presence` com RLS e TTL de 90 segundos;
+nenhum IP, histórico de navegação ou mensagem privada é gravado. O servidor
+PostgreSQL cria o timestamp por `touch_chat_presence()` (SECURITY INVOKER),
+sem aceitar horário arbitrário do cliente. Após ocultar, a própria linha
+é removida. Quando a aba fica em segundo plano, deixa de renovar a presença;
+a expiração evita mostrar uma conta desconectada como online.
+
+O widget flutuante, a lista de conexões e a caixa de entrada mostram um
+indicador verde discreto apenas quando o status pode ser observado de forma
+legítima. A opção persiste localmente por conta, não habilita para novos
+usuários sem ação explícita e não depende de servidor adicional pago.

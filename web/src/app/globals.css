@@ -65,3 +65,13 @@
 .conecta-chat-push-test{color:var(--brand)}
 .conecta-chat-push-feedback{position:absolute;z-index:60;right:0;top:calc(100% + 6px);width:min(320px,75vw);padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);font-size:12px;line-height:1.4;color:var(--ink);white-space:normal}
 @media(max-width:740px){.conecta-chat-push-trigger{padding:7px}.conecta-chat-push-trigger>span{display:none}.conecta-chat-push-test{padding:7px 5px;font-size:10px}}
+
+/* Opt-in online presence: never infer an offline user's whereabouts. */
+.conecta-online-indicator{display:inline-flex;align-items:center;gap:4px;margin-inline-start:5px;font-size:11px;letter-spacing:0;color:#218557;font-weight:600;white-space:nowrap;vertical-align:middle}
+.conecta-online-dot{display:inline-block;flex:none;width:8px;height:8px;border:2px solid var(--panel);border-radius:50%;background:#27b86b;box-shadow:0 0 0 1px #27b86b55}
+.conecta-presence-settings{display:inline-flex;position:relative;align-items:center;flex-wrap:wrap;gap:4px}
+.conecta-presence-toggle{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:9px;padding:6px 9px;font-size:11px;font-weight:650}
+.conecta-presence-toggle[aria-pressed="true"]{color:#218557;border-color:#27b86b66}
+.conecta-presence-error{color:#b33a4a;font-size:11px}
+.conecta-widget-contacts .conecta-presence-settings{margin-left:auto}
+.conecta-chat-connections>.conecta-presence-settings{margin:8px 10px}

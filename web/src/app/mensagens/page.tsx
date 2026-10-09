@@ -12,6 +12,7 @@ import {optimizeImage} from '@/lib/media';
 import {MentionInput,MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
 import {useChatTyping} from '@/lib/use-chat-typing';
+import {ChatOnlineStatus,ChatPresenceToggle} from '@/components/chat-presence';
 import {mergeChatPage,olderChatCursor} from '@/lib/chat-timeline';
 import {groupAccess,canRemoveGroupTarget} from '@/lib/chat-group-roles';
 
@@ -654,14 +655,14 @@ export default function Messages(){
              <input aria-label="Buscar conexões por nome ou usuário" value={connectionSearch}
                placeholder="Buscar nome ou @usuário" onChange={e=>setConnectionSearch(e.target.value)}/>
            </label>
-           <div className="conecta-chat-connections-list" role="list">
+           <ChatPresenceToggle/><div className="conecta-chat-connections-list" role="list">
              {filteredConnections.map(person=><div className="conecta-chat-connection-item" role="listitem" key={person.id}>
                <button type="button" className="conecta-chat-contact-button" disabled={creating}
                  aria-label={'Conversar com '+person.display_name}
                  onClick={()=>void startDirectMessage(person)}>
                  <ProfileAvatar person={person} size="small"/>
                  <span className="conecta-chat-contact-details">
-                   <strong>{person.display_name}</strong><small>@{person.handle}</small>
+                   <strong>{person.display_name} <ChatOnlineStatus userId={person.id}/></strong><small>@{person.handle}</small>
                  </span><MessageCircle size={16}/></button>
              </div>)}
              {!loading&&filteredConnections.length===0&&<p className="small-note">
@@ -695,7 +696,7 @@ export default function Messages(){
        {!loading&&filtered.length===0&&<p className="small-note">Nenhuma conversa encontrada.</p>}
        <div className="conecta-chat-threads">{filtered.map(t=><button key={t.id} className={'conecta-chat-thread '+(t.id===active?'active':'')} onClick={()=>setActive(t.id)}>
          {t.group?<span className="concept-round-icon violet"><Users size={18}/></span>:<ProfileAvatar person={t.other}/>}
-         <span><strong>{t.group?(t.title||'Grupo'):t.other?.display_name||'Conversa privada'}</strong><small>{t.group?(t.participants.length+1)+' membros':('@'+(t.other?.handle||'contato'))} · {t.last?.content?.slice(0,55)||(t.last?.media_type==='image'?'📷 Foto':t.last?.media_type==='video'?'🎬 Vídeo':t.last?.media_type==='audio'?'🎤 Áudio':'Comece a conversar')}</small></span>
+         <span><strong>{t.group?(t.title||'Grupo'):t.other?.display_name||'Conversa privada'} {!t.group&&<ChatOnlineStatus userId={t.other?.id}/>}</strong><small>{t.group?(t.participants.length+1)+' membros':('@'+(t.other?.handle||'contato'))} · {t.last?.content?.slice(0,55)||(t.last?.media_type==='image'?'📷 Foto':t.last?.media_type==='video'?'🎬 Vídeo':t.last?.media_type==='audio'?'🎤 Áudio':'Comece a conversar')}</small></span>
          <span className="conecta-chat-thread-meta">
            {t.mutedUntil&&Date.parse(t.mutedUntil)>Date.now()&&<BellOff size={13} aria-label="Conversa silenciada"/>}
            <time>{new Date(t.last?.created_at||t.created_at).toLocaleDateString('pt-BR')}</time>
@@ -708,7 +709,7 @@ export default function Messages(){
           <button type="button" className="icon-btn conecta-chat-mobile-back"
             aria-label="Voltar à lista de conversas" onClick={()=>setActive(null)}>
             <Reply size={19}/></button>{current?.group?<span className="concept-round-icon violet"><Users size={20}/></span>:<ProfileAvatar person={current?.other}/>}
-         <div><strong>{current?.group?(current.title||'Grupo'):current?.other?.display_name||'Conversa'}</strong>
+         <div><strong>{current?.group?(current.title||'Grupo'):current?.other?.display_name||'Conversa'} {!current?.group&&<ChatOnlineStatus userId={current?.other?.id} showText/>}</strong>
          <small>{current?.group?current.participants.map(p=>p.display_name).join(', '):(current?.other?.handle?'@'+current.other.handle:'Mensagens privadas')}</small></div>
          <ChatPushControl/>
          <button className="icon-btn" type="button"

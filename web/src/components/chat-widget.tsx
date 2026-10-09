@@ -8,6 +8,7 @@ import {ReportContentButton} from '@/components/report-content-button';
 import {useChatTyping} from '@/lib/use-chat-typing';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import {ChatPushControl,notifyChatMessageSent} from '@/components/chat-push-control';
+import {ChatOnlineStatus,ChatPresenceToggle} from '@/components/chat-presence';
 type Thread={id:string;title:string;group:boolean;otherNames:string;otherId:string|null;other:Contact|null;lastAt:string;unread:number;preview:string;mutedUntil:string|null};
 type Contact={id:string;handle:string;display_name:string;avatar_path:string|null};
 type Msg={id:string;conversation_id:string;sender_id:string;content:string;created_at:string;media_type:string|null;edited_at:string|null;deleted_at:string|null};
@@ -221,7 +222,7 @@ export function ChatWidget({userId}:{userId:string}){
       aria-label={totalUnread+' mensagens não lidas'}>{totalUnread>99?'99+':totalUnread}</span>}</button>:
    <section className="conecta-chat-widget" aria-label="Chat flutuante">
      <header><button type="button" className="icon-btn" aria-label="Voltar às conversas" disabled={!active} onClick={()=>{setActive(null);setMessages([]);}}>{active?<ArrowLeft size={19}/>:<MessageCircle size={19}/>}</button>
-       <strong>{active?active.title:'Conversas'}</strong>
+       <strong>{active?active.title:'Conversas'}{active&&!active.group&&<ChatOnlineStatus userId={active.otherId} showText/>}</strong>
        <button className="icon-btn" type="button"
          title={alertsEnabled?'Desativar avisos neste navegador':'Ativar avisos neste navegador'}
          aria-label={alertsEnabled?'Desativar notificações':'Ativar notificações'} onClick={()=>void toggleBrowserAlerts()}>
@@ -234,11 +235,11 @@ export function ChatWidget({userId}:{userId:string}){
        {threads.length===0?<div className="conecta-widget-empty"><MessageCircle size={26}/><p>Suas conversas aparecem aqui.</p></div>:
          threads.map(t=><button key={t.id} type="button" onClick={()=>{setActive(t);setError('');}}>{t.group?<span className="conecta-widget-thread-icon"><Users size={19}/></span>:
             <ProfileAvatar person={t.other} size="small"/>}
-           <span><strong>{t.title}</strong><small>{t.preview.slice(0,75)}</small></span>
+           <span><strong>{t.title} {!t.group&&<ChatOnlineStatus userId={t.otherId}/>}</strong><small>{t.preview.slice(0,75)}</small></span>
            {t.mutedUntil&&Date.parse(t.mutedUntil)>Date.now()&&<BellOff size={13} aria-label="Conversa silenciada"/>}
            {t.unread>0&&<span className="conecta-chat-unread" aria-label={t.unread+' mensagens não lidas'}>{t.unread>99?'99+':t.unread}</span>}</button>)}
        <section className="conecta-widget-contacts" aria-label="Minhas conexões">
-         <strong className="conecta-widget-contacts-title">Conexões ({contacts.length})</strong>
+         <strong className="conecta-widget-contacts-title">Conexões ({contacts.length})</strong><ChatPresenceToggle/>
          <input className="form-input" aria-label="Buscar conexões no chat" value={contactSearch}
            placeholder="Pesquisar nome ou @usuário" onChange={e=>setContactSearch(e.target.value)}/>
          {contacts.filter(person=>(person.display_name+' '+person.handle)
@@ -246,7 +247,7 @@ export function ChatWidget({userId}:{userId:string}){
            .map(person=><button type="button" key={person.id}
              disabled={Boolean(starting)} onClick={()=>void openContact(person)}>
              <ProfileAvatar person={person} size="small"/>
-             <span><strong>{person.display_name}</strong><small>@{person.handle}</small></span>
+             <span><strong>{person.display_name} <ChatOnlineStatus userId={person.id}/></strong><small>@{person.handle}</small></span>
              {starting===person.id?<Loader2 size={15} className="spin"/>:<MessageCircle size={15}/>}
            </button>)}
          {!contacts.length&&<small>Aceite conexões para conversar.</small>}
