@@ -6,6 +6,7 @@ import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {HumanCameraCheck} from '@/components/human-camera-check';
 import {CinQrScanner} from '@/components/cin-qr-scanner';
+import {LegacyRgScanner} from '@/components/legacy-rg-scanner';
 import {GovBrSignatureFlow} from '@/components/govbr-signature-flow';
 
 type Result={
@@ -170,11 +171,10 @@ export default function IdentityPage(){
           declaração assinada via gov.br e eventual conferência documental assistida.
           Nenhuma dessas ações confirma automaticamente a autenticidade do RG, a
           titularidade ou a data de nascimento.</p>
-        <p className="small-note">Ainda não solicitamos foto do RG antigo neste fluxo
-          porque falta um canal de análise documental seguro e autorizado.
+        <p className="small-note">Agora é possível fazer leitura OCR local do RG antigo para identificar possível faixa etária. Não armazenamos as imagens.
           Não envie RG, CPF ou outros dados pessoais por mensagens ou comentários.</p>
       </div>}
     </section>
-    {documentMode==='cin'&&<CinQrScanner/>}
+    {documentMode==='cin'?<CinQrScanner/>:<LegacyRgScanner declaredBand={declaredBand}/>}
     <GovBrSignatureFlow/><HumanCameraCheck/></main></GuardedPage>;
 }

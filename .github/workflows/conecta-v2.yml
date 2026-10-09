@@ -52,5 +52,7 @@ jobs:
         run: npm run test:origin
       - name: Registration age and privacy tests
         run: node --test tests/registration-age.test.cjs
+      - name: Verify legacy RG OCR preflight
+        run: npm run test:legacy-rg
       - name: Build Next.js
         run: npm run build

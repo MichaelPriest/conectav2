@@ -11,7 +11,8 @@
     "test:human": "node --test tests/human-browser.test.cjs tests/liveness-challenge.test.cjs",
     "test:cin": "node --test tests/cin-qr.test.cjs",
     "test:govbr": "node --test tests/govbr-flow.test.cjs",
-    "test:origin": "node --test tests/identity-origin.test.cjs"
+    "test:origin": "node --test tests/identity-origin.test.cjs",
+    "test:legacy-rg": "node --test tests/legacy-rg-ocr.test.cjs"
   },
   "dependencies": {
     "@supabase/ssr": "0.12.7",
@@ -23,7 +24,8 @@
     "emoji-picker-react": "4.22.3",
     "@vladmandic/human": "3.3.6",
     "@zxing/browser": "0.2.1",
-    "pdf-lib": "1.17.1"
+    "pdf-lib": "1.17.1",
+    "tesseract.js": "6.0.1"
   },
   "devDependencies": {
     "@types/node": "22.18.6",
