@@ -132,7 +132,7 @@ Se a aba conectada detectar uma inscrição Push existente neste dispositivo,
 não cria uma segunda notificação local da mesma mensagem; a notificação Web Push
 tem prioridade. Sem inscrição real, os avisos locais continuam disponíveis.
 
-### Ativação de chaves Web Push (10/10/2026)
+### Ativação de chaves Web Push (09/10/2026)
 
 As três variáveis `WEB_PUSH_VAPID_*` foram configuradas como variáveis
 protegidas na Vercel de produção, em conjunto com
@@ -153,3 +153,26 @@ O Render ainda exige a configuração do mesmo par no ambiente do serviço
 e um novo deploy. O par não deve ser regenerado separadamente para
 cada hospedagem: isso invalidaria assinaturas existentes quando o
 domínio fosse atendido por servidores diferentes.
+
+## Chat V4.4 — webhook assinado de notificação automática
+
+Criada a infraestrutura opcional para disparar o Push a partir do servidor
+após o COMMIT da mensagem, mesmo se o navegador do remetente se fechar.
+O gatilho PostgreSQL de `messages INSERT` consulta apenas a existência de
+inscrições e enfileira no `pg_net` um payload com `messageId`, timestamp
+e HMAC SHA-256. Não transmite texto privado, remetente, credencial do Supabase,
+chave VAPID ou segredos estáticos ao worker HTTP. O segredo da assinatura fica
+no Supabase Vault e nas variáveis do servidor; o servidor só aceita assinaturas
+válidas nos dois minutos seguintes e deriva os destinatários diretamente do
+banco com as mesmas validações de privacidade da rotina de envio existente.
+A chave primária de claim protege contra competição entre webhook e fallback
+do navegador.
+
+**Rollout seguro:** a configuração `app_private.chat_push_webhook_config.enabled`
+fica **false** por padrão. Não ative até verificar que a Vercel publicou este
+commit e que `CHAT_PUSH_WEBHOOK_SECRET` está configurado na hospedagem,
+com o mesmo segredo `conecta_chat_push_webhook` no Vault. Se o novo
+deployment não estiver disponível, o caminho antigo do navegador continua
+como fallback, sem enviar mensagens HTTP a versões antigas do servidor.
+A entrega segue best-effort, sujeita a eventuais falhas de gateway/rede; o
+webhook do banco não substitui uma fila com novas tentativas.
