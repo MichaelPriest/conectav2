@@ -20,14 +20,19 @@ Não usa um WebView como interface principal.
   usando o RPC existente com verificação de amizade/participação.
 - Chat privado e em grupo: inbox, contadores, últimas mensagens, texto,
   recibo de leitura e atualização em tempo real via RLS do Supabase.
+  Gravação de mensagens de voz com permissão explícita, limite de um minuto,
+  upload para o bucket privado do Conecta e reprodução por URL assinada.
+- Stories nativos de até 24 horas: listagem, câmera/galeria, publicação,
+  legenda, privacidade, visualização e exclusão pelo autor, com moderação
+  no endpoint real do Conecta.
 - Comunidades: listagem, busca e participar/sair. Detalhes avançados são
   abertos pelo site no navegador.
 - Notificações: listagem, atualização em tempo real e marcar como lidas.
 - Perfil: exibir foto/capa existente, editar nome/biografia, sair.
 - Identidade visual Conecta para Android e iOS, navegação nativa inferior.
 
-**Não incluídos nesta etapa:** chamadas WebRTC nativas, mensagens de voz,
-publicação nativa de Reels/Stories, notificações push APNs/FCM, moderação
+**Não incluídos nesta etapa:** chamadas WebRTC nativas,
+publicação nativa de Reels, notificações push APNs/FCM, moderação
 administrativa mobile, e certificados de assinatura de distribuição. Os
 recursos web continuam disponíveis pelo site; não anunciar paridade total.
 
@@ -122,9 +127,15 @@ Só execute builds quando necessário para controlar os minutos do GitHub.
 6. Escreva uma publicação sem enviar, reinicie o aplicativo e valide o
    rascunho. Envie ou descarte e confirme que o rascunho não reaparece.
 7. Troque de conta: o rascunho da conta anterior não deve ser exibido.
-8. Teste chat, conexões, notificações, perfil e logout; valide que conteúdo
+8. Crie um Story com foto e outro com vídeo; confira moderação, visibilidade,
+   vencimento em 24 horas e exclusão pelo autor.
+9. Grave uma mensagem de voz em uma conversa real, envie e reproduza nos dois
+   sentidos (Android ↔ site). Confirme que negar microfone não grava nada,
+   e que a gravação termina ou é descartada ao deixar a tela.
+10. Teste denúncias nativas de publicações e mensagens e a fila de moderação.
+11. Teste chat, conexões, notificações, perfil e logout; valide que conteúdo
    privado não aparece após encerrar a sessão.
-9. Valide em aparelhos Android e iOS reais. A execução dos testes/TypeScript
+12. Valide em aparelhos Android e iOS reais. A execução dos testes/TypeScript
    no GitHub não substitui o teste do APK e nem equivale a build iOS assinada.
 
 As partes ainda disponíveis só no site devem permanecer acessíveis sem
