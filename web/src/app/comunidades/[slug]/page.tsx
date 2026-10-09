@@ -12,6 +12,7 @@ import {MentionInput} from '@/components/mention-input';
 import {PollDraft,validatePoll} from '@/components/poll-draft';
 import {attachPoll} from '@/lib/create-poll';
 import {supabaseBrowser} from '@/lib/supabase/browser';
+import {requestContentModeration} from '@/lib/submit-moderation';
 import {optimizeImage} from '@/lib/media';
 import {communityVisual} from '@/lib/community-visuals';
 import type {FeedPost} from '@/lib/types';
@@ -46,7 +47,7 @@ export default function CommunityDetail(){
  const fetchPosts=useCallback(async(id:string,from=0,append=false)=>{
    const db=supabaseBrowser();
    const {data,error:e}=await db.from('posts')
-    .select('id,author_id,community_id,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
+    .select('id,author_id,community_id,moderation_status,moderation_reason,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
     .eq('community_id',id).order('created_at',{ascending:false}).range(from,from+PAGE_SIZE-1);
    if(e){setError(e.message);return;}
    const rows=(data||[]) as unknown as FeedPost[];
@@ -135,7 +136,9 @@ export default function CommunityDetail(){
        if(mediaError)throw mediaError;
      }
      if(pollMode)await attachPoll(db,created.id,text,pollOptions,pollDays);
+     const moderation=await requestContentModeration('post',created.id);
      setFiles([]);setText('');setPollOptions(['','']);setPollMode(false);setTab('all');
+     if(moderation.status==='pending')setError('Publicação registrada e aguardando análise. Por enquanto, somente você e a equipe autorizada podem vê-la.');
      await fetchPosts(community.id);
    }catch(err){
      if(postId){const {error:e}=await db.from('posts').delete().eq('id',postId);rollbackFailed=Boolean(e);}
