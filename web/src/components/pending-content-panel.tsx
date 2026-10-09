@@ -102,7 +102,7 @@ export function PendingContentPanel(){
        <strong><ShieldCheck size={15}/> Triagem por modelo de repositório</strong>
        <span>{aiNote}</span>
        <small>Esta pontuação não substitui a revisão de contexto por pessoa autorizada.</small>
-     </div>
+     </div>}
      {loadingPreview&&<p className="small-note"><Loader2 className="spin" size={16}/> Carregando prévia...</p>}
      {current.media_type&&preview.length===0&&!loadingPreview&&
        <p className="small-note">Prévia indisponível. Não aprove sem conferir a mídia.</p>}
