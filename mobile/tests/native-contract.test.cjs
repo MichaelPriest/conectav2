@@ -97,7 +97,7 @@ test('Native Stories use the same 24h expiry, RLS and moderation as web',()=>{
  assert.match(story,/from\('stories'\)/);
  assert.match(story,/\.gt\('expires_at',new Date\(\)\.toISOString\(\)\)/);
  assert.match(story,/storage\.from\('social-media'\)\.upload\(/);
- assert.match(story,/requestContentModeration\('story',createdId\)/);
+ assert.match(story,/requestContentModeration\('story',data\.id\)/);
  assert.match(story,/from\('stories'\)\.delete\(\)/);
  assert.match(ui,/Date\.parse\(story\.expires_at\)>Date\.now\(\)/);
  assert.match(ui,/launchImageLibraryAsync/);
