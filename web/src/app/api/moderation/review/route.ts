@@ -81,7 +81,7 @@ export async function POST(request:NextRequest){
  if(fetchError||!record)return reply({error:'Conteúdo não encontrado.'},404);
  const row=record as {
   author_id:string;content?:string;caption?:string;expires_at?:string;
-  moderation_status:string;ai_checked_at?:string|null;media_path:string|null;media_type:MediaKind|null;
+  moderation_status:string;ai_checked_at?:string|null;community_id?:string|null;media_path:string|null;media_type:MediaKind|null;
  };
  if(row.author_id!==user.id)return reply({error:'Você não pode moderar o conteúdo de terceiros.'},403);
  if(kind==='story'&&new Date(row.expires_at as string).getTime()<Date.now())
@@ -101,7 +101,7 @@ export async function POST(request:NextRequest){
  if(media.length>5)return reply({status:'pending',error:'Número de mídias exige revisão manual.'},200);
  if(media.some(m=>m.type==='video')&&!process.env.CONEXA_MODERATION_WORKER_URL)
   return reply({status:'pending',reason:'Vídeos aguardam análise de quadros e revisão humana.'});
- if(media.some(m=>m.type!=='image'))return reply({status:'pending'});
+ if(media.some(m=>m.type!=='image'&&m.type!=='video'))return reply({status:'pending'});
  if(media.some(m=>!m.path.startsWith(user.id+'/')))
   return reply({status:'pending',error:'Caminho de mídia inválido.'},422);
 
@@ -125,6 +125,18 @@ export async function POST(request:NextRequest){
     await moderateWithFreeApi(content,imageUrls);
   const next=(result.flagged||result.humanReview)?'pending':'approved';
   const now=new Date().toISOString();
+  if(kind==='post'&&row.community_id){
+    // Community review mode and moderator decision take priority.
+    // This provider verdict records that a model checked the content,
+    // but never bypasses the community's existing review workflow.
+    const {error:e}=await admin.from('posts').update({
+      ai_checked_at:now,ai_provider:result.provider
+    }).eq('id',id).eq('author_id',user.id).eq('content',content)
+      .is('ai_checked_at',null);
+    if(e)return reply({status:'pending',reason:'Aguardando moderação da comunidade.'},200);
+    return reply({status:row.moderation_status,provider:result.provider,
+      reason:'Conteúdo analisado; decisão final da equipe da comunidade.'});
+  }
   if(kind==='post'){
    // Optimistic concurrency: content changes/extra media uploads cannot retain prior approval.
    let update=admin.from('posts').update({
