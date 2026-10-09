@@ -18,6 +18,7 @@ import {
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
 import {StoryRail} from './src/story-ui';
+import {AudioMessage,VoiceRecorder} from './src/voice-ui';
 import {normalizeMedia,publishMediaPost} from './src/media';
 import type {SelectedMedia} from './src/media';
 
@@ -529,7 +530,9 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     </Text>
     {!item.deleted_at&&item.media_path&&item.media_type?.startsWith('image')&&
       <Media path={item.media_path} height={175}/>}
-     {!item.deleted_at&&item.media_path&&!item.media_type?.startsWith('image')&&<Pressable onPress={()=>void openOfficial('/mensagens')}>
+     {!item.deleted_at&&item.media_path&&item.media_type==='audio'&&
+      <AudioMessage path={item.media_path}/>}
+    {!item.deleted_at&&item.media_path&&!item.media_type?.startsWith('image')&&item.media_type!=='audio'&&<Pressable onPress={()=>void openOfficial('/mensagens')}>
      <Text style={{color:item.sender_id===userId?'white':t.primary,fontSize:12,marginTop:4}}>
       Abrir anexo no Conecta ↗</Text></Pressable>}
     <Text style={{alignSelf:'flex-end',fontSize:10,color:item.sender_id===userId?'#E9DFFB':t.muted,marginTop:5}}>
@@ -541,6 +544,8 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
    ListEmptyComponent={<Loading text="Esta conversa ainda não tem mensagens."/>}/>
   <View style={{backgroundColor:'white',padding:12,borderTopWidth:1,borderTopColor:t.line}}>
    <Text accessibilityLiveRegion="polite" style={[s.muted,{textAlign:'right',marginBottom:5,color:messageLength>4000?t.danger:t.muted}]}>{messageLength}/4000</Text>
+   <VoiceRecorder conversationId={active} userId={userId}
+    onSent={()=>{void loadMessages(active);void loadInbox();}}/>
    <View style={[s.row,{gap:8}]}>
     <TextInput accessibilityLabel="Sua mensagem" value={compose} onChangeText={setCompose} multiline
      placeholder="Sua mensagem..." placeholderTextColor={t.muted} style={[s.input,{flex:1,maxHeight:120,marginVertical:0}]}/>
