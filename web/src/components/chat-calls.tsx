@@ -20,18 +20,8 @@ const idlePollMs=12000;
 const negotiationTimeoutMs=47000;
 const describe=(e:unknown)=>e instanceof Error?e.message:'Não foi possível realizar a chamada.';
 
-async function iceComplete(pc:RTCPeerConnection){
- if(pc.iceGatheringState==='complete')return;
- await new Promise<void>((resolve,reject)=>{
-  const timeout=window.setTimeout(()=>{cleanup();reject(new Error('A rede não concluiu a negociação WebRTC.'));},14000);
-  const complete=()=>{if(pc.iceGatheringState==='complete'){cleanup();resolve();}};
-  const cleanup=()=>{window.clearTimeout(timeout);pc.removeEventListener('icegatheringstatechange',complete);};
-  pc.addEventListener('icegatheringstatechange',complete);complete();
- });
-}
-
 export function ChatCallsProvider({userId,children}:{userId:string;children:React.ReactNode}){
- const db=supabaseBrowser();
+ const [db]=useState(()=>supabaseBrowser());
  const [current,setCurrent]=useState<CallRow|null>(null),currentRef=useRef<CallRow|null>(null);
  const [contact,setContact]=useState(''),[busy,setBusy]=useState(false),busyRef=useRef(false);
  const [error,setError]=useState(''),[status,setStatus]=useState('Chamando…');
@@ -46,6 +36,10 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
  const failureTimer=useRef<number|null>(null);
  const connectTimer=useRef<number|null>(null);
  const lastIdlePoll=useRef(0);
+ const lastRemoteCandidateId=useRef(0);
+ const bufferedRemoteCandidates=useRef<RTCIceCandidateInit[]>([]);
+ const remoteCandidatesFetching=useRef(false);
+ const candidateFailureReported=useRef(false);
  const [iceState,setIceState]=useState<RTCIceConnectionState>('new');
  const [callPhase,setCallPhase]=useState('Aguardando atendimento');
  const [technical,setTechnical]=useState(false);
@@ -88,6 +82,8 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
   setMicOn(true);setCamOn(false);setStatus('Chamando…');
   setIceState('new');setCallPhase('Aguardando atendimento');setTechnical(false);
   sentOffer.current=false;sentAnswer.current=false;negotiating.current=false;
+  lastRemoteCandidateId.current=0;bufferedRemoteCandidates.current=[];
+  candidateFailureReported.current=false;remoteCandidatesFetching.current=false;
   currentRef.current=null;setCurrent(null);busyRef.current=false;setBusy(false);
  },[]);
  const end=useCallback(async(decline=false)=>{
@@ -104,6 +100,19 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
   });
   streamRef.current=media;setLocal(media);setMicOn(true);setCamOn(kind==='video');
   const pc=new RTCPeerConnection(config);pcRef.current=pc;
+  pc.onicecandidate=(event)=>{
+   if(!event.candidate||pcRef.current!==pc)return;
+   const active=currentRef.current;
+   if(!active)return;
+   void db.rpc('add_chat_call_ice_candidate',{
+    _call_id:active.id,_candidate:event.candidate.toJSON()
+   }).then(({error:e})=>{
+    if(e&&pcRef.current===pc&&!candidateFailureReported.current){
+     candidateFailureReported.current=true;
+     setCallPhase('Falha ao sinalizar ICE: '+e.message);
+    }
+   });
+  };
   pc.oniceconnectionstatechange=()=>{
     setIceState(pc.iceConnectionState);
     if(pc.iceConnectionState==='checking')setStatus('Verificando conexão entre navegadores…');
@@ -137,7 +146,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     },4500);
    }
   };
- },[end]);
+ },[end,db]);
  const start=useCallback(async(conversationId:string,recipientId:string,recipientName:string,kind:CallKind)=>{
   if(currentRef.current||busyRef.current)return;
   busyRef.current=true;setBusy(true);setError('');setContact(recipientName);
@@ -150,6 +159,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
    const row:CallRow={id:String(data),conversation_id:conversationId,caller_id:userId,
     callee_id:recipientId,kind,status:'ringing',offer_sdp:null,answer_sdp:null,
     expires_at:new Date(Date.now()+65000).toISOString()};
+   lastRemoteCandidateId.current=0;bufferedRemoteCandidates.current=[];
    ended.current=null;currentRef.current=row;setCurrent(row);setStatus('Chamando…');
    setCallPhase('Aguardando a outra pessoa atender');
   }catch(e){release();setError(describe(e));}
@@ -192,7 +202,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     setStatus('Preparando a oferta de conexão…');
     setCallPhase('Oferta WebRTC sendo preparada');
     await pc.setLocalDescription(await pc.createOffer());
-    await iceComplete(pc);
+    // Trickle ICE: send SDP immediately, subsequent candidates go over RPC.
     const sdp=pc.localDescription?.sdp;
     if(!sdp)throw Error('Oferta WebRTC vazia.');
     const {error:e}=await db.rpc('signal_chat_call',{_id:row.id,_kind:'offer',_sdp:sdp});
@@ -205,7 +215,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
     setCallPhase('Oferta recebida');
     await pc.setRemoteDescription({type:'offer',sdp:row.offer_sdp});
     await pc.setLocalDescription(await pc.createAnswer());
-    await iceComplete(pc);
+    // Trickle ICE: send SDP immediately, subsequent candidates go over RPC.
     const sdp=pc.localDescription?.sdp;
     if(!sdp)throw Error('Resposta WebRTC vazia.');
     const {error:e}=await db.rpc('signal_chat_call',{_id:row.id,_kind:'answer',_sdp:sdp});
@@ -257,6 +267,7 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
       .eq('id',data.caller_id).maybeSingle();
     if(currentRef.current)return;
     const incoming=data as CallRow;
+    lastRemoteCandidateId.current=0;bufferedRemoteCandidates.current=[];
     ended.current=null;currentRef.current=incoming;setCurrent(incoming);
     setContact(person?.display_name||'Sua conexão');
     setStatus('Chamada recebida');
