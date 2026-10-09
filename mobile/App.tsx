@@ -21,12 +21,14 @@ import {StoryRail} from './src/story-ui';
 import {AudioMessage,VoiceRecorder} from './src/voice-ui';
 import {sendChatMedia} from './src/chat-media';
 import {changeProfilePhoto,loadCover} from './src/profile-media';
+import {ReelsScreen} from './src/reels-ui';
 import {normalizeMedia,publishMediaPost} from './src/media';
 import type {SelectedMedia} from './src/media';
 
-type Tab='feed'|'connections'|'messages'|'communities'|'notifications'|'profile';
+type Tab='feed'|'reels'|'connections'|'messages'|'communities'|'notifications'|'profile';
 const TABS:{tab:Tab;symbol:string;title:string}[]=[
  {tab:'feed',symbol:'⌂',title:'Início'},
+ {tab:'reels',symbol:'▶',title:'Reels'},
  {tab:'connections',symbol:'♡',title:'Pessoas'},
  {tab:'messages',symbol:'✉',title:'Chat'},
  {tab:'communities',symbol:'◈',title:'Grupos'},
@@ -793,6 +795,7 @@ export default function App(){
  const render=()=>{
   if(!user||!profile)return null;
   if(tab==='feed')return <FeedScreen userId={user.id}/>;
+  if(tab==='reels')return <ReelsScreen userId={user.id}/>;
   if(tab==='connections')return <ConnectionsScreen userId={user.id} onConversation={openConversation}/>;
   if(tab==='messages')return <ChatScreen userId={user.id} initialId={chatId}/>;
   if(tab==='communities')return <CommunityScreen userId={user.id}/>;
