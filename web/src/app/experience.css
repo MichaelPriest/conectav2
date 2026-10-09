@@ -364,3 +364,18 @@
 .conecta-story-viewer footer a,.conecta-story-viewer footer button{color:#e0d8ff;background:transparent;border:0;font:inherit;display:inline-flex;align-items:center;gap:6px}
 @media(max-width:600px){.conecta-stories{padding:14px 12px}.conecta-story-strip{gap:8px}.conecta-story-bubble{flex-basis:68px}.conecta-story-avatar{width:60px;height:60px}.conecta-story-avatar>.avatar{width:52px;height:52px}.conecta-story-draft{grid-template-columns:95px minmax(0,1fr);gap:10px}.conecta-story-draft-fields .btn{padding:8px 10px;font-size:12px}}
 @media(prefers-reduced-motion:reduce){.conecta-story-bubble .conecta-story-avatar{transition:none}}
+
+
+/* Chat attachments and voice messages */
+.conecta-chat-attachment{display:block;max-width:min(100%,320px);max-height:320px;border-radius:10px;object-fit:contain;margin:7px 0}
+.conecta-chat-audio{display:block;width:min(100%,320px);margin:7px 0}
+.conecta-chat-attachment-draft{display:flex;gap:10px;align-items:center;padding:8px 15px;border-top:1px solid var(--line);min-width:0}
+.conecta-chat-attachment-draft>img,.conecta-chat-attachment-draft>video{width:64px;height:58px;object-fit:contain;border-radius:8px;background:#202038}
+.conecta-chat-attachment-draft>audio{max-width:min(45%,200px);height:38px}
+.conecta-chat-attachment-draft>span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.conecta-chat-attachment-draft>.icon-btn{flex-shrink:0}
+.conecta-chat-write>.icon-btn{flex-shrink:0}
+.conecta-chat-write>.icon-btn.recording{background:#ffeeef;color:#bd2141;animation:conecta-record-pulse 1.1s ease-in-out infinite}
+@keyframes conecta-record-pulse{50%{box-shadow:0 0 0 5px #ee9a9a55}}
+@media(max-width:600px){.conecta-chat-write>.icon-btn{width:30px;min-width:30px}.conecta-chat-write{gap:3px}.conecta-chat-attachment-draft{padding:6px}}
+@media(prefers-reduced-motion:reduce){.conecta-chat-write>.icon-btn.recording{animation:none}}
