@@ -29,3 +29,11 @@ O Supabase rejeita a terceira cópia idêntica de um texto dentro de 30 segundos
 ## Validação e limites
 
 Testes SQL em transações revertidas cobrem iniciar conversa legítima entre perfis reais já conectados, rejeitar terceira mensagem duplicada e impedir manipular `is_group` no INSERT. Ainda não há terceira conta para validar visualmente transferência e administração com múltiplos integrantes, e os testes end-to-end em diferentes navegadores permanecem pendentes. Os anexos e dados de mensagens seguem protegidos pelas políticas RLS do Supabase, mas não oferecem criptografia de ponta a ponta. A licença dos modelos de moderação não implica que a hospedagem seja ilimitada.
+
+## Moderação pelos administradores — atualização
+
+O criador do grupo pode remover um integrante pelo painel de configurações. A remoção é realizada
+pelo RPC `remove_conversation_group_member` com autenticação obrigatória, verificação de
+propriedade, identidade de grupo e participação atual; membros comuns não podem remover
+outras pessoas. A operação remove a participação e o indicador de digitação, mas não apaga
+o histórico para os demais integrantes. Ainda não há coadministradores.

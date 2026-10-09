@@ -43,3 +43,11 @@
 .hero-mini-card{background:#fff;border:1px solid #eae6fe;padding:22px;width:250px;position:absolute;left:-100px;bottom:12px;border-radius:20px;box-shadow:0 12px 40px #3b376b29;transform:rotate(-10deg)}.hero-mini-card h3{font-size:16px;line-height:1.35;margin:10px 0 8px}.hero-mini-card p{font-size:12px;color:#7f88a0;margin:0}
 @media(max-width:1099px){.hero-preview{display:none}}
 .auth-intro{background:linear-gradient(125deg,#2a265dd6,#6851bad5 45%,#8659d1ca),url('https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=1300&q=85') center/cover}
+
+/* Chat V4 — members are manageable without exposing contact media publicly. */
+.conecta-chat-group-roster{display:grid;gap:.7rem;padding:.9rem;border:1px solid var(--line,rgba(100,116,139,.22));border-radius:14px}
+.conecta-chat-roster-member{display:flex;align-items:center;gap:.75rem;min-width:0}
+.conecta-chat-roster-member>span:nth-child(2){display:flex;flex:1;min-width:0;flex-direction:column;overflow-wrap:anywhere}
+.conecta-chat-roster-member small{opacity:.7}
+.conecta-chat-roster-member .btn{margin-left:auto;white-space:nowrap}
+@media(max-width:560px){.conecta-chat-roster-member .btn{padding:.5rem;font-size:.8rem}}

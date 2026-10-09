@@ -515,6 +515,19 @@ export default function Messages(){
    else{setActive(null);setMessages([]);setPins([]);await loadThreads();}
    setSettingsBusy(false);
  }
+ async function removeGroupMember(person:Person){
+   if(!active||!canManageGroup||settingsBusy||!current?.participants.some(p=>p.id===person.id))return;
+   if(!confirm('Remover '+person.display_name+' deste grupo? A pessoa perderá acesso às mensagens.'))return;
+   setSettingsBusy(true);setError('');
+   try{
+     const {error:e}=await supabaseBrowser().rpc('remove_conversation_group_member',{
+       _conversation:active,_member:person.id
+     });
+     if(e)throw e;
+     await loadThreads();
+   }catch(e){setError('Não foi possível remover integrante: '+(e instanceof Error?e.message:'Tente novamente.'));}
+   finally{setSettingsBusy(false);}
+ }
  async function transferGroupOwnership(){
    if(!active||!transferOwner||!canManageGroup||settingsBusy)return;
    const chosen=current?.participants.find(p=>p.id===transferOwner);
@@ -657,6 +670,16 @@ export default function Messages(){
             </select>
             <button className="btn btn-outline" type="button" disabled={!inviteFriend||settingsBusy}
               onClick={()=>void inviteGroupFriend()}><UserPlus size={15}/> Convidar</button>
+          </div>
+          <div className="conecta-chat-group-roster">
+            <strong>Integrantes do grupo ({(current?.participants.length||0)+1})</strong>
+            {current?.participants.map(person=><div className="conecta-chat-roster-member" key={person.id}>
+              <ProfileAvatar person={person} size="small"/>
+              <span><strong>{person.display_name}</strong><small>@{person.handle}</small></span>
+              <button className="btn btn-outline" type="button" disabled={settingsBusy}
+                aria-label={'Remover '+person.display_name+' do grupo'}
+                onClick={()=>void removeGroupMember(person)}><Trash2 size={15}/> Remover</button>
+            </div>)}
           </div>
           <div className="conecta-chat-manage-row">
             <label htmlFor="conecta-group-transfer">Transferir administração</label>
