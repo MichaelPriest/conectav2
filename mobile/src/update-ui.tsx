@@ -22,6 +22,8 @@ let manualRequest:(()=>void)|null=null;
  */
 export async function checkForNativeUpdate():Promise<AvailableUpdate|null>{
  if(Platform.OS!=='android'&&Platform.OS!=='ios')return null;
+ if(Platform.OS==='android'&&process.env.EXPO_PUBLIC_CONECTA_DISTRIBUTION==='play')
+  return null; // Google Play is the only binary-update channel for Store installs.
  const installed=Application.nativeApplicationVersion;
  if(!installed)return null;
  const controller=new AbortController();
@@ -40,6 +42,12 @@ export async function checkForNativeUpdate():Promise<AvailableUpdate|null>{
 
 /** Raised by the Profile button; all update UI is controlled at app root. */
 export function checkVersionManually():void{
+ if(Platform.OS==='android'&&process.env.EXPO_PUBLIC_CONECTA_DISTRIBUTION==='play'){
+  void Linking.openURL('https://play.google.com/store/apps/details?id=br.com.conectav2.app')
+   .catch(()=>Alert.alert('Google Play indisponível',
+    'Não foi possível abrir a página do Conecta na Play Store.'));
+  return;
+ }
  if(manualRequest)manualRequest();
  else Alert.alert('Verificação indisponível',
   'A interface de atualizações está sendo iniciada. Tente novamente.');
