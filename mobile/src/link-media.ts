@@ -66,3 +66,28 @@ export function linksInContent(content:string):LinkedMedia[]{
  }
  return results;
 }
+
+/** Canonical in-app embeds reuse the same providers as the Conecta Web.
+ * Never use an untrusted post URL as an iframe source. */
+export function trustedMediaEmbed(media:LinkedMedia):string|null{
+ if(media.kind!=='external')return null;
+ try{
+  const parsed=classifyMediaLink(media.url);
+  if(!parsed||parsed.kind!=='external'||parsed.provider!==media.provider||
+     parsed.url!==media.url)return null;
+  const url=new URL(parsed.url);
+  if(parsed.provider==='YouTube'){
+   const id=url.searchParams.get('v');
+   return id&&/^[a-zA-Z0-9_-]{11}$/.test(id)?
+    'https://www.youtube-nocookie.com/embed/'+id+'?rel=0':null;
+  }
+  if(parsed.provider==='Spotify')
+   return 'https://open.spotify.com/embed'+url.pathname;
+  if(parsed.provider==='SoundCloud')
+   return 'https://w.soundcloud.com/player/?url='+encodeURIComponent(parsed.url)+
+    '&auto_play=false';
+  if(parsed.provider==='Apple Music')
+   return 'https://embed.music.apple.com'+url.pathname+url.search;
+  return null;
+ }catch{return null;}
+}
