@@ -1,7 +1,7 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {mergeChatPages,mergeChatReactionPages}=require('../src/chat-merge.ts');
+const {mergeChatPages,mergeChatReactionPages,refreshChatReactionPage}=require('../src/chat-merge.ts');
 
 function message(id,conversation_id='thread-1',timestamp='2026-10-09T20:00:00Z',content=id){
  return {id,conversation_id,created_at:timestamp,content};
@@ -36,4 +36,13 @@ test('Reactions merge by message, sender and emoji independently',()=>{
  const merged=mergeChatReactionPages(old,next);
  assert.equal(merged.length,3);
  assert.equal(merged.find(r=>r.user_id==='me'&&r.emoji==='❤️').created_at,'2');
+});
+
+test('Refreshed page removes deleted emoji reactions without clearing older pages',()=>{
+ const current=[
+  {message_id:'a',user_id:'me',emoji:'❤️',created_at:'1'},
+  {message_id:'old',user_id:'other',emoji:'👍',created_at:'1'}
+ ];
+ const updated=refreshChatReactionPage(current,[],['a']);
+ assert.deepEqual(updated.map(x=>x.message_id),['old']);
 });
