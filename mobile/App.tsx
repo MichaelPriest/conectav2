@@ -21,7 +21,7 @@ import {StoryRail} from './src/story-ui';
 import {VoiceRecorder} from './src/voice-ui';
 import {ChatBubble} from './src/chat-bubble';
 import {loadChatReactions} from './src/chat-actions';
-import {mergeChatPages,mergeChatReactionPages} from './src/chat-merge';
+import {mergeChatPages,refreshChatReactionPage} from './src/chat-merge';
 import {sendChatMedia} from './src/chat-media';
 import {changeProfilePhoto,loadCover} from './src/profile-media';
 import {ReelsScreen} from './src/reels-ui';
@@ -497,7 +497,7 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
    const loadedReactions=await loadChatReactions(loaded);
    if(activeRef.current!==id)return;
    setMessages(previous=>mergeChatPages(previous,loaded,id));
-   setReactions(previous=>mergeChatReactionPages(previous,loadedReactions));
+   setReactions(previous=>refreshChatReactionPage(previous,loadedReactions,loaded.map(m=>m.id)));
    if(!historyInitialized.current){
     historyInitialized.current=true;setHasOlder(loaded.length===60);
    }
@@ -512,7 +512,7 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
    const olderReactions=await loadChatReactions(older);
    if(activeRef.current!==active)return;
    setMessages(previous=>mergeChatPages(previous,older,active));
-   setReactions(previous=>mergeChatReactionPages(previous,olderReactions));
+   setReactions(previous=>refreshChatReactionPage(previous,olderReactions,older.map(m=>m.id)));
    setHasOlder(older.length===60);
   }catch(e){if(activeRef.current===active)setError(errorMessage(e));}
   finally{setLoadingOlder(false);}
