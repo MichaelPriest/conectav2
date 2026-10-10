@@ -43,6 +43,18 @@ export async function loadFeed(offset=0):Promise<{items:Post[];more:boolean}>{
  return {items,more:items.length===15};
 }
 /** Video posts are the same public records used by the Conecta Web Reels page. */
+export async function loadOwnPosts(userId:string,offset=0):Promise<{
+ items:Post[];more:boolean
+}>{
+ const {data:{session}}=await supabase.auth.getSession();
+ if(session?.user.id!==userId)throw new Error('Sua sessão expirou.');
+ const {data,error}=await supabase.from('posts').select(POST_FIELDS)
+  .eq('author_id',userId).order('created_at',{ascending:false})
+  .range(offset,offset+11);
+ if(error)throw error;
+ const items=(data||[]) as unknown as Post[];
+ return {items,more:items.length===12};
+}
 export async function loadPublicReels():Promise<Post[]>{
  const {data,error}=await supabase.from('posts').select(POST_FIELDS)
   .eq('visibility','public').eq('media_type','video')
