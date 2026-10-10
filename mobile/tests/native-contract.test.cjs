@@ -117,7 +117,7 @@ test('Voice notes stay private and require explicit microphone consent',()=>{
  assert.match(ui,/requestRecordingPermissionsAsync\(\)/);
  assert.match(ui,/useAudioRecorder\(RecordingPresets\.HIGH_QUALITY\)/);
  assert.match(ui,/useAudioPlayer\(url\)/);
- assert.match(app,/VoiceRecorder conversationId=/);
+ assert.match(app,/VoiceRecorder key=\{active\} conversationId=/);
  assert.match(read('src/chat-bubble.tsx'),/AudioMessage path=/);
  const plugin=config.expo.plugins.find(p=>p[0]==='expo-audio');
  assert.ok(plugin);
@@ -133,7 +133,7 @@ test('Chat media stays scoped to the signed-in conversation, with upload cleanup
  assert.match(media,/media_type:media\.kind/);
  assert.match(media,/from\('messages'\)\.insert\(/);
  assert.match(media,/remove\(\[path\]\)/);
- assert.match(app,/sendChatMedia\(active,userId,chosen\)/);
+ assert.match(app,/sendChatMedia\(active,userId,chosen,replyTo\?\.id\|\|null\)/);
  assert.match(read('src/chat-bubble.tsx'),/VideoMedia path=\{message\.media_path\}/);
 });
 
