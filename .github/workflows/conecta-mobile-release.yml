@@ -1,0 +1,92 @@
+# Distribuição opcional de APK assinada permanentemente para atualizações no app.
+# Somente tags mobile-vX.Y.Z publicam uma release. Sem todos os GitHub secrets,
+# a build falha antes de assinar/publicar. A main é preservada.
+name: Conecta Mobile - Android release oficial
+on:
+  push:
+    tags:
+      - 'mobile-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  official-android-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      CI: '1'
+      NODE_OPTIONS: --max-old-space-size=4096
+      CONECTA_ANDROID_KEYSTORE_BASE64: ${{ secrets.CONECTA_ANDROID_KEYSTORE_BASE64 }}
+      CONECTA_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.CONECTA_ANDROID_KEYSTORE_PASSWORD }}
+      CONECTA_ANDROID_KEY_ALIAS: ${{ secrets.CONECTA_ANDROID_KEY_ALIAS }}
+      CONECTA_ANDROID_KEY_PASSWORD: ${{ secrets.CONECTA_ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/package.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Validar tag, versao e origem da main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+          node - <<'NODE'
+          const p=require('./package.json');
+          const app=require('./app.json').expo;
+          const tag=process.env.GITHUB_REF_NAME||'';
+          if(!/^mobile-v\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$/.test(tag))
+            throw Error('A tag deve ser mobile-vX.Y.Z');
+          const v=tag.slice('mobile-v'.length);
+          if(v!==p.version||v!==app.version)
+            throw Error('A tag precisa ser igual as versoes do package.json e app.json.');
+          if(!Number.isInteger(app.android.versionCode)||app.android.versionCode<1)
+            throw Error('Android versionCode invalido.');
+          console.log('Versao de release autenticada:',v);
+          NODE
+      - name: Instalar e validar app nativo
+        run: |
+          npm install --no-audit --no-fund --no-package-lock
+          npm test
+          npm run typecheck
+          npx expo install --check
+      - name: Preparar projeto nativo Android
+        run: npx expo prebuild --platform android --non-interactive --no-install
+      - name: Exigir e configurar keystore permanente
+        run: node scripts/configure-release-signing.cjs
+      - name: Compilar APK assinado para atualizacao
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Verificar arquivo de saida
+        run: |
+          set -euo pipefail
+          apk="android/app/build/outputs/apk/release/app-release.apk"
+          test -s "$apk"
+          test "$(stat -c %s "$apk")" -gt 2000000
+      - name: Publicar GitHub Release com instalador permanente
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#mobile-v}"
+          apk="android/app/build/outputs/apk/release/app-release.apk"
+          gh release create "$GITHUB_REF_NAME" \
+            "$apk#conecta-v2-android-${version}.apk" \
+            --title "Conecta Mobile ${version}" \
+            --notes "APK Android oficial do Conecta V2, assinado com certificado de distribuicao. A instalacao requer aprovacao do Android." \
+            --prerelease
