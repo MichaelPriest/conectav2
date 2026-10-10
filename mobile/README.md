@@ -441,3 +441,54 @@ Play In-App Updates, nunca via sideload APK.
 nenhuma release oficial e nenhuma assinatura permanente fornecida. Logo,
 por enquanto a consulta retorna "nenhuma atualização oficial".
 A CI aprovada não é prova de instalação bem-sucedida no aparelho.
+
+## Alpha 0.7.0 — Explorar, perfis, galerias e permissões
+
+- Explorar agora é uma busca global por pessoas, comunidades, publicações e
+  vídeos; há acesso separado a amizades e convites. As consultas de posts
+  públicos verificam `visibility='public'` e
+  `moderation_status='approved'`; autores bloqueados são filtrados.
+- Perfis públicos nativos com capa, interesses, status, conexões, bloqueio,
+  histórico de publicações públicas e mídia autorizada.
+- Edição completa de `profile_details` (headline, cidade, site, música,
+  status, emoji, interesses, tema de capa e layout) sem apagar fotos existentes.
+- Galeria nativa em tela cheia; fotos assinadas pelo Supabase, navegação
+  anterior/próxima e ampliação manual.
+- Ações de notificações abrem posts e conexões no aplicativo; o parser de
+  deep links aceita apenas `conecta://post/{uuid}`, notificações e a
+  origem pública aprovada, rejeitando redirects e formatos desconhecidos.
+- Central de permissões na área do perfil. Câmera, microfone e notificações
+  só são solicitados por ação explícita. Para anexos, o seletor do sistema
+  evita requerer acesso irrestrito à biblioteca.
+- `expo-notifications` entrega avisos locais de interação **somente quando
+  o aplicativo está aberto** e a pessoa optou por recebê-los. A notificação
+  nunca contém texto de conversas nem dados de saúde/identidade na
+  tela bloqueada. Tokens FCM/APNs e push em segundo plano ainda não existem.
+- A configuração Android bloqueia explicitamente permissões de localização,
+  contatos, SMS, histórico de chamadas, sobreposições, gerenciamento de
+  arquivos e alarmes exatos, além de desativar backup automático e HTTP puro.
+- O canal de atualização `sideload` conserva a permissão especial para
+  instalar APKs; builds Google Play não a pedem.
+
+### QA adicional obrigatório
+
+1. Confirmar que o aplicativo não pede permissões no primeiro acesso.
+2. Autorizar e negar câmera/microfone; verificar que a recusa não quebra
+   Feed, Stories, chat ou navegação.
+3. Ativar notificações pelo perfil, receber interação de outra conta
+   com o app aberto, tocar no aviso e confirmar navegação nativa.
+4. Desativar notificações e confirmar ausência de novos avisos locais.
+5. Tentar abrir um post pendente ou rejeitado de outra conta e confirmar
+   que não aparece no perfil público nem na busca global.
+6. Bloquear uma conta, recarregar a descoberta e verificar a filtragem.
+7. Testar modalidades de MySpace e campos de personalização usando duas
+   contas; garantir que upload anterior da capa foi preservado.
+8. Abrir fotos em tela cheia em Android/iOS, passar para a próxima e
+   voltar, ampliar e fechar sem encobrir barra ou recortes da câmera.
+9. Confirmar APK sideload x Play: somente o sideload contém a
+   permissão `REQUEST_INSTALL_PACKAGES`.
+10. Confirmar que permissões de localização/contatos/SMS não aparecem
+    na ficha de permissões do APK e que o app funciona com acesso negado.
+
+**Nota**: a aprovação da CI comprova testes de código, não testes reais
+de permissões, entrega por push, assinatura e instalação de APK.
