@@ -74,8 +74,18 @@ export function chooseAndroidUpdate(
   });
   if(!asset)continue;
   if(!best||compareVersions(tag[1],best.version)>0){
-   const hash=typeof asset.digest==='string'&&/^sha256:[a-f0-9]{64}$/i.test(asset.digest)
+   const githubHash=typeof asset.digest==='string'&&/^sha256:[a-f0-9]{64}$/i.test(asset.digest)
     ?asset.digest.slice(7).toLowerCase():null;
+   // GitHub may omit the release-asset digest immediately after upload.
+   // Hash metadata in the owner-controlled release notes is an equivalent
+   // source only if it names the exact APK and agrees with GitHub, if present.
+   const notesHash=typeof release.body==='string'?
+    /^APK-SHA256:\\s*([a-f0-9]{64})\\s*$/im.exec(release.body)?.[1]?.toLowerCase():null;
+   const notesSize=typeof release.body==='string'?
+    /^APK-SIZE:\\s*(\\d+)\\s*$/im.exec(release.body)?.[1]:null;
+   const releaseNotesAgree=!notesHash||!githubHash||notesHash===githubHash;
+   const notesSizeAgree=!notesSize||Number(notesSize)===asset.size;
+   const hash=releaseNotesAgree&&notesSizeAgree?(githubHash||notesHash||null):null;
    best={version:tag[1],url:asset.browser_download_url,
     size:asset.size,sha256:hash,channel:'android',
     notes:typeof release.body==='string'&&release.body.trim()
