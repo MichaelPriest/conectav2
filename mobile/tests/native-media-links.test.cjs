@@ -30,7 +30,10 @@ test('Do not render untrusted schemes, URLs with credentials or lookalike provid
   'https://user:pass@www.youtube.com/watch?v=dQw4w9WgXcQ',
   'https://www.youtube.com/watch?v=short',
   'https://soundcloud.com/pages/login',
-  'https://evil.example/?redirect=https://youtu.be/dQw4w9WgXcQ'
+  'https://evil.example/?redirect=https://youtu.be/dQw4w9WgXcQ',
+  'https://127.0.0.1/secret.mp4',
+  'https://localhost/audio.mp3',
+  'https://router.local/video.mp4'
  ])assert.equal(classifyMediaLink(value),null,value);
  assert.equal(linksInContent('texto sem links').length,0);
 });
@@ -51,4 +54,28 @@ test('Linked media loads only after a tap and chat photos have visible retry',()
  assert.match(chat,/Tentar novamente/);
  assert.match(chat,/Modal visible=/);
  assert.match(bubble,/<ChatImage path=\{message\.media_path\}/);
+});
+
+test('Provider embeds use only canonical hostnames and remain user-triggered',()=>{
+ const {trustedMediaEmbed}=require('../src/link-media.ts');
+ const cases=[
+  ['https://youtu.be/dQw4w9WgXcQ','www.youtube-nocookie.com'],
+  ['https://open.spotify.com/track/3n3Ppam7vgaVa1iaRUc9Lp','open.spotify.com'],
+  ['https://soundcloud.com/artist/song','w.soundcloud.com'],
+  ['https://music.apple.com/br/album/demo/123456','embed.music.apple.com']
+ ];
+ for(const [url,hostname] of cases){
+  const media=classifyMediaLink(url);
+  assert.ok(media,url);
+  const embed=trustedMediaEmbed(media);
+  assert.equal(new URL(embed).hostname,hostname);
+ }
+ const ui=source('src/link-media-ui.tsx');
+ const pkg=JSON.parse(source('package.json'));
+ assert.equal(pkg.dependencies['react-native-webview'],'13.16.1');
+ assert.match(ui,/active&&embed\?<ProviderPlayer/);
+ assert.match(ui,/mediaPlaybackRequiresUserAction/);
+ assert.match(ui,/onShouldStartLoadWithRequest/);
+ assert.match(ui,/thirdPartyCookiesEnabled=\{false\}/);
+ assert.match(ui,/onPress=\{play\}/);
 });
