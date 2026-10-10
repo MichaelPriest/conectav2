@@ -152,19 +152,48 @@ export async function deleteOwnPost(post:Post,userId:string):Promise<string|null
  return null;
 }
 
-export async function requestContentModeration(kind:'post'|'story',id:string):Promise<void>{
+export type NativeModerationFeedback={
+ status:'approved'|'pending'|'rejected'|'expired';reason?:string
+};
+function safeModerationFeedback(value:unknown):NativeModerationFeedback{
+ if(value&&typeof value==='object'){
+  const candidate=value as {status?:string;reason?:unknown};
+  if(['approved','pending','rejected','expired'].includes(candidate.status||''))
+   return {status:candidate.status as NativeModerationFeedback['status'],
+    reason:typeof candidate.reason==='string'?candidate.reason.slice(0,260):undefined};
+ }
+ return {status:'pending',reason:'Triagem ainda não concluída. O conteúdo continua protegido.'};
+}
+/**
+ * Return the actual moderation outcome. Provider/server errors never approve a
+ * post, but the app tells the author that the content is still under review.
+ */
+export async function requestContentModeration(kind:'post'|'story',id:string):Promise<NativeModerationFeedback>{
  const {data:{session}}=await supabase.auth.getSession();
- if(!session?.access_token)return;
+ if(!session?.access_token)
+  return {status:'pending',reason:'Sessão de revisão indisponível. Tente novamente após entrar na conta.'};
  try{
-  await fetch(SITE_URL+'/api/moderation/review',{
+  const response=await fetch(SITE_URL+'/api/moderation/review',{
    method:'POST',
    headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
-   body:JSON.stringify({kind,id})
+   body:JSON.stringify({kind,id}),cache:'no-store'
   });
- }catch{/* Never bypass the database pending moderation state. */}
+  if(!response.ok)
+   return {status:'pending',reason:'Não foi possível concluir a triagem automática. Conteúdo aguardando revisão.'};
+  return safeModerationFeedback(await response.json());
+ }catch{
+  return {status:'pending',reason:'Serviço de análise indisponível. Tente novamente mais tarde.'};
+ }
 }
-export async function requestPostModeration(id:string):Promise<void>{
+export async function requestPostModeration(id:string):Promise<NativeModerationFeedback>{
  return requestContentModeration('post',id);
+}
+/** Source of truth: status is always read from the protected database row. */
+export async function ownPostModerationStatus(id:string):Promise<NativeModerationFeedback>{
+ const {data,error}=await supabase.from('posts')
+  .select('moderation_status,moderation_reason').eq('id',id).maybeSingle();
+ if(error||!data)return {status:'pending',reason:'Não foi possível confirmar a análise.'};
+ return safeModerationFeedback({status:data.moderation_status,reason:data.moderation_reason});
 }
 
 /** Only rows allowed by Supabase comment RLS are returned. */
