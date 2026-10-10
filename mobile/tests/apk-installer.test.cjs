@@ -98,7 +98,7 @@ test('Google Play builds never request restricted APK install permission',()=>{
 
 test('Public Alpha release notes unlock checksum-protected in-app upgrades even without API digest',()=>{
  const notes=release('0.7.2',{digest:null});
- notes.body='Conecta Alpha 0.7.2\\nAPK-SHA256: '+sha+'\\nAPK-SIZE: 40000000';
+ notes.body='Conecta Alpha 0.7.2\nAPK-SHA256: '+sha+'\nAPK-SIZE: 40000000';
  const update=chooseAndroidUpdate([notes],'0.7.1');
  assert.ok(update);
  assert.equal(update.sha256,sha);
@@ -109,7 +109,7 @@ test('Public Alpha release notes unlock checksum-protected in-app upgrades even 
  assert.equal(chooseAndroidUpdate([notes],'0.7.1').sha256,null,
   'Do not trust contradictory GitHub asset digest and release notes');
  notes.assets[0].digest=null;
- notes.body='APK-SHA256: '+sha+'\\nAPK-SIZE: 12345678';
+ notes.body='APK-SHA256: '+sha+'\nAPK-SIZE: 12345678';
  assert.equal(chooseAndroidUpdate([notes],'0.7.1').sha256,null,
   'Do not trust a size mismatch in release metadata');
 });
@@ -118,8 +118,8 @@ test('CI publishes semver prereleases only after pinning the existing Alpha sign
  assert.match(workflow,/contents: write/);
  assert.match(workflow,/Validar continuidade da assinatura dos APKs Alpha/);
  assert.match(workflow,/fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c/);
- assert.match(workflow,/gh release create "\\$tag"/);
- assert.match(workflow,/APK-SHA256: \\$digest/);
+ assert.match(workflow,/gh release create "\$tag"/);
+ assert.match(workflow,/APK-SHA256: \$digest/);
  assert.match(workflow,/--prerelease/);
  assert.match(workflow,/upload-artifact@v4/);
  const ui=read('src/update-ui.tsx');
