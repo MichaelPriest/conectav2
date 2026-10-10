@@ -1,6 +1,6 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {
- Alert,AppState,FlatList,Image,KeyboardAvoidingView,Linking,Platform,Pressable,Share,
+ Alert,AppState,FlatList,Image,KeyboardAvoidingView,Linking,Modal,Platform,Pressable,Share,
  RefreshControl,SafeAreaView,ScrollView,StatusBar as NativeStatusBar,
  StyleSheet,Text,TextInput,View
 } from 'react-native';
@@ -27,17 +27,17 @@ import {sendChatMedia} from './src/chat-media';
 import {changeProfilePhoto,loadCover} from './src/profile-media';
 import {ReelsScreen} from './src/reels-ui';
 import {normalizeMedia,publishMediaPost} from './src/media';
+import {
+ Bell,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
+ MoreHorizontal,Plus,Search,Send,ShieldCheck,Sparkles,UsersRound,Video,
+ X,Globe2,LockKeyhole,UserRound,ChevronRight,Pencil,Share2,HeartHandshake
+} from 'lucide-react-native';
+import {BottomNavigation,Brand,FeedTabs,GradientPanel,RoundIcon,
+ SectionEyebrow,SectionHeader} from './src/design';
+
 import type {SelectedMedia} from './src/media';
 
 type Tab='feed'|'reels'|'connections'|'messages'|'communities'|'notifications'|'profile';
-const TABS:{tab:Tab;symbol:string;title:string}[]=[
- {tab:'feed',symbol:'⌂',title:'Início'},
- {tab:'reels',symbol:'▶',title:'Reels'},
- {tab:'connections',symbol:'♡',title:'Pessoas'},
- {tab:'messages',symbol:'✉',title:'Chat'},
- {tab:'communities',symbol:'◈',title:'Grupos'},
- {tab:'profile',symbol:'◉',title:'Perfil'}
-];
 const noticeNames:Record<string,string>={
  like:'curtiu sua publicação',comment:'comentou sua publicação',
  friend_request:'enviou um convite',friend_accept:'aceitou sua conexão',
