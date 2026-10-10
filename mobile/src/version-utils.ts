@@ -80,9 +80,9 @@ export function chooseAndroidUpdate(
    // Hash metadata in the owner-controlled release notes is an equivalent
    // source only if it names the exact APK and agrees with GitHub, if present.
    const notesHash=typeof release.body==='string'?
-    /^APK-SHA256:\\s*([a-f0-9]{64})\\s*$/im.exec(release.body)?.[1]?.toLowerCase():null;
+    /^APK-SHA256:\s*([a-f0-9]{64})\s*$/im.exec(release.body)?.[1]?.toLowerCase():null;
    const notesSize=typeof release.body==='string'?
-    /^APK-SIZE:\\s*(\\d+)\\s*$/im.exec(release.body)?.[1]:null;
+    /^APK-SIZE:\s*(\d+)\s*$/im.exec(release.body)?.[1]:null;
    const releaseNotesAgree=!notesHash||!githubHash||notesHash===githubHash;
    const notesSizeAgree=!notesSize||Number(notesSize)===asset.size;
    const hash=releaseNotesAgree&&notesSizeAgree?(githubHash||notesHash||null):null;
