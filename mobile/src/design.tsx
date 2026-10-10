@@ -56,13 +56,15 @@ export function Brand({compact=false,light=false}:{
  </View>;
 }
 
-export function RoundIcon({Icon,onPress,label,badge=0,active=false}:{
+export function RoundIcon({Icon,onPress,label,badge=0,active=false,compact=false}:{
  Icon:LucideIcon;onPress:()=>void;label:string;badge?:number;active?:boolean;
+ compact?:boolean;
 }){
  return <Pressable accessibilityRole="button" accessibilityLabel={label}
   onPress={onPress} hitSlop={7}
-  style={[design.roundIcon,active&&{backgroundColor:t.subtle,borderColor:'#D9C9FE'}]}>
-  <Icon size={21} strokeWidth={1.9} color={active?t.primary:t.dark}/>
+  style={[design.roundIcon,compact&&{width:34,height:34,borderRadius:11},
+   active&&{backgroundColor:t.subtle,borderColor:'#D9C9FE'}]}>
+  <Icon size={compact?18:21} strokeWidth={1.9} color={active?t.primary:t.dark}/>
   {badge>0&&<View style={design.badge}>
    <Text style={design.badgeText}>{badge>99?'99+':badge}</Text>
   </View>}
