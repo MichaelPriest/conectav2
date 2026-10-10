@@ -74,7 +74,10 @@ test('Permissions do not request location, contacts or microphone at launch',()=
  const pkg=JSON.parse(read('package.json'));
  assert.ok(pkg.dependencies['expo-notifications']);
  assert.equal(config.plugins.some(p=>Array.isArray(p)&&p[0]==='expo-notifications'),true);
- assert.equal(config.plugins.find(p=>Array.isArray(p)&&p[0]==='expo-image-picker')[1].microphonePermission,false);
+ // Expo ImagePicker microphonePermission:false strips RECORD_AUDIO from the
+ // merged AndroidManifest even when expo-audio needs it for explicit recordings.
+ assert.notEqual(config.plugins.find(p=>Array.isArray(p)&&p[0]==='expo-image-picker')[1].microphonePermission,false);
+ assert.ok(config.plugins.find(p=>Array.isArray(p)&&p[0]==='expo-audio')[1].recordAudioAndroid);
  assert.equal(config.plugins.find(p=>Array.isArray(p)&&p[0]==='expo-audio')[1].enableBackgroundRecording,false);
  assert.ok(config.ios.infoPlist.NSCameraUsageDescription);
  assert.ok(config.ios.infoPlist.NSMicrophoneUsageDescription);
