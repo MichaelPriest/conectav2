@@ -3,6 +3,7 @@ import {useCallback,useEffect,useState} from 'react';
 import {CheckCircle,Clock,Eye,Image as ImageIcon,Loader2,RefreshCcw,ShieldCheck,XCircle} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {LocalAIReview} from '@/components/local-ai-review';
+import {reviewerPreviewFromRls} from '@/lib/moderation-reviewer-preview';
 
 type Pending={
  id:string;kind:'post'|'story';author_handle:string|null;content_excerpt:string;
@@ -27,31 +28,59 @@ export function PendingContentPanel(){
   setLoading(false);
  },[]);
  useEffect(()=>{void load();},[load]);
+ // Keep pending queues current for reviewers without making them reload the page.
+ useEffect(()=>{
+  const refresh=()=>{if(document.visibilityState==='visible')void load();};
+  window.addEventListener('focus',refresh);
+  const timer=window.setInterval(refresh,45000);
+  return()=>{window.removeEventListener('focus',refresh);window.clearInterval(timer);};
+ },[load]);
 
  const current=items.find(item=>item.id===selected)||null;
+ const loadPreview=useCallback(async(item:Pending)=>{
+  if(!item.media_type)return;
+  setLoadingPreview(true);setPreview([]);setError('');
+  try{
+   const {data:{session}}=await supabaseBrowser().auth.getSession();
+   if(!session?.access_token)throw Error('Sessão expirada.');
+   const params=new URLSearchParams({kind:item.kind,id:item.id});
+   let signed:Preview[]|null=null;
+   let reason='';
+   try{
+    const response=await fetch('/api/moderation/preview?'+params,{
+     headers:{Authorization:'Bearer '+session.access_token},cache:'no-store'
+    });
+    if(!response.ok)throw Error('Prévia do servidor indisponível ('+response.status+').');
+    const payload=await response.json() as {media?:Preview[]};
+    if(!Array.isArray(payload.media)||!payload.media.length)
+     throw Error('Prévia do servidor não retornou arquivos.');
+    signed=payload.media;
+   }catch(e){reason=e instanceof Error?e.message:'Endpoint de prévia indisponível.';}
+   if(!signed){
+    // No privileged bypass: Storage requires the moderator's own JWT.
+    try{signed=await reviewerPreviewFromRls({kind:item.kind,id:item.id});}
+    catch(e){
+     const detail=e instanceof Error?e.message:'Arquivo não acessível.';
+     throw Error(reason+' Tentativa segura pelo Supabase: '+detail);
+    }
+   }
+   setPreview(signed);
+  }catch(e){
+   setError((e instanceof Error?e.message:'Falha na prévia de mídia.')+
+    ' Use "Recarregar prévia" para tentar novamente. A publicação permanece em revisão.');
+  }finally{setLoadingPreview(false);}
+ },[]);
  const show=useCallback(async(item:Pending)=>{
   setSelected(item.id);setPreview([]);setRationale('');setError('');setAiNote(null);
   if(item.kind==='post'){
    const {data:review}=await supabaseBrowser().from('posts')
     .select('moderation_reason,ai_provider,ai_checked_at').eq('id',item.id).maybeSingle();
    if(review?.ai_provider&&review.ai_checked_at)
-    setAiNote('Modelo '+review.ai_provider+': '+(review.moderation_reason||'Triagem concluída; verificar também outras categorias.'));
+    setAiNote('Modelo '+review.ai_provider+': '+(review.moderation_reason||
+     'Triagem concluída; verificar também outras categorias.'));
   }
-  if(!item.media_type)return;
-  setLoadingPreview(true);
-  try{
-   const {data:{session}}=await supabaseBrowser().auth.getSession();
-   if(!session?.access_token)throw new Error('Sua sessão expirou.');
-   const params=new URLSearchParams({kind:item.kind,id:item.id});
-   const response=await fetch('/api/moderation/preview?'+params,{
-    headers:{Authorization:'Bearer '+session.access_token},cache:'no-store'
-   });
-   if(!response.ok)throw new Error('Não foi possível visualizar a mídia autorizada.');
-   const payload=await response.json() as {media?:Preview[]};
-   setPreview(payload.media||[]);
-  }catch(e){setError(e instanceof Error?e.message:'Falha na prévia de mídia.');}
-  finally{setLoadingPreview(false);}
- },[]);
+  if(item.media_type)await loadPreview(item);
+ },[loadPreview]);
 
  async function decide(decision:'approve'|'reject'){
   if(!current||busy||rationale.trim().length<10)return;
@@ -104,13 +133,21 @@ export function PendingContentPanel(){
        <span>{aiNote}</span>
        <small>Esta pontuação não substitui a revisão de contexto por pessoa autorizada.</small>
      </div>}
-     {loadingPreview&&<p className="small-note"><Loader2 className="spin" size={16}/> Carregando prévia...</p>}
+     {current.media_type&&<button type="button" className="btn btn-outline"
+       disabled={loadingPreview||busy} onClick={()=>void loadPreview(current)}
+       style={{marginBottom:12}}>
+       <RefreshCcw size={15}/> {loadingPreview?'Carregando arquivos...':'Recarregar prévia'}
+      </button>}
+     {loadingPreview&&<p className="small-note"><Loader2 className="spin" size={16}/> Carregando prévia protegida...</p>}
      {current.media_type&&preview.length===0&&!loadingPreview&&
        <p className="small-note">Prévia indisponível. Não aprove sem conferir a mídia.</p>}
      {preview.length>0&&<div className="conecta-content-moderation-previews">
       {preview.map((m,index)=>m.type==='image'?
-        <img key={index} src={m.url} alt={'Mídia '+(index+1)+' sob revisão'}/>:
-        <video key={index} src={m.url} controls playsInline preload="metadata" aria-label={'Vídeo '+(index+1)+' sob revisão'}/>)}
+        <img key={index} src={m.url} alt={'Mídia '+(index+1)+' sob revisão'}
+         onError={()=>{setPreview([]);setError('A imagem não carregou. Recarregue a prévia para renovar o acesso antes de aprovar.');}}/>:
+        <video key={index} src={m.url} controls playsInline preload="metadata"
+         onError={()=>{setPreview([]);setError('O vídeo não carregou. Atualize a prévia antes de aprovar.');}}
+         aria-label={'Vídeo '+(index+1)+' sob revisão'}/>)}
      </div>}
      <LocalAIReview itemKey={current.kind+current.id} text={current.content_excerpt}
        videoUrl={preview.find(m=>m.type==='video')?.url}/>
