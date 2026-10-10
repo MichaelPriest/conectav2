@@ -11,7 +11,7 @@ import {PollCard} from '@/components/poll-card';
 import {MentionInput,MentionText} from '@/components/mention-input';
 import {ReportContentButton} from '@/components/report-content-button';
 import {ModerationAppealButton} from '@/components/moderation-appeal-button';
-import {requestCommentModeration} from '@/lib/submit-moderation';
+import {requestCommentModeration,requestContentModeration} from '@/lib/submit-moderation';
 
 function ago(value: string) {
   const minutes = Math.max(0, Math.floor((Date.now()-new Date(value).getTime())/60000));
@@ -30,6 +30,7 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
   const [comments, setComments] = useState<PostComment[]>([]);
   const [comment, setComment] = useState('');
   const [sending, setSending] = useState(false);
+  const [retryingModeration,setRetryingModeration]=useState(false);
   const [notice, setNotice] = useState('');
   const [activeMediaIndex,setActiveMediaIndex] = useState<number|null>(null);
   const media = post.media?.length ? post.media : post.mediaUrl && post.media_type ? [{url:post.mediaUrl,type:post.media_type,path:post.media_path||''}] : [];
@@ -133,6 +134,21 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
     {post.moderation_status!=='approved'&&<div className="conecta-content-review" role="status">
       <strong>{post.moderation_status==='rejected'?'Publicação não aprovada':'Publicação em análise'}</strong>
       <span>{post.moderation_status==='rejected'?'Esta publicação não está disponível para outras pessoas.':'Você consegue visualizar este conteúdo enquanto ele é analisado. Ele ainda não aparece para outras pessoas.'}</span>
+      {post.moderation_status==='pending'&&post.author_id===userId&&
+       <button type="button" className="btn btn-outline" disabled={retryingModeration}
+        onClick={()=>{void (async()=>{
+         setRetryingModeration(true);setNotice('');
+         try{
+          const verdict=await requestContentModeration('post',post.id);
+          setNotice(verdict.status==='approved'?'Publicação liberada após análise.':
+           verdict.status==='rejected'?'A publicação não foi aprovada.':
+           'A publicação continua em revisão. Nenhum conteúdo foi liberado indevidamente.');
+          await refresh();
+         }catch{setNotice('Não foi possível verificar a análise no momento.');}
+         finally{setRetryingModeration(false);}
+        })();}}>
+        {retryingModeration?'Verificando...':'Verificar análise novamente'}
+       </button>}
     </div>}
     {post.moderation_status==='rejected'&&post.author_id===userId&&<ModerationAppealButton kind="post" targetId={post.id}/>}
     <div className="post-body">{post.content && <p><MentionText text={post.content}/></p>}{media.length>0 && (media.length===1 && media[0].type==='video'
