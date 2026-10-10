@@ -26,7 +26,9 @@
     "expo-image-manipulator": "~57.0.21",
     "expo-audio": "~57.0.5",
     "react-native-svg": "15.15.4",
-    "lucide-react-native": "1.48.0"
+    "lucide-react-native": "1.48.0",
+    "react-native-safe-area-context": "~5.7.0",
+    "expo-navigation-bar": "~57.0.3"
   },
   "devDependencies": {
     "@types/react": "19.2.7",
