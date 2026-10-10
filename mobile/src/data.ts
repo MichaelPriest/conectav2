@@ -216,22 +216,27 @@ export async function loadPostComments(postId:string):Promise<PostComment[]>{
  if(error)throw error;
  return (data||[]) as unknown as PostComment[];
 }
-export async function sendPostComment(postId:string,userId:string,body:string,parentId:string|null=null):Promise<void>{
+export async function sendPostComment(postId:string,userId:string,body:string,parentId:string|null=null):Promise<'approved'|'pending'|'rejected'>{
  const content=body.trim();
  if(!content||content.length>1000)throw new Error('O comentário deve ter entre 1 e 1.000 caracteres.');
  const {data,error}=await supabase.from('post_comments').insert({
   post_id:postId,author_id:userId,body:content,parent_id:parentId
  }).select('id').single();
  if(error)throw error;
- // Comments use a different moderation endpoint from posts, as on the web.
+ // Comments remain protected while the server moderation endpoint is offline.
  const {data:{session}}=await supabase.auth.getSession();
- if(!session?.access_token)return;
- try{
-  await fetch(SITE_URL+'/api/moderation/comment',{
-   method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
-   body:JSON.stringify({id:data.id})
-  });
- }catch{/* Database comment quarantine remains authoritative. */}
+ if(session?.access_token){
+  try{
+   await fetch(SITE_URL+'/api/moderation/comment',{
+    method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
+    body:JSON.stringify({id:data.id}),cache:'no-store'
+   });
+  }catch{/* The database's pending status remains authoritative. */}
+ }
+ const {data:latest}=await supabase.from('post_comments')
+  .select('moderation_status').eq('id',data.id).maybeSingle();
+ return latest?.moderation_status==='approved'?'approved':
+  latest?.moderation_status==='rejected'?'rejected':'pending';
 }
 
 export async function loadConnections(userId:string):Promise<{friends:Friendship[];people:Profile[]}>{
