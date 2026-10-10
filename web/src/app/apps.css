@@ -1,0 +1,39 @@
+/* Dedicated public application download landing; isolated from feed UI. */
+.conecta-apps{min-height:100vh;background:radial-gradient(ellipse at 18% 9%,#f3eaff,transparent 47%),linear-gradient(180deg,#fff,#f9f8ff 80%);color:#292342}
+.conecta-apps-header{max-width:1200px;margin:auto;padding:23px 27px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+.conecta-apps-header nav{display:flex;gap:22px;align-items:center;font-size:13px;font-weight:750;color:#7054ad}
+.conecta-apps-header nav a:last-child{display:inline-flex;align-items:center;gap:6px}
+.conecta-apps-main{max-width:1120px;margin:auto;padding:34px 26px 65px}
+.conecta-apps-intro{text-align:center;max-width:770px;margin:0 auto 40px}
+.conecta-apps-kicker{display:inline-flex;align-items:center;gap:8px;color:#7a53d8;background:#eee6ff;border-radius:40px;padding:9px 16px;font-size:11px;font-weight:850;letter-spacing:1px}
+.conecta-apps-intro h1{font-size:clamp(37px,6vw,65px);line-height:1.08;letter-spacing:-.06em;margin:21px 0}
+.conecta-apps-intro h1 em{font-style:normal;color:#8d60e8}
+.conecta-apps-intro p{font-size:15px;line-height:1.8;color:#77758b;margin:auto;max-width:630px}
+.conecta-apps-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:23px;align-items:stretch}
+.conecta-apps-card{display:flex;flex-direction:column;min-width:0;padding:34px;background:#fff;border:1px solid #eae3f9;border-radius:26px;box-shadow:0 18px 56px #573eac13}
+.conecta-apps-card.android{border-top:5px solid #8b61e7}.conecta-apps-card.ios{border-top:5px solid #bdb7cd}
+.conecta-apps-icon{width:66px;height:66px;display:grid;place-items:center;border-radius:20px;color:#7849d4;background:#efe8ff;margin-bottom:19px}
+.conecta-apps-card.ios .conecta-apps-icon{color:#756f8b;background:#f1eff5}
+.conecta-apps-platform{font-size:11px;font-weight:900;color:#865bd9;letter-spacing:.15em}
+.conecta-apps-card h2{font-size:26px;line-height:1.25;letter-spacing:-.035em;margin:12px 0 9px}
+.conecta-apps-card>p{font-size:14px;line-height:1.7;color:#7d7991;margin:0 0 23px}
+.conecta-apps-release{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:#f0fbf6;color:#176747;padding:14px;border-radius:13px;font-size:13px;font-weight:750;margin-bottom:18px}
+.conecta-apps-release small{margin-left:auto;font-size:12px;font-weight:700}.conecta-apps-release.unavailable{background:#f5f3f9;color:#655c76}
+.conecta-apps-button{display:flex;align-items:center;justify-content:center;gap:10px;min-height:54px;padding:13px 17px;border-radius:14px;background:#8353e5;color:#fff;font-size:15px;font-weight:850;text-decoration:none;transition:transform .15s,background .15s}
+.conecta-apps-button:hover{background:#7240d6;transform:translateY(-2px);color:#fff}
+.conecta-apps-button.secondary{background:#f0ebfc;color:#7452bc}.conecta-apps-button.secondary:hover{background:#e6dcfc;color:#62439f}
+.conecta-apps-secondary{display:flex;align-items:center;justify-content:center;gap:6px;color:#7154af;font-size:12px;font-weight:800;margin:15px 0}
+.conecta-apps-checksum{font-size:12px;color:#716c86;padding:9px 0;overflow-wrap:anywhere}
+.conecta-apps-checksum code{display:block;margin-top:8px;color:#362b54}
+.conecta-apps-instructions{border-top:1px solid #eeeaf6;margin-top:25px;padding-top:21px;font-size:13px;line-height:1.65;color:#77718c}
+.conecta-apps-instructions strong{display:block;color:#41365d;font-size:14px;margin-bottom:7px}
+.conecta-apps-instructions ol{padding-left:19px;margin:9px 0 12px}.conecta-apps-instructions li{margin-bottom:8px}
+.conecta-apps-instructions small{font-size:11px;line-height:1.55;display:block;color:#847f97}
+.conecta-apps-instructions p{margin:8px 0 13px}
+.conecta-apps-card.ios .conecta-apps-button{margin-top:auto}
+.conecta-apps-safety{display:flex;gap:16px;align-items:flex-start;background:#f1edfb;border-radius:19px;padding:20px 23px;margin:32px 0 22px;color:#7554bb}
+.conecta-apps-safety svg{flex-shrink:0}.conecta-apps-safety strong{font-size:14px;color:#514076}
+.conecta-apps-safety p{font-size:12px;line-height:1.7;color:#746c8c;margin:5px 0 0}
+.conecta-apps-back{display:inline-flex;align-items:center;gap:7px;color:#7958bc;font-size:13px;font-weight:800}
+.conecta-apps-footer{text-align:center;border-top:1px solid #e8e1f3;padding:25px;font-size:12px;color:#9490a2}
+@media(max-width:750px){.conecta-apps-header{padding:19px 18px}.conecta-apps-header nav{gap:12px;font-size:12px}.conecta-apps-main{padding:27px 16px 40px}.conecta-apps-intro{margin-bottom:26px}.conecta-apps-intro h1{font-size:40px}.conecta-apps-intro p{font-size:13px}.conecta-apps-grid{grid-template-columns:1fr;gap:17px}.conecta-apps-card{padding:25px 21px;border-radius:20px}.conecta-apps-card h2{font-size:24px}.conecta-apps-safety{padding:16px}}
