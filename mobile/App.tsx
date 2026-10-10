@@ -66,6 +66,25 @@ function SignIn({onSignedIn}:{onSignedIn:()=>void}){
  const [password,setPassword]=useState('');
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
+ const [recoverOpen,setRecoverOpen]=useState(false);
+ const [recoverEmail,setRecoverEmail]=useState('');
+ const [recoverSent,setRecoverSent]=useState(false);
+ const recover=async()=>{
+  const address=recoverEmail.trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)){
+   setError('Informe um e-mail válido.');return;
+  }
+  if(busy)return;
+  setBusy(true);setError('');
+  try{
+   const {error:resetError}=await supabase.auth.resetPasswordForEmail(address,{
+    redirectTo:SITE_URL+'/auth/callback?next=/auth/redefinir-senha'
+   });
+   if(resetError)throw resetError;
+   setRecoverSent(true);
+  }catch(e){setError(errorMessage(e));}
+  finally{setBusy(false);}
+ };
  const login=async()=>{
   if(!email.trim()||password.length<8){setError('Informe seu e-mail e senha (mínimo de 8 caracteres).');return;}
   setBusy(true);setError('');
@@ -102,7 +121,45 @@ function SignIn({onSignedIn}:{onSignedIn:()=>void}){
    <Action fullWidth disabled={busy} label={busy?'Entrando...':'Entrar no Conecta'}
     leading={<ChevronRight size={18} color="#FFF"/>} onPress={()=>void login()}/>
    <View style={{height:11}}/>
+   <Action secondary label="Esqueci minha senha"
+    onPress={()=>{setRecoverOpen(true);setRecoverEmail(email);setRecoverSent(false);setError('');}}/>
+   <View style={{height:10}}/>
    <Action secondary label="Criar conta com proteção por idade" onPress={()=>void openOfficial('/auth?mode=signup')}/>
+   <Modal visible={recoverOpen} animationType="slide"
+    onRequestClose={()=>setRecoverOpen(false)}>
+    <SafeAreaProvider>
+     <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
+      <ScrollView keyboardShouldPersistTaps="handled"
+       contentContainerStyle={{padding:21,paddingTop:28,gap:10}}>
+       <View style={[s.row,{justifyContent:'space-between'}]}>
+        <Text style={{fontSize:23,fontWeight:'900',color:t.dark}}>Recuperar senha</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Fechar recuperação"
+         onPress={()=>setRecoverOpen(false)}><X size={25} color={t.dark}/></Pressable>
+       </View>
+       <Text style={s.sub}>Enviaremos um link protegido para seu e-mail.
+        A redefinição é concluída pelo Conecta Web.</Text>
+       {recoverSent?<View style={s.card}>
+        <Text style={s.primaryText}>Confira sua caixa de entrada</Text>
+        <Text style={s.muted}>Se o e-mail estiver cadastrado, você receberá
+         instruções para criar uma nova senha.</Text>
+        <Action secondary label="Voltar ao login"
+         onPress={()=>setRecoverOpen(false)}/>
+       </View>:<>
+        <Text style={s.primaryText}>E-mail cadastrado</Text>
+        <TextInput value={recoverEmail} onChangeText={setRecoverEmail}
+         autoCapitalize="none" keyboardType="email-address"
+         autoComplete="email" accessibilityLabel="E-mail de recuperação"
+         placeholder="seuemail@exemplo.com" placeholderTextColor={t.muted}
+         style={s.input}/>
+        <ErrorNotice text={error}/>
+        <Action fullWidth disabled={busy}
+         label={busy?'Enviando...':'Enviar link de recuperação'}
+         onPress={()=>void recover()}/>
+       </>}
+      </ScrollView>
+     </SafeAreaView>
+    </SafeAreaProvider>
+   </Modal>
    <Text style={[s.muted,{textAlign:'center',marginTop:13}]}>
     O cadastro e a verificação de idade utilizam o processo protegido do Conecta.
    </Text>
