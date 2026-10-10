@@ -42,6 +42,7 @@ import {ExploreScreen} from './src/explore-ui';
 import {ProfileDetailsEditor} from './src/profile-details-ui';
 import {NativePermissionsCenter} from './src/permissions-ui';
 import {NativeForegroundNotificationBridge} from './src/native-notifications';
+import {unregisterRemotePush} from './src/remote-push';
 import {MediaGallery} from './src/media-gallery';
 import {parseConectaLink} from './src/deep-link';
 import type {PinnedChatMessage} from './src/chat-groups';
@@ -1849,6 +1850,8 @@ export default function App(){
   return()=>{app.remove();void supabase.removeChannel(channel);};
  },[user?.id,restricted,refreshUnread]);
  const logout=async()=>{
+  if(user)try{await unregisterRemotePush(user.id);}
+  catch{Alert.alert('Avisos remotos','Não foi possível retirar o dispositivo da lista de avisos. A sessão será encerrada; revise as notificações deste aparelho.');}
   await supabase.auth.signOut();clearMediaCache();setTab('feed');setChatId(null);
   setUnreadCount(0);setUser(null);setProfile(null);setRestricted(null);
  };
@@ -1889,7 +1892,8 @@ export default function App(){
  return <SafeAreaProvider>
   <NativeVersionMonitor/>
   {user&&!restricted&&<NativeForegroundNotificationBridge userId={user.id}
-   onOpenNotifications={openNativeNotifications}/>}
+   onOpenNotifications={openNativeNotifications}
+   onOpenMessages={()=>{setViewPostId(null);setChatId(null);setTab('messages');}}/>}
   <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
   <StatusBar style="dark" hidden={Platform.OS==='android'}/>
   {Platform.OS==='android'&&<NavigationBar hidden style="light"/>}
