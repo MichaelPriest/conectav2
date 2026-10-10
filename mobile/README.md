@@ -492,3 +492,54 @@ A CI aprovada não é prova de instalação bem-sucedida no aparelho.
 
 **Nota**: a aprovação da CI comprova testes de código, não testes reais
 de permissões, entrega por push, assinatura e instalação de APK.
+
+## Alpha 0.7.1 — push remoto e permissão real de gravação
+
+- Corrigido o conflito entre o plugin Expo ImagePicker e Expo Audio: o
+  `microphonePermission: false` removia `RECORD_AUDIO` no APK final,
+  apesar de o app possuir mensagens de voz. A permissão permanece no
+  manifesto Android e só é solicitada **em tempo de uso**.
+- A CI agora audita as permissões **do APK compilado**, verifica a assinatura
+  Android por `apksigner` e registra seu hash SHA-256. Os artefatos do
+  GitHub Actions continuam sendo apenas para **homologação**.
+- O push de mensagens agora possui registro e exclusão por usuário autenticado
+  em `/api/mobile/push/devices`, tokens privados em
+  `public.mobile_push_devices` (RLS habilitado; apenas service role acessa)
+  e entrega de avisos genéricos pelo Expo Push no dispatcher Web existente.
+  O mesmo webhook HMAC e as regras de participação, bloqueio, silêncio e
+  leitura anterior continuam sendo usados. **Nenhum texto do chat** é enviado
+  como notificação.
+- O app abre a tela de conversas ao tocar um aviso remoto e retira seu
+  dispositivo da lista na opção desativar notificações/logout. Os avisos
+  locais em primeiro plano continuam independentes do push remoto.
+
+### O que falta configurar para entrega real em segundo plano
+
+1. Associar um projeto Expo/EAS ao app e configurar as credenciais oficiais
+   **Firebase Cloud Messaging HTTP v1 (Android)** e **APNs (iOS)**;
+   sem elas o SDK não emite um token utilizável no APK.
+2. Definir `CONECTA_EXPO_PROJECT_ID` como **GitHub Actions Variable** da
+   build Android ou `EXPO_PUBLIC_EAS_PROJECT_ID` no ambiente de build.
+   O ID do projeto é público; nunca coloque credenciais FCM/APNs no cliente.
+3. Configurar no servidor de entrega do Conecta `EXPO_ACCESS_TOKEN`
+   como segredo (não `NEXT_PUBLIC_*` nem `EXPO_PUBLIC_*`).
+   Se a conta Expo utilizar segurança aprimorada, este token é obrigatório.
+4. Garantir que o deploy Web atualizado tenha a rota
+   `/api/mobile/push/devices`, `SUPABASE_SECRET_KEY` e chave pública
+   do projeto; ativar/verificar o webhook HMAC já existente no Supabase.
+   A tabela `mobile_push_devices` foi adicionada na migração
+   `20261010033000_conecta_mobile_push_devices.sql`.
+5. Testar em **dois aparelhos físicos**: registrar, reiniciar, receber
+   com o app fechado, silenciar, bloquear, trocar de usuário e efetuar
+   logout, confirmando que o token da conta anterior não recebe alertas.
+   Monitorar tickets e recibos do Expo para revogar tokens expirados.
+
+Enquanto o projeto Expo ou as credenciais de envio não estiverem
+configurados, a central de permissões indica que o push remoto está pendente;
+ela **não** anuncia recebimento em segundo plano como pronto. Os alertas
+locais exigem uma escolha explícita do usuário.
+
+O atualizador por APK continua condicionado à assinatura permanente, tag
+de versão e Release oficial. Instalar um APK de homologação com chave de
+teste não equivale à liberação de atualização automática, nem é um
+substituto para uma distribuição Google Play/App Store.
