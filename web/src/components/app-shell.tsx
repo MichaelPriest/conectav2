@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Bell, Bookmark, Compass, Clapperboard, Home, LogOut, Menu, MessageCircle, Moon, Plus, Search, Settings, Sun, Users, X, PanelLeftClose, PanelLeftOpen, HeartHandshake, ShieldCheck } from 'lucide-react';
+import { Bell, Bookmark, Compass, Clapperboard, Home, LogOut, Menu, MessageCircle, Moon, Plus, Search, Settings, Sun, Users, X, PanelLeftClose, PanelLeftOpen, HeartHandshake, ShieldCheck, Smartphone } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/lib/types';
 import { supabaseBrowser } from '@/lib/supabase/browser';
@@ -169,6 +169,11 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
           <Icon size={20} strokeWidth={1.9}/><span>{t(({'Início':'home','Explorar':'explore','Reels':'reels','Comunidades':'communities','Acolhimento':'support','Conexões':'connections','Notificações':'notifications','Mensagens':'messages','Perfil':'profile','Publicar':'post'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')}</span>
           {label==='Notificações' && unread>0 && <span className="concept-nav-count">{unread>99?'99+':unread}</span>}
         </Link>)}
+        <Link href="/apps" title="Baixar aplicativos Android e iPhone" onClick={()=>setMobileNav(false)}
+          aria-current={pathname==='/apps'?'page':undefined}
+          className={'nav-link '+(pathname==='/apps'?'nav-active':'')}>
+          <Smartphone size={20} strokeWidth={1.9}/><span>Baixar aplicativo</span>
+        </Link>
         <Link href="/apoiar" title="Apoie o Conecta" onClick={()=>setMobileNav(false)}
           aria-current={pathname==='/apoiar'?'page':undefined}
           className={'nav-link '+(pathname==='/apoiar'?'nav-active':'')}>
