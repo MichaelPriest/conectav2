@@ -22,3 +22,13 @@ export function mergeChatReactionPages(
   map.set([reaction.message_id,reaction.user_id,reaction.emoji].join(':'),reaction);
  return [...map.values()];
 }
+
+/** Refresh only reactions belonging to the fetched page; deletions must disappear. */
+export function refreshChatReactionPage(
+ current:ChatReaction[],incoming:ChatReaction[],messageIds:string[]
+):ChatReaction[]{
+ const scoped=new Set(messageIds);
+ return mergeChatReactionPages(
+  current.filter(reaction=>!scoped.has(reaction.message_id)),incoming
+ );
+}
