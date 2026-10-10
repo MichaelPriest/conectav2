@@ -4,8 +4,11 @@ export type LinkedMedia={
 };
 const HTTPS=/https:\/\/[^\s<>"'\u0000-\u001f]+/gi;
 function valid(url:URL):boolean{
+ const host=url.hostname.toLowerCase();
  return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&
-   url.href.length<=1600;
+   url.href.length<=1600&&host.includes('.')&&!host.startsWith('[')&&
+   host!=='localhost'&&!host.endsWith('.localhost')&&!host.endsWith('.local')&&
+   !/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(host);
 }
 /** Only permitted audio/video URLs are offered. Nothing loads from third parties
  * until the person explicitly opens/plays a link. No arbitrary iframe HTML. */
