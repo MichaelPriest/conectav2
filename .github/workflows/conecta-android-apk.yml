@@ -1,19 +1,11 @@
-# Homologação Alpha 0.7.2: Explorar, perfis, mídia, permissões mínimas e avisos opt-in.
+# Homologação Alpha 0.7.2: feed multimídia, imagens privadas, chamadas WebRTC e permissões.
 name: Conecta V2 · Android APK de testes
 on:
   push:
     branches: [main]
     paths:
       - '.github/workflows/conecta-android-apk.yml'
-      - 'mobile/app.json'
-      - 'mobile/app.config.js'
-      - 'mobile/package.json'
-      - 'mobile/src/voice-ui.tsx'
-      - 'mobile/src/native-notifications.tsx'
-      - 'mobile/src/permissions-ui.tsx'
-      - 'mobile/src/remote-push.ts'
-      - 'mobile/tests/native-contract.test.cjs'
-      - 'mobile/tests/native-features-v07.test.cjs'
+      - 'mobile/**'
   workflow_dispatch:
 
 concurrency:
