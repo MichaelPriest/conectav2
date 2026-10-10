@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import './concept.css';
 import './landing-v3.css';
+import './apps.css';
 import './experience.css';
 import './auth-concept.css';
 import './monetization.css';
