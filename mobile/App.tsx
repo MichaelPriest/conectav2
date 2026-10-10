@@ -1,10 +1,12 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {
  Alert,AppState,FlatList,Image,KeyboardAvoidingView,Linking,Modal,Platform,Pressable,Share,
- RefreshControl,SafeAreaView,ScrollView,StatusBar as NativeStatusBar,
+ RefreshControl,ScrollView,StatusBar as NativeStatusBar,
  StyleSheet,Text,TextInput,View
 } from 'react-native';
 import {StatusBar} from 'expo-status-bar';
+import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
+import {NavigationBar} from 'expo-navigation-bar';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {User} from '@supabase/supabase-js';
@@ -871,8 +873,10 @@ export default function App(){
   if(tab==='notifications')return <NotificationsScreen userId={user.id} onRead={()=>void refreshUnread(user.id)}/>;
   return <ProfileScreen profile={profile} onUpdate={setProfile} onLogout={()=>void logout()}/>;
  };
- return <SafeAreaView style={s.page}>
-  <StatusBar style="dark"/>
+ return <SafeAreaProvider>
+  <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
+  <StatusBar style="dark" hidden={Platform.OS==='android'}/>
+  {Platform.OS==='android'&&<NavigationBar hidden style="light"/>}
   {booting?<View style={{flex:1,justifyContent:'center'}}><Loading text="Preparando seu Conecta..."/></View>:
    !user?<SignIn onSignedIn={()=>void verify()}/>:
    restricted?<Restricted status={restricted}
@@ -904,8 +908,10 @@ export default function App(){
     {render()}
     <BottomNavigation tab={tab} onNavigate={navigate}/>
    </>}
-  <NativeStatusBar barStyle="dark-content" backgroundColor={t.surface}/>
- </SafeAreaView>;
+  {Platform.OS!=='android'&&
+   <NativeStatusBar barStyle="dark-content" backgroundColor={t.surface}/>}
+ </SafeAreaView>
+ </SafeAreaProvider>;
 }
 const a=StyleSheet.create({
  auth:{flexGrow:1,backgroundColor:t.bg,justifyContent:'center',padding:20},
