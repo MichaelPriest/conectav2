@@ -50,7 +50,7 @@ import {parseConectaLink} from './src/deep-link';
 import type {PinnedChatMessage} from './src/chat-groups';
 import {
  Bell,BellOff,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
- MoreHorizontal,Plus,Search,Send,ShieldCheck,Sparkles,UsersRound,Video,
+ MoreHorizontal,Plus,Search,Send,ShieldCheck,Sparkles,UsersRound,Phone,Video,
  X,Globe2,LockKeyhole,UserRound,ChevronRight,ChevronLeft,Pencil,Share2,HeartHandshake,Trash2,Pin,Settings2
 } from 'lucide-react-native';
 import {BottomNavigation,Brand,FeedTabs,GradientPanel,RoundIcon,
