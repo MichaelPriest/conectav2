@@ -40,8 +40,8 @@ export function AudioMessage({path}:{path:string}){
 }
 
 /** Record only while the person actively holds the chat screen open. */
-export function VoiceRecorder({conversationId,userId,onSent}:{
- conversationId:string;userId:string;onSent:()=>void;
+export function VoiceRecorder({conversationId,userId,replyTo,onSent}:{
+ conversationId:string;userId:string;replyTo?:string|null;onSent:()=>void;
 }){
  const recorder=useAudioRecorder(RecordingPresets.HIGH_QUALITY);
  const status=useAudioRecorderState(recorder);
@@ -59,7 +59,7 @@ export function VoiceRecorder({conversationId,userId,onSent}:{
    setRecording(false);
    if(send){
     if(!uri)throw new Error('A gravação não foi salva no dispositivo.');
-    await sendVoiceMessage(conversationId,userId,uri);
+    await sendVoiceMessage(conversationId,userId,uri,replyTo||null);
     onSent();
    }
   }catch(e){setError(describe(e));}
