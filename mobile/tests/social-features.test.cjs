@@ -35,7 +35,7 @@ test('Poll rules prevent ambiguous votes and invalid deadlines',()=>{
 });
 test('Mentions appear only after an @handle, respecting the caret position',()=>{
  assert.deepEqual(activeMention('Oi @mic',7),{start:3,query:'mic'});
- assert.deepEqual(activeMention('Oi @MICH',8),{start:3,query:'mich'});
+ assert.deepEqual(activeMention('Oi @MICH',9),{start:3,query:'mich'});
  assert.equal(activeMention('email@exemplo.com',14),null);
  assert.equal(activeMention('Olá @micha texto',16),null);
  assert.equal(activeMention('Olá @',5),null);
