@@ -5,12 +5,13 @@
  * Actions artifacts as automatic-update downloads. Only a published, versioned
  * release APK under our repository may be offered to an Android device.
  */
-export type ReleaseAsset={name:string;browser_download_url:string;size?:number};
+export type ReleaseAsset={name:string;browser_download_url:string;size?:number;digest?:string|null};
 export type MobileRelease={
- tag_name:string;draft:boolean;prerelease?:boolean;published_at?:string|null;
+ tag_name:string;draft:boolean;prerelease?:boolean;published_at?:string|null;body?:string|null;
  assets:ReleaseAsset[];html_url?:string
 };
-export type AvailableUpdate={version:string;url:string;notes:string};
+export type AvailableUpdate={version:string;url:string;notes:string;
+ channel?:'android'|'ios';sha256?:string|null;size?:number|null;};
 
 export function versionParts(value:string):{major:number;minor:number;patch:number;pre:string|null}|null{
  const match=/^v?(\d+)\.(\d+)\.(\d+)(?:-([a-z0-9.-]+))?(?:\+[a-z0-9.-]+)?$/i.exec(value.trim());
@@ -41,7 +42,6 @@ export function compareVersions(left:string,right:string):number{
  }
  return 0;
 }
-const PREFIX='https://github.com/MichaelPriest/conectav2/releases/download/';
 export function trustedAndroidApk(url:string):boolean{
  try{
   const parsed=new URL(url);
@@ -63,15 +63,23 @@ export function chooseAndroidUpdate(
   if(release.draft||typeof release.tag_name!=='string'||!Array.isArray(release.assets))continue;
   const tag=/^mobile-v(\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?)$/i.exec(release.tag_name);
   if(!tag||!versionParts(tag[1])||compareVersions(tag[1],installedVersion)<=0)continue;
-  const asset=release.assets.find(a=>a&&typeof a.name==='string'&&
-   /^conecta-v2-android-[a-z0-9.-]+\.apk$/i.test(a.name)&&
-   typeof a.browser_download_url==='string'&&trustedAndroidApk(a.browser_download_url)&&
-   // An actual Android binary, not a placeholder or suspiciously small file.
-   typeof a.size==='number'&&a.size>=2_000_000);
+  const filename='conecta-v2-android-'+tag[1]+'.apk';
+  const expectedPath='/MichaelPriest/conectav2/releases/download/'+release.tag_name+'/'+filename;
+  const asset=release.assets.find(a=>{
+   if(!a||typeof a.name!=='string'||a.name!==filename||
+      typeof a.browser_download_url!=='string'||!trustedAndroidApk(a.browser_download_url)||
+      typeof a.size!=='number'||a.size<2_000_000||a.size>250_000_000)return false;
+   try{return new URL(a.browser_download_url).pathname===expectedPath;}
+   catch{return false;}
+  });
   if(!asset)continue;
   if(!best||compareVersions(tag[1],best.version)>0){
+   const hash=typeof asset.digest==='string'&&/^sha256:[a-f0-9]{64}$/i.test(asset.digest)
+    ?asset.digest.slice(7).toLowerCase():null;
    best={version:tag[1],url:asset.browser_download_url,
-    notes:'Uma nova versão instalável do Conecta está disponível.'};
+    size:asset.size,sha256:hash,channel:'android',
+    notes:typeof release.body==='string'&&release.body.trim()
+     ?release.body.trim().slice(0,850):'Uma nova versão instalável do Conecta está disponível.'};
   }
  }
  return best;
@@ -96,7 +104,7 @@ export function chooseIosUpdate(data:unknown,installedVersion:string):AvailableU
    const url=new URL(app.trackViewUrl);
    if(url.protocol!=='https:'||url.hostname!=='apps.apple.com'||
       !/\/id\d+/.test(url.pathname)||url.username||url.password)return null;
-   return {version:app.version,url:app.trackViewUrl,
+   return {version:app.version,url:app.trackViewUrl,channel:'ios',
     notes:'Uma nova versão do Conecta está disponível na App Store.'};
   }catch{return null;}
  }
