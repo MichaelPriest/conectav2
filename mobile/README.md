@@ -353,3 +353,38 @@ paralelo e sem remover a interface nativa introduzida na 0.4.0.
 **Ainda não implementados:** chamadas WebRTC de áudio/vídeo nativas
 e notificações push Android/iOS em segundo plano. Esses componentes
 exigem dispositivos de teste, credenciais de push e TURN operacional.
+
+## Distribuição automática futura — GitHub Releases assinadas
+
+O repositório passou a incluir `.github/workflows/conecta-mobile-release.yml`.
+Este workflow **não é executado a cada push normal**: só é ativado por
+uma tag explícita `mobile-vX.Y.Z`, que precisa apontar para a `main` e
+corresponder às versões declaradas em `mobile/app.json` e
+`mobile/package.json`.
+
+Para gerar APKs que atualizem uma instalação anterior **sem desinstalar**,
+precisamos configurar os quatro secrets do GitHub Actions uma única vez:
+
+- `CONECTA_ANDROID_KEYSTORE_BASE64`: conteúdo base64 do keystore Android
+  **permanente**, em vez da chave efêmera das builds de teste.
+- `CONECTA_ANDROID_KEYSTORE_PASSWORD`: senha do keystore.
+- `CONECTA_ANDROID_KEY_ALIAS`: alias da chave.
+- `CONECTA_ANDROID_KEY_PASSWORD`: senha da chave.
+
+Nunca guardar essas credenciais no código, nas issues ou no APK.
+O arquivo JKS é reconstruído apenas no executor de build, com permissão
+restrita. A publicação **falha de propósito** se faltar qualquer secret:
+não cria uma release com um instalador assinado em modo debug.
+
+Após configurar as credenciais e testar a migração de assinatura, a
+pessoa mantenedora poderá criar uma tag `mobile-v0.6.0` para publicar
+uma GitHub Release com um único APK chamado
+`conecta-v2-android-0.6.0.apk`. Essa é exatamente a origem aceita
+pelo verificador incluído no aplicativo desde a 0.5.1.
+
+**Nenhuma tag oficial foi criada nem uma chave de distribuição inventada
+nesta rodada.** Se um APK anterior foi instalado com outra assinatura,
+o Android não permite a atualização sobre a instalação existente.
+Será necessária uma migração orientada ou reinstalação, que poderá
+apagar dados locais não sincronizados. As contas e publicações persistem
+no Supabase, mas rascunhos locais devem ser preservados antes disso.
