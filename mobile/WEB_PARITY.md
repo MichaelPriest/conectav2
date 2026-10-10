@@ -1,35 +1,35 @@
 # Conecta V2 — auditoria de paridade Web × Mobile
 
-Estado auditado: branch `main`, aplicativo Alpha 0.5.0, em 09/10/2026.
+Estado auditado: branch `main`, aplicativo Alpha 0.6.1, em 09/10/2026 (validação automatizada).
 Fonte: arquivos reais sob `web/src/app`, `web/src/components`,
 `mobile/App.tsx` e `mobile/src`. **Não** é uma lista de recursos
 homologados em dispositivos: a CI só verifica contratos e compilação.
 
 | Área | Web de referência | Situação no app | Próxima entrega |
 |---|---|---|---|
-| Acesso / sessão | `auth/page.tsx` | Básico pronto | Cadastro, recuperar e redefinir senha nativos |
+| Acesso / sessão | `auth/page.tsx` | Login e solicitação nativa de recuperação; redefinição segura pelo Web | Cadastro e conclusão nativa de recuperação |
 | Cadastro / Conecta ID | `onboarding`, `verificar-identidade` | Apenas encaminha ao site | Fluxos nativos protegidos, CIN QR, RG e gov.br |
 | Feed e publicação | `feed/page.tsx` | Texto, foto, vídeo, salvos, rascunhos, enquetes | Músicas incorporadas, refinamento de menções |
 | Comentários | `post-card.tsx` | Comentar e responder | Ligação com perfis, recursos/revisão quando rejeitado |
 | Publicações próprias | `perfil`, `profile-timeline` | Timeline e exclusão básica | Página nativa individual de post e compartilhamento via link profundo |
 | Galeria / mídia | `post-card.tsx` | Grade e vídeo | Visualizador em tela cheia com swipe, zoom e navegação |
-| Pessoas / conexões | `conexoes/page.tsx` | Amizades, convites recebidos, descoberta | Convites enviados, perfis públicos completos e bloqueio/desbloqueio |
+| Pessoas / conexões | `conexoes/page.tsx` | Amizades, convites recebidos/enviados, descoberta e bloqueio/desbloqueio | Perfis públicos completos e filtros avançados |
 | Descoberta global | `explorar/page.tsx` | Busca de pessoas e comunidades em áreas distintas | Busca unificada: pessoas, comunidades, posts, vídeos |
 | Perfis | `perfil/page.tsx`, `p/[handle]` | Editar nome/bio, foto/capa, posts próprios | @handle, headline, localização, site, interesses, emoji, humor |
 | Identidade MySpace | `myspace-panel`, `music-embed` | Ausente | Layout/tema, música, MySpace e presença social |
 | Comunidades | `comunidades/[slug]/page.tsx` | Entrar/sair/criar/ver regras/posts/votar | Alterar dados/capa/avatar e controles do proprietário |
 | Administração de comunidades | `comunidades/[slug]/moderar` | Ausente | Moderadores, cargos, denúncias, banimento, termos de revisão |
-| Chat privado e grupos | `mensagens/page.tsx` | Inbox, mensagens/mídias/áudio, reply, reactions, editar/apagar, buscar | Criar grupos, convites, cargos, membro/papel, conversa arquivada |
-| Conversas avançadas | `mensagens/page.tsx` | Leitura e paginação | Digitando, online/ausente, silenciar, fixar mensagem, recibos por participante |
+| Chat privado e grupos | `mensagens/page.tsx` | Inbox, mídias/áudio, resposta, reações, busca, grupos com convites/cargos/permissões | Conversas arquivadas e sincronização avançada |
+| Conversas avançadas | `mensagens/page.tsx` | Digitação, presença opt-in, silenciar e fixar mensagens | Recibos avançados por participante e notificações push |
 | Chamadas WebRTC | `chat-calls.tsx` | Ausente | Áudio e vídeo no game app, chamada recebida, toque, perdido, TURN |
 | Notificações | `notificacoes/page.tsx`, `chat-push-control` | Lista e badge em primeiro plano | Push Android/iOS em segundo plano, deep-links dos alertas |
 | Stories | `story-ui` e `stories` | Captura, visualização, publicação, exclusão | Alinhar visualizações e interações específicas do site |
 | Reels | `reels/page.tsx` | Visualizar, curtir e compartilhar | Tela de criação nativa contextual e navegação ao post/comentários |
 | Moderação geral | `moderacao/page.tsx` | Somente denunciar; bloqueios continuam no servidor | Central administrativa, fila de denúncias, decisão/recurso |
-| Segurança pessoal | `p/[handle]/page.tsx` | Sem interface de bloqueios | Bloquear/desbloquear pessoas e gerenciar privacidade |
+| Segurança pessoal | `p/[handle]/page.tsx` | Bloquear/desbloquear pessoas na descoberta | Controles completos de privacidade e perfil público |
 | Espaço de apoio | `acolhimento/page.tsx` | Ausente | Área de mães atípicas / acolhimento e modo calmo |
 | Publicidade discreta | `feed/page.tsx` e outros componentes web | Sem espaços publicitários no nativo | Modelo discreto com conformidade Play/App Store |
-| Atualizações | `mobile/src/update-ui.tsx` | Verificação Android/iOS ao abrir | Publicação de versões estáveis e mesma assinatura Android, OTA EAS |
+| Atualizações | `mobile/src/update-ui.tsx` | Verificação e download nativo Android com SHA-256, progresso e instalação confirmada; iOS via App Store | Release oficial, keystore permanente, homologação real e OTA EAS |
 | Distribuição de loja | `mobile/eas.json` | APK Alpha para testes | Google Play, App Store, assinatura definitiva, políticas e testes físicos |
 
 ## Próximas prioridades
@@ -42,8 +42,8 @@ homologados em dispositivos: a CI só verifica contratos e compilação.
 5. Homologação de conteúdo, moderação, segurança e UX em Android/iOS reais.
 
 **P1 — Paridade social**
-6. Gerenciamento de grupos (criar, convidar, membros/cargos), typing, presença e silenciar/fixar.
-7. Perfis públicos e bloqueio/desbloqueio nativos, busca global, notificações clicáveis.
+6. Aperfeiçoar grupos já implementados: arquivamento, recibos, sincronização completa e QA.
+7. Perfis públicos completos, busca global e notificações clicáveis.
 8. Personalização de perfis (temas, música, MySpace), mídia em tela cheia.
 9. Administração de comunidades e envio de capa/avatar.
 
@@ -58,13 +58,18 @@ A partir da versão que incorporar o verificador
 (`mobile/src/update-ui.tsx`), no Android o app consultará ao iniciar e
 retomar a frente as releases **públicas, não draft** do repositório GitHub.
 Somente uma release com tag `mobile-vX.Y.Z` contendo um arquivo
-`conecta-v2-android-<versão>.apk` de no mínimo 2 MB, e hospedado sob
+`conecta-v2-android-<versão>.apk` de 2–250 MB, e hospedado sob
 `github.com/MichaelPriest/conectav2/releases/download/`, é aceita.
 No iOS a consulta é feita à listagem oficial da App Store pelo bundle ID
 `br.com.conectav2.app`, quando o app for publicado lá.
 
 * Os artefatos do GitHub Actions **não** bastam: são temporários e o
   instalador só deve vir de uma release oficial.
+* Na Alpha 0.6.1, o app pode baixar o APK diretamente, mostrar progresso,
+  verificar seu tamanho e hash SHA-256 do GitHub e então abrir o instalador
+  do sistema. Sem hash, oferece somente o link externo oficial.
+* A distribuição Google Play não utiliza `REQUEST_INSTALL_PACKAGES`;
+  o canal `sideload` configura essa permissão separadamente.
 * O Android exige aprovação do usuário para instalar ou atualizar APK.
 * A atualização só instala por cima se a assinatura do novo APK for a
   mesma da versão anterior. Devemos definir um **keystore permanente**.
