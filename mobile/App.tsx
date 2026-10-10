@@ -20,6 +20,7 @@ import {formatDate,theme as t} from './src/theme';
 import {StoryRail} from './src/story-ui';
 import {VoiceRecorder} from './src/voice-ui';
 import {ChatBubble} from './src/chat-bubble';
+import {ChatSearch} from './src/chat-search';
 import {loadChatReactions} from './src/chat-actions';
 import {mergeChatPages,refreshChatReactionPage} from './src/chat-merge';
 import {sendChatMedia} from './src/chat-media';
@@ -479,6 +480,7 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  const [messages,setMessages]=useState<ChatMessage[]>([]);
  const [reactions,setReactions]=useState<ChatReaction[]>([]);
  const [replyTo,setReplyTo]=useState<ChatMessage|null>(null);
+ const [searchOpen,setSearchOpen]=useState(false);
  const activeRef=useRef<string|null>(active);
  const historyInitialized=useRef(false);
  const [hasOlder,setHasOlder]=useState(false);
@@ -533,7 +535,7 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
   historyInitialized.current=false;
   setHasOlder(false);
   if(!active)return;
-  setMessages([]);setReactions([]);setReplyTo(null);void loadMessages(active);
+  setMessages([]);setReactions([]);setReplyTo(null);setSearchOpen(false);void loadMessages(active);
   const channel=supabase.channel('conecta-mobile-thread-'+active)
     .on('postgres_changes',{event:'*',schema:'public',table:'messages',
      filter:'conversation_id=eq.'+active},()=>{void loadMessages(active);})
@@ -573,7 +575,13 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
    <Avatar path={selected?.other?.avatar_path} name={selected?.title||'Conversa'} size={36}/>
    <View style={s.grow}><Text numberOfLines={1} style={s.primaryText}>{selected?.title||'Conversa'}</Text>
     <Text style={s.muted}>{selected?.group?'Grupo do Conecta':'Chat privado e seguro'}</Text></View>
+   <Pressable accessibilityRole="button" accessibilityLabel="Pesquisar mensagens"
+    accessibilityState={{expanded:searchOpen}} onPress={()=>setSearchOpen(open=>!open)}>
+    <Text style={{fontSize:22,color:t.primary}}>⌕</Text>
+   </Pressable>
   </View>
+  {searchOpen&&<ChatSearch conversationId={active}
+   onReply={message=>setReplyTo(message)} onClose={()=>setSearchOpen(false)}/>}
   <ErrorNotice text={error}/>
   <FlatList style={{flex:1,paddingHorizontal:12}} inverted
    data={[...messages].reverse()} keyExtractor={m=>m.id}
