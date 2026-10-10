@@ -31,6 +31,12 @@ test('automatic PT-BR moderation screens ordinary and risky comments on the serv
   const {screenTextAutomatically}=await import(pathToFileURL(path.join(sourceDir,temporary[0])).href);
   const ordinary=screenTextAutomatically('Olá, adorei a postagem e desejo um ótimo dia.');
   assert.equal(ordinary.reviewRequired,false,'ordinary text should have an automatic path');
+  const music=screenTextAutomatically('Escutem https://open.spotify.com/track/3n3Ppam7vgaVa1iaRUc9Lp');
+  assert.equal(music.reviewRequired,false,'verified music links should not trigger URL-only review');
+  const video=screenTextAutomatically('Veja https://youtu.be/dQw4w9WgXcQ');
+  assert.equal(video.reviewRequired,false,'YouTube links alone do not require a human');
+  const fake=screenTextAutomatically('https://open.spotify.com.evil.test/track/3n3Ppam7vgaVa1iaRUc9Lp');
+  assert.equal(fake.reviewRequired,true,'lookalike streaming links remain suspicious');
   const contextual=screenTextAutomatically('Entre no site https://pagamento.exemplo agora');
   assert.equal(contextual.reviewRequired,true,'external links require a check');
   const threat=screenTextAutomatically('Eu vou te matar amanhã.');
