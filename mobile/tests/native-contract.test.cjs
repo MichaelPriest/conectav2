@@ -195,3 +195,13 @@ test('Chat pagination and server search preserve membership, order and privacy',
  assert.match(app,/ChatSearch conversationId=\{active\}/);
  assert.match(search,/searchChatMessages\(conversationId,query\)/);
 });
+
+test('Foreground notification badge reads private unread count and updates after marking read',()=>{
+ assert.match(data,/export async function unreadNotificationCount/);
+ assert.match(data,/\.select\('id',\{count:'exact',head:true\}\)/);
+ assert.match(data,/\.eq\('recipient_id',userId\)\.is\('read_at',null\)/);
+ assert.match(app,/conecta-mobile-unread-/);
+ assert.match(app,/if\(state==='active'\)void refreshUnread\(id\)/);
+ assert.match(app,/onRead:\(\)=>void/);
+ assert.match(app,/unreadCount>99\?'99\+':unreadCount/);
+});
