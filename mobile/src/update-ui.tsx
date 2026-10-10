@@ -36,6 +36,12 @@ export async function checkForNativeUpdate():Promise<AvailableUpdate|null>{
   });
   if(!response.ok)throw new Error('Não foi possível consultar versões do Conecta.');
   const records=await response.json();
+  // A successful HTTP response with no installable GitHub Release is not
+  // proof that the app is current. Actions artifacts are NOT an update feed.
+  if(!ios&&!chooseAndroidUpdate(records,'0.0.0'))
+   throw new Error('Ainda não existe uma versão Android instalável publicada em Releases. Os APKs de Actions não aparecem no atualizador.');
+  if(ios&&(!Array.isArray(records?.results)||records.results.length===0))
+   throw new Error('O Conecta ainda não está publicado na App Store para atualização automática.');
   return ios?chooseIosUpdate(records,installed):chooseAndroidUpdate(records,installed);
  }finally{clearTimeout(timeout);}
 }
