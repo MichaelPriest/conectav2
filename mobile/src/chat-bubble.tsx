@@ -9,9 +9,10 @@ import {theme as t} from './theme';
 type Props={
  message:ChatMessage;userId:string;quoted:ChatMessage|null;reactions:ChatReaction[];
  onReply:(message:ChatMessage)=>void;onChanged:()=>Promise<void>;
+ pinned?:boolean;onTogglePin?:(message:ChatMessage)=>void;
 };
 
-export function ChatBubble({message,userId,quoted,reactions,onReply,onChanged}:Props){
+export function ChatBubble({message,userId,quoted,reactions,onReply,onChanged,pinned,onTogglePin}:Props){
  const own=message.sender_id===userId;
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  const [editing,setEditing]=useState(false),[editText,setEditText]=useState('');
@@ -92,6 +93,13 @@ export function ChatBubble({message,userId,quoted,reactions,onReply,onChanged}:P
     disabled={busy} onPress={()=>setEmojiOpen(current=>!current)}>
     <Text style={{fontSize:12,color:secondaryColor,fontWeight:'700'}}>☺ Reagir</Text>
    </Pressable>
+   {!!onTogglePin&&<Pressable accessibilityRole="button"
+    accessibilityLabel={pinned?'Desafixar mensagem':'Fixar mensagem'}
+    disabled={busy} onPress={()=>onTogglePin(message)}>
+    <Text style={{fontSize:12,color:secondaryColor,fontWeight:'700'}}>
+     {pinned?'⌁ Desafixar':'⌁ Fixar'}
+    </Text>
+   </Pressable>}
    {own&&!!message.content&&<Pressable accessibilityRole="button" accessibilityLabel="Editar mensagem"
     disabled={busy} onPress={()=>{setEditText(message.content);setEditing(true);}}>
     <Text style={{fontSize:12,color:secondaryColor,fontWeight:'700'}}>Editar</Text>
