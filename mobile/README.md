@@ -293,3 +293,63 @@ Para atualizações JS sem APK, instalar/configurar `expo-updates`,
 associar um projeto EAS Update, configurar runtime/channel e validar
 rollback. A simples adição do verificador **não** instala pacotes
 nativos nem cria OTA.
+
+## Alpha 0.6.0 — Conversas, grupos e segurança de contas
+
+A 0.6.0 evolui as funcionalidades reais do Conecta Web, sem backend
+paralelo e sem remover a interface nativa introduzida na 0.4.0.
+
+- **Criar grupos:** selecione ao menos duas amizades aceitas,
+  dê um nome (2–80 caracteres) e abra o grupo nativo imediatamente.
+  Utiliza o RPC `create_conversation_with_members` do Web.
+- **Administrar grupos:** consultar integrantes, renomear (dono),
+  convidar amizades, promover/revogar coadministradores (dono),
+  configurar permissão de convite e remoção (dono), remover
+  integrantes conforme privilégios e sair do grupo (não proprietário).
+  Todas as ações passam pelos RPCs e RLS existentes; não há elevação
+  de privilégios pelo cliente.
+- **Chat avançado:** fixar e desafixar mensagens, exibir até três
+  mensagens fixadas e silenciar/desfazer silenciamento por 30 dias.
+  A preferencia de silenciamento é gravada em `conversation_members`.
+- **Indicador de digitação:** usa `set_chat_typing` e
+  `conversation_typing` com expiração no banco. O conteúdo digitado
+  **nunca** é enviado para a presença. O chat mostra quando outras
+  pessoas estão digitando; a presença é interrompida ao sair.
+- **Online opcional:** na caixa de entrada, a chave
+  "Mostrar meu status online" começa desligada. Quando ativada,
+  informa presença ao Supabase no aplicativo ativo. O usuário
+  pode desativá-la a qualquer momento e apagar o registro.
+- **Recuperação de senha:** formulário nativo envia e-mail pelo
+  `auth.resetPasswordForEmail`; o link conclui a troca de senha
+  no fluxo web protegido já existente. Não tenta redefinir por link
+  não verificado no app.
+- **Conexões:** agora também lista e permite cancelar os convites
+  enviados, além de bloquear e desbloquear outras pessoas. Controles
+  de bloqueio usam a tabela `user_blocks` e exigem confirmação.
+
+### Checklist de homologação 0.6.0
+
+1. Com três contas que sejam amizades aceitas, criar grupo no Android
+   e confirmar que aparece no Web para as três contas.
+2. Testar dono, coadministrador e participante simples em dois aparelhos;
+   garantir que o servidor bloqueia convite, remoção e alteração sem permissão.
+3. Convidar uma conexão aceita ao grupo, remover participante e sair do
+   grupo. Confirmar atualização no Web, inclusive histórico e acesso.
+4. Fixar/desafixar mensagens de outra conta; conferir sincronização
+   de três mensagens fixadas com o Web.
+5. Silenciar a conversa por 30 dias e reativar; verificar a preferência
+   no Web e no Android.
+6. Escrever/limpar mensagens e alternar chats; verificar "digitando" e
+   encerramento de presença ao enviar ou deixar a conversa.
+7. Ativar/desativar status online; garantir que começa **desligado**
+   em novas instalações e que o registro é removido ao desativar.
+8. Receber e cancelar um convite enviado; bloquear e desbloquear
+   usuários usando duas contas, sem expor o perfil bloqueado.
+9. Pedir recuperação de senha, abrir o e-mail e concluir a alteração
+   pelo domínio oficial, depois autenticar com a nova senha.
+10. Revalidar modo imersivo, ícone, safe-area, Feed, Stories, Reels,
+    comunidades, mídia e notificações da Alpha 0.5.1.
+
+**Ainda não implementados:** chamadas WebRTC de áudio/vídeo nativas
+e notificações push Android/iOS em segundo plano. Esses componentes
+exigem dispositivos de teste, credenciais de push e TURN operacional.
