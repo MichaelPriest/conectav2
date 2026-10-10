@@ -10,10 +10,16 @@
       },
       "ios": {
         "simulator": true
+      },
+      "env": {
+        "EXPO_PUBLIC_CONECTA_DISTRIBUTION": "sideload"
       }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_CONECTA_DISTRIBUTION": "play"
+      }
     }
   }
 }
