@@ -19,7 +19,7 @@ export function GradientPanel({children,style}:{
  children:React.ReactNode;style?:ViewStyle;
 }){
  return <View style={[design.gradient,style]}>
-  <Svg width="100%" height="100%" style={StyleSheet.absoluteFillObject}
+  <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}
    viewBox="0 0 400 215" preserveAspectRatio="xMidYMid slice" accessible={false}>
    <Defs>
     <LinearGradient id="conecta-panel" x1="0" y1="0" x2="1" y2="1">
@@ -43,7 +43,7 @@ export function Brand({compact=false,light=false}:{
  return <View style={design.brand}>
   <View style={[design.brandSymbol,compact&&{height:30,width:30,borderRadius:10}]}>
    <Svg width="100%" height="100%" viewBox="0 0 38 38"
-    style={StyleSheet.absoluteFillObject} accessible={false}>
+    style={StyleSheet.absoluteFill} accessible={false}>
     <Defs><LinearGradient id="logo" x1="0" y1="0" x2="1" y2="1">
      <Stop offset="0" stopColor="#8C58FF"/><Stop offset="1" stopColor="#49CCF5"/>
     </LinearGradient></Defs>
