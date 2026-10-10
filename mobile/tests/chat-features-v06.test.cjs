@@ -87,3 +87,20 @@ test('Recovery is native, but reset link uses authenticated web recovery callbac
  assert.match(read('src/data.ts'),/from\('user_blocks'\)/);
  assert.match(read('src/data.ts'),/blocker_id:userId,blocked_id:targetId/);
 });
+
+test('Opt-in chat presence shares only freshness, with manual privacy toggle',()=>{
+ const source=read('src/chat-presence.ts'),app=read('App.tsx');
+ assert.match(source,/ONLINE_WINDOW=90_000/);
+ assert.match(source,/POLL_INTERVAL=25_000/);
+ assert.match(source,/setEnabled\(false\)/);
+ assert.match(source,/AsyncStorage\.getItem\(storageKey\(userId\)\)/);
+ assert.match(source,/value==='1'/);
+ assert.match(source,/rpc\('touch_chat_presence'\)/);
+ assert.match(source,/from\('chat_user_presence'\)/);
+ assert.match(source,/\.delete\(\)\.eq\('user_id',userId\)/);
+ assert.match(source,/AppState\.currentState!=='active'/);
+ assert.match(source,/row\.user_id!==userId/);
+ assert.match(app,/useNativeChatPresence\(userId\)/);
+ assert.match(app,/presence\.onlineIds\.has\(item\.other\.id\)/);
+ assert.match(app,/presence\.toggle\(\)/);
+});
