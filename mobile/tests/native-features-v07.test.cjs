@@ -77,10 +77,15 @@ test('Permissions do not request location, contacts or microphone at launch',()=
  assert.ok(config.ios.infoPlist.NSCameraUsageDescription);
  assert.ok(config.ios.infoPlist.NSMicrophoneUsageDescription);
  assert.ok(config.ios.infoPlist.NSPhotoLibraryUsageDescription);
- const txt=JSON.stringify(config)+JSON.stringify(exp);
- for(const perm of ['ACCESS_FINE_LOCATION','READ_CONTACTS','READ_SMS','READ_CALL_LOG','SCHEDULE_EXACT_ALARM']){
-  assert.ok(!txt.includes(perm),perm);
+ const blocked=config.android.blockedPermissions;
+ for(const perm of ['ACCESS_FINE_LOCATION','ACCESS_BACKGROUND_LOCATION','READ_CONTACTS',
+  'READ_SMS','READ_CALL_LOG','SCHEDULE_EXACT_ALARM','SYSTEM_ALERT_WINDOW']){
+  assert.ok(blocked.includes('android.permission.'+perm),'Explicitly block '+perm);
+  assert.ok(!exp.android.permissions.includes('android.permission.'+perm),
+   'Never grant '+perm);
  }
+ assert.equal(config.android.allowBackup,false);
+ assert.equal(config.android.usesCleartextTraffic,false);
  assert.match(permissionUi,/requestCameraPermissionsAsync\(\)/);
  assert.match(permissionUi,/requestRecordingPermissionsAsync\(\)/);
  assert.match(permissionUi,/setNativeNotificationPreference\(userId,!notifyEnabled\)/);
