@@ -67,16 +67,31 @@ function SignIn({onSignedIn}:{onSignedIn:()=>void}){
   setBusy(false);
  };
  return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={a.auth}>
-  <View style={a.authArt}><Text style={a.authBrand}>conecta<Text style={{color:'#F6A5C5'}}>✳</Text></Text>
-   <Text style={a.authCopy}>Pessoas, ideias e comunidades em um lugar feito para pertencer.</Text>
-  </View>
+  <GradientPanel style={{minHeight:212,borderRadius:27,
+   justifyContent:'flex-start',paddingTop:28,paddingBottom:52}}>
+   <Brand light/>
+   <Text style={{fontSize:24,fontWeight:'900',color:'#FFFFFF',
+    marginTop:27,letterSpacing:-0.8,lineHeight:31}}>
+    Pertencer faz toda a diferença.
+   </Text>
+   <Text style={{color:'#F2EFFF',fontSize:13,lineHeight:20,marginTop:7,
+    maxWidth:285}}>Suas conversas, pessoas e comunidades em um só lugar.</Text>
+  </GradientPanel>
   <View style={a.authCard}>
-   <Text style={s.title}>Bem-vindo de volta</Text>
-   <Text style={[s.sub,{marginBottom:14}]}>Entre com a mesma conta do Conecta V2.</Text>
+   <View style={{flexDirection:'row',alignItems:'center',gap:8,marginBottom:9}}>
+    <View style={{backgroundColor:t.subtle,borderRadius:12,padding:10}}>
+     <HeartHandshake size={23} color={t.primary}/>
+    </View>
+    <View style={{flex:1}}>
+     <Text style={[s.title,{fontSize:22,lineHeight:29}]}>Bem-vindo de volta</Text>
+     <Text style={s.sub}>Sua comunidade está esperando.</Text>
+    </View>
+   </View>
    <Field value={email} onChangeText={setEmail} placeholder="Seu e-mail"/>
    <Field value={password} onChangeText={setPassword} placeholder="Sua senha" secureTextEntry/>
    <ErrorNotice text={error}/>
-   <Action disabled={busy} label={busy?'Entrando...':'Entrar no Conecta'} onPress={()=>void login()}/>
+   <Action fullWidth disabled={busy} label={busy?'Entrando...':'Entrar no Conecta'}
+    leading={<ChevronRight size={18} color="#FFF"/>} onPress={()=>void login()}/>
    <View style={{height:11}}/>
    <Action secondary label="Criar conta com proteção por idade" onPress={()=>void openOfficial('/auth?mode=signup')}/>
    <Text style={[s.muted,{textAlign:'center',marginTop:13}]}>
@@ -766,15 +781,37 @@ function CommunityScreen({userId}:{userId:string}){
    <Field value={query} onChangeText={setQuery} placeholder="Buscar comunidades"/>
    <ErrorNotice text={error}/></View>}
   renderItem={({item})=><View style={s.card}>
-   <View style={[a.communityCover,{marginBottom:12}]}>
-    <Text style={{fontSize:26}}>✳</Text><Text style={{color:'#FFF',fontWeight:'800',fontSize:12}}>CONECTA COMUNIDADES</Text>
+   {item.cover_path?<Media path={item.cover_path} height={153}
+    radius={15} marginTop={0}/>:
+    <GradientPanel style={{height:153,minHeight:153,marginBottom:7,
+     alignItems:'flex-start'}}>
+     <UsersRound size={29} color="#FFF"/>
+     <Text style={{fontSize:12,color:'#FFF',fontWeight:'800',marginTop:14}}>
+      CONECTA COMUNIDADES
+     </Text>
+    </GradientPanel>}
+   <View style={{flexDirection:'row',alignItems:'center',gap:10,marginTop:13}}>
+    {item.avatar_path?<Avatar path={item.avatar_path} name={item.name} size={49}/>:
+     <View style={{width:49,height:49,borderRadius:14,backgroundColor:t.subtle,
+      alignItems:'center',justifyContent:'center'}}>
+      <UsersRound size={22} color={t.primary}/>
+     </View>}
+    <View style={{flex:1}}>
+     <Text style={[s.primaryText,{fontSize:16}]}>{item.name}
+      {item.is_official?' ✦':''}</Text>
+     <Text style={s.muted}>{item.is_official?'Comunidade oficial':'Comunidade Conecta'}</Text>
+    </View>
    </View>
-   <Text style={s.primaryText}>{item.name} {item.is_official?'✦':''}</Text>
-   <Text style={[s.muted,{marginVertical:9}]}>{item.description||'Uma comunidade para compartilhar ideias.'}</Text>
-   <View style={[s.row,{gap:8}]}>
-    <Action label={joined.has(item.id)?'Participando ✓':'Participar'} secondary={joined.has(item.id)}
-     disabled={busy!==null} onPress={()=>void toggle(item)}/>
-    <Action secondary label="Explorar ↗" onPress={()=>void openOfficial('/comunidades/'+item.slug)}/>
+   <Text style={[s.muted,{marginVertical:12,fontSize:13,lineHeight:20}]}
+    numberOfLines={3}>{item.description||'Um espaço para compartilhar ideias e criar novas conexões.'}</Text>
+   <View style={[s.row,{gap:8,flexWrap:'wrap'}]}>
+    <Action label={joined.has(item.id)?'Participando ✓':'Participar'}
+     leading={<UsersRound size={16} color={joined.has(item.id)?t.primary:'#FFF'}/>}
+     secondary={joined.has(item.id)} disabled={busy!==null}
+     onPress={()=>void toggle(item)}/>
+    <Action secondary label="Explorar"
+     leading={<Compass color={t.primary} size={16}/>}
+     onPress={()=>void openOfficial('/comunidades/'+item.slug)}/>
    </View>
   </View>}
   ListEmptyComponent={!loading?<View style={s.empty}><Text style={s.muted}>Nenhuma comunidade encontrada.</Text></View>:<Loading/>}/>;
