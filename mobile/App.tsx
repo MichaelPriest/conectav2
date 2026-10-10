@@ -11,7 +11,7 @@ import type {User} from '@supabase/supabase-js';
 import {SITE_URL,supabase} from './src/supabase';
 import type {ChatMessage,ChatReaction,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './src/models';
 import {
- changeConnection,changeMembership,clearMediaCache,loadChatMessages,loadCommunities,
+ changeConnection,changeMembership,clearMediaCache,loadChatMessages,loadOlderChatMessages,loadCommunities,
  loadConnections,loadFeed,loadNotifications,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
  publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,startChat,updateMyProfile,verifyAccess
 } from './src/data';
@@ -21,6 +21,7 @@ import {StoryRail} from './src/story-ui';
 import {VoiceRecorder} from './src/voice-ui';
 import {ChatBubble} from './src/chat-bubble';
 import {loadChatReactions} from './src/chat-actions';
+import {mergeChatPages,mergeChatReactionPages} from './src/chat-merge';
 import {sendChatMedia} from './src/chat-media';
 import {changeProfilePhoto,loadCover} from './src/profile-media';
 import {ReelsScreen} from './src/reels-ui';
@@ -478,6 +479,10 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  const [messages,setMessages]=useState<ChatMessage[]>([]);
  const [reactions,setReactions]=useState<ChatReaction[]>([]);
  const [replyTo,setReplyTo]=useState<ChatMessage|null>(null);
+ const activeRef=useRef<string|null>(active);
+ const historyInitialized=useRef(false);
+ const [hasOlder,setHasOlder]=useState(false);
+ const [loadingOlder,setLoadingOlder]=useState(false);
  const [compose,setCompose]=useState(''),[busy,setBusy]=useState(false);
  const messageLength=compose.trim().length;
  const validMessage=messageLength>0&&messageLength<=4000;
@@ -490,10 +495,28 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
   try{
    const loaded=await loadChatMessages(id);
    const loadedReactions=await loadChatReactions(loaded);
-   setMessages(loaded);setReactions(loadedReactions);
+   if(activeRef.current!==id)return;
+   setMessages(previous=>mergeChatPages(previous,loaded,id));
+   setReactions(previous=>mergeChatReactionPages(previous,loadedReactions));
+   if(!historyInitialized.current){
+    historyInitialized.current=true;setHasOlder(loaded.length===60);
+   }
    await readConversation(id,userId);
-  }catch(e){setError(errorMessage(e));}
+  }catch(e){if(activeRef.current===id)setError(errorMessage(e));}
  },[userId]);
+ const loadOlder=async()=>{
+  if(!active||loadingOlder||!hasOlder||messages.length===0)return;
+  setLoadingOlder(true);setError('');
+  try{
+   const older=await loadOlderChatMessages(active,messages[0]);
+   const olderReactions=await loadChatReactions(older);
+   if(activeRef.current!==active)return;
+   setMessages(previous=>mergeChatPages(previous,older,active));
+   setReactions(previous=>mergeChatReactionPages(previous,olderReactions));
+   setHasOlder(older.length===60);
+  }catch(e){if(activeRef.current===active)setError(errorMessage(e));}
+  finally{setLoadingOlder(false);}
+ };
  useEffect(()=>{setActive(initialId);},[initialId]);
  useEffect(()=>{
   void loadInbox();
@@ -506,6 +529,9 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
   return()=>{clearInterval(timer);void supabase.removeChannel(channel);};
  },[loadInbox,userId]);
  useEffect(()=>{
+  activeRef.current=active;
+  historyInitialized.current=false;
+  setHasOlder(false);
   if(!active)return;
   setMessages([]);setReactions([]);setReplyTo(null);void loadMessages(active);
   const channel=supabase.channel('conecta-mobile-thread-'+active)
@@ -549,13 +575,18 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     <Text style={s.muted}>{selected?.group?'Grupo do Conecta':'Chat privado e seguro'}</Text></View>
   </View>
   <ErrorNotice text={error}/>
-  <FlatList style={{flex:1,paddingHorizontal:12}} data={messages} keyExtractor={m=>m.id}
+  <FlatList style={{flex:1,paddingHorizontal:12}} inverted
+   data={[...messages].reverse()} keyExtractor={m=>m.id}
    contentContainerStyle={{paddingVertical:15}}
    renderItem={({item})=><ChatBubble message={item} userId={userId}
     quoted={messages.find(m=>m.id===item.reply_to)||null}
     reactions={reactions.filter(reaction=>reaction.message_id===item.id)}
     onReply={message=>setReplyTo(message)}
     onChanged={async()=>{await loadMessages(active);await loadInbox();}}/>}
+   ListFooterComponent={hasOlder?<View style={{marginVertical:15,alignItems:'center'}}>
+    <Action secondary disabled={loadingOlder} label={loadingOlder?'Carregando...':'Carregar mensagens antigas'}
+     onPress={()=>void loadOlder()}/>
+   </View>:null}
    ListEmptyComponent={<Loading text="Esta conversa ainda não tem mensagens."/>}/>
   <View style={{backgroundColor:'white',padding:12,borderTopWidth:1,borderTopColor:t.line}}>
    {replyTo&&<View style={[s.row,{justifyContent:'space-between',gap:8,marginBottom:7}]}>
