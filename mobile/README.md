@@ -203,3 +203,57 @@ barra superior, sem esconder recursos existentes.
 
 A CI valida TypeScript, contratos do Supabase e recursos PNG. Homologação
 visual e das barras do Android exige o APK em dispositivo físico.
+
+## Alpha 0.5.0 — mais funcionalidades nativas
+
+Esta atualização preserva a UI 0.4.0 (cores, ícones, navegação,
+fullscreen e launcher) e substitui novos redirecionamentos ao navegador.
+
+### Comunidades
+
+- Diretório com busca e filtro de participação
+- Página nativa com capa, avatar, descrição, regras e número de membros
+- Entrada e saída de comunidades sob RLS do usuário autenticado
+- Publicações da comunidade com texto, fotos (até cinco), vídeo e enquetes
+- Feed paginado com curtidas, comentários, salvos e exclusão de posts próprios
+- Criação nativa de comunidades com nome, endereço (slug), descrição e regras
+- Moderação compartilhada com o site: nenhuma mídia recebe aprovação direta
+- Recursos administrativos avançados continuam disponíveis no site
+
+### Enquetes
+
+- Pergunta de 5 a 250 caracteres, 2 a 6 opções distintas (até 120 caracteres)
+- Encerramento em 1, 3, 7 ou 14 dias
+- Voto único conforme políticas do servidor; exibição de percentuais
+- Utiliza `post_polls`, `post_poll_options`, `post_poll_votes` e
+  `poll_results` já existentes, sem tabela paralela
+- Enquetes nos posts do feed e nas comunidades
+
+### Marcações, perfil e exclusão
+
+- Sugestões de `@usuário` por handle durante publicações, comentários,
+  respostas e mensagens privadas; buscas com debounce e limite de seis pessoas
+- Perfil exibe timeline pessoal, curtidas, comentários, salvos e histórico
+- Publicações próprias podem ser excluídas pelo aplicativo com confirmação,
+  filtragem por autor e limpeza das respectivas mídias no bucket
+
+### Homologação dos novos fluxos
+
+1. Criar uma comunidade, confirmar a entrada e abrir pelo app e pelo site.
+2. Entrar, sair e tentar publicar quando não for membro: o app e o RLS devem bloquear.
+3. Publicar texto, múltiplas fotos e vídeo numa comunidade; conferir no site.
+4. Testar moderação e visualização de conteúdo pendente apenas pelo autor.
+5. Criar enquetes no Feed e numa comunidade; votar em contas diferentes e
+   confirmar total e percentuais. Impedir segundo voto e prazo expirado.
+6. Testar pergunta curta, opções repetidas, mais de seis opções e texto longo.
+7. Digitar `@usuário` e escolher sugestão no Feed, comentários e chat;
+   confirmar o texto final e que não há consulta antes de dois caracteres.
+8. Excluir post próprio com mídia e confirmar remoção no site e no aplicativo.
+   Confirmar que não existe botão de exclusão em publicação de terceiro.
+9. Visualizar publicações próprias no perfil e carregar posts mais antigos.
+10. Testar a mesma versão com Android por gestos e por três botões, conferindo
+    o ícone, os recortes da câmera, a barra superior e a barra inferior.
+
+A aprovação dos testes automatizados **não substitui a homologação em
+dispositivos reais** nem indica que notificações push e chamadas WebRTC nativas
+estejam prontas.
