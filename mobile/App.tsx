@@ -564,7 +564,8 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
    if(result.canceled)return;
    const chosen=normalizeMedia(result.assets)[0];
    setBusy(true);
-   await sendChatMedia(active,userId,chosen);
+   await sendChatMedia(active,userId,chosen,replyTo?.id||null);
+   setReplyTo(null);
    await Promise.all([loadMessages(active),loadInbox()]);
   }catch(e){setError(errorMessage(e));}
   finally{setBusy(false);}
@@ -610,7 +611,8 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     <Action secondary disabled={busy} label="▶ Vídeo" onPress={()=>void attach('video')}/>
    </View>
    <VoiceRecorder conversationId={active} userId={userId}
-    onSent={()=>{void loadMessages(active);void loadInbox();}}/>
+    replyTo={replyTo?.id||null}
+    onSent={()=>{setReplyTo(null);void loadMessages(active);void loadInbox();}}/>
    <View style={[s.row,{gap:8}]}>
     <TextInput accessibilityLabel="Sua mensagem" value={compose} onChangeText={setCompose} multiline
      placeholder="Sua mensagem..." placeholderTextColor={t.muted} style={[s.input,{flex:1,maxHeight:120,marginVertical:0}]}/>
