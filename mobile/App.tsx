@@ -222,7 +222,7 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onDelete,onComment}:{
   try{
    await requestPostModeration(post.id);
    const result=await ownPostModerationStatus(post.id);
-   setReviewStatus(result.status);
+   setReviewStatus(result.status==='expired'?'pending':result.status);
    Alert.alert(result.status==='approved'?'Publicação aprovada':
     result.status==='rejected'?'Publicação não aprovada':'Revisão pendente',
     result.status==='approved'?'A análise liberou a publicação para o público permitido.':
