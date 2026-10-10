@@ -59,6 +59,8 @@ test('Explore is global, block-aware, approved-only and native',()=>{
  assert.match(ui,/Pessoas para conhecer/);
  assert.match(ui,/Publicações públicas/);
  assert.match(ui,/Minhas conexões e convites/);
+ assert.match(ui,/onOpenCommunity\(community\.slug\)/);
+ assert.match(app,/initialSlug=\{communitySlugRoute\}/);
  assert.match(ui,/startChat\(personId\)/);
  assert.match(ui,/toggleBlock/);
  assert.match(app,/ExploreScreen userId=\{user\.id\}/);
