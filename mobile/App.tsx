@@ -29,6 +29,7 @@ import {sendChatMedia} from './src/chat-media';
 import {changeProfilePhoto,loadCover} from './src/profile-media';
 import {ReelsScreen} from './src/reels-ui';
 import {normalizeMedia,publishMediaPost} from './src/media';
+import {loadCommunityPosts,communityMemberCount,publishCommunityText,createCommunity,communitySlug} from './src/community';
 import {
  Bell,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
  MoreHorizontal,Plus,Search,Send,ShieldCheck,Sparkles,UsersRound,Video,
@@ -781,6 +782,255 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
   ListEmptyComponent={!loading?<View style={s.empty}><Text style={s.primaryText}>Suas conversas aparecerão aqui.</Text>
     <Text style={[s.muted,{marginTop:7,textAlign:'center'}]}>Abra Pessoas e escolha Conversar para iniciar uma conversa.</Text>
   </View>:<Loading/>}/>;
+}
+
+
+function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
+ community:Community;userId:string;member:boolean;
+ onMembership:()=>Promise<void>;onBack:()=>void;
+}){
+ const [posts,setPosts]=useState<Post[]>([]);
+ const [liked,setLiked]=useState<Set<string>>(new Set());
+ const [saved,setSaved]=useState<Set<string>>(new Set());
+ const [count,setCount]=useState<number|null>(null);
+ const [loading,setLoading]=useState(true),[more,setMore]=useState(false);
+ const [loadingMore,setLoadingMore]=useState(false);
+ const [busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [content,setContent]=useState(''),[media,setMedia]=useState<SelectedMedia[]>([]);
+ const [composerOpen,setComposerOpen]=useState(false);
+ const [filter,setFilter]=useState<'all'|'image'|'video'>('all');
+ const [rulesOpen,setRulesOpen]=useState(false);
+ const load=useCallback(async(offset=0)=>{
+  const result=await loadCommunityPosts(community.id,offset);
+  const ids=result.items.map(p=>p.id);
+  const [newLikes,newSaved]=await Promise.all([myLikes(userId,ids),mySaved(userId,ids)]);
+  setPosts(current=>offset?[...current.filter(p=>!ids.includes(p.id)),...result.items]:result.items);
+  setLiked(current=>new Set([...offset?Array.from(current):[],...newLikes]));
+  setSaved(current=>new Set([...offset?Array.from(current):[],...newSaved]));
+  setMore(result.more);
+ },[community.id,userId]);
+ const refresh=useCallback(async()=>{
+  setLoading(true);setError('');
+  try{
+   const [_,total]=await Promise.all([load(),communityMemberCount(community.id)]);
+   setCount(total);
+  }catch(e){setError(errorMessage(e));}
+  finally{setLoading(false);}
+ },[load,community.id]);
+ useEffect(()=>{void refresh();},[refresh]);
+ const pick=async(kind:'image'|'video')=>{
+  setError('');
+  try{
+   const result=await ImagePicker.launchImageLibraryAsync({
+    mediaTypes:kind==='video'?['videos']:['images'],
+    allowsMultipleSelection:kind==='image',selectionLimit:kind==='image'?5:1,
+    quality:1
+   });
+   if(!result.canceled)setMedia(normalizeMedia(result.assets));
+  }catch(e){setError(errorMessage(e));}
+ };
+ const publish=async()=>{
+  if(busy||!member||(!content.trim()&&!media.length)||content.trim().length>3000)return;
+  setBusy(true);setError('');
+  try{
+   if(media.length)await publishMediaPost(userId,content,'public',media,community.id);
+   else await publishCommunityText(userId,community.id,content);
+   setContent('');setMedia([]);setComposerOpen(false);
+   await refresh();
+   Alert.alert('Enviado à comunidade','Sua publicação segue as regras de moderação do Conecta.');
+  }catch(e){setError(errorMessage(e));}
+  finally{setBusy(false);}
+ };
+ const toggleLike=async(post:Post)=>{
+  if(busy)return;setBusy(true);setError('');
+  const wasLiked=liked.has(post.id);
+  try{
+   await setLike(post.id,userId,wasLiked);
+   setLiked(current=>{const next=new Set(current);if(wasLiked)next.delete(post.id);else next.add(post.id);return next;});
+   setPosts(current=>current.map(p=>p.id===post.id?{...p,
+    post_likes:[{count:Math.max(0,(p.post_likes?.[0]?.count||0)+(wasLiked?-1:1))}]}:p));
+  }catch(e){setError(errorMessage(e));}
+  finally{setBusy(false);}
+ };
+ const toggleSaved=async(post:Post)=>{
+  if(busy)return;setBusy(true);setError('');
+  const wasSaved=saved.has(post.id);
+  try{
+   await setSavedPost(post.id,userId,wasSaved);
+   setSaved(current=>{const next=new Set(current);if(wasSaved)next.delete(post.id);else next.add(post.id);return next;});
+  }catch(e){setError(errorMessage(e));}
+  finally{setBusy(false);}
+ };
+ const visible=posts.filter(p=>filter==='all'||(filter==='image'
+  ?p.media_type==='image'||p.post_media?.some(media=>media.media_type==='image')
+  :p.media_type==='video'||p.post_media?.some(media=>media.media_type==='video')));
+ const banner=<View>
+  <View style={[s.row,{paddingTop:13,paddingBottom:10,gap:10}]}>
+   <Pressable accessibilityRole="button" accessibilityLabel="Voltar às comunidades"
+    onPress={onBack} style={[s.secondary,{width:42,height:42}]}>
+    <ChevronLeft size={21} color={t.primary}/>
+   </Pressable>
+   <Text style={{fontWeight:'800',fontSize:15,color:t.dark,flex:1}} numberOfLines={1}>
+    Comunidade
+   </Text>
+   <Action secondary label="Abrir no site" onPress={()=>void openOfficial('/comunidades/'+community.slug)}/>
+  </View>
+  <View style={[s.card,{padding:0,overflow:'hidden'}]}>
+   {community.cover_path?<Media path={community.cover_path}
+    height={189} radius={0} marginTop={0}/>:
+    <GradientPanel style={{height:189,minHeight:189,borderRadius:0}}>
+     <UsersRound color="#FFFFFF" size={37}/>
+     <Text style={{color:'#FFFFFF',fontWeight:'900',fontSize:14,marginTop:13}}>
+      Faça parte desta conversa
+     </Text>
+    </GradientPanel>}
+   <View style={{padding:17}}>
+    <View style={[s.row,{gap:12,marginBottom:12}]}>
+     <Avatar path={community.avatar_path} name={community.name} size={62}/>
+     <View style={{flex:1}}>
+      <Text style={[s.primaryText,{fontSize:20,lineHeight:26}]}>{community.name}
+       {community.is_official?' ✦':''}
+      </Text>
+      <Text style={[s.muted,{marginTop:3}]}>
+       {community.is_official?'Comunidade oficial · ':''}
+       {count===null?'Membros':count+' '+(count===1?'membro':'membros')}
+      </Text>
+     </View>
+    </View>
+    {!!community.description&&<Text style={{fontSize:13,lineHeight:20,color:t.dark}}>
+     {community.description}
+    </Text>}
+    <View style={[s.row,{gap:8,flexWrap:'wrap',marginTop:15}]}>
+     <Action disabled={busy} label={member?'Sair da comunidade':'Participar'}
+      secondary={member} onPress={()=>{if(!busy)void (async()=>{
+       setBusy(true);setError('');
+       try{await onMembership();setCount(await communityMemberCount(community.id));}
+       catch(e){setError(errorMessage(e));}
+       finally{setBusy(false);}
+      })();}}/>
+     {!!community.rules&&<Action secondary label="Regras"
+      leading={<ShieldCheck size={16} color={t.primary}/>}
+      onPress={()=>setRulesOpen(v=>!v)}/>}
+     {member&&<Action label="Publicar"
+      leading={<Plus size={17} color="#FFF"/>}
+      onPress={()=>setComposerOpen(true)}/>}
+    </View>
+    {rulesOpen&&!!community.rules&&<View style={{backgroundColor:t.bg,
+     padding:13,borderRadius:13,marginTop:13,borderWidth:1,borderColor:t.line}}>
+     <Text style={[s.primaryText,{marginBottom:6}]}>Regras da comunidade</Text>
+     <Text style={{fontSize:13,lineHeight:20,color:t.dark}}>{community.rules}</Text>
+    </View>}
+   </View>
+  </View>
+  {member?<Pressable accessibilityRole="button" accessibilityLabel="Publicar na comunidade"
+   onPress={()=>setComposerOpen(true)}
+   style={[s.card,{flexDirection:'row',alignItems:'center',gap:10}]}>
+   <View style={{backgroundColor:t.subtle,borderRadius:12,padding:11}}>
+    <Pencil size={21} color={t.primary}/>
+   </View>
+   <View style={{flex:1}}>
+    <Text style={s.primaryText}>Compartilhe com esta comunidade</Text>
+    <Text style={s.muted}>Fotos, vídeos ou um novo assunto</Text>
+   </View>
+   <ChevronRight size={18} color={t.primary}/>
+  </Pressable>:
+   <View style={s.card}>
+    <Text style={s.muted}>Participe da comunidade para compartilhar publicações.</Text>
+   </View>}
+  <SectionHeader title="Publicações da comunidade"
+   description="Conversas e histórias de quem faz parte." Icon={MessageCircle}/>
+  <View style={[s.row,{gap:7,flexWrap:'wrap',marginBottom:10}]}>
+   {([
+    {key:'all',label:'Tudo'},
+    {key:'image',label:'Fotos'},
+    {key:'video',label:'Vídeos'}
+   ] as const).map(item=><Pressable key={item.key} accessibilityRole="tab"
+    accessibilityState={{selected:filter===item.key}}
+    onPress={()=>setFilter(item.key)}
+    style={[s.secondary,filter===item.key&&{backgroundColor:t.primary}]}>
+    <Text style={[s.secondaryText,filter===item.key&&{color:'#FFF'}]}>{item.label}</Text>
+   </Pressable>)}
+  </View>
+  <ErrorNotice text={error}/>
+  <Modal visible={composerOpen} animationType="slide"
+   onRequestClose={()=>{if(!busy)setComposerOpen(false);}}>
+   <SafeAreaProvider>
+    <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
+     <StatusBar hidden={Platform.OS==='android'} style="dark"/>
+     {Platform.OS==='android'&&<NavigationBar hidden style="light"/>}
+     <View style={s.header}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Fechar"
+       disabled={busy} onPress={()=>setComposerOpen(false)}>
+       <X size={23} color={t.dark}/>
+      </Pressable>
+      <Text style={{fontWeight:'900',fontSize:16,color:t.dark}}>Nova publicação</Text>
+      <View style={{width:23}}/>
+     </View>
+     <ScrollView keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{padding:20,gap:11,paddingBottom:35}}>
+      <View style={[s.row,{gap:10}]}>
+       <UsersRound size={25} color={t.primary}/>
+       <View style={{flex:1}}>
+        <Text style={s.primaryText}>{community.name}</Text>
+        <Text style={s.muted}>Público · seguindo as regras da comunidade</Text>
+       </View>
+      </View>
+      <TextInput value={content} onChangeText={setContent} multiline
+       accessibilityLabel="Texto da publicação"
+       placeholder="Compartilhe uma ideia ou marque alguém com @usuário..."
+       placeholderTextColor={t.muted} maxLength={3000}
+       style={{color:t.dark,fontSize:17,textAlignVertical:'top',
+        minHeight:148,paddingVertical:10,lineHeight:25}}/>
+      {media.length>0&&<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>
+       {media.map((item,index)=><View key={item.uri} style={{gap:4}}>
+        {item.kind==='image'?<Image source={{uri:item.uri}} style={{
+         width:85,height:85,borderRadius:12}}/>:
+         <View style={{width:106,height:85,backgroundColor:t.subtle,
+          borderRadius:12,alignItems:'center',justifyContent:'center'}}>
+          <Video size={25} color={t.primary}/>
+         </View>}
+        <Pressable accessibilityRole="button"
+         accessibilityLabel={'Remover mídia '+(index+1)}
+         onPress={()=>setMedia(current=>current.filter((_,i)=>i!==index))}>
+         <Text style={s.secondaryText}>Remover ×</Text>
+        </Pressable>
+       </View>)}
+      </View>}
+      <View style={[s.row,{gap:9,flexWrap:'wrap'}]}>
+       <Action secondary disabled={busy} label="Fotos" onPress={()=>void pick('image')}
+        leading={<ImagePlus size={17} color={t.primary}/>}/>
+       <Action secondary disabled={busy} label="Vídeo" onPress={()=>void pick('video')}
+        leading={<Video size={17} color={t.primary}/>}/>
+      </View>
+      <Text style={[s.muted,{textAlign:'right'}]}>{content.trim().length}/3000</Text>
+      <ErrorNotice text={error}/>
+      <Action fullWidth disabled={busy||(!content.trim()&&!media.length)}
+       label={busy?'Publicando...':'Publicar na comunidade'}
+       leading={<Send size={17} color="#FFF"/>} onPress={()=>void publish()}/>
+     </ScrollView>
+    </SafeAreaView>
+   </SafeAreaProvider>
+  </Modal>
+ </View>;
+ return <FlatList style={s.screen} data={visible} keyExtractor={p=>p.id}
+  refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void refresh()}/>}
+  ListHeaderComponent={banner}
+  renderItem={({item})=><PostCard post={item} userId={userId}
+   liked={liked.has(item.id)} saved={saved.has(item.id)}
+   onLike={post=>void toggleLike(post)} onSave={post=>void toggleSaved(post)}
+   onComment={id=>setPosts(current=>current.map(p=>p.id===id?
+    {...p,post_comments:[{count:(p.post_comments?.[0]?.count||0)+1}]}:p))}/>}
+  ListEmptyComponent={!loading?<View style={s.empty}>
+   <Text style={s.primaryText}>Ainda não há publicações nesta categoria</Text>
+   <Text style={s.muted}>Seja a primeira pessoa a compartilhar.</Text>
+  </View>:<Loading/>}
+  onEndReachedThreshold={0.5}
+  onEndReached={()=>{if(loading||loadingMore||!more)return;
+   setLoadingMore(true);
+   void load(posts.length).catch(e=>setError(errorMessage(e)))
+    .finally(()=>setLoadingMore(false));
+  }}
+  ListFooterComponent={loadingMore?<Loading/>:<View style={{height:20}}/>}/>;
 }
 
 function CommunityScreen({userId}:{userId:string}){
