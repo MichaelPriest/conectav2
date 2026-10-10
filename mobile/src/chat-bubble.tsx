@@ -3,6 +3,7 @@ import {Alert,Pressable,Text,TextInput,View} from 'react-native';
 import type {ChatMessage,ChatReaction} from './models';
 import {CHAT_EMOJIS,deleteChatMessage,editChatMessage,setChatReaction} from './chat-actions';
 import {AudioMessage} from './voice-ui';
+import {ChatImage} from './chat-image';
 import {ErrorNotice,Media,ReportContent,VideoMedia,styles as s} from './ui';
 import {theme as t} from './theme';
 
@@ -75,7 +76,7 @@ export function ChatBubble({message,userId,quoted,reactions,onReply,onChanged,pi
     (message.media_path?'Mídia compartilhada':'')}
   </Text>}
   {!message.deleted_at&&message.media_path&&message.media_type?.startsWith('image')&&
-   <Media path={message.media_path} height={175}/>}
+   <ChatImage path={message.media_path}/>}
   {!message.deleted_at&&message.media_path&&message.media_type==='video'&&
    <VideoMedia path={message.media_path}/>}
   {!message.deleted_at&&message.media_path&&message.media_type==='audio'&&
