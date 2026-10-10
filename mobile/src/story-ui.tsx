@@ -1,14 +1,16 @@
-import React,{useCallback,useEffect,useState} from 'react';
+import React,{useCallback,useEffect,useMemo,useState} from 'react';
 import {Alert,AppState,Image,Modal,Platform,Pressable,ScrollView,Text,TextInput,View} from 'react-native';
 import {StatusBar} from 'expo-status-bar';
 import {NavigationBar} from 'expo-navigation-bar';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
-import {Camera,ImagePlus,Plus,Sparkles,Video,X} from 'lucide-react-native';
+import {ChevronLeft,ChevronRight,ExternalLink,Plus,X} from 'lucide-react-native';
+import {VideoView,useVideoPlayer} from 'expo-video';
 import * as ImagePicker from 'expo-image-picker';
-import type {Story} from './models';
+import type {Story,Post} from './models';
 import type {SelectedMedia} from './media-validation';
 import {normalizeMedia} from './media-validation';
 import {loadActiveStories,publishStory,removeStory} from './stories';
+import {loadPermittedPost,signedMedia} from './data';
 import {Avatar,Action,ErrorNotice,Loading,Media,VideoMedia,styles as s} from './ui';
 import {theme as t,formatDate} from './theme';
 
@@ -16,10 +18,45 @@ const permissions:{label:string;value:'public'|'friends'|'private'}[]=[
  {label:'Conexões',value:'friends'},{label:'Público',value:'public'},{label:'Só eu',value:'private'}
 ];
 const describe=(e:unknown)=>e instanceof Error?e.message:'Não foi possível concluir esta ação.';
+/** Native video playback with progress and an end event (no fake player). */
+function StoryVideo({path,onEnd,onProgress}:{
+ path:string;onEnd:()=>void;onProgress:(fraction:number)=>void;
+}){
+ const [url,setUrl]=useState<string|null>(null);
+ useEffect(()=>{let current=true;setUrl(null);
+  void signedMedia(path).then(uri=>{if(current)setUrl(uri);});
+  return()=>{current=false;};
+ },[path]);
+ return url?<PlayingStoryVideo key={url} url={url} onEnd={onEnd}
+  onProgress={onProgress}/>:<Loading text="Carregando vídeo protegido..."/>;
+}
+function PlayingStoryVideo({url,onEnd,onProgress}:{
+ url:string;onEnd:()=>void;onProgress:(fraction:number)=>void;
+}){
+ const player=useVideoPlayer(url);
+ useEffect(()=>{player.play();return()=>player.pause();},[player]);
+ useEffect(()=>{
+  const listener=player.addListener('playToEnd',onEnd);
+  const interval=setInterval(()=>{
+   if(player.duration>0)onProgress(Math.min(1,player.currentTime/player.duration));
+  },250);
+  return()=>{listener.remove();clearInterval(interval);};
+ },[player,onEnd,onProgress]);
+ return <VideoView player={player} nativeControls={false} contentFit="contain"
+  style={{width:'100%',height:420}}/>;
+}
 
-export function StoryRail({userId}:{userId:string}){
+
+export function StoryRail({userId,onOpenPost}:{
+ userId:string;onOpenPost?:(postId:string)=>void
+}){
  const [stories,setStories]=useState<Story[]>([]);
  const [selected,setSelected]=useState<Story|null>(null);
+ const [sharedPost,setSharedPost]=useState<Post|null>(null);
+ const [sharedLoading,setSharedLoading]=useState(false);
+ const [progress,setProgress]=useState(0);
+ const [paused,setPaused]=useState(false);
+ const [seen,setSeen]=useState<Set<string>>(new Set());
  const [file,setFile]=useState<SelectedMedia|null>(null);
  const [caption,setCaption]=useState('');
  const [visibility,setVisibility]=useState<'public'|'friends'|'private'>('friends');
@@ -36,6 +73,62 @@ export function StoryRail({userId}:{userId:string}){
   const timer=setInterval(()=>{if(AppState.currentState==='active')void refresh();},60000);
   return()=>{sub.remove();clearInterval(timer);};
  },[refresh]);
+
+ const timeline=useMemo(()=>{
+  const groups=new Map<string,Story[]>();
+  for(const story of stories){
+   if(Date.parse(story.expires_at)<=Date.now())continue;
+   const values=groups.get(story.author_id)||[];
+   values.push(story);groups.set(story.author_id,values);
+  }
+  return [...groups.entries()].sort(([a],[b])=>
+    a===userId?-1:b===userId?1:0).flatMap(([,values])=>
+     values.sort((a,b)=>a.created_at.localeCompare(b.created_at)));
+ },[stories,userId]);
+ const bubbles=useMemo(()=>{
+  const group=new Map<string,Story>();
+  for(const story of timeline)if(!group.has(story.author_id))group.set(story.author_id,story);
+  return [...group.values()];
+ },[timeline]);
+ const selectedIndex=selected?timeline.findIndex(story=>story.id===selected.id):-1;
+ const groupItems=selected?timeline.filter(story=>story.author_id===selected.author_id):[];
+ const groupIndex=selected?groupItems.findIndex(story=>story.id===selected.id):-1;
+ const open=useCallback((story:Story)=>{
+  if(Date.parse(story.expires_at)<=Date.now()){void refresh();return;}
+  setSelected(story);setSharedPost(null);setProgress(0);setPaused(false);
+  setSeen(current=>new Set(current).add(story.id));
+ },[refresh]);
+ const close=useCallback(()=>{setSelected(null);setSharedPost(null);},[]);
+ const advance=useCallback((step:1|-1)=>{
+  const target=timeline[selectedIndex+step];
+  if(target)open(target);else close();
+ },[timeline,selectedIndex,open,close]);
+ const next=useCallback(()=>advance(1),[advance]);
+ const trackVideo=useCallback((fraction:number)=>setProgress(fraction),[]);
+ useEffect(()=>{
+  const id=selected?.shared_post_id;
+  if(!id){setSharedPost(null);setSharedLoading(false);return;}
+  let active=true;setSharedLoading(true);setSharedPost(null);
+  void loadPermittedPost(id,userId).then(post=>{
+   if(active&&post?.visibility==='public'&&post.moderation_status==='approved')
+    setSharedPost(post);
+  }).catch(e=>{if(active)setError(describe(e));}).finally(()=>{
+   if(active)setSharedLoading(false);
+  });
+  return()=>{active=false;};
+ },[selected?.id,selected?.shared_post_id,userId]);
+ useEffect(()=>{
+  if(!selected||paused||selected.media_type==='video')return;
+  const started=Date.now()-progress*6500;
+  const timer=setInterval(()=>{
+   const fraction=Math.min(1,(Date.now()-started)/6500);
+   setProgress(fraction);
+   if(fraction>=1)next();
+  },130);
+  return()=>clearInterval(timer);
+  // Playback progress resets only when opening a different Story.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+ },[selected?.id,paused,next]);
  const pick=async(mode:'image'|'video'|'camera')=>{
   setError('');
   try{
@@ -71,7 +164,7 @@ export function StoryRail({userId}:{userId:string}){
    {text:'Cancelar',style:'cancel'},
    {text:'Excluir',style:'destructive',onPress:()=>{void (async()=>{
     setBusy(true);setError('');
-    try{await removeStory(userId,story);setSelected(null);await refresh();}
+    try{await removeStory(userId,story);close();await refresh();}
     catch(e){setError(describe(e));}
     finally{setBusy(false);}
    })();}}
@@ -96,11 +189,11 @@ export function StoryRail({userId}:{userId:string}){
     </View>
     <Text numberOfLines={1} style={s.muted}>Seu Story</Text>
    </Pressable>
-   {stories.map(story=><Pressable key={story.id} accessibilityRole="button"
+   {bubbles.map(story=><Pressable key={story.id} accessibilityRole="button"
     accessibilityLabel={'Ver Story de '+(story.profiles?.display_name||'pessoa')}
-    onPress={()=>{if(Date.parse(story.expires_at)>Date.now())setSelected(story);else void refresh();}}
+    onPress={()=>open(story)}
     style={{width:75,alignItems:'center',gap:4}}>
-    <View style={{borderWidth:2,borderColor:t.pink,borderRadius:40,padding:3}}>
+    <View style={{borderWidth:2,borderColor:seen.has(story.id)?t.line:t.pink,borderRadius:40,padding:3}}>
      <Avatar path={story.profiles?.avatar_path} name={story.profiles?.display_name||'Pessoa'} size={49}/>
     </View>
     <Text numberOfLines={1} style={s.muted}>{story.author_id===userId?'Você':story.profiles?.display_name||'Pessoa'}</Text>
