@@ -43,6 +43,19 @@ export async function loadFeed(offset=0):Promise<{items:Post[];more:boolean}>{
  return {items,more:items.length===15};
 }
 /** Video posts are the same public records used by the Conecta Web Reels page. */
+/** Single post follows the same Supabase RLS as Feed. Pending/rejected posts
+ * are visible only to their author; other viewers get no private metadata. */
+export async function loadPermittedPost(postId:string,userId:string):Promise<Post|null>{
+ if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(postId))
+  throw new Error('Identificador de publicação inválido.');
+ const {data,error}=await supabase.from('posts').select(POST_FIELDS)
+  .eq('id',postId).maybeSingle();
+ if(error)throw error;
+ if(!data)return null;
+ const post=data as unknown as Post;
+ if(post.author_id!==userId&&post.moderation_status!=='approved')return null;
+ return post;
+}
 export async function loadOwnPosts(userId:string,offset=0):Promise<{
  items:Post[];more:boolean
 }>{
