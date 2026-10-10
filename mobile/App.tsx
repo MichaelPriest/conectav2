@@ -37,6 +37,7 @@ import {NativeVersionMonitor,checkVersionManually} from './src/update-ui';
 import {NativeGroupCreator,NativeGroupSettings} from './src/chat-group-ui';
 import {getPinnedMessages,setConversationMuted,toggleChatPin} from './src/chat-groups';
 import {useNativeChatTyping} from './src/chat-typing';
+import {useNativeChatPresence} from './src/chat-presence';
 import type {PinnedChatMessage} from './src/chat-groups';
 import {
  Bell,BellOff,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
@@ -756,6 +757,7 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  const [loadingOlder,setLoadingOlder]=useState(false);
  const [compose,setCompose]=useState(''),[busy,setBusy]=useState(false);
  const typingIds=useNativeChatTyping(active,userId,compose);
+ const presence=useNativeChatPresence(userId);
  const messageLength=compose.trim().length;
  const validMessage=messageLength>0&&messageLength<=4000;
  const [loading,setLoading]=useState(true),[error,setError]=useState('');
@@ -973,6 +975,22 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
    <Heading title="Mensagens" subtitle="Conversas, amizades e grupos do Conecta."/>
    <Action label="Criar grupo" leading={<UsersRound size={18} color="#FFF"/>}
     onPress={()=>setCreatorOpen(true)}/>
+   <Pressable accessibilityRole="switch"
+    accessibilityLabel={presence.enabled?'Ocultar meu status online':'Mostrar meu status online'}
+    accessibilityState={{checked:presence.enabled,disabled:!presence.ready||presence.busy}}
+    disabled={!presence.ready||presence.busy} onPress={()=>void presence.toggle()}
+    style={[s.card,{marginVertical:10,flexDirection:'row',alignItems:'center',gap:10}]}>
+    <View style={{flex:1}}>
+     <Text style={s.primaryText}>{presence.enabled?'Status online visível':'Mostrar meu status online'}</Text>
+     <Text style={s.muted}>Opcional. Outras conexões podem ver quando você está online.</Text>
+    </View>
+    <View style={{width:42,height:25,borderRadius:13,
+     backgroundColor:presence.enabled?t.primary:t.line,
+     justifyContent:'center',paddingHorizontal:3,alignItems:presence.enabled?'flex-end':'flex-start'}}>
+     <View style={{width:19,height:19,borderRadius:10,backgroundColor:'#FFFFFF'}}/>
+    </View>
+   </Pressable>
+   <ErrorNotice text={presence.error}/>
    <Modal visible={creatorOpen} animationType="slide"
     onRequestClose={()=>setCreatorOpen(false)}>
     <SafeAreaProvider>
@@ -1000,6 +1018,10 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
       {item.muted_until&&Date.parse(item.muted_until)>Date.now()?'🔕 ':''}
       {item.last}
      </Text>
+     {!item.group&&!!item.other?.id&&presence.onlineIds.has(item.other.id)&&
+      <Text style={{color:t.success,fontSize:11,fontWeight:'800',marginTop:4}}>
+       ● Online agora
+      </Text>}
     </View>
     {item.unread>0?<View style={[a.count,{backgroundColor:t.primary}]}>
      <Text style={{color:'white',fontSize:11,fontWeight:'800'}}>{item.unread}</Text>
