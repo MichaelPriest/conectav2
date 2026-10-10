@@ -13,9 +13,9 @@ import type {User} from '@supabase/supabase-js';
 import {SITE_URL,supabase} from './src/supabase';
 import type {ChatMessage,ChatReaction,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './src/models';
 import {
- changeConnection,changeMembership,clearMediaCache,loadChatMessages,loadOlderChatMessages,loadCommunities,
+ changeConnection,changeMembership,clearMediaCache,deleteOwnPost,loadChatMessages,loadOlderChatMessages,loadCommunities,
  loadConnections,loadFeed,loadNotifications,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
- publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,startChat,unreadNotificationCount,updateMyProfile,verifyAccess
+ publishTextPost,readConversation,sendMessage,sendPost,setLike,setSavedPost,startChat,unreadNotificationCount,updateMyProfile,verifyAccess
 } from './src/data';
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
@@ -36,7 +36,7 @@ import {MentionInput} from './src/mentions';
 import {
  Bell,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
  MoreHorizontal,Plus,Search,Send,ShieldCheck,Sparkles,UsersRound,Video,
- X,Globe2,LockKeyhole,UserRound,ChevronRight,ChevronLeft,Pencil,Share2,HeartHandshake
+ X,Globe2,LockKeyhole,UserRound,ChevronRight,ChevronLeft,Pencil,Share2,HeartHandshake,Trash2
 } from 'lucide-react-native';
 import {BottomNavigation,Brand,FeedTabs,GradientPanel,RoundIcon,
  SectionEyebrow,SectionHeader} from './src/design';
@@ -126,9 +126,9 @@ function Restricted({status,onRetry,onLogout}:{
  </View>;
 }
 
-function PostCard({post,userId,liked,saved,onLike,onSave,onComment}:{
+function PostCard({post,userId,liked,saved,onLike,onSave,onDelete,onComment}:{
  post:Post;userId:string;liked:boolean;saved:boolean;
- onLike:(post:Post)=>void;onSave:(post:Post)=>void;
+ onLike:(post:Post)=>void;onSave:(post:Post)=>void;onDelete:(post:Post)=>void;
  onComment:(postId:string)=>void;
 }){
  const author=post.profiles?.display_name||'Pessoa do Conecta';
@@ -179,6 +179,15 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onComment}:{
       <Globe2 size={12} color={t.muted}/>}
     <Text style={{fontSize:10,fontWeight:'700',color:t.muted}}>{visibility}</Text>
    </View>
+   {post.author_id===userId&&<Pressable accessibilityRole="button"
+    accessibilityLabel="Excluir publicação" onPress={()=>
+     Alert.alert('Excluir publicação?','Esta ação não pode ser desfeita.',[
+      {text:'Cancelar',style:'cancel'},
+      {text:'Excluir',style:'destructive',onPress:()=>onDelete(post)}
+     ])}
+    style={{width:34,height:35,justifyContent:'center',alignItems:'center'}}>
+    <Trash2 size={18} color={t.muted}/>
+   </Pressable>}
   </View>
   {post.moderation_status==='pending'&&post.author_id===userId&&
    <Text style={[s.badge,{marginTop:10}]}>⌛ Aguardando moderação automática</Text>}
@@ -378,6 +387,15 @@ function FeedScreen({userId,profile,composeRequest}:{
     {...item,post_likes:[{count:Math.max(0,(item.post_likes?.[0]?.count||0)+(wasLiked?-1:1))}]}:item));
   }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
  };
+ const deletePost=async(post:Post)=>{
+  if(busy)return;setBusy(true);setError('');
+  try{
+   const warning=await deleteOwnPost(post,userId);
+   setPosts(current=>current.filter(item=>item.id!==post.id));
+   if(warning)Alert.alert('Publicação excluída',warning);
+  }catch(e){setError(errorMessage(e));}
+  finally{setBusy(false);}
+ };
  const toggleSave=async(post:Post)=>{
   if(busy)return;
   setBusy(true);setError('');
@@ -539,6 +557,7 @@ function FeedScreen({userId,profile,composeRequest}:{
   renderItem={({item})=><PostCard post={item} userId={userId}
    liked={liked.has(item.id)} saved={saved.has(item.id)}
    onLike={post=>void toggleLike(post)} onSave={post=>void toggleSave(post)}
+   onDelete={post=>void deletePost(post)}
    onComment={postId=>setPosts(current=>current.map(p=>p.id===postId?
     {...p,post_comments:[{count:(p.post_comments?.[0]?.count||0)+1}]}:p))}/>}
   ListEmptyComponent={!loading?<View style={s.empty}>
@@ -882,6 +901,15 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
   }catch(e){setError(errorMessage(e));}
   finally{setBusy(false);}
  };
+ const deletePost=async(post:Post)=>{
+  if(busy)return;setBusy(true);setError('');
+  try{
+   const warning=await deleteOwnPost(post,userId);
+   setPosts(current=>current.filter(p=>p.id!==post.id));
+   if(warning)Alert.alert('Publicação excluída',warning);
+  }catch(e){setError(errorMessage(e));}
+  finally{setBusy(false);}
+ };
  const toggleSaved=async(post:Post)=>{
   if(busy)return;setBusy(true);setError('');
   const wasSaved=saved.has(post.id);
@@ -1053,6 +1081,7 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
   renderItem={({item})=><PostCard post={item} userId={userId}
    liked={liked.has(item.id)} saved={saved.has(item.id)}
    onLike={post=>void toggleLike(post)} onSave={post=>void toggleSaved(post)}
+   onDelete={post=>void deletePost(post)}
    onComment={id=>setPosts(current=>current.map(p=>p.id===id?
     {...p,post_comments:[{count:(p.post_comments?.[0]?.count||0)+1}]}:p))}/>}
   ListEmptyComponent={!loading?<View style={s.empty}>
