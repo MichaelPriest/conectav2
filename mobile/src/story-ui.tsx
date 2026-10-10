@@ -229,36 +229,99 @@ export function StoryRail({userId,onOpenPost}:{
    <Action secondary disabled={busy} label="Cancelar" onPress={()=>{setEditing(false);setFile(null);setCaption('');}}/>
   </View>}
   <ErrorNotice text={error}/>
+
   <Modal visible={Boolean(selected)} animationType="slide"
-   onRequestClose={()=>setSelected(null)}>
+   onRequestClose={close}>
    <SafeAreaProvider>
     <SafeAreaView edges={['top','bottom','left','right']}
-     style={{flex:1,backgroundColor:t.dark,paddingTop:12,paddingHorizontal:16,paddingBottom:22}}>
+     style={{flex:1,backgroundColor:'#10101B',paddingTop:10,paddingHorizontal:12,paddingBottom:22}}>
      <StatusBar style="light" hidden={Platform.OS==='android'}/>
      {Platform.OS==='android'&&<NavigationBar hidden style="dark"/>}
-    <View style={[s.row,{gap:10,marginBottom:16}]}>
-     <Avatar path={selected?.profiles?.avatar_path} name={selected?.profiles?.display_name||'Pessoa'} size={43}/>
-     <View style={{flex:1}}>
-      <Text style={{color:'#FFF',fontWeight:'800'}}>{selected?.profiles?.display_name||'Story'}</Text>
-      <Text style={{color:'#E0D4F5',fontSize:12}}>{selected?formatDate(selected.created_at):''}</Text>
+     <View style={{flexDirection:'row',gap:4,marginBottom:13}}>
+      {groupItems.map((story,i)=><View key={story.id}
+       style={{flex:1,height:3,backgroundColor:'#5D5870',borderRadius:5,overflow:'hidden'}}>
+       <View style={{height:3,
+        width:(i<groupIndex?'100%':i===groupIndex?
+         Math.round(progress*100)+'%':'0%') as `${number}%`,
+        backgroundColor:'#FFFFFF',borderRadius:5}}/>
+      </View>)}
      </View>
-     <Pressable accessibilityRole="button" accessibilityLabel="Fechar Story"
-      onPress={()=>setSelected(null)}><X color="#FFF" size={25}/></Pressable>
-    </View>
-    {selected?.media_type==='image'?
-     <Media path={selected.media_path} height={420}/>:
-     selected?.media_type==='video'?<VideoMedia path={selected.media_path}/>:null}
-    {!!selected?.caption&&<Text style={{color:'#FFF',fontSize:17,marginTop:20,textAlign:'center'}}>
-     {selected.caption}
-    </Text>}
-    {selected?.author_id===userId&&<View style={{marginTop:24}}>
-     <Action secondary disabled={busy} label={busy?'Excluindo...':'Excluir meu Story'}
-      onPress={deleteSelected}/>
-    </View>}
-    {selected?.moderation_status!=='approved'&&selected?.author_id===userId&&
-     <Text style={{color:'#F4C6D5',fontSize:12,marginTop:14,textAlign:'center'}}>
-      Conteúdo em análise e visível somente conforme permissões da moderação.
-     </Text>}
+     <View style={[s.row,{gap:10,marginBottom:15}]}>
+      <Avatar path={selected?.profiles?.avatar_path}
+       name={selected?.profiles?.display_name||'Pessoa'} size={42}/>
+      <View style={{flex:1}}>
+       <Text style={{color:'#FFF',fontWeight:'800'}}>
+        {selected?.author_id===userId?'Você':selected?.profiles?.display_name||'Story'}
+       </Text>
+       <Text style={{color:'#CAC4E5',fontSize:12}}>
+        {selected?formatDate(selected.created_at):''}
+        {selected?.shared_post_id?' · Publicação compartilhada':''}
+       </Text>
+      </View>
+      <Pressable accessibilityRole="button" accessibilityLabel={paused?'Retomar Story':'Pausar Story'}
+       onPress={()=>setPaused(p=>!p)} style={{padding:6}}>
+       <Text style={{color:'#FFF',fontWeight:'800'}}>{paused?'▶':'Ⅱ'}</Text>
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Fechar Story"
+       onPress={close} style={{padding:6}}><X color="#FFF" size={23}/></Pressable>
+     </View>
+     <View style={{flex:1,justifyContent:'center',borderRadius:17,overflow:'hidden',
+      backgroundColor:'#1E1B31'}}>
+      {selected?.shared_post_id?
+       sharedLoading?<Loading text="Carregando publicação protegida..."/>:
+       sharedPost?<View style={{padding:20,gap:13,alignItems:'center'}}>
+        <Text style={{color:'#C8B8FF',fontSize:11,fontWeight:'900',letterSpacing:1.5}}>
+         PUBLICAÇÃO DO CONECTA
+        </Text>
+        <Avatar path={sharedPost.profiles?.avatar_path}
+         name={sharedPost.profiles?.display_name||'Pessoa'} size={54}/>
+        <Text style={{color:'#FFF',fontWeight:'900',fontSize:16}}>
+         {sharedPost.profiles?.display_name||'Pessoa do Conecta'}
+        </Text>
+        <Text style={{color:'#FFF',fontSize:19,lineHeight:27,textAlign:'center'}}
+         numberOfLines={7}>{sharedPost.content||'Veja esta publicação no Conecta.'}</Text>
+        {sharedPost.post_media?.find(m=>m.media_type==='image')?.storage_path||
+         (sharedPost.media_type==='image'&&sharedPost.media_path)?
+         <Media path={sharedPost.post_media?.find(m=>m.media_type==='image')?.storage_path||
+          sharedPost.media_path} height={190} radius={12}/>:
+         sharedPost.media_type==='video'?<Text style={{color:'#D8C8FF'}}>
+          ▶ Publicação com vídeo
+         </Text>:null}
+        <Action label="Abrir publicação original" onPress={()=>{
+         close();onOpenPost?.(sharedPost.id);
+        }} leading={<ExternalLink size={16} color="#FFF"/>}/>
+       </View>:
+       <Text style={{color:'#FFF',textAlign:'center',padding:24}}>
+        Publicação não disponível ou privacidade alterada.
+       </Text>:
+       selected?.media_type==='image'&&selected.media_path?
+        <Media path={selected.media_path} height={440} marginTop={0} radius={0}/>:
+       selected?.media_type==='video'&&selected.media_path?
+        <StoryVideo key={selected.id} path={selected.media_path}
+         onEnd={next} onProgress={trackVideo}/>:
+       <Loading text="Abrindo Story..."/>}
+     </View>
+     {!!selected?.caption&&<Text style={{color:'#FFF',fontSize:16,marginTop:13,
+      textAlign:'center'}}>{selected.caption}</Text>}
+     <View style={[s.row,{gap:8,justifyContent:'space-between',marginTop:14}]}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Story anterior"
+       onPress={()=>advance(-1)} style={{flex:1,alignItems:'flex-start',padding:11}}>
+       <ChevronLeft color="#FFF" size={25}/>
+      </Pressable>
+      <Text style={{color:'#CFC4E9',fontSize:12,textAlign:'center'}}>
+       {selectedIndex+1} de {timeline.length} · 24h
+      </Text>
+      <Pressable accessibilityRole="button" accessibilityLabel="Próximo Story"
+       onPress={()=>advance(1)} style={{flex:1,alignItems:'flex-end',padding:11}}>
+       <ChevronRight color="#FFF" size={25}/>
+      </Pressable>
+     </View>
+     {selected?.author_id===userId&&<Action secondary disabled={busy}
+      label={busy?'Excluindo...':'Excluir meu Story'} onPress={deleteSelected}/>}
+     {selected?.moderation_status!=='approved'&&selected?.author_id===userId&&
+      <Text style={{color:'#F4C6D5',fontSize:12,marginTop:9,textAlign:'center'}}>
+       Em análise · ainda não liberado para outras pessoas.
+      </Text>}
     </SafeAreaView>
    </SafeAreaProvider>
   </Modal>
