@@ -1,0 +1,78 @@
+'use strict';
+const test=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path');
+const root=path.join(__dirname,'..');
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+const {chooseAndroidUpdate}=require('../src/version-utils.ts');
+const {verifiedInAppDownload,safeApkFilename,bytesToHex,formatSize,
+ progressFraction,MAX_APK_BYTES}=require('../src/apk-installer-policy.ts');
+const sha='0123456789abcdef'.repeat(4);
+const release=(version,asset={})=>({
+ tag_name:'mobile-v'+version,draft:false,prerelease:true,
+ body:'Atualização do Conecta V2: desempenho, privacidade e conversas.',
+ assets:[{
+  name:'conecta-v2-android-'+version+'.apk',
+  browser_download_url:'https://github.com/MichaelPriest/conectav2/releases/download/mobile-v'+version+'/conecta-v2-android-'+version+'.apk',
+  digest:'sha256:'+sha,size:40000000,...asset
+ }]
+});
+test('Android updater resolves verified SHA-256 directly from public GitHub Release',()=>{
+ const update=chooseAndroidUpdate([release('0.6.1')],'0.6.0');
+ assert.ok(update);
+ assert.equal(update.version,'0.6.1');
+ assert.equal(update.sha256,sha);
+ assert.equal(update.size,40000000);
+ assert.equal(update.channel,'android');
+ assert.equal(verifiedInAppDownload(update),true);
+ assert.equal(safeApkFilename(update),'conecta-v2-android-0.6.1.apk');
+ assert.match(update.notes,/desempenho/);
+});
+test('Unverifiable releases may be opened on GitHub but never installed from a local download',()=>{
+ const missing=chooseAndroidUpdate([release('0.7.0',{digest:null})],'0.6.0');
+ assert.ok(missing);
+ assert.equal(missing.sha256,null);
+ assert.equal(verifiedInAppDownload(missing),false);
+ assert.throws(()=>safeApkFilename(missing),/verificável/);
+ const bad=chooseAndroidUpdate([release('0.7.0',{digest:'sha256:bad'})],'0.6.0');
+ assert.equal(bad.sha256,null);
+ assert.equal(verifiedInAppDownload(bad),false);
+});
+test('Releases reject version-mismatched and foreign APKs',()=>{
+ assert.equal(chooseAndroidUpdate([release('0.6.1',{
+  name:'conecta-v2-android-0.9.0.apk'
+ })],'0.6.0'),null);
+ assert.equal(chooseAndroidUpdate([release('0.6.1',{
+  browser_download_url:'https://github.com/MichaelPriest/conectav2/releases/download/mobile-v0.9.0/conecta-v2-android-0.6.1.apk'
+ })],'0.6.0'),null);
+ assert.equal(chooseAndroidUpdate([release('0.6.1',{size:MAX_APK_BYTES+1})],'0.6.0'),null);
+ assert.equal(chooseAndroidUpdate([release('0.6.1',{size:100})],'0.6.0'),null);
+});
+test('Download progress and binary integrity helpers have bounded behavior',()=>{
+ assert.equal(bytesToHex(new Uint8Array([0,2,15,255])),'00020fff');
+ assert.equal(progressFraction(20,100),0.2);
+ assert.equal(progressFraction(400,100),1);
+ assert.equal(progressFraction(-10,100),0);
+ assert.equal(progressFraction(40,0),0);
+ assert.equal(progressFraction(NaN,100),0);
+ assert.equal(formatSize(10485760),'10.0 MB');
+});
+test('Native installer uses a content URI, user confirmation, and downloaded data checksum',()=>{
+ const installer=read('src/apk-installer.ts');
+ const ui=read('src/update-ui.tsx');
+ const config=JSON.parse(read('app.json')).expo;
+ assert.match(installer,/File\.createDownloadTask\(update\.url,file,/);
+ assert.match(installer,/onProgress:\(\{bytesWritten,totalBytes\}\)/);
+ assert.match(installer,/Crypto\.digest\(Crypto\.CryptoDigestAlgorithm\.SHA256/);
+ assert.match(installer,/downloaded\.size!==expectedSize/);
+ assert.match(installer,/actual!==update\.sha256/);
+ assert.match(installer,/file\.contentUri/);
+ assert.match(installer,/IntentLauncher\.startActivityAsync\('android\.intent\.action\.VIEW'/);
+ assert.match(installer,/type:APK_MIME,flags:1/);
+ assert.match(ui,/Instalar com o Android/);
+ assert.match(ui,/Tamanho e SHA-256 conferidos/);
+ assert.match(ui,/Verificando versões/);
+ assert.match(ui,/Linking\.openURL\(update\.url\)/);
+ assert.match(ui,/checkForNativeUpdate\(\)/);
+ assert.ok(config.android.permissions.includes('android.permission.REQUEST_INSTALL_PACKAGES'));
+});
