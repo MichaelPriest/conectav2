@@ -45,6 +45,7 @@ import {NativeForegroundNotificationBridge} from './src/native-notifications';
 import {unregisterRemotePush} from './src/remote-push';
 import {MediaGallery} from './src/media-gallery';
 import {LinkedMediaPreview} from './src/link-media-ui';
+import {NativeCallsProvider,useNativeCalls} from './src/native-calls';
 import {parseConectaLink} from './src/deep-link';
 import type {PinnedChatMessage} from './src/chat-groups';
 import {
@@ -750,6 +751,7 @@ function ConnectionsScreen({userId,onConversation,onBack}:{
 }
 
 function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
+ const calls=useNativeCalls();
  const [threads,setThreads]=useState<Thread[]>([]);
  const [active,setActive]=useState<string|null>(initialId);
  const [messages,setMessages]=useState<ChatMessage[]>([]);
@@ -893,6 +895,22 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
        selected?.group?'Grupo do Conecta':'Chat privado e seguro'}
     </Text>
    </View>
+   {!selected?.group&&selected?.other&&<>
+    <Pressable accessibilityRole="button"
+     accessibilityLabel="Ligar por voz" disabled={calls.busy||calls.hasCall}
+     onPress={()=>void calls.start(active,selected.other!.id,selected.title,'audio')}
+     style={{height:38,width:38,borderRadius:12,backgroundColor:t.subtle,
+      alignItems:'center',justifyContent:'center'}}>
+     <Phone size={19} color={t.primary}/>
+    </Pressable>
+    <Pressable accessibilityRole="button"
+     accessibilityLabel="Iniciar videochamada" disabled={calls.busy||calls.hasCall}
+     onPress={()=>void calls.start(active,selected.other!.id,selected.title,'video')}
+     style={{height:38,width:38,borderRadius:12,backgroundColor:t.subtle,
+      alignItems:'center',justifyContent:'center'}}>
+     <Video size={19} color={t.primary}/>
+    </Pressable>
+   </>}
    <Pressable accessibilityRole="button"
     accessibilityLabel={selected?.muted_until&&Date.parse(selected.muted_until)>Date.now()?
      'Reativar notificações da conversa':'Silenciar conversa por 30 dias'}
@@ -927,6 +945,7 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     style={[s.muted,{marginVertical:2}]}>• {pin.content||'Mídia compartilhada'}</Text>)}
   </View>}
   <ErrorNotice text={error}/>
+  <ErrorNotice text={calls.error}/>
   <Modal visible={groupSettingsOpen} animationType="slide"
    onRequestClose={()=>setGroupSettingsOpen(false)}>
    <SafeAreaProvider>
@@ -1892,6 +1911,7 @@ export default function App(){
   return <ProfileScreen profile={profile} onUpdate={setProfile} onLogout={()=>void logout()}/>;
  };
  return <SafeAreaProvider>
+  <NativeCallsProvider userId={user&&!restricted?user.id:null}>
   <NativeVersionMonitor/>
   {user&&!restricted&&<NativeForegroundNotificationBridge userId={user.id}
    onOpenNotifications={openNativeNotifications}
@@ -1933,6 +1953,7 @@ export default function App(){
   {Platform.OS!=='android'&&
    <NativeStatusBar barStyle="dark-content" backgroundColor={t.surface}/>}
  </SafeAreaView>
+ </NativeCallsProvider>
  </SafeAreaProvider>;
 }
 const a=StyleSheet.create({
