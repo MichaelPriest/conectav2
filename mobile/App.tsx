@@ -32,7 +32,7 @@ import {normalizeMedia,publishMediaPost} from './src/media';
 import {
  Bell,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
  MoreHorizontal,Plus,Search,Send,ShieldCheck,Sparkles,UsersRound,Video,
- X,Globe2,LockKeyhole,UserRound,ChevronRight,Pencil,Share2,HeartHandshake
+ X,Globe2,LockKeyhole,UserRound,ChevronRight,ChevronLeft,Pencil,Share2,HeartHandshake
 } from 'lucide-react-native';
 import {BottomNavigation,Brand,FeedTabs,GradientPanel,RoundIcon,
  SectionEyebrow,SectionHeader} from './src/design';
@@ -699,13 +699,20 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  if(active)return <KeyboardAvoidingView style={{flex:1}}
   behavior={Platform.OS==='ios'?'padding':undefined} keyboardVerticalOffset={12}>
   <View style={[s.header,{justifyContent:'flex-start',gap:14}]}>
-   <Pressable accessibilityRole="button" accessibilityLabel="Voltar para conversas" onPress={()=>setActive(null)} hitSlop={12}><Text style={{color:t.primary,fontSize:21}}>‹</Text></Pressable>
+   <Pressable accessibilityRole="button" accessibilityLabel="Voltar para conversas"
+    onPress={()=>setActive(null)} hitSlop={10}
+    style={{width:37,height:37,borderRadius:12,
+     alignItems:'center',justifyContent:'center',backgroundColor:t.subtle}}>
+    <ChevronLeft size={22} color={t.primary}/>
+   </Pressable>
    <Avatar path={selected?.other?.avatar_path} name={selected?.title||'Conversa'} size={36}/>
    <View style={s.grow}><Text numberOfLines={1} style={s.primaryText}>{selected?.title||'Conversa'}</Text>
     <Text style={s.muted}>{selected?.group?'Grupo do Conecta':'Chat privado e seguro'}</Text></View>
    <Pressable accessibilityRole="button" accessibilityLabel="Pesquisar mensagens"
-    accessibilityState={{expanded:searchOpen}} onPress={()=>setSearchOpen(open=>!open)}>
-    <Text style={{fontSize:22,color:t.primary}}>⌕</Text>
+    accessibilityState={{expanded:searchOpen}} onPress={()=>setSearchOpen(open=>!open)}
+    style={{height:38,width:38,borderRadius:12,backgroundColor:t.subtle,
+     justifyContent:'center',alignItems:'center'}}>
+    <Search size={20} color={t.primary}/>
    </Pressable>
   </View>
   {searchOpen&&<ChatSearch conversationId={active}
@@ -732,8 +739,10 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
    </View>}
    <Text accessibilityLiveRegion="polite" style={[s.muted,{textAlign:'right',marginBottom:5,color:messageLength>4000?t.danger:t.muted}]}>{messageLength}/4000</Text>
    <View style={[s.row,{gap:8,flexWrap:'wrap',marginBottom:9}]}>
-    <Action secondary disabled={busy} label="▧ Foto" onPress={()=>void attach('image')}/>
-    <Action secondary disabled={busy} label="▶ Vídeo" onPress={()=>void attach('video')}/>
+    <Action secondary disabled={busy} label="Foto" onPress={()=>void attach('image')}
+     leading={<ImagePlus size={17} color={t.primary}/>}/>
+    <Action secondary disabled={busy} label="Vídeo" onPress={()=>void attach('video')}
+     leading={<Video size={17} color={t.primary}/>}/>
    </View>
    <VoiceRecorder key={active} conversationId={active} userId={userId}
     replyTo={replyTo?.id||null}
@@ -749,14 +758,23 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
   refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void loadInbox()}/>}
   ListHeaderComponent={<View><Heading title="Mensagens" subtitle="Converse em privado com suas conexões."/>
     <ErrorNotice text={error}/></View>}
-  renderItem={({item})=><Pressable style={s.card} onPress={()=>setActive(item.id)}>
+  renderItem={({item})=><Pressable style={[s.card,{paddingVertical:15}]}
+   accessibilityRole="button" accessibilityLabel={'Abrir conversa com '+item.title}
+   onPress={()=>setActive(item.id)}>
    <View style={[s.row,{gap:12}]}>
-    <Avatar path={item.other?.avatar_path} name={item.title} size={48}/>
-    <View style={s.grow}>
-     <Text style={s.primaryText}>{item.group?'♧ ':''}{item.title}</Text>
-     <Text style={s.muted} numberOfLines={1}>{item.last}</Text>
+    <View style={{borderRadius:31,borderWidth:2,borderColor:t.subtle,padding:2}}>
+     <Avatar path={item.other?.avatar_path} name={item.title} size={48}/>
     </View>
-    {item.unread>0&&<View style={a.count}><Text style={{color:'white',fontSize:11,fontWeight:'800'}}>{item.unread}</Text></View>}
+    <View style={s.grow}>
+     <View style={[s.row,{gap:5}]}>
+      {item.group&&<UsersRound color={t.primary} size={15}/>}
+      <Text style={[s.primaryText,{fontSize:15,flex:1}]} numberOfLines={1}>{item.title}</Text>
+     </View>
+     <Text style={[s.muted,{marginTop:4}]} numberOfLines={1}>{item.last}</Text>
+    </View>
+    {item.unread>0?<View style={[a.count,{backgroundColor:t.primary}]}>
+     <Text style={{color:'white',fontSize:11,fontWeight:'800'}}>{item.unread}</Text>
+    </View>:<ChevronRight size={19} color={t.muted}/>}
    </View>
   </Pressable>}
   ListEmptyComponent={!loading?<View style={s.empty}><Text style={s.primaryText}>Suas conversas aparecerão aqui.</Text>
