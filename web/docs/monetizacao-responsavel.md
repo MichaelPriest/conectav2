@@ -15,7 +15,7 @@ Migration: `supabase/migrations/20261010_conecta_monetization_interests.sql`.
 - RLS obrigatório; somente autenticados com faixa declarada adulta podem enviar solicitação;
 - Usuário lê apenas suas próprias solicitações; administradores autorizados leem e atualizam somente o status;
 - `INSERT` restrito aos campos editáveis; `UPDATE` restrito à coluna `status`; `anon` sem acesso;
-- Uma solicitação por modalidade por conta impede duplicação trivial;
+- Uma solicitação por modalidade por conta impede duplicação trivial; permite retirar interesse e apagar os dados de contato dessa solicitação;
 - E-mail fornecido conscientemente só é usado para contato sobre a proposta; não usar para anúncios/comportamento ou compartilhar com anunciantes.
 
 Para exclusão de dados de contato, o administrador deverá atender solicitações por canal de privacidade e apagar o registro correspondente usando mecanismo administrativo autorizado. Não armazenar CPF, dados de cartão ou menores.

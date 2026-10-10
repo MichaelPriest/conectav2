@@ -28,6 +28,7 @@ export default function SupportConecta(){
  const [sent,setSent]=useState<Interest[]>([]);
  const [loadingEntries,setLoadingEntries]=useState(true);
  const [saving,setSaving]=useState(false);
+ const [removing,setRemoving]=useState(false);
  const [error,setError]=useState('');
  const [notice,setNotice]=useState('');
 
@@ -68,6 +69,17 @@ export default function SupportConecta(){
   setSaving(false);
  }
 
+ async function withdraw(){
+  if(!auth.user||removing)return;
+  if(!window.confirm('Retirar seu interesse e apagar seus dados de contato desta solicitação?'))return;
+  setRemoving(true);setError('');setNotice('');
+  const {error:e}=await supabaseBrowser().from('monetization_interests')
+   .delete().eq('user_id',auth.user.id).eq('kind',kind);
+  if(e)setError('Não foi possível retirar o interesse: '+e.message);
+  else {setSent(prev=>prev.filter(item=>item.kind!==kind));
+   setNotice('Interesse retirado. Seus dados de contato desta solicitação foram excluídos.');}
+  setRemoving(false);
+ }
  const existing=sent.find(item=>item.kind===kind);
  return <GuardedPage profile={auth.profile} loading={auth.loading} error={auth.error}>
   <main className="section-page conecta-money">
@@ -101,7 +113,9 @@ export default function SupportConecta(){
     {notice&&<p className="form-success" role="status">{notice}</p>}
     {error&&<p className="form-error" role="alert">{error}</p>}
     {loadingEntries?<p className="muted">Verificando solicitações...</p>:existing?
-      <div className="conecta-money-done"><CheckCircle2 size={22}/><span>{statusLabels[existing.status]}. Você não precisa enviar novamente.</span></div>:
+      <div className="conecta-money-done"><CheckCircle2 size={22}/><span>{statusLabels[existing.status]}. Você não precisa enviar novamente.</span>
+       <button type="button" className="btn btn-outline" onClick={()=>void withdraw()} disabled={removing}>{removing?'Excluindo...':'Retirar interesse'}</button>
+      </div>:
       <form className="conecta-money-form" onSubmit={submit}>
        {kind!=='plus'&&<label>Empresa ou organização<input className="form-input" type="text" value={organization}
          maxLength={120} minLength={2} required autoComplete="organization" onChange={e=>setOrganization(e.target.value)}/></label>}
