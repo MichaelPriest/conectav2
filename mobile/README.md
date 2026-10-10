@@ -23,6 +23,8 @@ Não usa um WebView como interface principal.
   Gravação de mensagens de voz com permissão explícita, limite de um minuto,
   upload para o bucket privado do Conecta e reprodução por URL assinada.
   Fotos e vídeos em conversas também são enviados nativamente.
+  Respostas citadas, edição e exclusão pelo próprio autor, reações por emojis,
+  busca no histórico e paginação estável de mensagens antigas.
 - Stories nativos de até 24 horas: listagem, câmera/galeria, publicação,
   legenda, privacidade, visualização e exclusão pelo autor, com moderação
   no endpoint real do Conecta.
@@ -30,7 +32,9 @@ Não usa um WebView como interface principal.
   compartilhamento por folha nativa; publicar vídeo permanece no Feed.
 - Comunidades: listagem, busca e participar/sair. Detalhes avançados são
   abertos pelo site no navegador.
-- Notificações: listagem, atualização em tempo real e marcar como lidas.
+- Notificações: listagem, atualização em tempo real, marcar como lidas e
+  contador de não lidas na barra superior (somente enquanto o app está em uso;
+  **não** equivale a notificações push em segundo plano).
 - Perfil: alterar foto e capa do perfil pela galeria (até 8 MB),
   editar nome/biografia e sair.
 - Identidade visual Conecta para Android e iOS, navegação nativa inferior.
@@ -143,7 +147,14 @@ Só execute builds quando necessário para controlar os minutos do GitHub.
     site. Tente um arquivo maior que 8 MB para verificar a proteção.
 13. Teste chat, conexões, notificações, perfil e logout; valide que conteúdo
    privado não aparece após encerrar a sessão.
-14. Valide em aparelhos Android e iOS reais. A execução dos testes/TypeScript
+14. No chat, carregue mensagens antigas; em seguida receba uma mensagem nova e
+    confirme que não há duplicação nem desaparecimento do histórico carregado.
+    Teste responder, editar, apagar, reagir e remover reação.
+15. Busque um termo no histórico da conversa e responda a um resultado;
+    confirme que mensagens apagadas não aparecem.
+16. Confirme o contador de notificações não lidas e a atualização após
+    marcar uma notificação ou todas como lidas.
+17. Valide em aparelhos Android e iOS reais. A execução dos testes/TypeScript
    no GitHub não substitui o teste do APK e nem equivale a build iOS assinada.
 
 As partes ainda disponíveis só no site devem permanecer acessíveis sem
