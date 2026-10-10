@@ -1,7 +1,8 @@
 'use strict';
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {versionParts,compareVersions,trustedAndroidApk,chooseAndroidUpdate,MOBILE_RELEASES_API}=
+const {versionParts,compareVersions,trustedAndroidApk,chooseAndroidUpdate,
+ chooseIosUpdate,MOBILE_RELEASES_API,APP_STORE_LOOKUP_API}=
  require('../src/version-utils.ts');
 
 const apk=(tag,assetName='conecta-v2-android-0.6.0-alpha.apk',url)=>({
@@ -53,4 +54,35 @@ test('Choose newest Alpha version with a real Android binary download link',()=>
  assert.match(current?.url||'',/0\.8\.0-alpha\.apk$/);
  assert.equal(chooseAndroidUpdate(releases,'0.8.0'),null);
  assert.match(MOBILE_RELEASES_API,/\/releases\?per_page=/);
+});
+
+test('iOS version checks reject unapproved app listings and phishing URLs',()=>{
+ const valid={results:[{
+  bundleId:'br.com.conectav2.app',version:'0.7.0',
+  trackViewUrl:'https://apps.apple.com/br/app/conecta/id1234567890'
+ }]};
+ assert.equal(chooseIosUpdate(valid,'0.5.1')?.version,'0.7.0');
+ assert.equal(chooseIosUpdate(valid,'0.7.0'),null);
+ assert.equal(chooseIosUpdate({results:[]},'0.5.1'),null);
+ assert.equal(chooseIosUpdate({results:[{
+  ...valid.results[0],bundleId:'com.other.app'
+ }]},'0.5.1'),null);
+ assert.equal(chooseIosUpdate({results:[{
+  ...valid.results[0],trackViewUrl:'https://apps.apple.com.attacker.net/br/app/id1234567890'
+ }]},'0.5.1'),null);
+ assert.match(APP_STORE_LOOKUP_API,/itunes\.apple\.com\/lookup\?/);
+});
+test('Version monitor is installed at root, checks foreground and requires user approval',()=>{
+ const fs=require('node:fs'),path=require('node:path');
+ const app=fs.readFileSync(path.join(__dirname,'../App.tsx'),'utf8');
+ const update=fs.readFileSync(path.join(__dirname,'../src/update-ui.tsx'),'utf8');
+ assert.match(app,/NativeVersionMonitor\/\>/);
+ assert.match(app,/checkVersionManually\(\)/);
+ assert.match(update,/Application\.nativeApplicationVersion/);
+ assert.match(update,/AppState\.addEventListener\('change'/);
+ assert.match(update,/checkForNativeUpdate\(\)/);
+ assert.match(update,/Alert\.alert\('Nova versão do Conecta'/);
+ assert.match(update,/Linking\.openURL\(update\.url\)/);
+ assert.match(update,/chooseAndroidUpdate\(records,installed\)/);
+ assert.match(update,/chooseIosUpdate\(records,installed\)/);
 });
