@@ -43,6 +43,7 @@ import {ProfileDetailsEditor} from './src/profile-details-ui';
 import {NativePermissionsCenter} from './src/permissions-ui';
 import {NativeForegroundNotificationBridge} from './src/native-notifications';
 import {MediaGallery} from './src/media-gallery';
+import {parseConectaLink} from './src/deep-link';
 import type {PinnedChatMessage} from './src/chat-groups';
 import {
  Bell,BellOff,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
@@ -1780,6 +1781,18 @@ export default function App(){
  const [tab,setTab]=useState<Tab>('feed');
  const [chatId,setChatId]=useState<string|null>(null);
  const [viewPostId,setViewPostId]=useState<string|null>(null);
+ useEffect(()=>{
+  let live=true;
+  const open=(url:string|null)=>{
+   if(!live||!url)return;
+   const to=parseConectaLink(url);
+   if(to?.type==='post'){setViewPostId(to.id);setTab('feed');}
+   if(to?.type==='notifications'){setViewPostId(null);setTab('notifications');}
+  };
+  void Linking.getInitialURL().then(open).catch(()=>{});
+  const listener=Linking.addEventListener('url',event=>open(event.url));
+  return()=>{live=false;listener.remove();};
+ },[]);
  const [contactsMode,setContactsMode]=useState(false);
  const [composeRequest,setComposeRequest]=useState(0);
  const [unreadCount,setUnreadCount]=useState(0);
