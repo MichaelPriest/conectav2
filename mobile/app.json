@@ -52,7 +52,7 @@
         {
           "photosPermission": "O Conecta acessa apenas fotos e vídeos que você selecionar para compartilhar.",
           "cameraPermission": "Permita a câmera para fotografar quando você escolher publicar uma imagem.",
-          "microphonePermission": false
+          "microphonePermission": "O microfone é utilizado apenas quando você escolhe gravar uma mensagem de voz ou iniciar uma chamada."
         }
       ],
       [
