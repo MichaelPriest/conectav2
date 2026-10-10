@@ -31,6 +31,8 @@ export async function signedMedia(path:string|null|undefined):Promise<string|nul
  if(signedCache.size>250)signedCache.clear();
  return data.signedUrl;
 }
+/** Retry media whose signed URL expired or was rejected by the image loader. */
+export function invalidateSignedMedia(path:string):void{signedCache.delete(path);}
 export function clearMediaCache(){signedCache.clear();}
 
 const POST_FIELDS='id,author_id,community_id,content,visibility,moderation_status,created_at,media_path,media_type,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)';
