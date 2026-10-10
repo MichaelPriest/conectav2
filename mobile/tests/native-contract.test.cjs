@@ -167,7 +167,8 @@ test('Native chat keeps replies, edits, deletes and emoji reactions under RLS',(
  assert.match(models,/reply_to:string\|null/);
  assert.match(models,/edited_at:string\|null/);
  assert.match(data,/reply_to:replyTo/);
- assert.match(data,/\.select\('id,conversation_id,sender_id,content,created_at,media_path,media_type,deleted_at,edited_at,reply_to'\)/);
+ assert.match(data,/CHAT_MESSAGE_FIELDS='id,conversation_id,sender_id,content,created_at,media_path,media_type,deleted_at,edited_at,reply_to'/);
+ assert.match(data,/\.select\(CHAT_MESSAGE_FIELDS\)/);
  assert.match(actions,/from\('message_reactions'\)/);
  assert.match(actions,/\.eq\('user_id',userId\)/);
  assert.match(actions,/\.eq\('sender_id',userId\)\.is\('deleted_at',null\)/);
@@ -178,4 +179,19 @@ test('Native chat keeps replies, edits, deletes and emoji reactions under RLS',(
  assert.match(bubble,/editChatMessage\(message,userId,editText\)/);
  assert.match(app,/onReply=\{message=>setReplyTo\(message\)\}/);
  assert.match(app,/sendMessage\(active,userId,compose,replyTo\?\.id\|\|null\)/);
+});
+
+test('Chat pagination and server search preserve membership, order and privacy',()=>{
+ const search=read('src/chat-search.tsx');
+ assert.match(data,/loadOlderChatMessages/);
+ assert.match(data,/\.eq\('conversation_id',conversationId\)/);
+ assert.match(data,/\.order\('created_at',\{ascending:false\}\)\.order\('id',\{ascending:false\}\)/);
+ assert.match(data,/\.is\('deleted_at',null\)/);
+ assert.match(data,/\.ilike\('content','%'\+escaped\+'%'\)/);
+ assert.match(data,/replace\(\/\[\\\\%_\]\/g/);
+ assert.match(app,/mergeChatPages\(previous,loaded,id\)/);
+ assert.match(app,/loadOlderChatMessages\(active,messages\[0\]\)/);
+ assert.match(app,/inverted/);
+ assert.match(app,/ChatSearch conversationId=\{active\}/);
+ assert.match(search,/searchChatMessages\(conversationId,query\)/);
 });
