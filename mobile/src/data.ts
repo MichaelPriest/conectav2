@@ -193,7 +193,7 @@ export async function changeConnection(userId:string,otherId:string,
 
 export async function loadCommunities(userId:string):Promise<{items:Community[];joined:Set<string>}>{
  const [result,membership]=await Promise.all([
-   supabase.from('communities').select('id,slug,name,description,cover_path,avatar_path,is_official')
+   supabase.from('communities').select('id,owner_id,slug,name,description,rules,cover_path,avatar_path,is_official,created_at')
     .order('created_at',{ascending:false}).limit(100),
    supabase.from('community_members').select('community_id').eq('user_id',userId)
  ]);
