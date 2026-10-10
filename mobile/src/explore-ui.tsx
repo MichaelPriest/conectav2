@@ -176,8 +176,9 @@ function PublicProfile({userId,personId,onBack,onConversation}:{
   <ErrorNotice text={error}/>
  </ScrollView>;
 }
-export function ExploreScreen({userId,onConversation,onOpenConnections}:{
- userId:string;onConversation:(id:string)=>void;onOpenConnections:()=>void
+export function ExploreScreen({userId,onConversation,onOpenConnections,onOpenCommunity}:{
+ userId:string;onConversation:(id:string)=>void;onOpenConnections:()=>void;
+ onOpenCommunity:(slug:string)=>void
 }){
  const [items,setItems]=useState<ExploreData>({people:[],communities:[],posts:[]});
  const [selected,setSelected]=useState<string|null>(null);
@@ -243,8 +244,8 @@ export function ExploreScreen({userId,onConversation,onOpenConnections}:{
      </View>
     </View>
     <View style={{marginTop:9}}>
-     <Action secondary label="Ver comunidade" onPress={()=>
-      void Linking.openURL('https://conectav2-validacao.onrender.com/comunidades/'+encodeURIComponent(community.slug))}/>
+     <Action secondary label="Ver comunidade"
+      onPress={()=>onOpenCommunity(community.slug)}/>
     </View>
    </View>)}
   </View>}
