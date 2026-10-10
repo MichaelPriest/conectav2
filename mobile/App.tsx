@@ -145,7 +145,7 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onComment}:{
   : post.media_type==='image'&&post.media_path?[post.media_path]:[];
  const videoPath=post.post_media?.find(x=>x.media_type==='video')?.storage_path||
   (post.media_type==='video'?post.media_path:null);
- const visibility=post.visibility==='private'?'🔒 Só eu':post.visibility==='friends'?'♡ Conexões':'◎ Público';
+ const visibility=post.visibility==='private'?'Só eu':post.visibility==='friends'?'Conexões':'Público';
  return <View style={s.card}>
   <View style={[s.row,{gap:11}]}>
    <Avatar path={post.profiles?.avatar_path} name={author} size={43}/>
@@ -153,7 +153,13 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onComment}:{
     <Text style={s.primaryText}>{author}</Text>
     <Text style={s.muted}>@{post.profiles?.handle||'conecta'} · {formatDate(post.created_at)}</Text>
    </View>
-   <Text style={s.badge}>{visibility}</Text>
+   <View style={{flexDirection:'row',alignItems:'center',gap:3,
+    backgroundColor:t.bg,paddingHorizontal:8,paddingVertical:6,borderRadius:9}}>
+    {post.visibility==='private'?<LockKeyhole size={12} color={t.muted}/>:
+     post.visibility==='friends'?<UsersRound size={12} color={t.muted}/>:
+      <Globe2 size={12} color={t.muted}/>}
+    <Text style={{fontSize:10,fontWeight:'700',color:t.muted}}>{visibility}</Text>
+   </View>
   </View>
   {post.moderation_status==='pending'&&post.author_id===userId&&
    <Text style={[s.badge,{marginTop:10}]}>⌛ Aguardando moderação automática</Text>}
@@ -162,28 +168,38 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onComment}:{
   <Text style={[s.primaryText,{fontSize:14,fontWeight:'400',lineHeight:22,marginTop:12}]}>
    {post.content}
   </Text>
-  {images.map(path=><Media key={path} path={path}/>)}
+  {images.length>0&&<View style={{flexDirection:'row',flexWrap:'wrap',
+   justifyContent:'space-between',marginTop:8}}>
+   {images.map(path=><Media key={path} path={path}
+    height={images.length===1?265:166}
+    width={images.length===1?'100%':'48%'} radius={13} marginTop={7}/>)}
+  </View>}
   {!!videoPath&&<VideoMedia path={videoPath}/>} 
-  <View style={s.separator}/>
-  <View style={[s.row,{justifyContent:'space-between',flexWrap:'wrap',gap:9}]}>
-   <Pressable onPress={()=>onLike(post)} hitSlop={9}>
-    <Text style={[s.secondaryText,{color:liked?t.pink:t.primary,fontSize:13}]}>
-     {liked?'♥':'♡'} {count} curtidas
-    </Text>
-   </Pressable>
-   <Pressable accessibilityRole="button" accessibilityLabel="Ver comentários"
-    accessibilityState={{expanded:commentsOpen}} onPress={()=>void toggleComments()}>
-    <Text style={s.secondaryText}>◌ {comments} comentários {commentsOpen?'⌃':'⌄'}</Text>
-   </Pressable>
-   <Pressable accessibilityRole="button" accessibilityLabel={saved?'Remover dos salvos':'Salvar publicação'}
-    accessibilityState={{selected:saved}} onPress={()=>onSave(post)}>
-    <Text style={[s.secondaryText,saved&&{color:t.pink}]}>{saved?'▣ Salvo':'▢ Salvar'}</Text>
-   </Pressable>
-   <Pressable accessibilityRole="button" accessibilityLabel="Compartilhar publicação"
-    onPress={()=>void Share.share({message:SITE_URL+'/post/'+encodeURIComponent(post.id)})
-     .catch(()=>Alert.alert('Compartilhamento indisponível','Não foi possível abrir o compartilhamento do dispositivo.'))}>
-    <Text style={s.secondaryText}>↗ Compartilhar</Text>
-   </Pressable>
+  <View style={[s.row,{justifyContent:'space-between',marginTop:13,
+   paddingBottom:12,borderBottomWidth:1,borderColor:t.line}]}>
+   <Text style={s.muted}><Text style={{color:t.pink,fontWeight:'900'}}>♥ </Text>
+    {count} curtidas</Text>
+   <Text style={s.muted}>{comments} comentários</Text>
+  </View>
+  <View style={[s.row,{justifyContent:'space-around',gap:6,marginTop:7}]}>
+   {([
+    {label:'Curtir',Icon:Heart,selected:liked,handler:()=>onLike(post)},
+    {label:'Comentar',Icon:MessageCircle,selected:commentsOpen,handler:()=>void toggleComments()},
+    {label:'Salvar',Icon:Bookmark,selected:saved,handler:()=>onSave(post)},
+    {label:'Enviar',Icon:Share2,selected:false,handler:()=>void Share.share({
+      message:SITE_URL+'/post/'+encodeURIComponent(post.id)
+     }).catch(()=>Alert.alert('Compartilhamento indisponível','Não foi possível abrir o compartilhamento.'))}
+   ] as const).map(({label,Icon,selected,handler})=><Pressable key={label}
+    accessibilityRole="button" accessibilityLabel={label}
+    accessibilityState={{selected}} onPress={handler}
+    style={{flex:1,minHeight:45,borderRadius:11,justifyContent:'center',
+     alignItems:'center',flexDirection:'row',gap:5,
+     backgroundColor:selected?t.subtle:'transparent'}}>
+    <Icon size={18} strokeWidth={2} color={selected?t.primary:t.muted}
+     fill={label==='Curtir'&&liked?t.pink:'none'}/>
+    <Text numberOfLines={1} style={{fontSize:11,fontWeight:'800',
+     color:selected?t.primary:t.muted}}>{label}</Text>
+   </Pressable>)}
   </View>
   {post.author_id!==userId&&<ReportContent targetType="post" targetId={post.id} userId={userId}/>}
   {commentsOpen&&<View style={{marginTop:14,gap:10}}>
