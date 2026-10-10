@@ -254,3 +254,62 @@ test('Native visual identity matches Conecta website and uses real icon tabs',()
  assert.match(app,/Modal visible=\{composerOpen\}/);
  assert.match(app,/BottomNavigation tab=\{tab\}/);
 });
+
+test('Community directory opens native pages and uses membership-guarded posts',()=>{
+ const community=read('src/community.ts');
+ const validation=read('src/community-validation.ts');
+ const media=read('src/media.ts');
+ assert.match(data,/from\('communities'\)\.select\('id,owner_id,slug,name,description,rules/);
+ assert.match(community,/from\('posts'\)\.select\(POST_FIELDS\)/);
+ assert.match(community,/\.eq\('community_id',communityId\)/);
+ assert.match(community,/from\('community_members'\)/);
+ assert.match(community,/ensureCommunityMembership\(userId,communityId\)/);
+ assert.match(community,/visibility:'public'/);
+ assert.match(community,/owner_id:userId/);
+ assert.match(validation,/validateCommunityDraft/);
+ assert.match(media,/community_id:communityId/);
+ assert.match(media,/ensureCommunityMembership\(userId,communityId\)/);
+ assert.match(app,/CommunityDetailScreen community=\{selected\}/);
+ assert.match(app,/setSelected\(item\)/);
+ assert.match(app,/createCommunity\(userId,newName,newSlug,newDescription,newRules\)/);
+ assert.match(app,/publishCommunityText\(userId,community\.id,content\)/);
+ assert.match(app,/publishMediaPost\(userId,content,'public',media,community\.id\)/);
+});
+test('Polls share the website schema with vote limits and server result counting',()=>{
+ const polls=read('src/polls.ts'),form=read('src/poll-ui.tsx');
+ const validation=read('src/poll-validation.ts');
+ assert.match(polls,/from\('post_polls'\)\.insert\(/);
+ assert.match(polls,/from\('post_poll_options'\)\.insert\(/);
+ assert.match(polls,/from\('post_poll_votes'\)\.insert\(/);
+ assert.match(polls,/rpc\('poll_results',\{target_post:postId\}\)/);
+ assert.match(polls,/await ensureCommunityMembership\(userId,communityId\)/);
+ assert.match(polls,/await requestPostModeration\(data\.id\)/);
+ assert.match(validation,/validatePollDraft/);
+ assert.match(form,/castPollVote\(postId,userId,id\)/);
+ assert.match(form,/poll\.selected/);
+ assert.match(app,/PollCard postId=\{post\.id\}/);
+ assert.match(app,/publishPollPost\(userId,text,visibility,pollOptions,pollDays\)/);
+ assert.match(app,/publishPollPost\(userId,content,'public',pollOptions,pollDays,community\.id\)/);
+});
+test('Native @mentions are authorized, debounced and sanitize username suggestions',()=>{
+ const mentions=read('src/mentions.tsx'),utils=read('src/mention-utils.ts');
+ assert.match(mentions,/from\('profiles'\)/);
+ assert.match(mentions,/\.ilike\('handle',query\+'%'\)\.limit\(6\)/);
+ assert.match(mentions,/setTimeout\(async\(\)=>/);
+ assert.match(mentions,/activeMention\(value,cursor\)/);
+ assert.match(mentions,/replaceMention\(value,cursor,person\.handle,maxLength\)/);
+ assert.match(utils,/\(\^\|\\s\)@/);
+ assert.match(app,/MentionInput value=\{text\}/);
+ assert.match(app,/MentionInput value=\{content\}/);
+ assert.match(app,/MentionInput value=\{commentBody\}/);
+ assert.match(app,/MentionInput value=\{compose\}/);
+});
+test('Post deletion remains author-only and cleans signed user-owned uploads',()=>{
+ assert.match(data,/deleteOwnPost\(post:Post,userId:string\)/);
+ assert.match(data,/post\.author_id!==userId/);
+ assert.match(data,/\.eq\('author_id',userId\)\.select\('id'\)/);
+ assert.match(data,/path\.startsWith\(userId\+'\/'\)/);
+ assert.match(data,/storage\.from\('social-media'\)\.remove\(paths\)/);
+ assert.match(app,/accessibilityLabel="Excluir publicação"/);
+ assert.match(app,/deleteOwnPost\(post,userId\)/);
+});
