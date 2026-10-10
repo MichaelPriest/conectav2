@@ -7,19 +7,25 @@ export {normalizeMedia};
 export type {SelectedMedia};
 import {supabase} from './supabase';
 import {requestPostModeration} from './data';
+import {ensureCommunityMembership} from './community';
 
 /**
  * Matches the web's posts + post_media contract. RLS, age gates and
  * moderation remain authoritative in Supabase; do not elevate credentials.
  */
 export async function publishMediaPost(
- userId:string,caption:string,visibility:'public'|'friends'|'private',selected:SelectedMedia[]
+ userId:string,caption:string,visibility:'public'|'friends'|'private',selected:SelectedMedia[],
+ communityId:string|null=null
 ):Promise<string>{
  const content=caption.trim();
  if(content.length>3000)throw new Error('A legenda pode ter até 3.000 caracteres.');
  if(!selected.length)throw new Error('Selecione uma mídia antes de publicar.');
  const {data:{session}}=await supabase.auth.getSession();
  if(!session||session.user.id!==userId)throw new Error('Sua sessão expirou. Entre novamente.');
+ if(communityId){
+  if(visibility!=='public')throw new Error('Publicações da comunidade precisam ser públicas.');
+  await ensureCommunityMembership(userId,communityId);
+ }
  const files=selected.map(media=>{
   const file=new File(media.uri);
   if(!file.exists||file.size<=0||file.size>MAX_MEDIA_BYTES)
@@ -63,7 +69,8 @@ export async function publishMediaPost(
   }
   const first=uploaded[0];
   const {data,error}=await supabase.from('posts').insert({
-   author_id:userId,content,visibility,media_path:first.storage_path,media_type:first.media_type
+   author_id:userId,community_id:communityId,content,visibility,
+   media_path:first.storage_path,media_type:first.media_type
   }).select('id').single();
   if(error)throw error;
   createdId=data.id;
