@@ -11,7 +11,14 @@ on:
       - 'mobile/src/voice-ui.tsx'
       - 'mobile/src/native-notifications.tsx'
       - 'mobile/src/permissions-ui.tsx'
+      - 'mobile/src/remote-push.ts'
+      - 'mobile/tests/native-contract.test.cjs'
+      - 'mobile/tests/native-features-v07.test.cjs'
   workflow_dispatch:
+
+concurrency:
+  group: conecta-android-apk-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
