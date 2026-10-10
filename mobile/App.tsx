@@ -610,7 +610,7 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     <Action secondary disabled={busy} label="▧ Foto" onPress={()=>void attach('image')}/>
     <Action secondary disabled={busy} label="▶ Vídeo" onPress={()=>void attach('video')}/>
    </View>
-   <VoiceRecorder conversationId={active} userId={userId}
+   <VoiceRecorder key={active} conversationId={active} userId={userId}
     replyTo={replyTo?.id||null}
     onSent={()=>{setReplyTo(null);void loadMessages(active);void loadInbox();}}/>
    <View style={[s.row,{gap:8}]}>
