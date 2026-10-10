@@ -94,3 +94,41 @@ test('Permissions do not request location, contacts or microphone at launch',()=
  assert.match(app,/NativeForegroundNotificationBridge userId=\{user\.id\}/);
  assert.match(app,/NativePermissionsCenter userId=\{profile\.id\}/);
 });
+
+test('Deep links accept only official Conecta hosts and UUID post identifiers',()=>{
+ const {parseConectaLink}=require('../src/deep-link.ts');
+ const id='f2bc906a-4cb1-4797-872e-5bdca1234567';
+ assert.deepEqual(parseConectaLink('conecta://post/'+id),{type:'post',id});
+ assert.deepEqual(parseConectaLink('conecta:///post/'+id),{type:'post',id});
+ assert.deepEqual(parseConectaLink('https://conectav2-validacao.onrender.com/post/'+id),
+  {type:'post',id});
+ assert.deepEqual(parseConectaLink('conecta://notifications'),{type:'notifications'});
+ assert.deepEqual(parseConectaLink('https://conectav2-validacao.onrender.com/notificacoes'),{
+  type:'notifications'
+ });
+ for(const bad of [
+  'https://conectav2-validacao.onrender.com.attacker.net/post/'+id,
+  'https://other.example.com/post/'+id,
+  'http://conectav2-validacao.onrender.com/post/'+id,
+  'conecta://post/%2e%2e/notifications',
+  'conecta://post/any-user-supplied',
+  'conecta://post/'+id+'?redirect=https://example.com',
+  'javascript:alert(1)'
+ ])assert.equal(parseConectaLink(bad),null,bad);
+});
+test('Native image gallery and post details do not open external browsers',()=>{
+ const src=read('App.tsx');
+ const gallery=read('src/media-gallery.tsx');
+ const data=read('src/data.ts');
+ assert.match(src,/MediaGallery paths=\{images\}/);
+ assert.match(src,/PostDetailScreen postId=\{viewPostId\}/);
+ assert.match(src,/parseConectaLink\(url\)/);
+ assert.match(src,/onPost=\{setViewPostId\}/);
+ assert.match(src,/onConnections=\{\(\)=>/);
+ assert.match(gallery,/Modal visible=\{active!==null\}/);
+ assert.match(gallery,/signedMedia\(paths\[active\]\)/);
+ assert.match(gallery,/accessibilityLabel="Próxima imagem"/);
+ assert.match(gallery,/setZoomed\(old=>!old\)/);
+ assert.match(data,/loadPermittedPost\(postId:string,userId:string\)/);
+ assert.match(data,/post\.author_id!==userId&&post\.moderation_status!=='approved'/);
+});
