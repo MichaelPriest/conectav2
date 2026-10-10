@@ -212,18 +212,64 @@ export function StoryRail({userId,profile}:{userId:string;profile:UserProfile|nu
    <p className="small-note conecta-moderation-disclosure">Stories com fotos e vídeos ficam pendentes até verificação. Com IA externa habilitada, a mídia poderá ser analisada pelo provedor; vídeos continuam sujeitos a revisão humana.</p>
    {error&&<p role="alert" className="form-error">{error}</p>}
    {selected&&<div className="conecta-story-overlay" role="presentation">
-     <section className="conecta-story-viewer" role="dialog" aria-modal="true" aria-label={'Story de '+(selected.profiles?.display_name||'usuário')}>
-       <header><ProfileAvatar person={selected.profiles} size="small"/><div><strong>{selected.profiles?.display_name||'Story'}</strong>
-         <small><Clock3 size={12}/> até {new Date(selected.expires_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</small></div>
-         <button type="button" className="icon-btn" aria-label="Fechar Story" onClick={()=>{setSelected(null);setSignedUrl('');}}><X size={22}/></button>
+     <section className="conecta-story-viewer" role="dialog" aria-modal="true"
+      aria-label={'Stories de '+(selected.profiles?.display_name||'usuário')}>
+       <div style={{display:'flex',gap:4,padding:'8px 12px'}}>
+        {groupStories.map((item,i)=><div key={item.id} style={{flex:1,height:3,
+         borderRadius:6,background:'rgba(255,255,255,.32)',overflow:'hidden'}}>
+         <div style={{width:i<groupIndex?'100%':i===groupIndex?Math.round(progress*100)+'%':'0%',
+          height:'100%',background:'#fff'}}/>
+        </div>)}
+       </div>
+       <header><ProfileAvatar person={selected.profiles} size="small"/>
+        <div><strong>{selected.profiles?.display_name||'Story'}</strong>
+         <small><Clock3 size={12}/> {groupIndex+1} de {groupStories.length} · 24h</small>
+        </div>
+        <button type="button" className="icon-btn" onClick={()=>setPaused(p=>!p)}
+         aria-label={paused?'Retomar Story':'Pausar Story'}>
+         {paused?'▶':'Ⅱ'}
+        </button>
+        <button type="button" className="icon-btn" aria-label="Fechar Story"
+         onClick={close}><X size={22}/></button>
        </header>
-       <div className="conecta-story-media">{!signedUrl?<Loader2 className="spin" size={30}/>:selected.media_type==='video'
-         ?<video key={selected.id} src={signedUrl} autoPlay controls playsInline preload="metadata"/>
-         :<img src={signedUrl} alt={selected.caption||'Story em foto'}/>}</div>
+       <div className="conecta-story-media">
+        {selected.shared_post_id?
+         !sharedLoaded?<Loader2 className="spin" size={30}/>:
+         sharedPost?<div style={{padding:26,textAlign:'center',color:'white'}}>
+          <small>PUBLICAÇÃO COMPARTILHADA</small>
+          <h3>{sharedPost.name}</h3>
+          <p style={{fontSize:18,lineHeight:1.5,whiteSpace:'pre-wrap'}}>
+           {sharedPost.content||'Veja a publicação no Conecta.'}
+          </p>
+          <Link className="btn btn-primary" href={'/post/'+sharedPost.id}
+           onClick={close}>Abrir publicação original</Link>
+         </div>:
+         <p style={{padding:20}}>A publicação não está mais disponível ao público.</p>:
+         !signedUrl?<Loader2 className="spin" size={30}/>:
+         selected.media_type==='video'
+         ?<video key={selected.id} ref={videoRef} src={signedUrl} autoPlay controls
+           playsInline preload="metadata" onEnded={next}
+           onTimeUpdate={e=>{
+            const target=e.currentTarget;
+            if(target.duration>0)setProgress(Math.min(1,target.currentTime/target.duration));
+           }}
+           onLoadedData={()=>setMediaLoaded(true)}/>
+         :<img src={signedUrl} alt={selected.caption||'Story em foto'}
+           onLoad={()=>setMediaLoaded(true)} onError={()=>setError('A foto não pôde ser exibida.')}/>}
+       </div>
        {selected.caption&&<p className="conecta-story-caption">{selected.caption}</p>}
-       {selected.author_id===userId&&selected.moderation_status==='rejected'&&<ModerationAppealButton kind="story" targetId={selected.id}/>}
-       <footer>{selected.profiles?.handle&&<Link href={'/p/'+selected.profiles.handle}>Ver perfil</Link>}
-         {selected.author_id===userId&&<button type="button" disabled={deleting} onClick={()=>void removeStory()}><Trash2 size={16}/> Excluir</button>}
+       {selected.author_id===userId&&selected.moderation_status==='rejected'&&
+        <ModerationAppealButton kind="story" targetId={selected.id}/>}
+       <footer>
+        <button type="button" className="btn btn-outline" aria-label="Story anterior"
+         onClick={()=>advance(-1)}><ChevronLeft size={19}/> Anterior</button>
+        {selected.profiles?.handle&&<Link href={'/p/'+selected.profiles.handle}>
+         Ver perfil
+        </Link>}
+        <button type="button" className="btn btn-outline" aria-label="Próximo Story"
+         onClick={next}>Próximo <ChevronRight size={19}/></button>
+        {selected.author_id===userId&&<button type="button" disabled={deleting}
+         onClick={()=>void removeStory()}><Trash2 size={16}/> Excluir</button>}
        </footer>
      </section>
    </div>}
