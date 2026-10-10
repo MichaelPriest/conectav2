@@ -30,8 +30,10 @@ import {changeProfilePhoto,loadCover} from './src/profile-media';
 import {ReelsScreen} from './src/reels-ui';
 import {normalizeMedia,publishMediaPost} from './src/media';
 import {loadCommunityPosts,communityMemberCount,publishCommunityText,createCommunity,communitySlug} from './src/community';
+import {PollCard,PollDraft} from './src/poll-ui';
+import {publishPollPost,validatePollDraft} from './src/polls';
 import {
- Bell,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
+ Bell,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
  MoreHorizontal,Plus,Search,Send,ShieldCheck,Sparkles,UsersRound,Video,
  X,Globe2,LockKeyhole,UserRound,ChevronRight,ChevronLeft,Pencil,Share2,HeartHandshake
 } from 'lucide-react-native';
@@ -191,6 +193,7 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onComment}:{
     width={images.length===1?'100%':'48%'} radius={13} marginTop={7}/>)}
   </View>}
   {!!videoPath&&<VideoMedia path={videoPath}/>} 
+  <PollCard postId={post.id} userId={userId}/>
   <View style={[s.row,{justifyContent:'space-between',marginTop:13,
    paddingBottom:12,borderBottomWidth:1,borderColor:t.line}]}>
    <Text style={s.muted}><Text style={{color:t.pink,fontWeight:'900'}}>♥ </Text>
@@ -273,6 +276,9 @@ function FeedScreen({userId,profile,composeRequest}:{
  const [more,setMore]=useState(false),[loadingMore,setLoadingMore]=useState(false);
  const [draftReady,setDraftReady]=useState(false);
  const [media,setMedia]=useState<SelectedMedia[]>([]);
+ const [pollMode,setPollMode]=useState(false);
+ const [pollOptions,setPollOptions]=useState(['','']);
+ const [pollDays,setPollDays]=useState(7);
  const draftRevision=useRef(0);
  const draftKey='conecta-mobile-feed-draft:'+userId;
  useEffect(()=>{
@@ -306,6 +312,10 @@ function FeedScreen({userId,profile,composeRequest}:{
  },[draftKey,draftReady,text,visibility]);
  const postLength=text.trim().length;
  const validPost=(postLength>0||media.length>0)&&postLength<=3000;
+ const pollReady=!pollMode||(()=>{
+  try{validatePollDraft(text,pollOptions,pollDays);return true;}
+  catch{return false;}
+ })();
  const load=useCallback(async(offset=0)=>{
   const result=feedView==='saved'?
    {items:await loadSavedPosts(userId),more:false}:await loadFeed(offset);
@@ -324,6 +334,7 @@ function FeedScreen({userId,profile,composeRequest}:{
  useEffect(()=>{void refresh();},[refresh]);
  const pick=async(kind:'image'|'video'|'camera')=>{
   if(busy)return;
+  setPollMode(false);
   setError('');
   try{
    if(kind==='camera'){
@@ -344,9 +355,11 @@ function FeedScreen({userId,profile,composeRequest}:{
   if(!validPost||busy)return;
   setBusy(true);setError('');
   try{
-   if(media.length)await publishMediaPost(userId,text,visibility,media);
+   if(pollMode)await publishPollPost(userId,text,visibility,pollOptions,pollDays);
+   else if(media.length)await publishMediaPost(userId,text,visibility,media);
    else await publishTextPost(userId,text,visibility);
-   setText('');setMedia([]);setComposerOpen(false);
+   setText('');setMedia([]);setPollMode(false);
+   setPollOptions(['','']);setPollDays(7);setComposerOpen(false);
    await AsyncStorage.removeItem(draftKey).catch(()=>{});
    await refresh();
    Alert.alert('Publicação enviada','O conteúdo segue as mesmas regras de moderação do site.');
@@ -479,6 +492,8 @@ function FeedScreen({userId,profile,composeRequest}:{
         <Text style={[s.secondaryText,visibility===value&&{color:'#FFF'}]}>{name}</Text>
        </Pressable>)}
       </View>
+      {pollMode&&<PollDraft question={text} options={pollOptions}
+       onOptionsChange={setPollOptions} days={pollDays} onDaysChange={setPollDays}/>}
       <View style={{borderWidth:1,borderColor:t.line,borderRadius:17,
        padding:15,gap:9,backgroundColor:t.surface}}>
        <Text style={s.primaryText}>Adicionar à publicação</Text>
@@ -492,6 +507,9 @@ function FeedScreen({userId,profile,composeRequest}:{
         <Action secondary disabled={busy} label="Câmera"
          leading={<Camera color={t.primary} size={17}/>}
          onPress={()=>void pick('camera')}/>
+        <Action secondary disabled={busy} label={pollMode?'Remover enquete':'Enquete'}
+         leading={<BarChart3 color={t.primary} size={17}/>}
+         onPress={()=>{setPollMode(v=>!v);setMedia([]);}}/>
        </View>
       </View>
       <Text style={[s.muted,{textAlign:'right',marginTop:12,
@@ -502,7 +520,7 @@ function FeedScreen({userId,profile,composeRequest}:{
        onPress={()=>{setText('');setMedia([]);void AsyncStorage.removeItem(draftKey).catch(()=>{});}}>
        <Text style={[s.secondaryText,{textAlign:'center',padding:13}]}>Descartar rascunho</Text>
       </Pressable>}
-      <Action fullWidth disabled={busy||!validPost}
+      <Action fullWidth disabled={busy||!validPost||!pollReady}
        label={busy?'Publicando...':'Publicar agora'}
        leading={<Send color="#FFF" size={17}/>}
        onPress={()=>void publish()}/>
