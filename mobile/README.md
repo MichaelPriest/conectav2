@@ -388,3 +388,56 @@ o Android não permite a atualização sobre a instalação existente.
 Será necessária uma migração orientada ou reinstalação, que poderá
 apagar dados locais não sincronizados. As contas e publicações persistem
 no Supabase, mas rascunhos locais devem ser preservados antes disso.
+
+## Alpha 0.6.1 — atualizar pelo aplicativo
+
+Esta versão introduz o fluxo de **download e instalação iniciados dentro do Conecta**:
+- Ao abrir o app e ao retornar do segundo plano (com intervalo mínimo de
+  cinco minutos), consultar versões oficiais do Conecta.
+- Quando há uma release nova, mostrar modal nativo com versão, novidades e
+  tamanho do APK; o usuário decide se deseja atualizar.
+- No Android (canal `sideload`), baixar diretamente para o cache nativo
+  com barra de progresso, cancelamento e verificação SHA-256.
+- Comparar o tamanho exato e hash do pacote com o campo `digest` da
+  release pública no GitHub. Se faltar SHA-256, **não instalar via cache**:
+  abrir o arquivo diretamente no site oficial.
+- Compartilhar a cópia verificada ao instalador Android por URI
+  `content://` (não expor caminhos privados), com permissão de leitura
+  temporária. Só o usuário confirma a instalação no sistema.
+- Se necessário, oferecer acesso à autorização do Android para instalar
+  aplicativos da fonte Conecta. O pacote só instala por cima de uma versão
+  existente se **a assinatura do certificado coincidir**.
+- No iOS, exibir e abrir a página oficial da App Store; a instalação fica
+  inteiramente com a Apple.
+
+### Canais separados de distribuição
+
+`mobile/app.config.js` diferencia o canal de APK distribuído diretamente
+(`EXPO_PUBLIC_CONECTA_DISTRIBUTION=sideload`, usado no GitHub) do
+`play` (definido em `eas.json > build.production`). **A permissão
+`REQUEST_INSTALL_PACKAGES` não aparece nos builds destinados ao Play**.
+Apps publicados no Google Play precisam ser atualizados pela loja / API
+Play In-App Updates, nunca via sideload APK.
+
+### Antes de ativar atualizações de ponta a ponta
+
+1. Configurar um certificado Android permanente nos quatro GitHub Actions
+   secrets `CONECTA_ANDROID_*` documentados acima.
+2. Compilar a primeira versão **oficial** com esse certificado e publicar
+   GitHub Release `mobile-vX.Y.Z` com arquivo
+   `conecta-v2-android-X.Y.Z.apk`.
+3. Instalar essa versão-base em Android real. Se uma Alpha anterior foi
+   gerada com outra assinatura, pode ser necessária reinstalação,
+   **somente após sincronizar rascunhos e dados locais**.
+4. Publicar uma versão superior com a mesma chave e confirmar:
+   abertura → aviso → download → SHA-256 → autorização do Android →
+   instalação por cima → retorno com versão nova e sessão preservada.
+5. Testar rollback negado (Android deve barrar versões anteriores),
+   falta de espaço, conexão interrompida, hash errado, recusa da
+   permissão, cancelamento de download, release não publicada e
+   aparelho sem Play Services.
+
+**Status:** interface e transferência implementadas, com testes automáticos;
+nenhuma release oficial e nenhuma assinatura permanente fornecida. Logo,
+por enquanto a consulta retorna "nenhuma atualização oficial".
+A CI aprovada não é prova de instalação bem-sucedida no aparelho.
