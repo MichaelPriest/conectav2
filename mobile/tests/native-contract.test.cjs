@@ -63,7 +63,8 @@ test('Native gallery and camera publish into the same secure post schema',()=>{
  assert.match(media,/requestPostModeration\(/);
  assert.match(validation,/MAX_MEDIA_BYTES/);
  assert.equal(appConfig.expo.plugins[0][0],'expo-image-picker');
- assert.equal(appConfig.expo.plugins[0][1].microphonePermission,false);
+ // Image picker must NOT strip RECORD_AUDIO required for voice notes.
+ assert.notEqual(appConfig.expo.plugins[0][1].microphonePermission,false);
 });
 
 test('Native comments, bookmarks and inline videos use actual authorized database records',()=>{
