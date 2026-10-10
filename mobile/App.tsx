@@ -228,10 +228,14 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onComment}:{
   </View>}
  </View>;
 }
-function FeedScreen({userId}:{userId:string}){
+function FeedScreen({userId,profile,composeRequest}:{
+ userId:string;profile:Profile;composeRequest:number;
+}){
  const [posts,setPosts]=useState<Post[]>([]),[liked,setLiked]=useState<Set<string>>(new Set());
  const [saved,setSaved]=useState<Set<string>>(new Set());
  const [feedView,setFeedView]=useState<'all'|'saved'>('all');
+ const [composerOpen,setComposerOpen]=useState(false);
+ useEffect(()=>{if(composeRequest>0){setFeedView('all');setComposerOpen(true);}},[composeRequest]);
  const [text,setText]=useState(''),[visibility,setVisibility]=useState<'public'|'friends'|'private'>('public');
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [more,setMore]=useState(false),[loadingMore,setLoadingMore]=useState(false);
@@ -310,7 +314,7 @@ function FeedScreen({userId}:{userId:string}){
   try{
    if(media.length)await publishMediaPost(userId,text,visibility,media);
    else await publishTextPost(userId,text,visibility);
-   setText('');setMedia([]);
+   setText('');setMedia([]);setComposerOpen(false);
    await AsyncStorage.removeItem(draftKey).catch(()=>{});
    await refresh();
    Alert.alert('Publicação enviada','O conteúdo segue as mesmas regras de moderação do site.');
@@ -341,63 +345,142 @@ function FeedScreen({userId}:{userId:string}){
   }catch(e){setError(errorMessage(e));}finally{setBusy(false);}
  };
  const composer=<View>
-  <Heading title="Seu feed" subtitle="Compartilhe histórias e reencontre suas conexões."/>
-  <StoryRail userId={userId}/>
-  <View style={[s.row,{gap:8,marginBottom:10}]}>
-   {([['all','Publicações'],['saved','Salvos']] as const).map(([key,label])=>
-    <Pressable key={key} accessibilityRole="tab" accessibilityState={{selected:feedView===key}}
-     onPress={()=>setFeedView(key)} style={[s.secondary,feedView===key&&{backgroundColor:t.primary}]}>
-     <Text style={[s.secondaryText,feedView===key&&{color:'#FFF'}]}>{label}</Text>
-    </Pressable>)}
-  </View>
-  {feedView==='all'&&<View style={s.card}>
-   <Text style={[s.primaryText,{marginBottom:5}]}>No que você está pensando?</Text>
-   <Field value={text} onChangeText={setText} placeholder="Conte algo para a sua rede..." multiline/>
-    <Text accessibilityLiveRegion="polite" style={[s.muted,{textAlign:'right',marginBottom:10,color:postLength>3000?t.danger:t.muted}]}>{postLength}/3000 caracteres</Text>
-   <View style={[s.row,{gap:7,marginBottom:12,flexWrap:'wrap'}]}>
-    {(['public','friends','private'] as const).map(v=><Pressable key={v}
-     accessibilityRole="radio" accessibilityState={{checked:visibility===v}}
-      accessibilityLabel={v==='public'?'Público':v==='friends'?'Conexões':'Só eu'}
-      onPress={()=>setVisibility(v)} style={[s.secondary,
-       visibility===v&&{backgroundColor:t.primary}]}>
-     <Text style={[s.secondaryText,visibility===v&&{color:'#FFF'}]}>
-      {v==='public'?'Público':v==='friends'?'Conexões':'Só eu'}
-     </Text>
-    </Pressable>)}
-   </View>
-   <View style={[s.row,{gap:8,flexWrap:'wrap',marginBottom:12}]}>
-    <Action secondary disabled={busy} label="▧ Fotos" onPress={()=>void pick('image')}/>
-    <Action secondary disabled={busy} label="▶ Vídeo" onPress={()=>void pick('video')}/>
-    <Action secondary disabled={busy} label="◎ Câmera" onPress={()=>void pick('camera')}/>
-   </View>
-   {media.length>0&&<View style={{marginBottom:12}}>
-    <Text style={[s.primaryText,{marginBottom:8}]}>
-     {media.length} {media[0].kind==='video'?'vídeo selecionado':'foto(s) selecionada(s)'}
+  <GradientPanel style={{marginTop:17,marginBottom:13,minHeight:137}}>
+   <View style={{flexDirection:'row',alignItems:'center',gap:6,marginBottom:10}}>
+    <Sparkles color="#FFF" size={15} strokeWidth={2.2}/>
+    <Text style={{fontSize:10,color:'#F2EAFF',fontWeight:'900',letterSpacing:1.3}}>
+     SEU ESPAÇO NO CONECTA
     </Text>
-    <View style={[s.row,{gap:8,flexWrap:'wrap'}]}>
-     {media.map((item,index)=><View key={item.uri+'-'+index} style={{alignItems:'center',gap:5}}>
-      {item.kind==='image'
-       ?<Image source={{uri:item.uri}} style={{height:84,width:84,borderRadius:12}}/>
-       :<View style={[s.secondary,{height:84,width:116,justifyContent:'center'}]}>
-         <Text style={s.secondaryText}>▶ Vídeo</Text>
-        </View>}
-      <Pressable accessibilityRole="button" accessibilityLabel={'Remover mídia '+(index+1)}
-       onPress={()=>setMedia(previous=>previous.filter((_,i)=>i!==index))}>
-       <Text style={s.secondaryText}>Remover ×</Text>
-      </Pressable>
-     </View>)}
-    </View>
-   </View>}
-   {(text.length>0||media.length>0)&&<Pressable accessibilityRole="button" accessibilityLabel="Descartar rascunho" onPress={()=>{
-    setText('');setMedia([]);void AsyncStorage.removeItem(draftKey).catch(()=>{});
-   }}><Text style={[s.secondaryText,{marginBottom:12}]}>Descartar rascunho</Text></Pressable>}
-   <Action label={busy?'Publicando...':media.length?'Publicar mídia':'Publicar texto'}
-    disabled={busy||!validPost} onPress={()=>void publish()}/>
-   <Text style={[s.muted,{marginTop:8}]}>
-    Até cinco fotos ou um vídeo de até 50 MB. Conteúdo sujeito às regras de moderação do Conecta.
+   </View>
+   <Text style={{fontSize:23,fontWeight:'900',letterSpacing:-0.8,
+    color:'#FFFFFF',marginBottom:5}}>Conecte-se ao que importa.</Text>
+   <Text style={{fontSize:12,color:'#F8F3FF',lineHeight:19,maxWidth:270}}>
+    Sua comunidade, suas histórias e novas conexões em um só lugar.
    </Text>
-  </View>}
+  </GradientPanel>
+  <StoryRail userId={userId}/>
+  <Pressable accessibilityRole="button" accessibilityLabel="Criar publicação"
+   onPress={()=>setComposerOpen(true)}
+   style={[s.card,{padding:14,flexDirection:'row',gap:10,
+    alignItems:'center',marginTop:12,marginBottom:17}]}>
+   <Avatar path={profile.avatar_path} name={profile.display_name} size={43}/>
+   <View style={{flex:1,backgroundColor:t.bg,borderRadius:13,
+    paddingVertical:13,paddingHorizontal:13,borderWidth:1,borderColor:t.line}}>
+    <Text style={{fontSize:13,color:t.muted}}>No que você está pensando?</Text>
+   </View>
+   <View style={{backgroundColor:t.subtle,width:36,height:36,
+    borderRadius:11,justifyContent:'center',alignItems:'center'}}>
+    <ImagePlus color={t.primary} size={19}/>
+   </View>
+  </Pressable>
+  <FeedTabs selected={feedView} onSelect={setFeedView}/>
+  <SectionHeader title={feedView==='saved'?'Suas publicações salvas':'Publicações recentes'}
+   description={feedView==='saved'?'Seus favoritos, sempre à mão.':'Novidades de pessoas que fazem parte da sua rede.'}
+   Icon={feedView==='saved'?Bookmark:Heart}/>
   <ErrorNotice text={error}/>
+  <Modal visible={composerOpen} animationType="slide" onRequestClose={()=>{
+   if(!busy)setComposerOpen(false);
+  }}>
+   <SafeAreaProvider>
+    <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
+     <StatusBar hidden={Platform.OS==='android'} style="dark"/>
+     {Platform.OS==='android'&&<NavigationBar hidden style="light"/>}
+     <View style={[s.header,{paddingVertical:12}]}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Fechar publicação"
+       disabled={busy} onPress={()=>setComposerOpen(false)}
+       style={{height:39,width:39,justifyContent:'center',alignItems:'center'}}>
+       <X color={t.dark} size={24}/>
+      </Pressable>
+      <Text style={{fontSize:17,fontWeight:'900',color:t.dark}}>Criar publicação</Text>
+      <View style={{width:39,height:39,justifyContent:'center',alignItems:'center'}}>
+       <Sparkles size={20} color={t.primary}/>
+      </View>
+     </View>
+     <ScrollView keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{paddingHorizontal:20,paddingTop:20,paddingBottom:38}}>
+      <View style={[s.row,{gap:10,marginBottom:16}]}>
+       <Avatar path={profile.avatar_path} name={profile.display_name} size={48}/>
+       <View style={{flex:1}}>
+        <Text style={[s.primaryText,{fontSize:15}]}>{profile.display_name}</Text>
+        <Text style={s.muted}>Compartilhe do seu jeito</Text>
+       </View>
+      </View>
+      <TextInput value={text} onChangeText={setText}
+       accessibilityLabel="Texto da publicação"
+       placeholder="O que você quer compartilhar com a comunidade?"
+       placeholderTextColor="#9EA4BD" multiline
+       style={{fontSize:18,lineHeight:28,minHeight:160,
+        textAlignVertical:'top',color:t.dark,paddingVertical:6}}/>
+      {media.length>0&&<View style={{marginTop:9,marginBottom:16}}>
+       <Text style={[s.primaryText,{marginBottom:11}]}>
+        {media[0].kind==='video'?'Vídeo selecionado':media.length+' foto(s) selecionada(s)'}
+       </Text>
+       <View style={{flexDirection:'row',flexWrap:'wrap',gap:10}}>
+        {media.map((item,index)=><View key={item.uri+'-'+index} style={{position:'relative'}}>
+         {item.kind==='image'
+          ?<Image source={{uri:item.uri}} resizeMode="cover"
+            style={{width:94,height:94,borderRadius:13}}/>
+          :<View style={{height:94,width:110,borderRadius:13,
+            backgroundColor:t.subtle,justifyContent:'center',alignItems:'center'}}>
+            <Video size={28} color={t.primary}/><Text style={s.muted}>Vídeo</Text>
+           </View>}
+         <Pressable accessibilityRole="button" accessibilityLabel={'Remover mídia '+(index+1)}
+          onPress={()=>setMedia(previous=>previous.filter((_,i)=>i!==index))}
+          style={{position:'absolute',right:-5,top:-7,height:24,width:24,
+           backgroundColor:t.dark,borderRadius:12,alignItems:'center',justifyContent:'center'}}>
+          <X size={13} color="#FFF"/>
+         </Pressable>
+        </View>)}
+       </View>
+      </View>}
+      <Text style={[s.primaryText,{marginTop:12,marginBottom:10}]}>Quem pode ver?</Text>
+      <View style={[s.row,{gap:8,flexWrap:'wrap',marginBottom:19}]}>
+       {([
+        {value:'public',name:'Público',Icon:Globe2},
+        {value:'friends',name:'Conexões',Icon:UsersRound},
+        {value:'private',name:'Só eu',Icon:LockKeyhole}
+       ] as const).map(({value,name,Icon})=><Pressable key={value}
+        accessibilityRole="radio" accessibilityState={{checked:visibility===value}}
+        onPress={()=>setVisibility(value)}
+        style={[s.secondary,visibility===value&&{backgroundColor:t.primary}]}>
+        <Icon size={15} color={visibility===value?'#FFF':t.primary}/>
+        <Text style={[s.secondaryText,visibility===value&&{color:'#FFF'}]}>{name}</Text>
+       </Pressable>)}
+      </View>
+      <View style={{borderWidth:1,borderColor:t.line,borderRadius:17,
+       padding:15,gap:9,backgroundColor:t.surface}}>
+       <Text style={s.primaryText}>Adicionar à publicação</Text>
+       <View style={[s.row,{gap:8,flexWrap:'wrap'}]}>
+        <Action secondary disabled={busy} label="Fotos"
+         leading={<ImagePlus color={t.primary} size={17}/>}
+         onPress={()=>void pick('image')}/>
+        <Action secondary disabled={busy} label="Vídeo"
+         leading={<Video color={t.primary} size={17}/>}
+         onPress={()=>void pick('video')}/>
+        <Action secondary disabled={busy} label="Câmera"
+         leading={<Camera color={t.primary} size={17}/>}
+         onPress={()=>void pick('camera')}/>
+       </View>
+      </View>
+      <Text style={[s.muted,{textAlign:'right',marginTop:12,
+       color:postLength>3000?t.danger:t.muted}]}>{postLength}/3000 caracteres</Text>
+      <ErrorNotice text={error}/>
+      {(text.length>0||media.length>0)&&<Pressable accessibilityRole="button"
+       accessibilityLabel="Descartar rascunho"
+       onPress={()=>{setText('');setMedia([]);void AsyncStorage.removeItem(draftKey).catch(()=>{});}}>
+       <Text style={[s.secondaryText,{textAlign:'center',padding:13}]}>Descartar rascunho</Text>
+      </Pressable>}
+      <Action fullWidth disabled={busy||!validPost}
+       label={busy?'Publicando...':'Publicar agora'}
+       leading={<Send color="#FFF" size={17}/>}
+       onPress={()=>void publish()}/>
+      <Text style={[s.muted,{textAlign:'center',marginTop:12}]}>
+       Até cinco fotos ou um vídeo de até 50 MB, sujeitos à moderação.
+      </Text>
+     </ScrollView>
+    </SafeAreaView>
+   </SafeAreaProvider>
+  </Modal>
  </View>;
  return <FlatList style={s.screen} data={posts} keyExtractor={item=>item.id}
   refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void refresh()} tintColor={t.primary}/>}
