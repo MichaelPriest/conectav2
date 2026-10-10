@@ -36,6 +36,7 @@ import {MentionInput} from './src/mentions';
 import {NativeVersionMonitor,checkVersionManually} from './src/update-ui';
 import {NativeGroupCreator,NativeGroupSettings} from './src/chat-group-ui';
 import {getPinnedMessages,setConversationMuted,toggleChatPin} from './src/chat-groups';
+import {useNativeChatTyping} from './src/chat-typing';
 import type {PinnedChatMessage} from './src/chat-groups';
 import {
  Bell,BellOff,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
@@ -661,6 +662,7 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  const [hasOlder,setHasOlder]=useState(false);
  const [loadingOlder,setLoadingOlder]=useState(false);
  const [compose,setCompose]=useState(''),[busy,setBusy]=useState(false);
+ const typingIds=useNativeChatTyping(active,userId,compose);
  const messageLength=compose.trim().length;
  const validMessage=messageLength>0&&messageLength<=4000;
  const [loading,setLoading]=useState(true),[error,setError]=useState('');
@@ -779,8 +781,14 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     <ChevronLeft size={22} color={t.primary}/>
    </Pressable>
    <Avatar path={selected?.other?.avatar_path} name={selected?.title||'Conversa'} size={36}/>
-   <View style={s.grow}><Text numberOfLines={1} style={s.primaryText}>{selected?.title||'Conversa'}</Text>
-    <Text style={s.muted}>{selected?.group?'Grupo do Conecta':'Chat privado e seguro'}</Text></View>
+   <View style={s.grow}>
+    <Text numberOfLines={1} style={s.primaryText}>{selected?.title||'Conversa'}</Text>
+    <Text style={[s.muted,typingIds.length>0&&{color:t.primary,fontWeight:'800'}]}>
+     {typingIds.length>0?
+       (typingIds.length===1?'Uma pessoa está digitando...':typingIds.length+' pessoas digitando...'):
+       selected?.group?'Grupo do Conecta':'Chat privado e seguro'}
+    </Text>
+   </View>
    <Pressable accessibilityRole="button"
     accessibilityLabel={selected?.muted_until&&Date.parse(selected.muted_until)>Date.now()?
      'Reativar notificações da conversa':'Silenciar conversa por 30 dias'}
