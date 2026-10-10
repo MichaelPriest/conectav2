@@ -239,7 +239,9 @@ function FeedScreen({userId}:{userId:string}){
  const draftKey='conecta-mobile-feed-draft:'+userId;
  useEffect(()=>{
   let mounted=true;
-  setDraftReady(false);
+  // A session can change without remounting the Feed screen.
+  // Never expose the previous account's unsent private draft or selected media.
+  setDraftReady(false);setText('');setVisibility('public');setMedia([]);
   const revision=++draftRevision.current;
   void AsyncStorage.getItem(draftKey).then(raw=>{
    if(!mounted||revision!==draftRevision.current)return;
