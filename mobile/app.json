@@ -11,9 +11,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "br.com.conectav2.app",
       "infoPlist": {
-        "NSCameraUsageDescription": "A câmera será utilizada apenas quando você escolher capturar uma foto ou participar de uma videochamada.",
-        "NSMicrophoneUsageDescription": "O microfone será utilizado somente quando você iniciar mensagens de voz ou chamadas.",
-        "NSPhotoLibraryUsageDescription": "Selecione fotos e vídeos para compartilhar no Conecta."
+        "NSCameraUsageDescription": "O Conecta usa a câmera somente quando você escolhe fotografar ou gravar uma mídia.",
+        "NSMicrophoneUsageDescription": "O Conecta usa o microfone somente quando você inicia uma gravação de mensagem de voz.",
+        "NSPhotoLibraryUsageDescription": "O Conecta acessa apenas fotos e vídeos que você selecionar para compartilhar."
       },
       "buildNumber": "9"
     },
@@ -33,8 +33,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "O Conecta acessa apenas as fotos e vídeos que você selecionar para publicar.",
-          "cameraPermission": "O Conecta utiliza a câmera apenas quando você escolher tirar uma foto.",
+          "photosPermission": "O Conecta acessa apenas fotos e vídeos que você selecionar para compartilhar.",
+          "cameraPermission": "Permita a câmera para fotografar quando você escolher publicar uma imagem.",
           "microphonePermission": false
         }
       ],
@@ -48,7 +48,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "O Conecta utiliza o microfone somente quando você gravar uma mensagem de voz.",
+          "microphonePermission": "Permita o microfone quando você decidir gravar uma mensagem de voz.",
           "recordAudioAndroid": true,
           "enableBackgroundRecording": false,
           "enableBackgroundPlayback": false
@@ -68,6 +68,13 @@
           "backgroundColor": "#F9F9FE",
           "image": "./assets/splash-icon.png",
           "imageWidth": 180
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#8055F5",
+          "defaultChannel": "conecta-social"
         }
       ]
     ],
