@@ -2,7 +2,7 @@ import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {
  Alert,AppState,FlatList,Image,KeyboardAvoidingView,Linking,Modal,Platform,Pressable,Share,
  RefreshControl,ScrollView,StatusBar as NativeStatusBar,
- StyleSheet,Text,TextInput,View
+ StyleSheet,Text,TextInput,useWindowDimensions,View
 } from 'react-native';
 import {StatusBar} from 'expo-status-bar';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
@@ -535,7 +535,7 @@ function ConnectionsScreen({userId,onConversation}:{
  userId:string;onConversation:(conversationId:string)=>void
 }){
  const [links,setLinks]=useState<Friendship[]>([]),[people,setPeople]=useState<Profile[]>([]);
- const [query,setQuery]=useState(''),[filter,setFilter]=useState<'friends'|'received'|'discover'>('friends');
+ const [query,setQuery]=useState(''),[filter,setFilter]=useState<'friends'|'received'|'discover'>('discover');
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const refresh=useCallback(async()=>{
   setLoading(true);setError('');
@@ -562,7 +562,8 @@ function ConnectionsScreen({userId,onConversation}:{
  };
  return <FlatList style={s.screen} data={visible} keyExtractor={x=>x.id}
   refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void refresh()}/>}
-  ListHeaderComponent={<View><Heading title="Conexões" subtitle="Pessoas que tornam a rede mais próxima."/>
+  ListHeaderComponent={<View><Heading eyebrow="descobrir" title="Explore pessoas"
+    subtitle="Encontre quem compartilha interesses com você."/>
    <View style={{flexDirection:'row',gap:10,alignItems:'center',backgroundColor:t.surface,
     borderColor:t.line,borderWidth:1,borderRadius:14,paddingHorizontal:12,marginBottom:8}}>
     <Search size={19} color={t.muted}/>
@@ -983,6 +984,8 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
 }
 
 export default function App(){
+ const {width}=useWindowDimensions();
+ const compactHeader=width<400;
  const [user,setUser]=useState<User|null>(null);
  const [profile,setProfile]=useState<Profile|null>(null);
  const [restricted,setRestricted]=useState<'onboarding'|'age-check'|null>(null);
@@ -1076,14 +1079,14 @@ export default function App(){
       onPress={()=>navigate('feed')} style={{flexShrink:1}}>
       <Brand compact/>
      </Pressable>
-     <View style={[s.row,{gap:7,flexShrink:0}]}>
-      <RoundIcon Icon={Search} label="Explorar pessoas" onPress={()=>navigate('connections')}
-       active={tab==='connections'}/>
-      <RoundIcon Icon={Clapperboard} label="Reels" onPress={()=>navigate('reels')}
-       active={tab==='reels'}/>
-      <RoundIcon Icon={MessageCircle} label="Conversas" onPress={()=>navigate('messages')}
-       active={tab==='messages'}/>
-      <RoundIcon Icon={Bell} label={unreadCount>0?
+     <View style={[s.row,{gap:compactHeader?4:7,flexShrink:0}]}>
+      <RoundIcon compact={compactHeader} Icon={Search} label="Explorar pessoas"
+       onPress={()=>navigate('connections')} active={tab==='connections'}/>
+      <RoundIcon compact={compactHeader} Icon={Clapperboard} label="Reels"
+       onPress={()=>navigate('reels')} active={tab==='reels'}/>
+      <RoundIcon compact={compactHeader} Icon={MessageCircle} label="Conversas"
+       onPress={()=>navigate('messages')} active={tab==='messages'}/>
+      <RoundIcon compact={compactHeader} Icon={Bell} label={unreadCount>0?
        unreadCount+' notificações não lidas':'Notificações'}
        badge={unreadCount} onPress={()=>navigate('notifications')}
        active={tab==='notifications'}/>
