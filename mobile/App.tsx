@@ -32,6 +32,7 @@ import {normalizeMedia,publishMediaPost} from './src/media';
 import {loadCommunityPosts,communityMemberCount,publishCommunityText,createCommunity,communitySlug} from './src/community';
 import {PollCard,PollDraft} from './src/poll-ui';
 import {publishPollPost,validatePollDraft} from './src/polls';
+import {MentionInput} from './src/mentions';
 import {
  Bell,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
  MoreHorizontal,Plus,Search,Send,ShieldCheck,Sparkles,UsersRound,Video,
@@ -254,8 +255,9 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onComment}:{
      <Text style={s.secondaryText}>Cancelar</Text>
     </Pressable>
    </View>}
-   <Field value={commentBody} onChangeText={setCommentBody}
-    placeholder={replyTo?'Escreva sua resposta...':'Escreva seu comentário...'}/>
+   <MentionInput value={commentBody} onChangeText={setCommentBody}
+    multiline={false} maxLength={1000}
+    placeholder={replyTo?'Responda e marque com @usuário...':'Comente e marque com @usuário...'}/>
    <Text style={[s.muted,{textAlign:'right'}]}>{commentBody.trim().length}/1000</Text>
    <Action label={sendingComment?'Enviando...':replyTo?'Enviar resposta':'Comentar'}
     disabled={sendingComment||!commentBody.trim()||commentBody.trim().length>1000}
@@ -450,11 +452,10 @@ function FeedScreen({userId,profile,composeRequest}:{
         <Text style={s.muted}>Compartilhe do seu jeito</Text>
        </View>
       </View>
-      <TextInput value={text} onChangeText={setText}
+      <MentionInput value={text} onChangeText={setText}
        accessibilityLabel="Texto da publicação"
-       placeholder="O que você quer compartilhar com a comunidade?"
-       placeholderTextColor="#9EA4BD" multiline
-       style={{fontSize:18,lineHeight:28,minHeight:160,
+       placeholder="Conte sua história e marque pessoas com @usuário..."
+       maxLength={3000} style={{fontSize:18,lineHeight:28,minHeight:160,
         textAlignVertical:'top',color:t.dark,paddingVertical:6}}/>
       {media.length>0&&<View style={{marginTop:9,marginBottom:16}}>
        <Text style={[s.primaryText,{marginBottom:11}]}>
@@ -768,8 +769,10 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     replyTo={replyTo?.id||null}
     onSent={()=>{setReplyTo(null);void loadMessages(active);void loadInbox();}}/>
    <View style={[s.row,{gap:8}]}>
-    <TextInput accessibilityLabel="Sua mensagem" value={compose} onChangeText={setCompose} multiline
-     placeholder="Sua mensagem..." placeholderTextColor={t.muted} style={[s.input,{flex:1,maxHeight:120,marginVertical:0}]}/>
+    <MentionInput value={compose} onChangeText={setCompose}
+     accessibilityLabel="Sua mensagem" placeholder="Sua mensagem... @usuário"
+     maxLength={4000} style={[s.input,{maxHeight:120,marginVertical:0,
+      minHeight:43,textAlignVertical:'top'}]}/>
     <Action label={busy?'...':'Enviar'} disabled={busy||!validMessage} onPress={()=>void send()}/>
    </View>
   </View>
@@ -1002,11 +1005,10 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
         <Text style={s.muted}>Público · seguindo as regras da comunidade</Text>
        </View>
       </View>
-      <TextInput value={content} onChangeText={setContent} multiline
+      <MentionInput value={content} onChangeText={setContent}
        accessibilityLabel="Texto da publicação"
        placeholder="Compartilhe uma ideia ou marque alguém com @usuário..."
-       placeholderTextColor={t.muted} maxLength={3000}
-       style={{color:t.dark,fontSize:17,textAlignVertical:'top',
+       maxLength={3000} style={{color:t.dark,fontSize:17,textAlignVertical:'top',
         minHeight:148,paddingVertical:10,lineHeight:25}}/>
       {media.length>0&&<View style={{flexDirection:'row',gap:8,flexWrap:'wrap'}}>
        {media.map((item,index)=><View key={item.uri} style={{gap:4}}>
