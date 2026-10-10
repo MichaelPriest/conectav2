@@ -92,14 +92,17 @@ export function Action({label,onPress,secondary=false,disabled=false,leading,ful
   <Text style={secondary?styles.secondaryText:styles.buttonText}>{label}</Text>
  </Pressable>;
 }
-export function Field({value,onChangeText,placeholder,multiline=false,secureTextEntry=false}:{
+export function Field({value,onChangeText,placeholder,multiline=false,
+ secureTextEntry=false,maxLength,autoCapitalize}:{
  value:string;onChangeText:(next:string)=>void;placeholder:string;
- multiline?:boolean;secureTextEntry?:boolean
+ multiline?:boolean;secureTextEntry?:boolean;maxLength?:number;
+ autoCapitalize?:'none'|'sentences'|'words'|'characters';
 }){
- return <TextInput accessibilityLabel={placeholder} value={value} onChangeText={onChangeText} placeholder={placeholder}
+ return <TextInput accessibilityLabel={placeholder} value={value}
+ onChangeText={onChangeText} placeholder={placeholder} maxLength={maxLength}
  placeholderTextColor="#9288A2" multiline={multiline} secureTextEntry={secureTextEntry}
  style={[styles.input,multiline&&{minHeight:100,textAlignVertical:'top'}]}
- autoCapitalize={secureTextEntry?'none':'sentences'}/>;
+ autoCapitalize={autoCapitalize||(secureTextEntry?'none':'sentences')}/>;
 }
 export function Loading({text='Carregando...'}:{text?:string}){
  return <View style={{alignItems:'center',padding:25,gap:12}}><ActivityIndicator size="small" color={t.primary}/><Text style={styles.muted}>{text}</Text></View>;
