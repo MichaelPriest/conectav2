@@ -212,3 +212,13 @@ test('Switching accounts clears unsent native composer media and previous drafts
  assert.match(app,/draftRevision\.current/);
  assert.match(app,/AsyncStorage\.removeItem\(draftKey\)/);
 });
+
+test('Voice and media replies remain in the selected conversation',()=>{
+ const voice=read('src/voice.ts'),audio=read('src/voice-ui.tsx');
+ const media=read('src/chat-media.ts');
+ assert.match(voice,/media_type:'audio',reply_to:replyTo/);
+ assert.match(media,/media_type:media\.kind,reply_to:replyTo/);
+ assert.match(audio,/sendVoiceMessage\(conversationId,userId,uri,replyTo\|\|null\)/);
+ assert.match(app,/sendChatMedia\(active,userId,chosen,replyTo\?\.id\|\|null\)/);
+ assert.match(app,/VoiceRecorder key=\{active\}/);
+});
