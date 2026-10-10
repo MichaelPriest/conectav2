@@ -68,6 +68,7 @@ test('Permissions do not request location, contacts or microphone at launch',()=
  const exp=require('../app.config.js').expo;
  const permissionUi=read('src/permissions-ui.tsx');
  const notice=read('src/native-notifications.tsx');
+ const app=read('App.tsx');
  const pkg=JSON.parse(read('package.json'));
  assert.ok(pkg.dependencies['expo-notifications']);
  assert.equal(config.plugins.some(p=>Array.isArray(p)&&p[0]==='expo-notifications'),true);
