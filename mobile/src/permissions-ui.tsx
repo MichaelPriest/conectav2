@@ -115,6 +115,9 @@ export function NativePermissionsCenter({userId,onClose}:{
      <View style={{flex:1}}>
       <Text style={s.primaryText}>Avisos no sistema</Text>
       <Text style={s.muted}>Por enquanto, mostra interações recebidas com o app aberto.</Text>
+      <Text style={{fontSize:11,fontWeight:'800',color:notifications==='granted'?t.success:t.muted}}>
+       Permissão do sistema: {notifications==='granted'?'Autorizada':'Não autorizada'}
+      </Text>
      </View>
     </View>
     <View style={[s.row,{gap:9,marginTop:13,justifyContent:'space-between'}]}>
