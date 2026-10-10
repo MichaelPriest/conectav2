@@ -49,7 +49,7 @@ export async function setNativeNotificationPreference(userId:string,enabled:bool
  }
  if(enabled){
   // A missing EAS project/FCM setup never disables foreground notifications.
-  void registerRemotePush(userId).catch(()=>{});
+  await registerRemotePush(userId).catch(()=>false);
  }else await unregisterRemotePush(userId);
  await AsyncStorage.setItem(prefKey(userId),enabled?'1':'0');
  for(const listener of listeners)listener(userId,enabled);
