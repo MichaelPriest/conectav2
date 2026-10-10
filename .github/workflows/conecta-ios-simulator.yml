@@ -1,0 +1,77 @@
+name: Conecta V2 · iOS Simulator build
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/conecta-ios-simulator.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: conecta-ios-simulator-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ios-simulator:
+    name: Build iOS Simulator app (not for physical devices)
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      CI: '1'
+      EXPO_PUBLIC_CONECTA_DISTRIBUTION: sideload
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: mobile/package.json
+      - name: Check macOS and Xcode toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcrun simctl list devices available | head -n 35
+      - name: Install JavaScript dependencies
+        run: npm install --no-audit --no-fund --no-package-lock
+      - name: Run mobile tests and TypeScript
+        run: npm test && npm run typecheck
+      - name: Generate iOS native project
+        run: npx expo prebuild --platform ios --non-interactive --no-install
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install
+      - name: Build unsigned simulator app
+        run: |
+          set -euo pipefail
+          workspace="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          test -n "$workspace"
+          xcodebuild \
+            -workspace "$workspace" \
+            -scheme Conecta \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/conecta-derived" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+          app="$RUNNER_TEMP/conecta-derived/Build/Products/Release-iphonesimulator/Conecta.app"
+          if [ ! -d "$app" ]; then
+            app="$(find "$RUNNER_TEMP/conecta-derived/Build/Products" -maxdepth 3 -name '*.app' -type d -print -quit)"
+          fi
+          test -d "$app"
+          ditto -c -k --sequesterRsrc --keepParent "$app" "$RUNNER_TEMP/conecta-ios-simulator-$(node -p 'require("./package.json").version').zip"
+          shasum -a 256 "$RUNNER_TEMP/conecta-ios-simulator-"*.zip
+      - name: Publish simulator build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: conecta-v2-ios-simulator-${{ github.sha }}
+          path: ${{ runner.temp }}/conecta-ios-simulator-*.zip
+          if-no-files-found: error
+          retention-days: 14
