@@ -815,6 +815,13 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
  const [loadingMore,setLoadingMore]=useState(false);
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  const [content,setContent]=useState(''),[media,setMedia]=useState<SelectedMedia[]>([]);
+ const [pollMode,setPollMode]=useState(false);
+ const [pollOptions,setPollOptions]=useState(['','']);
+ const [pollDays,setPollDays]=useState(7);
+ const pollReady=!pollMode||(()=>{
+  try{validatePollDraft(content,pollOptions,pollDays);return true;}
+  catch{return false;}
+ })();
  const [composerOpen,setComposerOpen]=useState(false);
  const [filter,setFilter]=useState<'all'|'image'|'video'>('all');
  const [rulesOpen,setRulesOpen]=useState(false);
@@ -837,7 +844,7 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
  },[load,community.id]);
  useEffect(()=>{void refresh();},[refresh]);
  const pick=async(kind:'image'|'video')=>{
-  setError('');
+  setPollMode(false);setError('');
   try{
    const result=await ImagePicker.launchImageLibraryAsync({
     mediaTypes:kind==='video'?['videos']:['images'],
@@ -851,9 +858,11 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
   if(busy||!member||(!content.trim()&&!media.length)||content.trim().length>3000)return;
   setBusy(true);setError('');
   try{
-   if(media.length)await publishMediaPost(userId,content,'public',media,community.id);
+   if(pollMode)await publishPollPost(userId,content,'public',pollOptions,pollDays,community.id);
+   else if(media.length)await publishMediaPost(userId,content,'public',media,community.id);
    else await publishCommunityText(userId,community.id,content);
-   setContent('');setMedia([]);setComposerOpen(false);
+   setContent('');setMedia([]);setPollMode(false);
+   setPollOptions(['','']);setPollDays(7);setComposerOpen(false);
    await refresh();
    Alert.alert('Enviado à comunidade','Sua publicação segue as regras de moderação do Conecta.');
   }catch(e){setError(errorMessage(e));}
@@ -1019,10 +1028,16 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
         leading={<ImagePlus size={17} color={t.primary}/>}/>
        <Action secondary disabled={busy} label="Vídeo" onPress={()=>void pick('video')}
         leading={<Video size={17} color={t.primary}/>}/>
+       <Action secondary disabled={busy} label={pollMode?'Remover enquete':'Enquete'}
+        leading={<BarChart3 size={17} color={t.primary}/>}
+        onPress={()=>{setPollMode(v=>!v);setMedia([]);}}/>
       </View>
+      {pollMode&&<PollDraft question={content} options={pollOptions}
+       onOptionsChange={setPollOptions} days={pollDays} onDaysChange={setPollDays}/>}
+
       <Text style={[s.muted,{textAlign:'right'}]}>{content.trim().length}/3000</Text>
       <ErrorNotice text={error}/>
-      <Action fullWidth disabled={busy||(!content.trim()&&!media.length)}
+      <Action fullWidth disabled={busy||(!content.trim()&&!media.length)||!pollReady}
        label={busy?'Publicando...':'Publicar na comunidade'}
        leading={<Send size={17} color="#FFF"/>} onPress={()=>void publish()}/>
      </ScrollView>
