@@ -42,11 +42,15 @@ export async function offerNativeUpdate(update:AvailableUpdate):Promise<void>{
 export function NativeVersionMonitor(){
  const notified=useRef<string|null>(null);
  const running=useRef(false);
+ const lastChecked=useRef(0);
  useEffect(()=>{
   if(Platform.OS!=='android'&&Platform.OS!=='ios')return;
   let alive=true;
   const inspect=async()=>{
-   if(running.current)return;
+   // Image picker, call UI, and permission dialogs can trigger frequent
+   // foreground events. Do not exhaust GitHub's unauthenticated API quota.
+   if(running.current||Date.now()-lastChecked.current<5*60_000)return;
+   lastChecked.current=Date.now();
    running.current=true;
    try{
     const update=await checkForNativeUpdate();
