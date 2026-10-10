@@ -39,6 +39,9 @@ import {getPinnedMessages,setConversationMuted,toggleChatPin} from './src/chat-g
 import {useNativeChatTyping} from './src/chat-typing';
 import {useNativeChatPresence} from './src/chat-presence';
 import {ExploreScreen} from './src/explore-ui';
+import {ProfileDetailsEditor} from './src/profile-details-ui';
+import {NativePermissionsCenter} from './src/permissions-ui';
+import {NativeForegroundNotificationBridge} from './src/native-notifications';
 import type {PinnedChatMessage} from './src/chat-groups';
 import {
  Bell,BellOff,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
@@ -1517,6 +1520,8 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
 }){
  const [name,setName]=useState(profile.display_name),[bio,setBio]=useState(profile.bio||'');
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [detailsOpen,setDetailsOpen]=useState(false);
+ const [permissionsOpen,setPermissionsOpen]=useState(false);
  const [ownPosts,setOwnPosts]=useState<Post[]>([]);
  const [ownLiked,setOwnLiked]=useState<Set<string>>(new Set());
  const [ownSaved,setOwnSaved]=useState<Set<string>>(new Set());
@@ -1671,7 +1676,13 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
   </View>}
   <View style={s.card}>
    <Text style={[s.primaryText,{marginBottom:10}]}>Minha conta</Text>
-   <Action secondary label="Abrir perfil completo ↗" onPress={()=>void openOfficial('/perfil')}/>
+   <Action secondary label="Personalizar perfil, temas e música"
+    leading={<Pencil size={16} color={t.primary}/>} onPress={()=>setDetailsOpen(true)}/>
+   <View style={{height:8}}/>
+   <Action secondary label="Permissões e privacidade"
+    leading={<ShieldCheck size={16} color={t.primary}/>} onPress={()=>setPermissionsOpen(true)}/>
+   <View style={{height:8}}/>
+   <Action secondary label="Abrir perfil no site ↗" onPress={()=>void openOfficial('/perfil')}/>
    <View style={{height:8}}/>
    <Action secondary label="Privacidade e segurança ↗" onPress={()=>void openOfficial('/perfil')}/>
    <View style={{height:8}}/>
@@ -1682,6 +1693,22 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
    </Text>
    <Action secondary label="Sair deste dispositivo" onPress={onLogout}/>
   </View>
+  <Modal visible={detailsOpen} animationType="slide"
+   onRequestClose={()=>setDetailsOpen(false)}>
+   <SafeAreaProvider><SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
+    <StatusBar hidden={Platform.OS==='android'} style="dark"/>
+    <ProfileDetailsEditor userId={profile.id}
+     onClose={()=>setDetailsOpen(false)}
+     onSaved={()=>Alert.alert('Personalização salva','Os novos detalhes estão disponíveis no Conecta.')}/>
+   </SafeAreaView></SafeAreaProvider>
+  </Modal>
+  <Modal visible={permissionsOpen} animationType="slide"
+   onRequestClose={()=>setPermissionsOpen(false)}>
+   <SafeAreaProvider><SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
+    <StatusBar hidden={Platform.OS==='android'} style="dark"/>
+    <NativePermissionsCenter userId={profile.id} onClose={()=>setPermissionsOpen(false)}/>
+   </SafeAreaView></SafeAreaProvider>
+  </Modal>
  </ScrollView>;
 }
 
@@ -1697,6 +1724,9 @@ export default function App(){
  const [contactsMode,setContactsMode]=useState(false);
  const [composeRequest,setComposeRequest]=useState(0);
  const [unreadCount,setUnreadCount]=useState(0);
+ const openNativeNotifications=useCallback(()=>{
+  setChatId(null);setTab('notifications');
+ },[]);
  const refreshUnread=useCallback(async(userId:string)=>{
   try{setUnreadCount(await unreadNotificationCount(userId));}
   catch{/* Notification badge is optional; do not interrupt sign-in. */}
@@ -1770,6 +1800,8 @@ export default function App(){
  };
  return <SafeAreaProvider>
   <NativeVersionMonitor/>
+  {user&&!restricted&&<NativeForegroundNotificationBridge userId={user.id}
+   onOpenNotifications={openNativeNotifications}/>}
   <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
   <StatusBar style="dark" hidden={Platform.OS==='android'}/>
   {Platform.OS==='android'&&<NavigationBar hidden style="light"/>}
