@@ -19,8 +19,8 @@ const permissions:{label:string;value:'public'|'friends'|'private'}[]=[
 ];
 const describe=(e:unknown)=>e instanceof Error?e.message:'Não foi possível concluir esta ação.';
 /** Native video playback with progress and an end event (no fake player). */
-function StoryVideo({path,onEnd,onProgress}:{
- path:string;onEnd:()=>void;onProgress:(fraction:number)=>void;
+function StoryVideo({path,onEnd,onProgress,paused}:{
+ path:string;onEnd:()=>void;onProgress:(fraction:number)=>void;paused:boolean;
 }){
  const [url,setUrl]=useState<string|null>(null);
  useEffect(()=>{let current=true;setUrl(null);
@@ -28,13 +28,14 @@ function StoryVideo({path,onEnd,onProgress}:{
   return()=>{current=false;};
  },[path]);
  return url?<PlayingStoryVideo key={url} url={url} onEnd={onEnd}
-  onProgress={onProgress}/>:<Loading text="Carregando vídeo protegido..."/>;
+  onProgress={onProgress} paused={paused}/>:<Loading text="Carregando vídeo protegido..."/>;
 }
-function PlayingStoryVideo({url,onEnd,onProgress}:{
- url:string;onEnd:()=>void;onProgress:(fraction:number)=>void;
+function PlayingStoryVideo({url,onEnd,onProgress,paused}:{
+ url:string;onEnd:()=>void;onProgress:(fraction:number)=>void;paused:boolean;
 }){
  const player=useVideoPlayer(url);
- useEffect(()=>{player.play();return()=>player.pause();},[player]);
+ useEffect(()=>{if(paused)player.pause();else player.play();
+  return()=>player.pause();},[player,paused]);
  useEffect(()=>{
   const listener=player.addListener('playToEnd',onEnd);
   const interval=setInterval(()=>{
@@ -94,8 +95,8 @@ export function StoryRail({userId,onOpenPost}:{
  const groupItems=selected?timeline.filter(story=>story.author_id===selected.author_id):[];
  const groupIndex=selected?groupItems.findIndex(story=>story.id===selected.id):-1;
  const open=useCallback((story:Story)=>{
-  if(Date.parse(story.expires_at)<=Date.now()){void refresh();return;}
-  setSelected(story);setSharedPost(null);setProgress(0);setPaused(false);
+  if(Date.parse(story.expires_at)>Date.now())setSelected(story);
+  else {void refresh();return;}setSharedPost(null);setProgress(0);setPaused(false);
   setSeen(current=>new Set(current).add(story.id));
  },[refresh]);
  const close=useCallback(()=>{setSelected(null);setSharedPost(null);},[]);
@@ -298,7 +299,7 @@ export function StoryRail({userId,onOpenPost}:{
         <Media path={selected.media_path} height={440} marginTop={0} radius={0}/>:
        selected?.media_type==='video'&&selected.media_path?
         <StoryVideo key={selected.id} path={selected.media_path}
-         onEnd={next} onProgress={trackVideo}/>:
+         onEnd={next} onProgress={trackVideo} paused={paused}/>:
        <Loading text="Abrindo Story..."/>}
      </View>
      {!!selected?.caption&&<Text style={{color:'#FFF',fontSize:16,marginTop:13,
