@@ -1,23 +1,11 @@
 import {supabase} from './supabase';
 import {requestPostModeration} from './data';
 import type {Community,Post} from './models';
+import {validateCommunityDraft} from './community-validation';
+export {communitySlug,validateCommunityDraft} from './community-validation';
 
 const COMMUNITY_POST_PAGE_SIZE=15;
 const POST_FIELDS='id,author_id,community_id,content,visibility,moderation_status,created_at,media_path,media_type,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)';
-
-export function communitySlug(value:string):string{
- return value.trim().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-  .toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60);
-}
-export function validateCommunityDraft(name:string,slug:string,description:string,rules:string){
- const trimmed=name.trim(),normalized=slug.trim().toLowerCase();
- if(trimmed.length<3||trimmed.length>100)throw new Error('O nome deve ter de 3 a 100 caracteres.');
- if(!/^[a-z0-9-]{3,60}$/.test(normalized))
-  throw new Error('O endereço deve ter de 3 a 60 letras minúsculas, números ou hífens.');
- if(description.trim().length>3000||rules.trim().length>5000)
-  throw new Error('Reduza a descrição ou as regras da comunidade.');
- return {name:trimmed,slug:normalized,description:description.trim(),rules:rules.trim()};
-}
 
 /** Reuse real web tables; no privileged credentials or bypass of community RLS. */
 export async function loadCommunityPosts(communityId:string,offset=0):Promise<{
