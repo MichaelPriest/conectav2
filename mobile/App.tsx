@@ -44,6 +44,7 @@ import {NativePermissionsCenter} from './src/permissions-ui';
 import {NativeForegroundNotificationBridge} from './src/native-notifications';
 import {unregisterRemotePush} from './src/remote-push';
 import {MediaGallery} from './src/media-gallery';
+import {LinkedMediaPreview} from './src/link-media-ui';
 import {parseConectaLink} from './src/deep-link';
 import type {PinnedChatMessage} from './src/chat-groups';
 import {
@@ -268,6 +269,7 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onDelete,onComment}:{
   </Text>
   {images.length>0&&<MediaGallery paths={images}/>} 
   {!!videoPath&&<VideoMedia path={videoPath}/>} 
+  <LinkedMediaPreview content={post.content}/>
   <PollCard postId={post.id} userId={userId}/>
   <View style={[s.row,{justifyContent:'space-between',marginTop:13,
    paddingBottom:12,borderBottomWidth:1,borderColor:t.line}]}>
