@@ -13,7 +13,7 @@ import type {ChatMessage,ChatReaction,Community,Friendship,Notice,Post,PostComme
 import {
  changeConnection,changeMembership,clearMediaCache,loadChatMessages,loadOlderChatMessages,loadCommunities,
  loadConnections,loadFeed,loadNotifications,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
- publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,startChat,updateMyProfile,verifyAccess
+ publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,startChat,unreadNotificationCount,updateMyProfile,verifyAccess
 } from './src/data';
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
@@ -675,7 +675,7 @@ function CommunityScreen({userId}:{userId:string}){
   ListEmptyComponent={!loading?<View style={s.empty}><Text style={s.muted}>Nenhuma comunidade encontrada.</Text></View>:<Loading/>}/>;
 }
 
-function NotificationsScreen({userId}:{userId:string}){
+function NotificationsScreen({userId,onRead}:{userId:string;onRead:()=>void}){
  const [items,setItems]=useState<Notice[]>([]),[loading,setLoading]=useState(true);
  const [error,setError]=useState(''),[busy,setBusy]=useState(false),[onlyUnread,setOnlyUnread]=useState(false);
  const load=useCallback(async()=>{
@@ -692,7 +692,7 @@ function NotificationsScreen({userId}:{userId:string}){
  },[userId,load]);
  const mark=async(id?:string)=>{
   setBusy(true);
-  try{await markNotifications(userId,id);await load();}catch(e){setError(errorMessage(e));}
+  try{await markNotifications(userId,id);await load();onRead();}catch(e){setError(errorMessage(e));}
   finally{setBusy(false);}
  };
  const unread=items.filter(n=>!n.read_at).length;
@@ -799,6 +799,11 @@ export default function App(){
  const [booting,setBooting]=useState(true),[error,setError]=useState('');
  const [tab,setTab]=useState<Tab>('feed');
  const [chatId,setChatId]=useState<string|null>(null);
+ const [unreadCount,setUnreadCount]=useState(0);
+ const refreshUnread=useCallback(async(userId:string)=>{
+  try{setUnreadCount(await unreadNotificationCount(userId));}
+  catch{/* Notification badge is optional; do not interrupt sign-in. */}
+ },[]);
  const verify=useCallback(async()=>{
   try{
    const {data,error:authError}=await supabase.auth.getUser();
@@ -824,9 +829,21 @@ export default function App(){
   });
   return()=>{subscription.unsubscribe();app.remove();};
  },[verify]);
+ useEffect(()=>{
+  if(!user||restricted){setUnreadCount(0);return;}
+  const id=user.id;
+  void refreshUnread(id);
+  const channel=supabase.channel('conecta-mobile-unread-'+id)
+   .on('postgres_changes',{event:'*',schema:'public',table:'notifications',
+    filter:'recipient_id=eq.'+id},()=>{void refreshUnread(id);}).subscribe();
+  const app=AppState.addEventListener('change',state=>{
+   if(state==='active')void refreshUnread(id);
+  });
+  return()=>{app.remove();void supabase.removeChannel(channel);};
+ },[user?.id,restricted,refreshUnread]);
  const logout=async()=>{
   await supabase.auth.signOut();clearMediaCache();setTab('feed');setChatId(null);
-  setUser(null);setProfile(null);setRestricted(null);
+  setUnreadCount(0);setUser(null);setProfile(null);setRestricted(null);
  };
  const openConversation=(id:string)=>{setChatId(id);setTab('messages');};
  const render=()=>{
@@ -836,7 +853,7 @@ export default function App(){
   if(tab==='connections')return <ConnectionsScreen userId={user.id} onConversation={openConversation}/>;
   if(tab==='messages')return <ChatScreen userId={user.id} initialId={chatId}/>;
   if(tab==='communities')return <CommunityScreen userId={user.id}/>;
-  if(tab==='notifications')return <NotificationsScreen userId={user.id}/>;
+  if(tab==='notifications')return <NotificationsScreen userId={user.id} onRead={()=>void refreshUnread(user.id)}/>;
   return <ProfileScreen profile={profile} onUpdate={setProfile} onLogout={()=>void logout()}/>;
  };
  return <SafeAreaView style={s.page}>
@@ -856,8 +873,18 @@ export default function App(){
       <Text style={{fontSize:25,fontWeight:'900',letterSpacing:-1.2,color:t.primaryDark}}>conecta<Text style={{color:t.pink}}>✳</Text></Text>
      </Pressable>
      <View style={[s.row,{gap:12}]}>
-      <Pressable accessibilityLabel="Notificações" onPress={()=>setTab('notifications')} hitSlop={10}>
+      <Pressable accessibilityRole="button"
+       accessibilityLabel={unreadCount?'Notificações, '+unreadCount+' não lidas':'Notificações'}
+       onPress={()=>setTab('notifications')} hitSlop={10}
+       style={{minWidth:36,minHeight:36,justifyContent:'center',alignItems:'center'}}>
        <Text style={{fontSize:22,color:tab==='notifications'?t.pink:t.primary}}>♧</Text>
+       {unreadCount>0&&<View style={{position:'absolute',top:0,right:0,minWidth:18,
+        height:18,borderRadius:9,backgroundColor:t.pink,alignItems:'center',
+        justifyContent:'center',paddingHorizontal:3}}>
+        <Text style={{color:'#FFF',fontWeight:'800',fontSize:9}}>
+         {unreadCount>99?'99+':unreadCount}
+        </Text>
+       </View>}
       </Pressable>
       <Pressable accessibilityLabel="Meu perfil" onPress={()=>setTab('profile')}>
        <Avatar name={profile.display_name} path={profile.avatar_path} size={33}/>
