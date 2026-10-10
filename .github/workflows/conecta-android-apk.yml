@@ -1,4 +1,4 @@
-# Homologação Alpha 0.5.1: verificação automática de versões oficiais ao abrir o app.
+# Homologação Alpha 0.6.0: grupos nativos, presença opt-in, recuperação e segurança.
 name: Conecta V2 · Android APK de testes
 on:
   push:
@@ -55,7 +55,7 @@ jobs:
       - name: Publicar artefato de teste
         uses: actions/upload-artifact@v4
         with:
-          name: conecta-v2-android-0.5.1-alpha
+          name: conecta-v2-android-0.6.0-alpha
           path: mobile/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
