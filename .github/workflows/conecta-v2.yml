@@ -56,6 +56,8 @@ jobs:
         run: node --test tests/chat-web-push.test.cjs tests/chat-web-push-subject.test.cjs tests/chat-push-signature.test.cjs tests/chat-push-origin.test.cjs tests/mobile-push-security.test.cjs tests/chat-presence.test.cjs tests/chat-calls.test.cjs tests/chat-calls-realtime.test.cjs tests/chat-rtc-connectivity.test.cjs tests/chat-trickle-ice.test.cjs tests/chat-call-tones.test.cjs
       - name: Monetization access control regression tests
         run: node --test tests/monetization-access.test.cjs
+      - name: Verify official Android release links and app download navigation
+        run: node --test tests/app-downloads.test.cjs
       - name: Check TypeScript
         run: npm run typecheck
       - name: Regression tests for nullable profile details
