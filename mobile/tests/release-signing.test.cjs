@@ -32,6 +32,9 @@ test('Updater-compatible releases require exact mobile tags and signed APK',()=>
  assert.match(workflow,/secrets\.CONECTA_ANDROID_KEYSTORE_PASSWORD/);
  assert.match(workflow,/secrets\.CONECTA_ANDROID_KEY_ALIAS/);
  assert.match(workflow,/secrets\.CONECTA_ANDROID_KEY_PASSWORD/);
+ const globalEnv=workflow.slice(0,workflow.indexOf('    steps:'));
+ assert.doesNotMatch(globalEnv,/secrets\.CONECTA_ANDROID_/,
+  'Signing secrets must never be passed to dependency install or untrusted test steps');
  assert.match(source,/signingConfig signingConfigs\.release/);
  assert.match(source,/GITHUB_ENV/);
  assert.match(source,/mode:0o600/);
