@@ -1,4 +1,4 @@
-# Build de homologação Alpha 0.3.0: Stories, voz, Reels e mídias nativas.
+# Build de homologação Alpha 0.3.1: chat avançado, buscas e alertas internos.
 name: Conecta V2 · Android APK de testes
 on:
   push:
