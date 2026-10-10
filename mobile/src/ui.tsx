@@ -49,13 +49,16 @@ export function Avatar({path,name,size=44}:{path?:string|null;name:string;size?:
   <Text style={{color:t.primary,fontWeight:'900',fontSize:size*0.34}}>{(name||'?').slice(0,2).toUpperCase()}</Text>
  </View>;
 }
-export function Media({path,height=185}:{path:string|null|undefined;height?:number}){
+export function Media({path,height=185,width='100%',radius=15,marginTop=12}:{
+ path:string|null|undefined;height?:number;width?:'100%'|'48%';
+ radius?:number;marginTop?:number;
+}){
  const [url,setUrl]=useState<string|null>(null);
  useEffect(()=>{let active=true;setUrl(null);void signedMedia(path).then(u=>{if(active)setUrl(u);});
  return()=>{active=false;};},[path]);
  if(!url)return null;
  return <Image accessibilityLabel="Mídia da publicação" accessibilityRole="image" source={{uri:url}} resizeMode="cover"
- style={{width:'100%',height,borderRadius:15,marginTop:12}}/>;
+ style={{width,height,borderRadius:radius,marginTop}}/>;
 }
 function InlineVideo({url,height}:{url:string;height:number}){
  const player=useVideoPlayer(url);
