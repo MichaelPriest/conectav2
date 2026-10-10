@@ -20,7 +20,8 @@
     "android": {
       "package": "br.com.conectav2.app",
       "adaptiveIcon": {
-        "backgroundColor": "#25194A"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#8055F5"
       },
       "edgeToEdgeEnabled": true,
       "versionCode": 4
@@ -52,7 +53,29 @@
           "enableBackgroundRecording": false,
           "enableBackgroundPlayback": false
         }
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false,
+          "hidden": true,
+          "style": "light"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F9F9FE",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180
+        }
       ]
-    ]
+    ],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F9F9FE"
+    }
   }
 }
