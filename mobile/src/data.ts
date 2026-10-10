@@ -105,6 +105,26 @@ export async function publishTextPost(userId:string,content:string,visibility:'p
  * Invokes the same authenticated moderation route as the website.
  * Database quarantine and moderation policies remain authoritative if offline.
  */
+/** Delete only a post owned by the signed-in person, then clean associated media. */
+export async function deleteOwnPost(post:Post,userId:string):Promise<string|null>{
+ if(post.author_id!==userId)throw new Error('Somente o autor pode excluir esta publicação.');
+ const {data:{session}}=await supabase.auth.getSession();
+ if(session?.user.id!==userId)throw new Error('Sua sessão expirou.');
+ const paths=[...new Set([post.media_path,
+  ...(post.post_media||[]).map(item=>item.storage_path)].filter(
+   (path):path is string=>Boolean(path&&path.startsWith(userId+'/'))
+  ))];
+ const {data,error}=await supabase.from('posts').delete()
+  .eq('id',post.id).eq('author_id',userId).select('id').maybeSingle();
+ if(error)throw error;
+ if(!data)throw new Error('Esta publicação não pode mais ser excluída.');
+ if(paths.length){
+  const {error:cleanup}=await supabase.storage.from('social-media').remove(paths);
+  if(cleanup)return 'Publicação excluída, mas a limpeza de mídias precisa ser verificada.';
+ }
+ return null;
+}
+
 export async function requestContentModeration(kind:'post'|'story',id:string):Promise<void>{
  const {data:{session}}=await supabase.auth.getSession();
  if(!session?.access_token)return;
