@@ -22,7 +22,7 @@ test('Poll rules prevent ambiguous votes and invalid deadlines',()=>{
  assert.deepEqual(validatePollDraft(' Qual seu favorito? ',[' Café ',' Chá '],7),{
   question:'Qual seu favorito?',options:['Café','Chá'],days:7
  });
- assert.throws(()=>validatePollDraft('Qual?', ['Sim','Não'],7),/pergunta/);
+ assert.throws(()=>validatePollDraft('Qual', ['Sim','Não'],7),/pergunta/);
  assert.throws(()=>validatePollDraft('Pergunta adequada',['Sim'],7),/2 e 6/);
  assert.throws(()=>validatePollDraft('Pergunta adequada',['Sim',' sim '],7),/diferentes/);
  assert.throws(()=>validatePollDraft('Pergunta adequada',['Café','café'],7),/diferentes/);
