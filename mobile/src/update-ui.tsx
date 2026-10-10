@@ -6,7 +6,7 @@ import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
 import {ArrowDownToLine,CheckCircle2,RefreshCw,ShieldCheck,Smartphone,X} from 'lucide-react-native';
 import React,{useCallback,useEffect,useRef,useState} from 'react';
 import {chooseAndroidUpdate,chooseIosUpdate,MOBILE_RELEASES_API,APP_STORE_LOOKUP_API} from './version-utils';
-import {beginAndroidApkDownload,requestAndroidInstall} from './apk-installer';
+import {beginAndroidApkDownload,requestAndroidInstall,openAndroidInstallPermissionSettings} from './apk-installer';
 import {formatSize,progressFraction,verifiedInAppDownload} from './apk-installer-policy';
 import {theme as t} from './theme';
 import type {AvailableUpdate} from './version-utils';
@@ -244,10 +244,26 @@ export function NativeVersionMonitor(){
      </>}
      {phase==='error'&&<>
       <Text style={{color:t.danger,fontSize:13,lineHeight:21,marginBottom:16}}>{error}</Text>
+      {downloaded&&Platform.OS==='android'&&<>
+       <Pressable accessibilityRole="button" accessibilityLabel="Abrir permissões de instalação no Android"
+        onPress={()=>void openAndroidInstallPermissionSettings().catch(e=>
+         setError(e instanceof Error?e.message:'As configurações não puderam ser abertas.'))}
+        style={{borderWidth:1,borderColor:t.primary,borderRadius:14,
+         padding:14,alignItems:'center',marginBottom:10}}>
+        <Text style={{color:t.primary,fontWeight:'800'}}>Permitir instalação pelo Conecta</Text>
+       </Pressable>
+       <Pressable accessibilityRole="button" accessibilityLabel="Solicitar instalação novamente"
+        onPress={()=>void install()}
+        style={{backgroundColor:t.primary,borderRadius:14,padding:15,
+         alignItems:'center',marginBottom:10}}>
+        <Text style={{color:'#FFF',fontWeight:'800'}}>Tentar instalar novamente</Text>
+       </Pressable>
+      </>}
       <Pressable accessibilityRole="button" accessibilityLabel="Verificar novamente"
        onPress={()=>void check(true)}
-       style={{backgroundColor:t.primary,borderRadius:14,padding:15,alignItems:'center'}}>
-       <Text style={{color:'#FFF',fontWeight:'800'}}>Tentar novamente</Text>
+       style={{backgroundColor:downloaded?'#EEE7FF':t.primary,
+        borderRadius:14,padding:15,alignItems:'center'}}>
+       <Text style={{color:downloaded?t.primary:'#FFF',fontWeight:'800'}}>Verificar versões</Text>
       </Pressable>
      </>}
      <View style={{marginTop:25,flexDirection:'row',alignItems:'flex-start',gap:9}}>
