@@ -87,7 +87,7 @@ test('Native safety reporting uses same RLS-protected web workflow',()=>{
  assert.match(data,/from\('safety_reports'\)\.insert\(/);
  assert.match(data,/reporter_id:userId,target_type:targetType,target_id:targetId/);
  assert.match(app,/ReportContent targetType="post"/);
- assert.match(app,/ReportContent targetType="message"/);
+ assert.match(read('src/chat-bubble.tsx'),/ReportContent targetType="message"/);
  assert.match(ui,/Assédio ou intimidação/);
  assert.match(ui,/Exposição de informações pessoais/);
 });
@@ -118,7 +118,7 @@ test('Voice notes stay private and require explicit microphone consent',()=>{
  assert.match(ui,/useAudioRecorder\(RecordingPresets\.HIGH_QUALITY\)/);
  assert.match(ui,/useAudioPlayer\(url\)/);
  assert.match(app,/VoiceRecorder conversationId=/);
- assert.match(app,/AudioMessage path=/);
+ assert.match(read('src/chat-bubble.tsx'),/AudioMessage path=/);
  const plugin=config.expo.plugins.find(p=>p[0]==='expo-audio');
  assert.ok(plugin);
  assert.equal(plugin[1].enableBackgroundRecording,false);
@@ -134,7 +134,7 @@ test('Chat media stays scoped to the signed-in conversation, with upload cleanup
  assert.match(media,/from\('messages'\)\.insert\(/);
  assert.match(media,/remove\(\[path\]\)/);
  assert.match(app,/sendChatMedia\(active,userId,chosen\)/);
- assert.match(app,/VideoMedia path=\{item\.media_path\}/);
+ assert.match(read('src/chat-bubble.tsx'),/VideoMedia path=\{message\.media_path\}/);
 });
 
 test('Profile media uses existing signed Supabase avatar and cover fields',()=>{
@@ -158,4 +158,24 @@ test('Reels browse the same public moderated video posts as web',()=>{
  assert.match(reels,/VideoMedia path=\{path\}/);
  assert.match(reels,/setLike\(post\.id,userId,wasLiked\)/);
  assert.match(app,/tab==='reels'/);
+});
+
+test('Native chat keeps replies, edits, deletes and emoji reactions under RLS',()=>{
+ const bubble=read('src/chat-bubble.tsx');
+ const actions=read('src/chat-actions.ts');
+ const models=read('src/models.ts');
+ assert.match(models,/reply_to:string\|null/);
+ assert.match(models,/edited_at:string\|null/);
+ assert.match(data,/reply_to:replyTo/);
+ assert.match(data,/\.select\('id,conversation_id,sender_id,content,created_at,media_path,media_type,deleted_at,edited_at,reply_to'\)/);
+ assert.match(actions,/from\('message_reactions'\)/);
+ assert.match(actions,/\.eq\('user_id',userId\)/);
+ assert.match(actions,/\.eq\('sender_id',userId\)\.is\('deleted_at',null\)/);
+ assert.match(actions,/deleted_at:new Date\(\)\.toISOString\(\)/);
+ assert.match(actions,/if\(message\.sender_id!==userId/);
+ assert.match(bubble,/CHAT_EMOJIS\.map/);
+ assert.match(bubble,/deleteChatMessage\(message,userId\)/);
+ assert.match(bubble,/editChatMessage\(message,userId,editText\)/);
+ assert.match(app,/onReply=\{message=>setReplyTo\(message\)\}/);
+ assert.match(app,/sendMessage\(active,userId,compose,replyTo\?\.id\|\|null\)/);
 });
