@@ -292,6 +292,20 @@ export async function loadOlderChatMessages(
  if(error)throw error;
  return ((data||[]) as ChatMessage[]).reverse();
 }
+/** Query real conversation messages, restricted by the database's membership RLS. */
+export async function searchChatMessages(conversationId:string,query:string):Promise<ChatMessage[]>{
+ const needle=query.trim();
+ if(needle.length<2||needle.length>100)
+  throw new Error('Pesquise usando de 2 a 100 caracteres.');
+ // Escape LIKE wildcards and backslashes so a user searches the literal phrase.
+ const escaped=needle.replace(/[\\%_]/g,'\\export async function sendMessage(');
+ const {data,error}=await supabase.from('messages').select(CHAT_MESSAGE_FIELDS)
+  .eq('conversation_id',conversationId).is('deleted_at',null)
+  .ilike('content','%'+escaped+'%')
+  .order('created_at',{ascending:false}).limit(25);
+ if(error)throw error;
+ return (data||[]) as ChatMessage[];
+}
 export async function sendMessage(
  conversationId:string,userId:string,content:string,replyTo:string|null=null
 ){
