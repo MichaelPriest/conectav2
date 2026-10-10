@@ -61,12 +61,16 @@ export async function classifyLocalImage(bytes:Uint8Array):Promise<Triage>{
  const scores=Object.values(classes).reduce((a,b)=>a+b,0);
  if(scores<0.95||scores>1.05)throw new Error('Malformed model probabilities');
  const flagged=classes.Porn>=0.60||classes.Hentai>=0.60||classes.Sexy>=0.85;
- const borderline=classes.Porn+classes.Hentai+classes.Sexy>=0.40;
+ // A photograph is NOT a moderation violation merely because it contains
+ // people or skin. Keep high/uncertain explicit risk for human reviewers,
+ // and let low-risk everyday photos pass the initial on-server scan.
+ const sexualRisk=classes.Porn+classes.Hentai+classes.Sexy*0.75;
+ const borderline=sexualRisk>=0.36;
  return {
-  flagged,reviewRequired:true,provider:'nsfwjs-mobilenet-v2',
+  flagged,reviewRequired:flagged||borderline,provider:'nsfwjs-mobilenet-v2',
   reason:flagged?'Possível nudez ou conteúdo sexual explícito; revisão especializada':
     borderline?'Classificação visual inconclusiva; revisão humana':
-    'Triagem visual sem indicação clara de nudez; outras categorias ainda precisam de revisão',
+    'Triagem de risco sexual sem alerta; denúncia e revisão posterior continuam disponíveis',
   classification:classes
  };
 }
