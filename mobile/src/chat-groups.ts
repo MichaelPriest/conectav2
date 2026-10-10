@@ -1,5 +1,7 @@
 import {supabase} from './supabase';
 import type {ChatMessage,Profile} from './models';
+import {validateGroupCreation} from './chat-group-validation';
+export {validateGroupCreation,groupRights} from './chat-group-validation';
 
 /** The Conecta Web owns the RPCs; mobile always uses the same RLS and membership rules. */
 export async function acceptedChatFriends(userId:string):Promise<Profile[]>{
@@ -16,15 +18,6 @@ export async function acceptedChatFriends(userId:string):Promise<Profile[]>{
   .order('display_name',{ascending:true});
  if(peopleError)throw peopleError;
  return (people||[]) as Profile[];
-}
-export function validateGroupCreation(title:string,selectedIds:string[],friends:Profile[]){
- const clean=title.trim();
- if(clean.length<2||clean.length>80)throw new Error('Nome do grupo: de 2 a 80 caracteres.');
- const allowed=new Set(friends.map(x=>x.id));
- const ids=[...new Set(selectedIds)].filter(id=>allowed.has(id));
- if(ids.length<2)throw new Error('Selecione pelo menos duas amizades aceitas.');
- if(ids.length>49)throw new Error('O grupo pode ter até 50 pessoas, incluindo você.');
- return {title:clean,ids};
 }
 export async function createNativeGroup(userId:string,title:string,selectedIds:string[]){
  const friends=await acceptedChatFriends(userId);
@@ -104,14 +97,6 @@ export async function getGroupDetails(conversationId:string,userId:string):Promi
   permissions:{coadmins:Array.isArray(p?.coadmins)?p.coadmins:[],
    coadmins_can_invite:p?.coadmins_can_invite===true,
    coadmins_can_remove:p?.coadmins_can_remove===true}};
-}
-export function groupRights(details:GroupDetails,userId:string){
- const owner=details.created_by===userId;
- const moderator=!owner&&details.permissions.coadmins.includes(userId);
- return {owner,moderator,
-  invite:owner||(moderator&&details.permissions.coadmins_can_invite),
-  remove:owner||(moderator&&details.permissions.coadmins_can_remove),
-  rename:owner,admins:owner};
 }
 async function callGroupAction(name:string,args:Record<string,unknown>){
  const {error}=await supabase.rpc(name,args);
