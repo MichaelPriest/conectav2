@@ -241,9 +241,14 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onDelete,onComment}:{
   if(sendingComment||!commentBody.trim()||commentBody.trim().length>1000)return;
   setSendingComment(true);setCommentError('');
   try{
-   await sendPostComment(post.id,userId,commentBody,replyTo?.id||null);
+   const moderation=await sendPostComment(post.id,userId,commentBody,replyTo?.id||null);
    setCommentBody('');setReplyTo(null);
    setCommentRows(await loadPostComments(post.id));
+   if(moderation!=='approved')Alert.alert(
+    moderation==='rejected'?'Comentário não aprovado':'Comentário em análise',
+    moderation==='rejected'?'O conteúdo não pode ser exibido.':
+     'Sua mensagem foi recebida, mas ainda não está liberada para outras pessoas.'
+   );
    onComment(post.id);
   }catch(e){setCommentError(errorMessage(e));}
   finally{setSendingComment(false);}
