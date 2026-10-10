@@ -22,7 +22,7 @@ export type Story={
 export type Friendship={id:string;requester_id:string;addressee_id:string;status:string;created_at:string};
 export type Community={id:string;owner_id:string|null;slug:string;name:string;description:string;rules:string|null;cover_path:string|null;avatar_path:string|null;is_official:boolean;created_at:string};
 export type Notice={id:string;kind:string;created_at:string;read_at:string|null;entity_id:string|null;profiles:{display_name:string;handle:string}|null};
-export type Thread={id:string;title:string;group:boolean;other:Profile|null;unread:number;last:string;updated:string};
+export type Thread={id:string;title:string;group:boolean;other:Profile|null;unread:number;last:string;updated:string;created_by:string|null;muted_until:string|null};
 export type ChatMessage={
  id:string;conversation_id:string;sender_id:string;content:string;created_at:string;
  media_path:string|null;media_type:string|null;deleted_at:string|null;
