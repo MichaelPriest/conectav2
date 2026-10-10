@@ -14,7 +14,7 @@ import {SITE_URL,supabase} from './src/supabase';
 import type {ChatMessage,ChatReaction,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './src/models';
 import {
  changeConnection,changeMembership,clearMediaCache,deleteOwnPost,loadChatMessages,loadOlderChatMessages,loadCommunities,
- loadConnections,loadFeed,loadNotifications,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
+ loadConnections,loadFeed,loadNotifications,loadOwnPosts,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
  publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,startChat,unreadNotificationCount,updateMyProfile,verifyAccess
 } from './src/data';
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
@@ -1302,6 +1302,60 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
 }){
  const [name,setName]=useState(profile.display_name),[bio,setBio]=useState(profile.bio||'');
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [ownPosts,setOwnPosts]=useState<Post[]>([]);
+ const [ownLiked,setOwnLiked]=useState<Set<string>>(new Set());
+ const [ownSaved,setOwnSaved]=useState<Set<string>>(new Set());
+ const [postsLoading,setPostsLoading]=useState(true);
+ const [postsMore,setPostsMore]=useState(false);
+ const [postBusy,setPostBusy]=useState(false);
+ const [postError,setPostError]=useState('');
+ useEffect(()=>{setName(profile.display_name);setBio(profile.bio||'');},[profile.id]);
+ const loadPosts=useCallback(async(offset=0)=>{
+  const result=await loadOwnPosts(profile.id,offset);
+  const ids=result.items.map(p=>p.id);
+  const [likes,saved]=await Promise.all([myLikes(profile.id,ids),mySaved(profile.id,ids)]);
+  setOwnPosts(current=>offset?[...current.filter(p=>!ids.includes(p.id)),...result.items]:result.items);
+  setOwnLiked(current=>new Set([...(offset?Array.from(current):[]),...likes]));
+  setOwnSaved(current=>new Set([...(offset?Array.from(current):[]),...saved]));
+  setPostsMore(result.more);
+ },[profile.id]);
+ const refreshPosts=useCallback(async()=>{
+  setPostsLoading(true);setPostError('');
+  try{await loadPosts();}
+  catch(e){setPostError(errorMessage(e));}
+  finally{setPostsLoading(false);}
+ },[loadPosts]);
+ useEffect(()=>{void refreshPosts();},[refreshPosts]);
+ const likeOwn=async(post:Post)=>{
+  if(postBusy)return;setPostBusy(true);setPostError('');
+  const liked=ownLiked.has(post.id);
+  try{
+   await setLike(post.id,profile.id,liked);
+   setOwnLiked(current=>{const next=new Set(current);
+    if(liked)next.delete(post.id);else next.add(post.id);return next;});
+   setOwnPosts(current=>current.map(p=>p.id===post.id?{...p,
+    post_likes:[{count:Math.max(0,(p.post_likes?.[0]?.count||0)+(liked?-1:1))}]}:p));
+  }catch(e){setPostError(errorMessage(e));}
+  finally{setPostBusy(false);}
+ };
+ const saveOwn=async(post:Post)=>{
+  if(postBusy)return;setPostBusy(true);setPostError('');
+  const saved=ownSaved.has(post.id);
+  try{await setSavedPost(post.id,profile.id,saved);
+   setOwnSaved(current=>{const next=new Set(current);
+    if(saved)next.delete(post.id);else next.add(post.id);return next;});
+  }catch(e){setPostError(errorMessage(e));}
+  finally{setPostBusy(false);}
+ };
+ const deleteOwn=async(post:Post)=>{
+  if(postBusy)return;setPostBusy(true);setPostError('');
+  try{
+   const warning=await deleteOwnPost(post,profile.id);
+   setOwnPosts(current=>current.filter(p=>p.id!==post.id));
+   if(warning)Alert.alert('Publicação excluída',warning);
+  }catch(e){setPostError(errorMessage(e));}
+  finally{setPostBusy(false);}
+ };
  const [coverPath,setCoverPath]=useState<string|null>(null);
  useEffect(()=>{
   let alive=true;
@@ -1381,6 +1435,25 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
    <Action disabled={busy} label={busy?'Salvando...':'Salvar perfil'} onPress={()=>void save()}/>
    <Text style={[s.muted,{marginTop:10}]}>Detalhes avançados de personalização continuam disponíveis no site.</Text>
   </View>
+  <SectionHeader title="Minhas publicações" Icon={Heart}
+   description="Histórias que você compartilhou com sua rede."
+   action="Atualizar" onAction={()=>void refreshPosts()}/>
+  <ErrorNotice text={postError}/>
+  {postsLoading?<Loading text="Carregando suas publicações..."/>:
+   ownPosts.length===0?<View style={s.empty}>
+    <Text style={s.primaryText}>Nenhuma publicação ainda</Text>
+    <Text style={s.muted}>Sua próxima história pode começar no Feed.</Text>
+   </View>:
+   ownPosts.map(post=><PostCard key={post.id} post={post} userId={profile.id}
+    liked={ownLiked.has(post.id)} saved={ownSaved.has(post.id)}
+    onLike={p=>void likeOwn(p)} onSave={p=>void saveOwn(p)}
+    onDelete={p=>void deleteOwn(p)}
+    onComment={id=>setOwnPosts(current=>current.map(p=>p.id===id?
+     {...p,post_comments:[{count:(p.post_comments?.[0]?.count||0)+1}]}:p))}/>)}
+  {postsMore&&!postsLoading&&<View style={{paddingVertical:12}}>
+   <Action secondary disabled={postBusy} label="Carregar publicações anteriores"
+    onPress={()=>{void loadPosts(ownPosts.length).catch(e=>setPostError(errorMessage(e)));}}/>
+  </View>}
   <View style={s.card}>
    <Text style={[s.primaryText,{marginBottom:10}]}>Minha conta</Text>
    <Action secondary label="Abrir perfil completo ↗" onPress={()=>void openOfficial('/perfil')}/>
