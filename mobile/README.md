@@ -159,3 +159,47 @@ Só execute builds quando necessário para controlar os minutos do GitHub.
 
 As partes ainda disponíveis só no site devem permanecer acessíveis sem
 fingir que foram implementadas no aplicativo.
+
+## Conecta Mobile 0.4.0 — identidade e navegação
+
+O app nativo agora compartilha os tokens de marca do site (roxo Conecta
+`#8055F5`, fundo claro `#F9F9FE`, texto `#16213F`), usa ícones
+Lucide/SVG e uma barra inferior de cinco ações: Início, Explorar,
+Publicar, Grupos e Perfil. Reels, Conversas e Notificações ficam na
+barra superior, sem esconder recursos existentes.
+
+- Feed: capa editorial, Stories, criação em modal, mídias em grade,
+  indicadores de curtidas e botões de interação vetoriais.
+- Perfil: capa real em destaque, avatar sobreposto, ações de editar foto
+  e capa e informações pessoais.
+- Comunidades e conexões: cartões com imagens reais, banners com a paleta
+  do site, busca e botões consistentes.
+- Android: modo de tela imersiva com barra de navegação do sistema oculta,
+  tratamento dos recortes da câmera e áreas seguras para os controles.
+  O gesto de sistema ainda pode reaparecer conforme a versão do Android
+  e o teclado; a navegação do sistema jamais é substituída pelo app.
+- Marca: assets reais em `assets/icon.png`, `assets/adaptive-icon.png`
+  e `assets/splash-icon.png`, inspirados no símbolo existente do site.
+  O ícone só muda **após instalar a nova build**, não por atualização
+  dos dados via Supabase.
+
+### Checklist visual obrigatório para Android e iOS
+
+1. Abrir em Android com botões de três teclas e com navegação por gestos;
+   confirmar que o menu inferior nunca é coberto pela barra do sistema.
+2. Confirmar que nada fica escondido atrás do recorte da câmera,
+   barra de status ou indicadores de segurança na parte superior.
+3. Abrir e fechar o modal de publicação e os Stories; verificar cabeçalho,
+   teclado, botões de publicar/fechar e áreas seguras em cada tela.
+4. Testar o launcher após uma instalação limpa: o ícone do Conecta
+   (símbolo "C" roxo/azul e ponto rosa) deve aparecer, e a abertura
+   deve usar a mesma marca.
+5. Conferir telas compactas (largura menor que 360 dp), fontes ampliadas,
+   rotação bloqueada e aparelhos com diferentes recortes.
+6. Conferir contraste, labels de acessibilidade, teclado de mensagens e
+   navegação pelo botão Voltar do Android.
+7. Conferir que dados, uploads, moderação e permissões são exatamente os
+   mesmos que já funcionavam antes do redesenho.
+
+A CI valida TypeScript, contratos do Supabase e recursos PNG. Homologação
+visual e das barras do Android exige o APK em dispositivo físico.
