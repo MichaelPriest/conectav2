@@ -5,12 +5,12 @@ import {supabase} from './supabase';
 import {requestContentModeration} from './data';
 import type {SelectedMedia} from './media-validation';
 import {MAX_MEDIA_BYTES} from './media-validation';
-import type {Story} from './models';
+import type {Story,Post} from './models';
 
 /** Visibility, expiration and moderation are enforced by the same server RLS as web. */
 export async function loadActiveStories():Promise<Story[]>{
  const {data,error}=await supabase.from('stories')
-  .select('id,author_id,caption,media_path,media_type,visibility,moderation_status,created_at,expires_at,profiles!stories_author_id_fkey(display_name,handle,avatar_path)')
+  .select('id,author_id,caption,media_path,media_type,shared_post_id,visibility,moderation_status,created_at,expires_at,profiles!stories_author_id_fkey(display_name,handle,avatar_path)')
   .gt('expires_at',new Date().toISOString())
   .order('created_at',{ascending:false}).limit(80);
  if(error)throw error;
@@ -78,10 +78,31 @@ export async function publishStory(
  }
 }
 
+/**
+ * Share a feed post into a 24-hour story without copying another user's media.
+ * A database trigger re-verifies public visibility and server approval.
+ */
+export async function sharePostToStory(
+ userId:string,post:Post,visibility:'public'|'friends'|'private'='friends'
+):Promise<string>{
+ if(post.visibility!=='public'||post.moderation_status!=='approved'||post.community_id)
+  throw new Error('Somente publicações públicas e aprovadas do feed podem ser compartilhadas.');
+ const {data:{session}}=await supabase.auth.getSession();
+ if(!session||session.user.id!==userId)throw new Error('Entre novamente para compartilhar no Story.');
+ const {data,error}=await supabase.from('stories').insert({
+  author_id:userId,shared_post_id:post.id,caption:'',
+  media_path:null,media_type:null,visibility
+ }).select('id').single();
+ if(error)throw new Error(error.message);
+ return data.id;
+}
+
 export async function removeStory(userId:string,story:Story):Promise<void>{
  if(story.author_id!==userId)throw new Error('Somente o autor pode excluir o próprio Story.');
  const {error}=await supabase.from('stories').delete().eq('id',story.id).eq('author_id',userId);
  if(error)throw error;
- const {error:cleanup}=await supabase.storage.from('social-media').remove([story.media_path]);
- if(cleanup)throw new Error('Story excluído, porém o arquivo precisa de limpeza: '+cleanup.message);
+ if(story.media_path){
+  const {error:cleanup}=await supabase.storage.from('social-media').remove([story.media_path]);
+  if(cleanup)throw new Error('Story excluído, porém o arquivo precisa de limpeza: '+cleanup.message);
+ }
 }
