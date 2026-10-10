@@ -38,6 +38,7 @@ import {NativeGroupCreator,NativeGroupSettings} from './src/chat-group-ui';
 import {getPinnedMessages,setConversationMuted,toggleChatPin} from './src/chat-groups';
 import {useNativeChatTyping} from './src/chat-typing';
 import {useNativeChatPresence} from './src/chat-presence';
+import {ExploreScreen} from './src/explore-ui';
 import type {PinnedChatMessage} from './src/chat-groups';
 import {
  Bell,BellOff,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
@@ -633,8 +634,8 @@ function FeedScreen({userId,profile,composeRequest}:{
   ListFooterComponent={loadingMore?<Loading/>:<View style={{height:20}}/>}/>;
 }
 
-function ConnectionsScreen({userId,onConversation}:{
- userId:string;onConversation:(conversationId:string)=>void
+function ConnectionsScreen({userId,onConversation,onBack}:{
+ userId:string;onConversation:(conversationId:string)=>void;onBack:()=>void
 }){
  const [links,setLinks]=useState<Friendship[]>([]),[people,setPeople]=useState<Profile[]>([]);
  const [blocked,setBlocked]=useState<Set<string>>(new Set());
@@ -694,8 +695,13 @@ function ConnectionsScreen({userId,onConversation}:{
  };
  return <FlatList style={s.screen} data={visible} keyExtractor={x=>x.id}
   refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void refresh()}/>}
-  ListHeaderComponent={<View><Heading eyebrow="descobrir" title="Explore pessoas"
-    subtitle="Encontre quem compartilha interesses com você."/>
+  ListHeaderComponent={<View>
+   <View style={{marginTop:13}}>
+    <Action secondary label="Voltar ao explorar" leading={<ChevronLeft size={17} color={t.primary}/>}
+     onPress={onBack}/>
+   </View>
+   <Heading eyebrow="conexões" title="Minhas conexões"
+    subtitle="Amizades e convites para conversar."/>
    <View style={{flexDirection:'row',gap:10,alignItems:'center',backgroundColor:t.surface,
     borderColor:t.line,borderWidth:1,borderRadius:14,paddingHorizontal:12,marginBottom:8}}>
     <Search size={19} color={t.muted}/>
@@ -1688,6 +1694,7 @@ export default function App(){
  const [booting,setBooting]=useState(true),[error,setError]=useState('');
  const [tab,setTab]=useState<Tab>('feed');
  const [chatId,setChatId]=useState<string|null>(null);
+ const [contactsMode,setContactsMode]=useState(false);
  const [composeRequest,setComposeRequest]=useState(0);
  const [unreadCount,setUnreadCount]=useState(0);
  const refreshUnread=useCallback(async(userId:string)=>{
@@ -1737,6 +1744,7 @@ export default function App(){
  };
  const openConversation=(id:string)=>{setChatId(id);setTab('messages');};
  const navigate=(key:string)=>{
+  if(key==='connections')setContactsMode(false);
   if(key==='create'){
    setChatId(null);setTab('feed');setComposeRequest(previous=>previous+1);
    return;
@@ -1750,7 +1758,11 @@ export default function App(){
   if(!user||!profile)return null;
   if(tab==='feed')return <FeedScreen userId={user.id} profile={profile} composeRequest={composeRequest}/>;
   if(tab==='reels')return <ReelsScreen userId={user.id}/>;
-  if(tab==='connections')return <ConnectionsScreen userId={user.id} onConversation={openConversation}/>;
+  if(tab==='connections')return contactsMode?
+   <ConnectionsScreen userId={user.id} onConversation={openConversation}
+    onBack={()=>setContactsMode(false)}/>:
+   <ExploreScreen userId={user.id} onConversation={openConversation}
+    onOpenConnections={()=>setContactsMode(true)}/>;
   if(tab==='messages')return <ChatScreen userId={user.id} initialId={chatId}/>;
   if(tab==='communities')return <CommunityScreen userId={user.id}/>;
   if(tab==='notifications')return <NotificationsScreen userId={user.id} onRead={()=>void refreshUnread(user.id)}/>;
