@@ -58,7 +58,7 @@ test('Native groups use the existing membership-enforcing server RPCs',()=>{
  assert.match(ui,/rights\.admins/);
  assert.match(ui,/rights\.remove/);
  assert.match(ui,/canRemove/);
- assert.match(ui,/Alert\.alert\('Remover do grupo\?'/);
+ assert.match(ui,/Alert\.alert\(\s*'Remover do grupo\?'/);
  assert.match(app,/NativeGroupCreator userId=\{userId\}/);
  assert.match(app,/NativeGroupSettings key=\{active\}/);
  assert.match(app,/toggleChatPin\(active,message\)/);
