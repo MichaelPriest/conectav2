@@ -24,10 +24,7 @@
         "backgroundColor": "#8055F5"
       },
       "edgeToEdgeEnabled": true,
-      "versionCode": 8,
-      "permissions": [
-        "android.permission.REQUEST_INSTALL_PACKAGES"
-      ]
+      "versionCode": 8
     },
     "experiments": {
       "tsconfigPaths": true
