@@ -20,10 +20,6 @@ jobs:
     env:
       CI: '1'
       NODE_OPTIONS: --max-old-space-size=4096
-      CONECTA_ANDROID_KEYSTORE_BASE64: ${{ secrets.CONECTA_ANDROID_KEYSTORE_BASE64 }}
-      CONECTA_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.CONECTA_ANDROID_KEYSTORE_PASSWORD }}
-      CONECTA_ANDROID_KEY_ALIAS: ${{ secrets.CONECTA_ANDROID_KEY_ALIAS }}
-      CONECTA_ANDROID_KEY_PASSWORD: ${{ secrets.CONECTA_ANDROID_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -66,8 +62,17 @@ jobs:
       - name: Preparar projeto nativo Android
         run: npx expo prebuild --platform android --non-interactive --no-install
       - name: Exigir e configurar keystore permanente
+        env:
+          CONECTA_ANDROID_KEYSTORE_BASE64: ${{ secrets.CONECTA_ANDROID_KEYSTORE_BASE64 }}
+          CONECTA_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.CONECTA_ANDROID_KEYSTORE_PASSWORD }}
+          CONECTA_ANDROID_KEY_ALIAS: ${{ secrets.CONECTA_ANDROID_KEY_ALIAS }}
+          CONECTA_ANDROID_KEY_PASSWORD: ${{ secrets.CONECTA_ANDROID_KEY_PASSWORD }}
         run: node scripts/configure-release-signing.cjs
       - name: Compilar APK assinado para atualizacao
+        env:
+          CONECTA_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.CONECTA_ANDROID_KEYSTORE_PASSWORD }}
+          CONECTA_ANDROID_KEY_ALIAS: ${{ secrets.CONECTA_ANDROID_KEY_ALIAS }}
+          CONECTA_ANDROID_KEY_PASSWORD: ${{ secrets.CONECTA_ANDROID_KEY_PASSWORD }}
         run: |
           cd android
           chmod +x gradlew
