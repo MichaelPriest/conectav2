@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   android-apk:
@@ -95,3 +95,58 @@ jobs:
           path: mobile/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
+
+
+      # Alpha-only: the previous APKs and this runner's template are signed
+      # by the same TEST certificate. A mismatch must never be auto-updated.
+      # Replace this with a secured release keystore before any production launch.
+      - name: Validar continuidade da assinatura dos APKs Alpha
+        run: |
+          set -euo pipefail
+          apk="android/app/build/outputs/apk/release/app-release.apk"
+          signer="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          actual="$("$signer" verify --print-certs "$apk" | awk '/certificate SHA-256 digest:/ {print $NF; exit}')"
+          expected="fac61745dc0903786fb9ede62a962b399f7348f0bb6f899b8332667591033b9c"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::Certificado diferente do usado nas Alpha 0.7.1/0.7.2. Não publicar atualização incompatível."
+            exit 1
+          fi
+          echo "Certificado Alpha de teste consistente (NÃO é assinatura de produção)."
+      - name: Publicar pre-release Alpha para atualizador do aplicativo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(node -p 'require("./package.json").version')"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Versão de release inválida."
+            exit 1
+          fi
+          tag="mobile-v$version"
+          filename="conecta-v2-android-$version.apk"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::notice::Pre-release $tag já existe. Nada será sobrescrito."
+            exit 0
+          fi
+          install -m 0644 android/app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/$filename"
+          digest="$(sha256sum "$RUNNER_TEMP/$filename" | cut -d ' ' -f 1)"
+          bytes="$(stat -c%s "$RUNNER_TEMP/$filename")"
+          cat > "$RUNNER_TEMP/conecta-release-notes.txt" <<EOF
+          Conecta Mobile Alpha $version (Android). Versão de homologação.
+
+          Atualizador no aplicativo: a versão instalada é comparada com esta
+          pré-release, e o APK é verificado por tamanho e SHA-256.
+          A instalação exige confirmação explícita do Android.
+
+          AVISO: APK assinado com certificado Alpha de teste usado desde 0.7.1.
+          Não é assinatura definitiva de loja. Não usar em produção.
+
+          APK-SHA256: $digest
+          APK-SIZE: $bytes
+          EOF
+          gh release create "$tag" "$RUNNER_TEMP/$filename#$filename" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Conecta Mobile Alpha $version" --prerelease \
+            --notes-file "$RUNNER_TEMP/conecta-release-notes.txt"
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json tagName,assets \
+            --jq '{tag: .tagName, apk: [.assets[].name]}'
