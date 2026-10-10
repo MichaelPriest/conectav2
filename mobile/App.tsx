@@ -9,7 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {User} from '@supabase/supabase-js';
 import {SITE_URL,supabase} from './src/supabase';
-import type {ChatMessage,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './src/models';
+import type {ChatMessage,ChatReaction,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './src/models';
 import {
  changeConnection,changeMembership,clearMediaCache,loadChatMessages,loadCommunities,
  loadConnections,loadFeed,loadNotifications,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
@@ -18,7 +18,9 @@ import {
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
 import {StoryRail} from './src/story-ui';
-import {AudioMessage,VoiceRecorder} from './src/voice-ui';
+import {VoiceRecorder} from './src/voice-ui';
+import {ChatBubble} from './src/chat-bubble';
+import {loadChatReactions} from './src/chat-actions';
 import {sendChatMedia} from './src/chat-media';
 import {changeProfilePhoto,loadCover} from './src/profile-media';
 import {ReelsScreen} from './src/reels-ui';
@@ -474,6 +476,8 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  const [threads,setThreads]=useState<Thread[]>([]);
  const [active,setActive]=useState<string|null>(initialId);
  const [messages,setMessages]=useState<ChatMessage[]>([]);
+ const [reactions,setReactions]=useState<ChatReaction[]>([]);
+ const [replyTo,setReplyTo]=useState<ChatMessage|null>(null);
  const [compose,setCompose]=useState(''),[busy,setBusy]=useState(false);
  const messageLength=compose.trim().length;
  const validMessage=messageLength>0&&messageLength<=4000;
@@ -484,7 +488,9 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  },[userId]);
  const loadMessages=useCallback(async(id:string)=>{
   try{
-   setMessages(await loadChatMessages(id));
+   const loaded=await loadChatMessages(id);
+   const loadedReactions=await loadChatReactions(loaded);
+   setMessages(loaded);setReactions(loadedReactions);
    await readConversation(id,userId);
   }catch(e){setError(errorMessage(e));}
  },[userId]);
@@ -501,17 +507,20 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  },[loadInbox,userId]);
  useEffect(()=>{
   if(!active)return;
-  setMessages([]);void loadMessages(active);
+  setMessages([]);setReactions([]);setReplyTo(null);void loadMessages(active);
   const channel=supabase.channel('conecta-mobile-thread-'+active)
     .on('postgres_changes',{event:'*',schema:'public',table:'messages',
-     filter:'conversation_id=eq.'+active},()=>{void loadMessages(active);}).subscribe();
+     filter:'conversation_id=eq.'+active},()=>{void loadMessages(active);})
+    .on('postgres_changes',{event:'*',schema:'public',table:'message_reactions'},
+     ()=>{void loadMessages(active);}).subscribe();
   const timer=setInterval(()=>{void loadMessages(active);},18000);
   return()=>{clearInterval(timer);void supabase.removeChannel(channel);};
  },[active,loadMessages]);
  const send=async()=>{
   if(!active||!validMessage||busy)return;
   setBusy(true);setError('');
-  try{await sendMessage(active,userId,compose);setCompose('');await loadMessages(active);await loadInbox();}
+  try{await sendMessage(active,userId,compose,replyTo?.id||null);
+   setCompose('');setReplyTo(null);await loadMessages(active);await loadInbox();}
   catch(e){setError(errorMessage(e));}finally{setBusy(false);}
  };
  const attach=async(kind:'image'|'video')=>{
@@ -542,29 +551,18 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
   <ErrorNotice text={error}/>
   <FlatList style={{flex:1,paddingHorizontal:12}} data={messages} keyExtractor={m=>m.id}
    contentContainerStyle={{paddingVertical:15}}
-   renderItem={({item})=><View style={[a.bubble,{alignSelf:item.sender_id===userId?'flex-end':'flex-start',
-    backgroundColor:item.sender_id===userId?t.primary:t.surface,
-    borderColor:item.sender_id===userId?t.primary:t.line}]}>
-    <Text style={{color:item.sender_id===userId?'white':t.dark,fontSize:14,lineHeight:20}}>
-     {item.deleted_at?'Mensagem apagada':item.content||'Mídia compartilhada'}
-    </Text>
-    {!item.deleted_at&&item.media_path&&item.media_type?.startsWith('image')&&
-      <Media path={item.media_path} height={175}/>}
-     {!item.deleted_at&&item.media_path&&item.media_type==='video'&&
-      <VideoMedia path={item.media_path}/>}
-    {!item.deleted_at&&item.media_path&&item.media_type==='audio'&&
-      <AudioMessage path={item.media_path}/>}
-    {!item.deleted_at&&item.media_path&&!item.media_type?.startsWith('image')&&item.media_type!=='audio'&&item.media_type!=='video'&&<Pressable onPress={()=>void openOfficial('/mensagens')}>
-     <Text style={{color:item.sender_id===userId?'white':t.primary,fontSize:12,marginTop:4}}>
-      Abrir anexo no Conecta ↗</Text></Pressable>}
-    <Text style={{alignSelf:'flex-end',fontSize:10,color:item.sender_id===userId?'#E9DFFB':t.muted,marginTop:5}}>
-     {new Date(item.created_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
-    </Text>
-    {!item.deleted_at&&item.sender_id!==userId&&
-     <ReportContent targetType="message" targetId={item.id} userId={userId}/>} 
-   </View>}
+   renderItem={({item})=><ChatBubble message={item} userId={userId}
+    quoted={messages.find(m=>m.id===item.reply_to)||null}
+    reactions={reactions.filter(reaction=>reaction.message_id===item.id)}
+    onReply={message=>setReplyTo(message)}
+    onChanged={async()=>{await loadMessages(active);await loadInbox();}}/>}
    ListEmptyComponent={<Loading text="Esta conversa ainda não tem mensagens."/>}/>
   <View style={{backgroundColor:'white',padding:12,borderTopWidth:1,borderTopColor:t.line}}>
+   {replyTo&&<View style={[s.row,{justifyContent:'space-between',gap:8,marginBottom:7}]}>
+    <Text style={[s.muted,{flex:1}]} numberOfLines={2}>↩ Respondendo: {replyTo.content||'Mídia compartilhada'}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel="Cancelar resposta"
+     onPress={()=>setReplyTo(null)}><Text style={s.secondaryText}>✕</Text></Pressable>
+   </View>}
    <Text accessibilityLiveRegion="polite" style={[s.muted,{textAlign:'right',marginBottom:5,color:messageLength>4000?t.danger:t.muted}]}>{messageLength}/4000</Text>
    <View style={[s.row,{gap:8,flexWrap:'wrap',marginBottom:9}]}>
     <Action secondary disabled={busy} label="▧ Foto" onPress={()=>void attach('image')}/>
