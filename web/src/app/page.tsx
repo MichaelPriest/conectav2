@@ -2,7 +2,7 @@ import Link from 'next/link';
 import {
   ArrowRight, ArrowUpRight, AtSign, Bookmark, Camera, Check, ChevronRight,
   Clapperboard, Compass, Heart, HeartHandshake, Image as ImageIcon,
-  LockKeyhole, Menu, MessageCircle, MessagesSquare, Mic2, Music2,
+  LockKeyhole, Menu, MessageCircle, MessagesSquare, Mic2, Music2, Smartphone,
   Palette, Play, ShieldCheck, Smile, Sparkles, Star, Users, Video,
 } from 'lucide-react';
 import { ConceptBrand } from '@/components/concept-brand';
@@ -34,7 +34,7 @@ export default function Home(){
   <header className="conecta-v3-header">
    <ConceptBrand/>
    <nav className="conecta-v3-nav" aria-label="Conhecer o Conecta">
-    <a href="#recursos">Recursos</a><a href="#comunidades">Comunidades</a><a href="#acolhimento">Acolhimento</a><a href="#seu-espaco">Seu espaço</a>
+    <a href="#recursos">Recursos</a><a href="#comunidades">Comunidades</a><a href="#acolhimento">Acolhimento</a><a href="#seu-espaco">Seu espaço</a><Link href="/apps">Baixar app</Link>
    </nav>
    <div className="conecta-v3-header-actions">
     <Link className="conecta-v3-login" href="/auth">Entrar</Link>
@@ -49,6 +49,7 @@ export default function Home(){
     <p>O Conecta reúne o melhor das comunidades, das boas conversas e das redes que marcaram gerações — com Stories, Reels, chat, perfis personalizados e espaço para quem cuida e precisa ser acolhido.</p>
     <div className="conecta-v3-hero-actions">
      <Link href="/auth?mode=signup" className="btn btn-primary btn-lg">Quero fazer parte <ArrowUpRight size={18}/></Link>
+     <Link href="/apps" className="conecta-v3-text-link"><Smartphone size={18}/> Baixar aplicativo</Link>
      <a href="#recursos" className="conecta-v3-text-link">Descobrir recursos <ChevronRight size={18}/></a>
     </div>
     <div className="conecta-v3-hero-highlights">
@@ -145,6 +146,6 @@ export default function Home(){
   </section>
 
   <section className="conecta-v3-final"><div><span><Sparkles size={16}/> A PRÓXIMA HISTÓRIA PODE SER A SUA</span><h2>Uma rede para conversar,<br/>criar e pertencer.</h2><p>Comece pelo seu espaço. O resto nasce das conexões.</p></div><Link href="/auth?mode=signup" className="btn btn-primary btn-lg">Criar minha conta <ArrowUpRight size={18}/></Link></section>
-  <footer className="conecta-v3-footer"><ConceptBrand/><div><span>© {new Date().getFullYear()} Conecta · Uma rede social mais humana.</span><span>Imagens de interface ilustrativas; nenhum conteúdo de usuários foi simulado como real.</span></div><Link href="/auth">Entrar <ArrowRight size={16}/></Link></footer>
+  <footer className="conecta-v3-footer"><ConceptBrand/><div><span>© {new Date().getFullYear()} Conecta · Uma rede social mais humana.</span><span>Imagens de interface ilustrativas; nenhum conteúdo de usuários foi simulado como real.</span></div><div style={{display:'flex',alignItems:'center',gap:20}}><Link href="/apps">Baixar app <Smartphone size={16}/></Link><Link href="/auth">Entrar <ArrowRight size={16}/></Link></div></footer>
  </main>;
 }
