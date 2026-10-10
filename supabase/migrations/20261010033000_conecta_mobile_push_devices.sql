@@ -3,7 +3,7 @@
 create table if not exists public.mobile_push_devices (
   token_hash text primary key check (token_hash ~ '^[a-f0-9]{64}$'),
   user_id uuid not null references auth.users(id) on delete cascade,
-  expo_push_token text not null check (expo_push_token ~ '^(Expo|Exponent)PushToken[[][A-Za-z0-9_-]{12,180}[]]
+  expo_push_token text not null check (expo_push_token ~ '^(Expo|Exponent)PushToken[[][A-Za-z0-9_-]{12,180}[]]$'),
   platform text not null check (platform in ('android','ios')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
