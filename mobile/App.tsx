@@ -42,6 +42,7 @@ import {ExploreScreen} from './src/explore-ui';
 import {ProfileDetailsEditor} from './src/profile-details-ui';
 import {NativePermissionsCenter} from './src/permissions-ui';
 import {NativeForegroundNotificationBridge} from './src/native-notifications';
+import {MediaGallery} from './src/media-gallery';
 import type {PinnedChatMessage} from './src/chat-groups';
 import {
  Bell,BellOff,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
@@ -263,12 +264,7 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onDelete,onComment}:{
   <Text style={[s.primaryText,{fontSize:14,fontWeight:'400',lineHeight:22,marginTop:12}]}>
    {post.content}
   </Text>
-  {images.length>0&&<View style={{flexDirection:'row',flexWrap:'wrap',
-   justifyContent:'space-between',marginTop:8}}>
-   {images.map(path=><Media key={path} path={path}
-    height={images.length===1?265:166}
-    width={images.length===1?'100%':'48%'} radius={13} marginTop={7}/>)}
-  </View>}
+  {images.length>0&&<MediaGallery paths={images}/>} 
   {!!videoPath&&<VideoMedia path={videoPath}/>} 
   <PollCard postId={post.id} userId={userId}/>
   <View style={[s.row,{justifyContent:'space-between',marginTop:13,
