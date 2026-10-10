@@ -216,6 +216,13 @@ export async function loadNotifications(userId:string):Promise<Notice[]>{
  if(error)throw error;
  return (data||[]) as unknown as Notice[];
 }
+export async function unreadNotificationCount(userId:string):Promise<number>{
+ const {count,error}=await supabase.from('notifications')
+  .select('id',{count:'exact',head:true})
+  .eq('recipient_id',userId).is('read_at',null);
+ if(error)throw error;
+ return Math.max(0,count||0);
+}
 export async function markNotifications(userId:string,id?:string):Promise<void>{
  let q=supabase.from('notifications').update({read_at:new Date().toISOString()}).eq('recipient_id',userId);
  q=id?q.eq('id',id):q.is('read_at',null);
