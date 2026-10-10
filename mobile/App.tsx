@@ -33,6 +33,7 @@ import {loadCommunityPosts,communityMemberCount,publishCommunityText,createCommu
 import {PollCard,PollDraft} from './src/poll-ui';
 import {publishPollPost,validatePollDraft} from './src/polls';
 import {MentionInput} from './src/mentions';
+import {NativeVersionMonitor,checkVersionManually} from './src/update-ui';
 import {
  Bell,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
  MoreHorizontal,Plus,Search,Send,ShieldCheck,Sparkles,UsersRound,Video,
@@ -1458,8 +1459,13 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
    <Text style={[s.primaryText,{marginBottom:10}]}>Minha conta</Text>
    <Action secondary label="Abrir perfil completo ↗" onPress={()=>void openOfficial('/perfil')}/>
    <View style={{height:8}}/>
-   <Action secondary label="Privacidade e segurança ↗" onPress={()=>void openOfficial('/configuracoes')}/>
+   <Action secondary label="Privacidade e segurança ↗" onPress={()=>void openOfficial('/perfil')}/>
    <View style={{height:8}}/>
+   <Action secondary label="Verificar atualizações do aplicativo"
+    onPress={()=>void checkVersionManually()}/>
+   <Text style={[s.muted,{marginTop:5,marginBottom:8}]}>
+    Versões Android são publicadas pelo canal oficial do Conecta.
+   </Text>
    <Action secondary label="Sair deste dispositivo" onPress={onLogout}/>
   </View>
  </ScrollView>;
@@ -1543,6 +1549,7 @@ export default function App(){
   return <ProfileScreen profile={profile} onUpdate={setProfile} onLogout={()=>void logout()}/>;
  };
  return <SafeAreaProvider>
+  <NativeVersionMonitor/>
   <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
   <StatusBar style="dark" hidden={Platform.OS==='android'}/>
   {Platform.OS==='android'&&<NavigationBar hidden style="light"/>}
