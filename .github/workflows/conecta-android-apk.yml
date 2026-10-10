@@ -1,4 +1,4 @@
-# Homologação Alpha 0.7.1: Explorar, perfis, mídia, permissões mínimas e avisos opt-in.
+# Homologação Alpha 0.7.2: Explorar, perfis, mídia, permissões mínimas e avisos opt-in.
 name: Conecta V2 · Android APK de testes
 on:
   push:
@@ -99,7 +99,7 @@ jobs:
       - name: Publicar artefato de teste
         uses: actions/upload-artifact@v4
         with:
-          name: conecta-v2-android-0.7.1-alpha
+          name: conecta-v2-android-0.7.2-alpha
           path: mobile/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
