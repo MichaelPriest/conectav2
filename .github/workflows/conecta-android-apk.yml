@@ -1,4 +1,4 @@
-# Homologação Alpha 0.6.1: atualizador in-app com SHA-256, download e instalador Android.
+# Homologação Alpha 0.7.0: Explorar, perfis, mídia, permissões mínimas e avisos opt-in.
 name: Conecta V2 · Android APK de testes
 on:
   push:
@@ -56,7 +56,7 @@ jobs:
       - name: Publicar artefato de teste
         uses: actions/upload-artifact@v4
         with:
-          name: conecta-v2-android-0.6.1-alpha
+          name: conecta-v2-android-0.7.0-alpha
           path: mobile/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
