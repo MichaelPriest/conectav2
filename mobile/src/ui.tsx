@@ -4,30 +4,40 @@ import {VideoView,useVideoPlayer} from 'expo-video';
 import {reportSafety,signedMedia} from './data';
 import {theme as t} from './theme';
 export const styles=StyleSheet.create({
- page:{flex:1,backgroundColor:t.bg},screen:{flex:1,paddingHorizontal:18},
- title:{fontSize:28,fontWeight:'900',color:t.dark,letterSpacing:-0.9},
- sub:{fontSize:13,color:t.muted,lineHeight:19,marginTop:5},
- card:{backgroundColor:t.surface,borderRadius:22,padding:17,
-  marginVertical:8,borderColor:t.line,borderWidth:1,elevation:2},
+ page:{flex:1,backgroundColor:t.bg},
+ screen:{flex:1,paddingHorizontal:16},
+ title:{fontSize:28,fontWeight:'900',color:t.dark,letterSpacing:-0.8,
+  lineHeight:35},
+ sub:{fontSize:13,color:t.muted,lineHeight:20,marginTop:4},
+ card:{backgroundColor:t.surface,borderRadius:20,padding:17,
+  marginVertical:8,borderColor:t.line,borderWidth:1,
+  shadowColor:t.shadow,shadowOpacity:0.055,shadowRadius:15,
+  shadowOffset:{width:0,height:6},elevation:2},
  row:{flexDirection:'row',alignItems:'center'},
  grow:{flex:1},
- primaryText:{fontSize:15,fontWeight:'800',color:t.dark},
- muted:{fontSize:12,color:t.muted,lineHeight:18},
+ primaryText:{fontSize:14,fontWeight:'800',color:t.dark},
+ muted:{fontSize:12,color:t.muted,lineHeight:19},
  badge:{fontSize:10,fontWeight:'800',color:t.primary},
- button:{backgroundColor:t.primary,borderRadius:13,paddingHorizontal:16,
-  paddingVertical:12,alignItems:'center',justifyContent:'center'},
- buttonText:{color:'#FFF',fontSize:13,fontWeight:'800'},
- secondary:{backgroundColor:t.subtle,borderRadius:12,paddingHorizontal:12,paddingVertical:10,
-  alignItems:'center'},
+ button:{backgroundColor:t.primary,borderRadius:12,paddingHorizontal:16,
+  paddingVertical:12,alignItems:'center',justifyContent:'center',
+  minHeight:43,flexDirection:'row',gap:7},
+ buttonText:{color:'#FFFFFF',fontSize:13,fontWeight:'800'},
+ secondary:{backgroundColor:t.subtle,borderRadius:12,paddingHorizontal:13,
+  paddingVertical:10,alignItems:'center',justifyContent:'center',
+  minHeight:39,flexDirection:'row',gap:6},
  secondaryText:{fontWeight:'800',color:t.primary,fontSize:12},
- input:{minHeight:46,paddingHorizontal:14,paddingVertical:10,borderWidth:1,borderColor:t.line,
-  borderRadius:13,backgroundColor:'#FFF',color:t.dark,fontSize:14,marginVertical:7},
- separator:{height:1,backgroundColor:t.line,marginVertical:12},
+ input:{minHeight:46,paddingHorizontal:14,paddingVertical:11,
+  borderWidth:1,borderColor:t.line,borderRadius:12,
+  backgroundColor:'#FAFAFF',color:t.dark,fontSize:14,marginVertical:7},
+ separator:{height:1,backgroundColor:t.line,marginVertical:14},
  header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',
-  paddingHorizontal:18,paddingVertical:13,backgroundColor:t.surface,
+  paddingHorizontal:16,paddingVertical:13,backgroundColor:t.surface,
   borderBottomWidth:1,borderColor:t.line},
- empty:{backgroundColor:t.surface,borderRadius:19,padding:28,alignItems:'center',marginTop:20},
+ empty:{backgroundColor:t.surface,borderRadius:19,padding:28,
+  alignItems:'center',justifyContent:'center',marginTop:20,
+  borderColor:t.line,borderWidth:1,minHeight:148}
 });
+
 export function Avatar({path,name,size=44}:{path?:string|null;name:string;size?:number}){
  const [url,setUrl]=useState<string|null>(null);
  useEffect(()=>{let active=true;setUrl(null);void signedMedia(path).then(u=>{if(active)setUrl(u);});
@@ -67,11 +77,15 @@ export function VideoMedia({path}:{path:string|null|undefined}){
     <Text style={styles.muted}>Não foi possível carregar o vídeo autorizado.</Text>}
  </View>;
 }
-export function Action({label,onPress,secondary=false,disabled=false}:{
- label:string;onPress:()=>void;secondary?:boolean;disabled?:boolean
+export function Action({label,onPress,secondary=false,disabled=false,leading,fullWidth=false}:{
+ label:string;onPress:()=>void;secondary?:boolean;disabled?:boolean;
+ leading?:React.ReactNode;fullWidth?:boolean;
 }){
- return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{disabled}} disabled={disabled} onPress={onPress}
- style={[secondary?styles.secondary:styles.button,disabled&&{opacity:0.5}]}>
+ return <Pressable accessibilityRole="button" accessibilityLabel={label}
+  accessibilityState={{disabled}} disabled={disabled} onPress={onPress}
+  style={[secondary?styles.secondary:styles.button,
+   fullWidth&&{alignSelf:'stretch'},disabled&&{opacity:0.5}]}>
+  {leading}
   <Text style={secondary?styles.secondaryText:styles.buttonText}>{label}</Text>
  </Pressable>;
 }
@@ -89,12 +103,16 @@ export function Loading({text='Carregando...'}:{text?:string}){
 }
 export function ErrorNotice({text}:{text:string}){
  if(!text)return null;
- return <Text accessibilityRole="alert" style={{padding:11,backgroundColor:'#FFF0F3',
+ return <Text accessibilityRole="alert" style={{padding:11,backgroundColor:'#FFF1F5',
   color:t.danger,borderRadius:11,marginVertical:7,fontSize:12}}>{text}</Text>;
 }
-export function Heading({title,subtitle}:{title:string;subtitle:string}){
- return <View style={{paddingVertical:17}}><Text style={styles.title}>{title}</Text>
- <Text style={styles.sub}>{subtitle}</Text></View>;
+export function Heading({title,subtitle,eyebrow}:{title:string;subtitle:string;eyebrow?:string}){
+ return <View style={{paddingTop:24,paddingBottom:16}}>
+  {!!eyebrow&&<Text style={{fontSize:10,fontWeight:'900',letterSpacing:1.6,
+   color:t.primary,marginBottom:4}}>{eyebrow.toUpperCase()}</Text>}
+  <Text style={styles.title}>{title}</Text>
+  <Text style={styles.sub}>{subtitle}</Text>
+ </View>;
 }
 
 const REPORT_REASONS=[
