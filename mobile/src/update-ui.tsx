@@ -1,7 +1,7 @@
 import * as Application from 'expo-application';
 import {Alert,AppState,Linking,Platform} from 'react-native';
 import React,{useEffect,useRef} from 'react';
-import {chooseAndroidUpdate,MOBILE_RELEASES_API} from './version-utils';
+import {chooseAndroidUpdate,chooseIosUpdate,MOBILE_RELEASES_API,APP_STORE_LOOKUP_API} from './version-utils';
 import type {AvailableUpdate} from './version-utils';
 
 /**
@@ -9,24 +9,27 @@ import type {AvailableUpdate} from './version-utils';
  * A platform-confirmed user action is always required to install a new binary.
  */
 export async function checkForNativeUpdate():Promise<AvailableUpdate|null>{
- if(Platform.OS!=='android')return null;
+ if(Platform.OS!=='android'&&Platform.OS!=='ios')return null;
  const installed=Application.nativeApplicationVersion;
  if(!installed)return null;
  const controller=new AbortController();
  const timeout=setTimeout(()=>controller.abort(),8500);
  try{
-  const response=await fetch(MOBILE_RELEASES_API,{
-   method:'GET',headers:{Accept:'application/vnd.github+json'},
+  const ios=Platform.OS==='ios';
+  const response=await fetch(ios?APP_STORE_LOOKUP_API:MOBILE_RELEASES_API,{
+   method:'GET',headers:{Accept:ios?'application/json':'application/vnd.github+json'},
    signal:controller.signal
   });
   if(!response.ok)throw new Error('Não foi possível consultar o canal de versões.');
-  return chooseAndroidUpdate(await response.json(),installed);
+  const records=await response.json();
+  return ios?chooseIosUpdate(records,installed):chooseAndroidUpdate(records,installed);
  }finally{clearTimeout(timeout);}
 }
 
 export async function offerNativeUpdate(update:AvailableUpdate):Promise<void>{
  Alert.alert('Nova versão do Conecta','A versão '+update.version+
-  ' está disponível. Sua instalação será confirmada pelo Android.',[
+  (Platform.OS==='ios'?' está disponível na App Store.':
+   ' está disponível. Sua instalação será confirmada pelo Android.'),[
   {text:'Agora não',style:'cancel'},
   {text:'Atualizar',onPress:()=>{
    void Linking.openURL(update.url).catch(()=>Alert.alert(
@@ -40,7 +43,7 @@ export function NativeVersionMonitor(){
  const notified=useRef<string|null>(null);
  const running=useRef(false);
  useEffect(()=>{
-  if(Platform.OS!=='android')return;
+  if(Platform.OS!=='android'&&Platform.OS!=='ios')return;
   let alive=true;
   const inspect=async()=>{
    if(running.current)return;
@@ -66,15 +69,13 @@ export function NativeVersionMonitor(){
 
 /** Available in Profile > Check for updates; user-initiated errors are visible. */
 export async function checkVersionManually():Promise<void>{
- if(Platform.OS!=='android'){
-  Alert.alert('Atualizações no iPhone',
-   'As futuras versões iOS seguirão a App Store ou TestFlight. A distribuição iOS ainda está em preparação.');
-  return;
- }
  try{
   const update=await checkForNativeUpdate();
   if(update)await offerNativeUpdate(update);
-  else Alert.alert('Conecta atualizado','Nenhuma versão Android mais nova está publicada no canal oficial.');
+  else Alert.alert('Nenhuma atualização encontrada',
+   Platform.OS==='ios'
+    ?'Não há versão mais recente do Conecta na App Store. As versões TestFlight seguem seu próprio canal.'
+    :'Nenhuma versão Android mais nova está publicada no canal oficial do Conecta.');
  }catch{
   Alert.alert('Verificação indisponível',
    'Não foi possível consultar novas versões agora. Verifique sua conexão e tente novamente.');
