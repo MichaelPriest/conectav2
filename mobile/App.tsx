@@ -636,7 +636,7 @@ function ConnectionsScreen({userId,onConversation}:{
  userId:string;onConversation:(conversationId:string)=>void
 }){
  const [links,setLinks]=useState<Friendship[]>([]),[people,setPeople]=useState<Profile[]>([]);
- const [query,setQuery]=useState(''),[filter,setFilter]=useState<'friends'|'received'|'discover'>('discover');
+ const [query,setQuery]=useState(''),[filter,setFilter]=useState<'friends'|'received'|'sent'|'discover'>('discover');
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const refresh=useCallback(async()=>{
   setLoading(true);setError('');
@@ -649,7 +649,8 @@ function ConnectionsScreen({userId,onConversation}:{
   if(p.id===userId||!(p.display_name+' '+p.handle).toLowerCase().includes(query.toLowerCase()))return false;
   const rel=links.find(x=>x.requester_id===p.id||x.addressee_id===p.id);
   return filter==='friends'?rel?.status==='accepted':
-   filter==='received'?rel?.status==='pending'&&rel.addressee_id===userId:!rel;
+   filter==='received'?rel?.status==='pending'&&rel.addressee_id===userId:
+   filter==='sent'?rel?.status==='pending'&&rel.requester_id===userId:!rel;
  }),[people,links,filter,query,userId]);
  const act=async(person:Profile,kind:'add'|'accept'|'remove'|'chat')=>{
   if(busy)return;setBusy(true);setError('');
@@ -673,7 +674,7 @@ function ConnectionsScreen({userId,onConversation}:{
      style={{flex:1,minHeight:48,fontSize:14,color:t.dark}}/>
    </View>
    <View style={[s.row,{gap:7,marginVertical:8,flexWrap:'wrap'}]}>
-    {([['friends','Minhas'],['received','Convites'],['discover','Descobrir']] as const)
+    {([['friends','Minhas'],['received','Recebidos'],['sent','Enviados'],['discover','Descobrir']] as const)
      .map(([id,label])=><Pressable key={id} onPress={()=>setFilter(id)} style={[s.secondary,
       filter===id&&{backgroundColor:t.primary}]}><Text style={[s.secondaryText,
       filter===id&&{color:'#FFF'}]}>{label}</Text></Pressable>)}
@@ -696,7 +697,9 @@ function ConnectionsScreen({userId,onConversation}:{
     </>:filter==='received'?<>
      <Action disabled={busy} label="Aceitar" onPress={()=>void act(item,'accept')}/>
      <Action disabled={busy} secondary label="Recusar" onPress={()=>void act(item,'remove')}/>
-    </>:<Action disabled={busy} label="Conectar" onPress={()=>void act(item,'add')}/>}
+    </>:filter==='sent'?<Action disabled={busy} secondary
+     label="Cancelar convite" onPress={()=>void act(item,'remove')}/>:
+     <Action disabled={busy} label="Conectar" onPress={()=>void act(item,'add')}/>}
    </View>
   </View>}
   ListEmptyComponent={!loading?<View style={s.empty}><Text style={s.muted}>Nenhuma conexão nesta categoria.</Text></View>:<Loading/>}
