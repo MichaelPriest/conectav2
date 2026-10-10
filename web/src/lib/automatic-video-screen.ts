@@ -80,7 +80,7 @@ export async function screenVideoAutomatically(bytes:Uint8Array):Promise<VideoSc
    const result=await classifyLocalImage(jpg);
    flagged=flagged||result.flagged;
    const cls=result.classification;
-   if(cls.Porn+cls.Hentai+cls.Sexy*0.75>=0.22)uncertain=true;
+   if(result.reviewRequired)uncertain=true;
   }
   return {
    reviewRequired:flagged||uncertain,
