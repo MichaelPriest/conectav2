@@ -1,5 +1,6 @@
 import {File,Paths} from 'expo-file-system';
 import * as Crypto from 'expo-crypto';
+import * as Application from 'expo-application';
 import * as IntentLauncher from 'expo-intent-launcher';
 import {Platform} from 'react-native';
 import {APK_MIME,bytesToHex,safeApkFilename,verifiedInAppDownload} from './apk-installer-policy';
@@ -80,5 +81,18 @@ export async function requestAndroidInstall(packageFile:AndroidDownload):Promise
   throw new Error('O Android não conseguiu preparar o arquivo para instalação.');
  await IntentLauncher.startActivityAsync('android.intent.action.VIEW',{
   data:uri,type:APK_MIME,flags:1
+ });
+}
+
+/**
+ * Android 8+ can require explicit approval to install APKs from Conecta.
+ * Opens the per-app system setting rather than asking for blanket access.
+ */
+export async function openAndroidInstallPermissionSettings():Promise<void>{
+ if(Platform.OS!=='android')return;
+ const id=Application.applicationId;
+ if(!id)throw new Error('Identificador do aplicativo indisponível.');
+ await IntentLauncher.startActivityAsync('android.settings.MANAGE_UNKNOWN_APP_SOURCES',{
+  data:'package:'+id
  });
 }
