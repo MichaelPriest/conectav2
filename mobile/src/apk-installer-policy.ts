@@ -1,5 +1,5 @@
 import type {AvailableUpdate} from './version-utils.ts';
-import {trustedAndroidApk,versionParts} from './version-utils';
+import {trustedAndroidApk,versionParts} from './version-utils.ts';
 
 export const MAX_APK_BYTES=250_000_000;
 export const MIN_APK_BYTES=2_000_000;
