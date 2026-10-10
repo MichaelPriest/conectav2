@@ -20,6 +20,7 @@ import {
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
 import {StoryRail} from './src/story-ui';
+import {sharePostToStory} from './src/stories';
 import {VoiceRecorder} from './src/voice-ui';
 import {ChatBubble} from './src/chat-bubble';
 import {ChatSearch} from './src/chat-search';
@@ -213,6 +214,22 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onDelete,onComment}:{
  const [sendingComment,setSendingComment]=useState(false);
  const [commentError,setCommentError]=useState('');
  const [loadingComments,setLoadingComments]=useState(false);
+ const [sharingToStory,setSharingToStory]=useState(false);
+ const shareToStory=(visibility:'public'|'friends'|'private')=>{
+  if(sharingToStory)return;
+  setSharingToStory(true);
+  void sharePostToStory(userId,post,visibility).then(()=>{
+   Alert.alert('Compartilhado no Story','A publicação estará disponível no seu Story por até 24 horas.');
+  }).catch(e=>Alert.alert('Não foi possível compartilhar',errorMessage(e)))
+   .finally(()=>setSharingToStory(false));
+ };
+ const chooseStoryVisibility=()=>Alert.alert('Compartilhar no Story',
+  'Escolha quem poderá visualizar este Story.',[
+   {text:'Conexões',onPress:()=>shareToStory('friends')},
+   {text:'Público',onPress:()=>shareToStory('public')},
+   {text:'Só eu',onPress:()=>shareToStory('private')},
+   {text:'Cancelar',style:'cancel'}
+  ]);
  const [checkingReview,setCheckingReview]=useState(false);
  const [reviewStatus,setReviewStatus]=useState(post.moderation_status);
  useEffect(()=>{setReviewStatus(post.moderation_status);},[post.id,post.moderation_status]);
@@ -331,6 +348,16 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onDelete,onComment}:{
      color:selected?t.primary:t.muted}}>{label}</Text>
    </Pressable>)}
   </View>
+  {post.visibility==='public'&&post.moderation_status==='approved'&&!post.community_id&&
+   <Pressable accessibilityRole="button" disabled={sharingToStory}
+    accessibilityLabel="Compartilhar esta publicação no Story"
+    onPress={chooseStoryVisibility}
+    style={{alignSelf:'flex-start',paddingVertical:10,paddingHorizontal:10,
+     borderRadius:11,backgroundColor:t.subtle,marginTop:7}}>
+    <Text style={{fontSize:12,fontWeight:'800',color:t.primary}}>
+     {sharingToStory?'Compartilhando...':'✳ Compartilhar no meu Story'}
+    </Text>
+   </Pressable>}
   {post.author_id!==userId&&<ReportContent targetType="post" targetId={post.id} userId={userId}/>}
   {commentsOpen&&<View style={{marginTop:14,gap:10}}>
    <Text style={s.primaryText}>Comentários e respostas</Text>
@@ -375,8 +402,8 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onDelete,onComment}:{
   </View>}
  </View>;
 }
-function FeedScreen({userId,profile,composeRequest}:{
- userId:string;profile:Profile;composeRequest:number;
+function FeedScreen({userId,profile,composeRequest,onOpenPost}:{
+ userId:string;profile:Profile;composeRequest:number;onOpenPost:(id:string)=>void;
 }){
  const [posts,setPosts]=useState<Post[]>([]),[liked,setLiked]=useState<Set<string>>(new Set());
  const [saved,setSaved]=useState<Set<string>>(new Set());
@@ -529,7 +556,7 @@ function FeedScreen({userId,profile,composeRequest}:{
     Sua comunidade, suas histórias e novas conexões em um só lugar.
    </Text>
   </GradientPanel>
-  <StoryRail userId={userId}/>
+  <StoryRail userId={userId} onOpenPost={onOpenPost}/>
   <Pressable accessibilityRole="button" accessibilityLabel="Criar publicação"
    onPress={()=>setComposerOpen(true)}
    style={[s.card,{padding:14,flexDirection:'row',gap:10,
@@ -1932,7 +1959,7 @@ export default function App(){
   if(!user||!profile)return null;
   if(viewPostId)return <PostDetailScreen postId={viewPostId} userId={user.id}
    onBack={()=>setViewPostId(null)}/>;
-  if(tab==='feed')return <FeedScreen userId={user.id} profile={profile} composeRequest={composeRequest}/>;
+  if(tab==='feed')return <FeedScreen userId={user.id} profile={profile} composeRequest={composeRequest} onOpenPost={setViewPostId}/>;
   if(tab==='reels')return <ReelsScreen userId={user.id}/>;
   if(tab==='connections')return contactsMode?
    <ConnectionsScreen userId={user.id} onConversation={openConversation}
