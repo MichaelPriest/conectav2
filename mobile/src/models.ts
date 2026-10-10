@@ -14,8 +14,8 @@ export type PostComment={
  created_at:string;profiles:{display_name:string;handle:string;avatar_path:string|null}|null;
 };
 export type Story={
- id:string;author_id:string;caption:string;media_path:string;
- media_type:'image'|'video';visibility:'public'|'friends'|'private';
+ id:string;author_id:string;caption:string;media_path:string|null;shared_post_id:string|null;
+ media_type:'image'|'video'|null;visibility:'public'|'friends'|'private';
  moderation_status:'approved'|'pending'|'rejected';created_at:string;expires_at:string;
  profiles:{display_name:string;handle:string;avatar_path:string|null}|null;
 };
