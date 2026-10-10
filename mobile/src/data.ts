@@ -267,11 +267,28 @@ export async function startChat(otherId:string):Promise<string>{
  if(typeof data!=='string')throw new Error('A conversa não foi criada.');
  return data;
 }
+const CHAT_MESSAGE_FIELDS='id,conversation_id,sender_id,content,created_at,media_path,media_type,deleted_at,edited_at,reply_to';
+const CHAT_PAGE_SIZE=60;
 export async function loadChatMessages(conversationId:string):Promise<ChatMessage[]>{
  const {data,error}=await supabase.from('messages')
- .select('id,conversation_id,sender_id,content,created_at,media_path,media_type,deleted_at,edited_at,reply_to')
- .eq('conversation_id',conversationId).order('created_at',{ascending:false})
- .order('id',{ascending:false}).limit(60);
+ .select(CHAT_MESSAGE_FIELDS).eq('conversation_id',conversationId)
+ .order('created_at',{ascending:false}).order('id',{ascending:false})
+ .limit(CHAT_PAGE_SIZE);
+ if(error)throw error;
+ return ((data||[]) as ChatMessage[]).reverse();
+}
+/** Keyset pagination prevents missing earlier messages when new chat items arrive. */
+export async function loadOlderChatMessages(
+ conversationId:string,oldest:ChatMessage
+):Promise<ChatMessage[]>{
+ if(oldest.conversation_id!==conversationId)
+  throw new Error('Não é possível paginar outra conversa.');
+ const {data,error}=await supabase.from('messages').select(CHAT_MESSAGE_FIELDS)
+  .eq('conversation_id',conversationId)
+  .or('created_at.lt.'+oldest.created_at+
+   ',and(created_at.eq.'+oldest.created_at+',id.lt.'+oldest.id+')')
+  .order('created_at',{ascending:false}).order('id',{ascending:false})
+  .limit(CHAT_PAGE_SIZE);
  if(error)throw error;
  return ((data||[]) as ChatMessage[]).reverse();
 }
