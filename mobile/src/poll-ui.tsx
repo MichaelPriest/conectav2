@@ -89,7 +89,7 @@ export function PollCard({postId,userId}:{postId:string;userId:string}){
      borderColor:mine?t.primary:t.line,
      justifyContent:'center',paddingHorizontal:12}}>
     {showResults&&<View style={{position:'absolute',left:0,top:0,bottom:0,
-     width:percent+'%',backgroundColor:mine?'#DCD0FF':'#EEE8FF'}}/>}
+     width:`${percent}%` as `${number}%`,backgroundColor:mine?'#DCD0FF':'#EEE8FF'}}/>}
     <View style={[s.row,{justifyContent:'space-between',gap:6}]}>
      <View style={[s.row,{flex:1,gap:5}]}>
       <Text style={{fontSize:13,color:t.dark,fontWeight:mine?'900':'600'}}>
