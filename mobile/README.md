@@ -257,3 +257,39 @@ fullscreen e launcher) e substitui novos redirecionamentos ao navegador.
 A aprovação dos testes automatizados **não substitui a homologação em
 dispositivos reais** nem indica que notificações push e chamadas WebRTC nativas
 estejam prontas.
+
+## Alpha 0.5.1 — atualizações de versões ao abrir
+
+A verificação nativa de versões foi adicionada a `src/update-ui.tsx` e
+é executada automaticamente na inicialização do aplicativo (mesmo sem
+login). Em uma retomada do segundo plano, a verificação é repetida
+com intervalo mínimo de cinco minutos para poupar bateria e evitar
+limites de requisições. No perfil, a opção **Verificar atualizações do
+aplicativo** permite consulta manual sem esse intervalo.
+
+**Android:** consulta apenas versões publicadas em
+`https://api.github.com/repos/MichaelPriest/conectav2/releases?per_page=30`.
+Para aparecer, uma atualização precisa ser uma GitHub Release pública
+com tag `mobile-v0.5.2` (exemplo) e APK
+`conecta-v2-android-0.5.2.apk` hospedado como arquivo da mesma
+release. Versões draft e assets em domínio estranho são ignorados.
+O usuário abre o download e confirma a instalação pelo Android.
+Apenas o APK mais novo é oferecido.
+
+**iOS:** consulta o catálogo público da App Store para
+`br.com.conectav2.app`; somente mostra atualizações quando o app
+estiver publicado lá. TestFlight e OTA são canais separados.
+
+**IMPORTANTE:** a compilação do GitHub Actions publica um **artefato
+temporário de teste** (14 dias), não uma release atualizável. A
+funcionalidade não mostra um alerta enquanto não houver uma release
+oficial. Para instalar novas versões sobre as antigas, os APKs de
+distribuição devem usar **exatamente o mesmo certificado de assinatura**.
+Sem esse processo permanente de publicação e assinatura, só está
+implementada a **checagem e oferta da versão** — não a instalação
+silenciosa ou uma atualização OTA.
+
+Para atualizações JS sem APK, instalar/configurar `expo-updates`,
+associar um projeto EAS Update, configurar runtime/channel e validar
+rollback. A simples adição do verificador **não** instala pacotes
+nativos nem cria OTA.
