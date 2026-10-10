@@ -269,17 +269,19 @@ export async function startChat(otherId:string):Promise<string>{
 }
 export async function loadChatMessages(conversationId:string):Promise<ChatMessage[]>{
  const {data,error}=await supabase.from('messages')
- .select('id,conversation_id,sender_id,content,created_at,media_path,media_type,deleted_at')
+ .select('id,conversation_id,sender_id,content,created_at,media_path,media_type,deleted_at,edited_at,reply_to')
  .eq('conversation_id',conversationId).order('created_at',{ascending:false})
  .order('id',{ascending:false}).limit(60);
  if(error)throw error;
  return ((data||[]) as ChatMessage[]).reverse();
 }
-export async function sendMessage(conversationId:string,userId:string,content:string){
+export async function sendMessage(
+ conversationId:string,userId:string,content:string,replyTo:string|null=null
+){
  const text=content.trim();
  if(!text||text.length>4000)throw new Error('Mensagem vazia ou muito longa.');
  const {error}=await supabase.from('messages').insert({
-  conversation_id:conversationId,sender_id:userId,content:text
+  conversation_id:conversationId,sender_id:userId,content:text,reply_to:replyTo
  });
  if(error)throw error;
 }
