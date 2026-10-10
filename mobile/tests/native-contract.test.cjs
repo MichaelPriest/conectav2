@@ -203,7 +203,7 @@ test('Foreground notification badge reads private unread count and updates after
  assert.match(app,/conecta-mobile-unread-/);
  assert.match(app,/if\(state==='active'\)void refreshUnread\(id\)/);
  assert.match(app,/onRead:\(\)=>void/);
- assert.match(app,/unreadCount>99\?'99\+':unreadCount/);
+ assert.match(read('src/design.tsx'),/badge>99\?'99\+':badge/);
 });
 
 test('Switching accounts clears unsent native composer media and previous drafts',()=>{
@@ -221,4 +221,36 @@ test('Voice and media replies remain in the selected conversation',()=>{
  assert.match(audio,/sendVoiceMessage\(conversationId,userId,uri,replyTo\|\|null\)/);
  assert.match(app,/sendChatMedia\(active,userId,chosen,replyTo\?\.id\|\|null\)/);
  assert.match(app,/VoiceRecorder key=\{active\}/);
+});
+
+test('Full-screen Android is inset-aware and provides real app icons',()=>{
+ const packageJson=JSON.parse(read('package.json'));
+ const conf=JSON.parse(read('app.json')).expo;
+ assert.equal(packageJson.dependencies['react-native-safe-area-context'],'~5.7.0');
+ assert.equal(packageJson.dependencies['expo-navigation-bar'],'~57.0.3');
+ assert.equal(conf.android.edgeToEdgeEnabled,true);
+ assert.ok(conf.android.adaptiveIcon.foregroundImage);
+ assert.ok(conf.icon);
+ assert.ok(conf.splash.image);
+ for(const icon of [conf.icon,conf.android.adaptiveIcon.foregroundImage,conf.splash.image]){
+  const png=fs.readFileSync(path.join(root,icon));
+  assert.deepEqual([...png.subarray(0,8)],[137,80,78,71,13,10,26,10]);
+  assert.ok(png.length>4000);
+ }
+ assert.match(app,/SafeAreaProvider/);
+ assert.match(app,/edges=\{\['top','bottom','left','right'\]\}/);
+ assert.match(app,/NavigationBar hidden/);
+ assert.match(app,/StatusBar style="dark" hidden=\{Platform\.OS==='android'\}/);
+});
+test('Native visual identity matches Conecta website and uses real icon tabs',()=>{
+ const design=read('src/design.tsx'),tokens=read('src/theme.ts');
+ assert.match(tokens,/#8055F5/i);
+ assert.match(tokens,/#F9F9FE/i);
+ assert.match(design,/nativeTabs/);
+ assert.match(design,/Criar publicação/);
+ assert.match(design,/BottomNavigation/);
+ assert.match(app,/GradientPanel/);
+ assert.match(app,/FeedTabs selected=/);
+ assert.match(app,/Modal visible=\{composerOpen\}/);
+ assert.match(app,/BottomNavigation tab=\{tab\}/);
 });
