@@ -298,7 +298,7 @@ export async function searchChatMessages(conversationId:string,query:string):Pro
  if(needle.length<2||needle.length>100)
   throw new Error('Pesquise usando de 2 a 100 caracteres.');
  // Escape LIKE wildcards and backslashes so a user searches the literal phrase.
- const escaped=needle.replace(/[\\%_]/g,'\\export async function sendMessage(');
+ const escaped=needle.replace(/[\\%_]/g,character=>'\\'+character);
  const {data,error}=await supabase.from('messages').select(CHAT_MESSAGE_FIELDS)
   .eq('conversation_id',conversationId).is('deleted_at',null)
   .ilike('content','%'+escaped+'%')
