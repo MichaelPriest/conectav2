@@ -543,3 +543,40 @@ O atualizador por APK continua condicionado à assinatura permanente, tag
 de versão e Release oficial. Instalar um APK de homologação com chave de
 teste não equivale à liberação de atualização automática, nem é um
 substituto para uma distribuição Google Play/App Store.
+
+## Alpha 0.7.2 — reprodução de links, imagens privadas e chamadas
+
+- Feed, perfis públicos e descoberta reconhecem links de YouTube, Spotify,
+  SoundCloud e Apple Music. O player incorporado usa a WebView oficial do
+  fornecedor **apenas após toque**; só URLs `https` de provedores validados
+  entram no player. Também reproduz `mp4/webm/mp3/m4a` diretos sob escolha
+  explícita. A rede externa pode exigir login ou indisponibilizar um embed.
+- Imagens de chat usam o Storage privado do Supabase, obtêm uma URL assinada
+  conforme a RLS da conversa, recarregam a assinatura após erro e permitem
+  tentar novamente e ampliar em tela cheia. Não cria políticas públicas.
+- Chamadas 1:1 nativas de voz e vídeo usam **react-native-webrtc** e o mesmo
+  fluxo WebRTC do Conecta Web (`chat_calls`,
+  `chat_call_ice_candidates`, `start_chat_call`, `accept_chat_call`,
+  `signal_chat_call`, `add_chat_call_ice_candidate`, `keep_chat_call_alive`
+  e `end_chat_call`). A interface inclui iniciar/atender/recusar/encerrar,
+  microfone, câmera, vídeo remoto e vídeo local.
+- Chamadas em grupo continuam fora do escopo. A seleção de um chat de grupo
+  não oferece ligação 1:1. O Supabase continua validando amizades,
+  bloqueios, participação e restrições por idade.
+
+### Limites de homologação das chamadas
+
+A compilação e os testes de contrato NÃO comprovam mídia conectada. Ainda
+é obrigatório testar Android↔Android e Android↔Web em aparelhos reais;
+permissão de áudio/câmera, negociação SDP/ICE, áudio de saída, alternância
+de aplicativos, áudio/vídeo remoto, aceitação simultânea e encerramento.
+A configuração atual usa apenas STUN (Cloudflare e Google). Redes móveis
+com CGNAT e redes corporativas podem exigir TURN autenticado e credenciais
+efêmeras de curta duração, servidas pelo backend; não publicar credenciais
+fixas no APK. O push remoto de chamadas recebidas quando o app está
+encerrado ainda não está pronto. iOS exige compilação Xcode e homologação
+nativa independente.
+
+O workflow de APK foi alterado para validar toda mudança em `mobile/**`,
+impedindo APKs antigos de serem publicados após alterações somente
+em telas, testes ou componentes.
