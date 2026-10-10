@@ -8,6 +8,7 @@ import {theme as t} from './theme';
 import {
  getNativeNotificationPreference,notificationPermissionGranted,setNativeNotificationPreference
 } from './native-notifications';
+import {remotePushConfigured,remotePushRegistered} from './remote-push';
 type State='granted'|'denied'|'undetermined';
 const statusLabel=(value:State)=>value==='granted'?'Permitido':
  value==='denied'?'Bloqueado':'Não solicitado';
@@ -21,6 +22,7 @@ export function NativePermissionsCenter({userId,onClose}:{
  const [microphone,setMicrophone]=useState<State>('undetermined');
  const [notifications,setNotifications]=useState<State>('undetermined');
  const [notifyEnabled,setNotifyEnabled]=useState(false);
+ const [pushRegistered,setPushRegistered]=useState(false);
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const refresh=useCallback(async()=>{
   try{
@@ -32,6 +34,7 @@ export function NativePermissionsCenter({userId,onClose}:{
    setMicrophone(mic.granted?'granted':mic.canAskAgain?'undetermined':'denied');
    setNotifications(notice?'granted':'undetermined');
    setNotifyEnabled(pref&&notice);
+   setPushRegistered(pref&&notice&&await remotePushRegistered(userId));
   }catch(e){setError(e instanceof Error?e.message:'Não foi possível consultar permissões.');}
   finally{setLoading(false);}
  },[userId]);
@@ -129,8 +132,10 @@ export function NativePermissionsCenter({userId,onClose}:{
       onPress={()=>void changeNotice()}/>
     </View>
     <Text style={[s.muted,{marginTop:9}]}>
-     Notificações push com o aplicativo fechado serão disponibilizadas
-     quando o registro seguro do dispositivo e FCM/APNs estiverem configurados.
+     {remotePushConfigured()?
+      pushRegistered?'Dispositivo registrado para push. A entrega em segundo plano depende das credenciais FCM/APNs e do serviço Expo.':
+       'Avisos locais disponíveis. O registro para push ainda não foi concluído; confira a configuração do serviço e a conexão.':
+      'Avisos com o app fechado exigem associar o projeto Expo/EAS e configurar FCM/APNs. Os avisos locais seguem disponíveis.'}
     </Text>
    </View>
    <View style={s.card}>
