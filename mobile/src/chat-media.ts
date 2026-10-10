@@ -7,7 +7,7 @@ import {MAX_MEDIA_BYTES} from './media-validation';
 
 /** Real private chat attachments share the web's message schema and RLS. */
 export async function sendChatMedia(
- conversationId:string,userId:string,media:SelectedMedia
+ conversationId:string,userId:string,media:SelectedMedia,replyTo:string|null=null
 ):Promise<void>{
  if(!conversationId)throw new Error('Selecione uma conversa.');
  const {data:{session}}=await supabase.auth.getSession();
@@ -38,7 +38,7 @@ export async function sendChatMedia(
  try{
   const {error}=await supabase.from('messages').insert({
    conversation_id:conversationId,sender_id:userId,content:'',
-   media_path:path,media_type:media.kind
+   media_path:path,media_type:media.kind,reply_to:replyTo
   });
   if(error)throw error;
  }catch(e){
