@@ -20,7 +20,7 @@ export type Story={
  profiles:{display_name:string;handle:string;avatar_path:string|null}|null;
 };
 export type Friendship={id:string;requester_id:string;addressee_id:string;status:string;created_at:string};
-export type Community={id:string;slug:string;name:string;description:string;cover_path:string|null;avatar_path:string|null;is_official:boolean};
+export type Community={id:string;owner_id:string|null;slug:string;name:string;description:string;rules:string|null;cover_path:string|null;avatar_path:string|null;is_official:boolean;created_at:string};
 export type Notice={id:string;kind:string;created_at:string;read_at:string|null;entity_id:string|null;profiles:{display_name:string;handle:string}|null};
 export type Thread={id:string;title:string;group:boolean;other:Profile|null;unread:number;last:string;updated:string};
 export type ChatMessage={
