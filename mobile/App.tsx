@@ -13,9 +13,9 @@ import type {User} from '@supabase/supabase-js';
 import {SITE_URL,supabase} from './src/supabase';
 import type {ChatMessage,ChatReaction,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './src/models';
 import {
- changeConnection,changeMembership,clearMediaCache,deleteOwnPost,loadChatMessages,loadOlderChatMessages,loadCommunities,
+ blockedUserIds,changeConnection,changeMembership,clearMediaCache,deleteOwnPost,loadChatMessages,loadOlderChatMessages,loadCommunities,
  loadConnections,loadFeed,loadNotifications,loadOwnPosts,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
- publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,startChat,unreadNotificationCount,updateMyProfile,verifyAccess
+ publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,setUserBlocked,startChat,unreadNotificationCount,updateMyProfile,verifyAccess
 } from './src/data';
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
@@ -636,12 +636,14 @@ function ConnectionsScreen({userId,onConversation}:{
  userId:string;onConversation:(conversationId:string)=>void
 }){
  const [links,setLinks]=useState<Friendship[]>([]),[people,setPeople]=useState<Profile[]>([]);
+ const [blocked,setBlocked]=useState<Set<string>>(new Set());
  const [query,setQuery]=useState(''),[filter,setFilter]=useState<'friends'|'received'|'sent'|'discover'>('discover');
  const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const refresh=useCallback(async()=>{
   setLoading(true);setError('');
   try{
-   const data=await loadConnections(userId);setLinks(data.friends);setPeople(data.people);
+   const [data,blocks]=await Promise.all([loadConnections(userId),blockedUserIds(userId)]);
+   setLinks(data.friends);setPeople(data.people);setBlocked(blocks);
   }catch(e){setError(errorMessage(e));}finally{setLoading(false);}
  },[userId]);
  useEffect(()=>{void refresh();},[refresh]);
@@ -652,8 +654,35 @@ function ConnectionsScreen({userId,onConversation}:{
    filter==='received'?rel?.status==='pending'&&rel.addressee_id===userId:
    filter==='sent'?rel?.status==='pending'&&rel.requester_id===userId:!rel;
  }),[people,links,filter,query,userId]);
+ const toggleBlock=async(person:Profile)=>{
+  if(busy)return;
+  const wasBlocked=blocked.has(person.id);
+  const apply=async()=>{
+   setBusy(true);setError('');
+   try{
+    await setUserBlocked(userId,person.id,wasBlocked);
+    setBlocked(current=>{
+     const next=new Set(current);
+     if(wasBlocked)next.delete(person.id);else next.add(person.id);
+     return next;
+    });
+    await refresh();
+   }catch(e){setError(errorMessage(e));}
+   finally{setBusy(false);}
+  };
+  if(wasBlocked){void apply();return;}
+  Alert.alert('Bloquear @'+person.handle+'?',
+   'Essa pessoa não poderá iniciar novas interações com você.',[
+    {text:'Cancelar',style:'cancel'},
+    {text:'Bloquear',style:'destructive',onPress:()=>void apply()}
+   ]);
+ };
  const act=async(person:Profile,kind:'add'|'accept'|'remove'|'chat')=>{
-  if(busy)return;setBusy(true);setError('');
+  if(busy||blocked.has(person.id)){
+   if(blocked.has(person.id))setError('Desbloqueie esta pessoa antes de interagir.');
+   return;
+  }
+  setBusy(true);setError('');
   try{
    if(kind==='chat')onConversation(await startChat(person.id));
    else{
@@ -691,7 +720,9 @@ function ConnectionsScreen({userId,onConversation}:{
     </View>
    </View>
    <View style={[s.row,{marginTop:12,gap:7,flexWrap:'wrap'}]}>
-    {filter==='friends'?<>
+    {blocked.has(item.id)?<Action secondary disabled={busy}
+     label="Desbloquear" onPress={()=>void toggleBlock(item)}/>:
+    filter==='friends'?<>
      <Action disabled={busy} label="Conversar" onPress={()=>void act(item,'chat')}/>
      <Action disabled={busy} secondary label="Desfazer" onPress={()=>void act(item,'remove')}/>
     </>:filter==='received'?<>
@@ -700,6 +731,8 @@ function ConnectionsScreen({userId,onConversation}:{
     </>:filter==='sent'?<Action disabled={busy} secondary
      label="Cancelar convite" onPress={()=>void act(item,'remove')}/>:
      <Action disabled={busy} label="Conectar" onPress={()=>void act(item,'add')}/>}
+    {!blocked.has(item.id)&&<Action secondary disabled={busy}
+     label="Bloquear" onPress={()=>void toggleBlock(item)}/>}
    </View>
   </View>}
   ListEmptyComponent={!loading?<View style={s.empty}><Text style={s.muted}>Nenhuma conexão nesta categoria.</Text></View>:<Loading/>}
