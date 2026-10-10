@@ -223,6 +223,28 @@ export async function changeConnection(userId:string,otherId:string,
  if(error)throw new Error(error.message);
 }
 
+/** Personal block list and block/unblock use the same Web table and RLS. */
+export async function blockedUserIds(userId:string):Promise<Set<string>>{
+ const {data,error}=await supabase.from('user_blocks')
+  .select('blocked_id').eq('blocker_id',userId);
+ if(error)throw error;
+ return new Set((data||[]).map(row=>row.blocked_id));
+}
+export async function setUserBlocked(
+ userId:string,targetId:string,blocked:boolean
+):Promise<void>{
+ if(!targetId||userId===targetId)throw new Error('Não é possível bloquear esta conta.');
+ const {data:{session}}=await supabase.auth.getSession();
+ if(session?.user.id!==userId)throw new Error('Sua sessão expirou.');
+ const {error}=blocked
+  ?await supabase.from('user_blocks').delete()
+    .eq('blocker_id',userId).eq('blocked_id',targetId)
+  :await supabase.from('user_blocks').insert({
+    blocker_id:userId,blocked_id:targetId
+  });
+ if(error)throw error;
+}
+
 export async function loadCommunities(userId:string):Promise<{items:Community[];joined:Set<string>}>{
  const [result,membership]=await Promise.all([
    supabase.from('communities').select('id,owner_id,slug,name,description,rules,cover_path,avatar_path,is_official,created_at')
