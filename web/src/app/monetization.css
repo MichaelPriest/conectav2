@@ -1,0 +1,44 @@
+/* Conecta monetization interest — transparent offers; no checkout until commercial launch. */
+.conecta-money{width:100%;max-width:1120px;margin:0 auto}
+.conecta-money-intro{padding:25px 28px;display:flex;justify-content:space-between;align-items:center;gap:18px;
+ background:linear-gradient(110deg,color-mix(in srgb,#8867ef 10%,var(--card)),var(--card))}
+.conecta-money-intro strong{font-size:18px;color:var(--ink)}
+.conecta-money-intro p{margin:8px 0 0;color:var(--muted);line-height:1.6}
+.conecta-money-intro svg{color:#8661d9;flex-shrink:0}
+.conecta-money-offers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:22px 0}
+.conecta-money-offer{display:flex;flex-direction:column;align-items:flex-start;text-align:left;padding:25px 22px;gap:11px;
+ border:1px solid var(--line);background:var(--card);border-radius:18px;color:var(--ink);cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.conecta-money-offer.selected{border-color:#9874f1;box-shadow:0 0 0 2px #9874f120,0 12px 32px #30225d0e}
+.conecta-money-offer-icon{display:grid;place-items:center;width:42px;height:42px;border-radius:13px;background:#ebe5ff;color:#8054da}
+.conecta-money-offer-title{font-size:19px;font-weight:800}
+.conecta-money-offer-price{font-size:23px;font-weight:800;letter-spacing:-.5px}
+.conecta-money-proposal{font-size:11px;font-weight:700;color:var(--muted)}
+.conecta-money-offer-description{font-size:13px;color:var(--muted);line-height:1.6;min-height:43px}
+.conecta-money-benefits{display:grid;gap:11px;margin-top:4px}
+.conecta-money-benefits span{display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.4}
+.conecta-money-benefits svg{flex-shrink:0;color:#8054da}
+.conecta-money-registered{display:flex;align-items:center;gap:6px;color:#15875d;font-size:12px;margin-top:auto;font-weight:700}
+.conecta-money-form-card{padding:27px 30px;margin:0 0 35px}
+.conecta-money-form-card h2{font-size:23px;color:var(--ink);margin:0 0 10px}
+.conecta-money-form-card>p{font-size:13px;color:var(--muted);line-height:1.6;max-width:720px}
+.conecta-money-form{display:grid;gap:16px;max-width:640px;margin-top:20px}
+.conecta-money-form>label{display:grid;gap:7px;font-size:13px;font-weight:700;color:var(--ink)}
+.conecta-money-form input,.conecta-money-form textarea{min-width:0;font-size:14px}
+.conecta-money-form .conecta-money-consent{display:flex;align-items:flex-start;gap:10px;line-height:1.55;font-weight:400}
+.conecta-money-consent input{margin:3px 0 0;flex-shrink:0}
+.conecta-money-form .btn{justify-self:start;display:flex;gap:9px}
+.conecta-money-done{display:flex;align-items:center;gap:10px;margin:18px 0;padding:15px;border:1px solid #b5ddc9;color:#18734c;border-radius:12px}
+.conecta-money-admin-top{display:flex;justify-content:space-between;align-items:center;gap:15px}
+.conecta-money-counts{display:flex;flex-wrap:wrap;gap:12px;margin:20px 0}
+.conecta-money-counts span{background:var(--bg);padding:10px 15px;border:1px solid var(--line);border-radius:12px;display:flex;gap:9px;align-items:center;font-size:13px}
+.conecta-money-counts strong{font-size:19px}
+.conecta-money-admin-list{display:grid;gap:12px}
+.conecta-money-admin-item{border:1px solid var(--line);border-radius:13px;padding:17px;display:grid;gap:11px;overflow-wrap:anywhere}
+.conecta-money-admin-item>div{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.conecta-money-admin-item small{color:var(--muted)}
+.conecta-money-admin-item p{margin:0;font-size:13px;white-space:pre-wrap}
+.conecta-money-admin-item a{font-size:13px}
+.conecta-money-admin-item>label{display:flex;gap:10px;align-items:center;font-size:13px}
+.conecta-money-admin-item select{max-width:180px}
+@media(max-width:800px){.conecta-money-offers{grid-template-columns:1fr}.conecta-money-offer-description{min-height:0}}
+@media(max-width:520px){.conecta-money-intro,.conecta-money-form-card{padding:20px}.conecta-money-admin-item>label{align-items:flex-start;flex-direction:column}}

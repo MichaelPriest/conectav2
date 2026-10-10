@@ -4,6 +4,7 @@ import './concept.css';
 import './landing-v3.css';
 import './experience.css';
 import './auth-concept.css';
+import './monetization.css';
 import {LocaleProvider} from '@/lib/i18n';
 
 export const metadata: Metadata = {
