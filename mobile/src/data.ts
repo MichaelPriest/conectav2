@@ -263,12 +263,12 @@ export async function markNotifications(userId:string,id?:string):Promise<void>{
 
 export async function loadThreads(userId:string):Promise<Thread[]>{
  const {data:membership,error:memberError}=await supabase.from('conversation_members')
-  .select('conversation_id,user_id').eq('user_id',userId);
+  .select('conversation_id,user_id,muted_until').eq('user_id',userId);
  if(memberError)throw memberError;
  const ids=[...new Set((membership||[]).map(m=>m.conversation_id))];
  if(!ids.length)return [];
  const [threads,members,last,unread]=await Promise.all([
-  supabase.from('conversations').select('id,title,created_at,is_group').in('id',ids)
+  supabase.from('conversations').select('id,title,created_at,created_by,is_group').in('id',ids)
    .order('created_at',{ascending:false}),
   supabase.from('conversation_members').select('conversation_id,user_id').in('conversation_id',ids),
   supabase.rpc('my_latest_conversation_messages'),
@@ -284,6 +284,7 @@ export async function loadThreads(userId:string):Promise<Thread[]>{
   .select('id,handle,display_name,bio,avatar_path').in('id',otherIds):{data:[],error:null};
  if(people.error)throw people.error;
  const byId=new Map(((people.data||[]) as Profile[]).map(p=>[p.id,p]));
+ const muteById=new Map((membership||[]).map(m=>[m.conversation_id,m.muted_until]));
  const lastById=new Map<string,{content:string;created_at:string}>();
  for(const msg of (last.data||[]) as {conversation_id:string;content:string;created_at:string}[])
   if(!lastById.has(msg.conversation_id))lastById.set(msg.conversation_id,msg);
@@ -295,7 +296,8 @@ export async function loadThreads(userId:string):Promise<Thread[]>{
   const lastMsg=lastById.get(t.id);
   return {id:t.id,title:t.is_group?t.title||'Grupo':byId.get(otherId||'')?.display_name||'Conversa',
     other:byId.get(otherId||'')||null,group:t.is_group,unread:countById.get(t.id)||0,
-    last:lastMsg?.content||'Nenhuma mensagem ainda',updated:lastMsg?.created_at||t.created_at};
+    last:lastMsg?.content||'Nenhuma mensagem ainda',updated:lastMsg?.created_at||t.created_at,
+    created_by:t.created_by||null,muted_until:muteById.get(t.id)||null};
  }).sort((a,b)=>Date.parse(b.updated)-Date.parse(a.updated));
 }
 export async function startChat(otherId:string):Promise<string>{
