@@ -1,4 +1,4 @@
-# Build de homologação Alpha 0.3.1: chat avançado, buscas e alertas internos.
+# Homologação Alpha 0.3.1 consolidada: respostas de mídia, proteção de rascunhos e chat seguro.
 name: Conecta V2 · Android APK de testes
 on:
   push:
