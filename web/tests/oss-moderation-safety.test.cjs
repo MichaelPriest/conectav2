@@ -8,10 +8,10 @@ const ts=require('typescript');
 const sourcePath=path.resolve(__dirname,'../src/lib/open-source-image-moderation.ts');
 const temporaryPath=path.resolve(__dirname,'../src/lib/.oss-moderation-real-model-test.mjs');
 
-test('real MIT NSFWJS model runs on server with zero API key and holds pictures for review',async()=>{
+test('real MIT NSFWJS model reviews only photos with material explicit-content risk',async()=>{
  const source=(await fs.readFile(sourcePath,'utf8')).replace(/^import 'server-only';\s*/m,'');
  assert.equal(source.includes("modelPromise"),true,'Model must be process-cached');
- assert.equal(source.includes("reviewRequired:true"),true,'Ambiguous images must not auto publish');
+ assert.match(source,/reviewRequired:flagged\|\|borderline/,'ordinary photos must not always await a human');
  const js=ts.transpileModule(source,{
   compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}
  }).outputText;
@@ -24,7 +24,10 @@ test('real MIT NSFWJS model runs on server with zero API key and holds pictures 
   }).jpeg().toBuffer();
   const verdict=await classifyLocalImage(new Uint8Array(input));
   assert.equal(verdict.provider,'nsfwjs-mobilenet-v2');
-  assert.equal(verdict.reviewRequired,true);
+  const scores=verdict.classification;
+  const risk=scores.Porn+scores.Hentai+scores.Sexy*0.75;
+  assert.equal(verdict.reviewRequired,verdict.flagged||risk>=0.36,
+   'only flagged or borderline image classifications trigger mandatory review');
   assert.equal(typeof verdict.flagged,'boolean');
   assert.ok(Object.values(verdict.classification).every(n=>n>=0&&n<=1));
   await assert.rejects(()=>classifyLocalImage(new Uint8Array([])),/exceeds 10MB/);
