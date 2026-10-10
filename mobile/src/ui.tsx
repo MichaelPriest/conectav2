@@ -49,16 +49,19 @@ export function Avatar({path,name,size=44}:{path?:string|null;name:string;size?:
   <Text style={{color:t.primary,fontWeight:'900',fontSize:size*0.34}}>{(name||'?').slice(0,2).toUpperCase()}</Text>
  </View>;
 }
-export function Media({path,height=185,width='100%',radius=15,marginTop=12}:{
+export function Media({path,height=185,width='100%',radius=15,marginTop=12,onPress}:{
  path:string|null|undefined;height?:number;width?:'100%'|'48%';
- radius?:number;marginTop?:number;
+ radius?:number;marginTop?:number;onPress?:()=>void;
 }){
  const [url,setUrl]=useState<string|null>(null);
  useEffect(()=>{let active=true;setUrl(null);void signedMedia(path).then(u=>{if(active)setUrl(u);});
  return()=>{active=false;};},[path]);
  if(!url)return null;
- return <Image accessibilityLabel="Mídia da publicação" accessibilityRole="image" source={{uri:url}} resizeMode="cover"
- style={{width,height,borderRadius:radius,marginTop}}/>;
+ const image=<Image accessibilityLabel="Mídia da publicação" accessibilityRole="image"
+  source={{uri:url}} resizeMode="cover" style={{width,height,borderRadius:radius,marginTop}}/>;
+ return onPress?<Pressable accessibilityRole="button"
+  accessibilityLabel="Ampliar imagem" onPress={onPress}
+  style={{width,overflow:'hidden'}}>{image}</Pressable>:image;
 }
 function InlineVideo({url,height}:{url:string;height:number}){
  const player=useVideoPlayer(url);
