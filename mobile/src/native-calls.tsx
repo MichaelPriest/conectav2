@@ -77,7 +77,7 @@ export function NativeCallsProvider({userId,children}:{
   const conn=new RTCPeerConnection(RTC_CONFIG);
   pc.current=conn;
   media.getTracks().forEach(track=>conn.addTrack(track,media));
-  conn.ontrack=event=>{
+  conn.ontrack=(event:{streams?:MediaStream[]})=>{
    if(pc.current!==conn)return;
    const incoming=event.streams?.[0];
    if(incoming)setRemote(incoming);
@@ -89,7 +89,7 @@ export function NativeCallsProvider({userId,children}:{
     setError('A rede não conseguiu estabelecer a ligação P2P. Algumas redes precisam de TURN.');
    else if(conn.connectionState==='connecting')setStatus('Conectando mídia...');
   };
-  conn.onicecandidate=event=>{
+  conn.onicecandidate=(event:{candidate:{toJSON:()=>unknown}|null})=>{
    const row=rowRef.current;
    if(pc.current!==conn||!row||!event.candidate)return;
    void supabase.rpc('add_chat_call_ice_candidate',{
