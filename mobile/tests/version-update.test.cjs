@@ -82,7 +82,9 @@ test('Version monitor is installed at root, checks foreground and requires user 
  assert.match(update,/AppState\.addEventListener\('change'/);
  assert.match(update,/checkForNativeUpdate\(\)/);
  assert.match(update,/Nova versão do Conecta/);
- assert.match(update,/Linking\.openURL\(update\.url\)/);\n assert.match(update,/beginAndroidApkDownload\(update,/);\n assert.match(update,/requestAndroidInstall\(downloaded\)/);
+ assert.match(update,/Linking\.openURL\(update\.url\)/);
+ assert.match(update,/beginAndroidApkDownload\(update,/);
+ assert.match(update,/requestAndroidInstall\(downloaded\)/);
  assert.match(update,/chooseAndroidUpdate\(records,installed\)/);
  assert.match(update,/chooseIosUpdate\(records,installed\)/);
 });
