@@ -10,6 +10,10 @@ const key=(userId:string)=>'conecta-remote-push:'+userId;
 const lastSync=new Map<string,number>();
 
 export function remotePushConfigured():boolean{return UUID.test(PROJECT_ID);}
+export async function remotePushRegistered(userId:string):Promise<boolean>{
+ const token=await AsyncStorage.getItem(key(userId));
+ return Boolean(token&&TOKEN.test(token));
+}
 
 /** Sender identity is always determined by the backend from this JWT, not from a request body. */
 async function callDeviceRoute(method:'POST'|'DELETE',token:string,userId:string):Promise<void>{
