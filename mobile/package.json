@@ -33,7 +33,8 @@
     "expo-application": "~57.0.3",
     "expo-intent-launcher": "~57.0.1",
     "expo-notifications": "~57.0.19",
-    "react-native-webrtc": "124.0.8"
+    "react-native-webrtc": "124.0.8",
+    "react-native-webview": "13.16.1"
   },
   "devDependencies": {
     "@types/react": "19.2.7",
