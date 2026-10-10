@@ -57,6 +57,8 @@ export function StoryRail({userId,onOpenPost}:{
  const [sharedPost,setSharedPost]=useState<Post|null>(null);
  const [sharedLoading,setSharedLoading]=useState(false);
  const [progress,setProgress]=useState(0);
+ const [imageUrl,setImageUrl]=useState<string|null>(null);
+ const [mediaReady,setMediaReady]=useState(false);
  const [paused,setPaused]=useState(false);
  const [seen,setSeen]=useState<Set<string>>(new Set());
  const [file,setFile]=useState<SelectedMedia|null>(null);
@@ -71,7 +73,10 @@ export function StoryRail({userId,onOpenPost}:{
  },[]);
  useEffect(()=>{
   void refresh();
-  const sub=AppState.addEventListener('change',state=>{if(state==='active')void refresh();});
+  const sub=AppState.addEventListener('change',state=>{
+   if(state==='active')void refresh();
+   else setPaused(true);
+  });
   const timer=setInterval(()=>{if(AppState.currentState==='active')void refresh();},60000);
   return()=>{sub.remove();clearInterval(timer);};
  },[refresh]);
@@ -94,6 +99,17 @@ export function StoryRail({userId,onOpenPost}:{
  const next=useCallback(()=>advance(1),[advance]);
  const trackVideo=useCallback((fraction:number)=>setProgress(fraction),[]);
  useEffect(()=>{
+  const storyId=selected?.id;
+  const path=selected?.media_type==='image'?selected.media_path:null;
+  let active=true;
+  setImageUrl(null);setMediaReady(false);
+  if(path)void signedMedia(path).then(url=>{
+   if(active){setImageUrl(url);if(!url)setError('Não foi possível abrir a imagem protegida.');}
+  }).catch(e=>{if(active)setError(describe(e));});
+  return()=>{active=false;};
+ },[selected?.id,selected?.media_path,selected?.media_type]);
+
+ useEffect(()=>{
   const id=selected?.shared_post_id;
   if(!id){setSharedPost(null);setSharedLoading(false);return;}
   let active=true;setSharedLoading(true);setSharedPost(null);
@@ -107,6 +123,8 @@ export function StoryRail({userId,onOpenPost}:{
  },[selected?.id,selected?.shared_post_id,userId]);
  useEffect(()=>{
   if(!selected||paused||selected.media_type==='video')return;
+  if(selected.media_type==='image'&&!mediaReady)return;
+  if(selected.shared_post_id&&sharedLoading)return;
   const started=Date.now()-progress*6500;
   const timer=setInterval(()=>{
    const fraction=Math.min(1,(Date.now()-started)/6500);
@@ -116,7 +134,7 @@ export function StoryRail({userId,onOpenPost}:{
   return()=>clearInterval(timer);
   // Playback progress resets only when opening a different Story.
   // eslint-disable-next-line react-hooks/exhaustive-deps
- },[selected?.id,paused,next]);
+ },[selected?.id,paused,next,mediaReady,sharedLoading]);
  const pick=async(mode:'image'|'video'|'camera')=>{
   setError('');
   try{
@@ -181,7 +199,7 @@ export function StoryRail({userId,onOpenPost}:{
     accessibilityLabel={'Ver Story de '+(story.profiles?.display_name||'pessoa')}
     onPress={()=>open(firstUnseenStory(timeline,story.author_id,seen)||story)}
     style={{width:75,alignItems:'center',gap:4}}>
-    <View style={{borderWidth:2,borderColor:seen.has(story.id)?t.line:t.pink,borderRadius:40,padding:3}}>
+    <View style={{borderWidth:2,borderColor:timeline.filter(item=>item.author_id===story.author_id).every(item=>seen.has(item.id))?t.line:t.pink,borderRadius:40,padding:3}}>
      <Avatar path={story.profiles?.avatar_path} name={story.profiles?.display_name||'Pessoa'} size={49}/>
     </View>
     <Text numberOfLines={1} style={s.muted}>{story.author_id===userId?'Você':story.profiles?.display_name||'Pessoa'}</Text>
@@ -283,7 +301,11 @@ export function StoryRail({userId,onOpenPost}:{
         Publicação não disponível ou privacidade alterada.
        </Text>:
        selected?.media_type==='image'&&selected.media_path?
-        <Media path={selected.media_path} height={440} marginTop={0} radius={0}/>:
+        imageUrl?<Image source={{uri:imageUrl}} resizeMode="contain"
+         onLoad={()=>setMediaReady(true)}
+         onError={()=>setError('Não foi possível carregar a foto do Story.')}
+         style={{width:'100%',height:440}}/>:
+        <Loading text="Carregando foto do Story..."/>:
        selected?.media_type==='video'&&selected.media_path?
         <StoryVideo key={selected.id} path={selected.media_path}
          onEnd={next} onProgress={trackVideo} paused={paused}/>:
