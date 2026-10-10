@@ -1312,7 +1312,9 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
   ListFooterComponent={loadingMore?<Loading/>:<View style={{height:20}}/>}/>;
 }
 
-function CommunityScreen({userId}:{userId:string}){
+function CommunityScreen({userId,initialSlug,onCloseDetail}:{
+ userId:string;initialSlug?:string|null;onCloseDetail?:()=>void
+}){
  const [items,setItems]=useState<Community[]>([]),[joined,setJoined]=useState<Set<string>>(new Set());
  const [selected,setSelected]=useState<Community|null>(null);
  const [createOpen,setCreateOpen]=useState(false);
@@ -1327,6 +1329,11 @@ function CommunityScreen({userId}:{userId:string}){
   catch(e){setError(errorMessage(e));}finally{setLoading(false);}
  },[userId]);
  useEffect(()=>{void load();},[load]);
+ useEffect(()=>{
+  if(!initialSlug||selected)return;
+  const match=items.find(community=>community.slug===initialSlug);
+  if(match)setSelected(match);
+ },[initialSlug,items,selected]);
  const filtered=items.filter(x=>
   (x.name+' '+(x.description||'')).toLowerCase().includes(query.toLowerCase().trim())&&
   (!showMine||joined.has(x.id)));
@@ -1352,7 +1359,7 @@ function CommunityScreen({userId}:{userId:string}){
   finally{setBusy(null);}
  };
  if(selected)return <CommunityDetailScreen community={selected} userId={userId}
-  member={joined.has(selected.id)} onBack={()=>setSelected(null)}
+  member={joined.has(selected.id)} onBack={()=>{setSelected(null);onCloseDetail?.();}}
   onMembership={async()=>{
    const currentlyMember=joined.has(selected.id);
    await changeMembership(userId,selected.id,currentlyMember);
@@ -1794,6 +1801,7 @@ export default function App(){
   return()=>{live=false;listener.remove();};
  },[]);
  const [contactsMode,setContactsMode]=useState(false);
+ const [communitySlugRoute,setCommunitySlugRoute]=useState<string|null>(null);
  const [composeRequest,setComposeRequest]=useState(0);
  const [unreadCount,setUnreadCount]=useState(0);
  const openNativeNotifications=useCallback(()=>{
@@ -1848,6 +1856,7 @@ export default function App(){
  const navigate=(key:string)=>{
   setViewPostId(null);
   if(key==='connections')setContactsMode(false);
+  if(key==='communities')setCommunitySlugRoute(null);
   if(key==='create'){
    setChatId(null);setTab('feed');setComposeRequest(previous=>previous+1);
    return;
@@ -1867,9 +1876,11 @@ export default function App(){
    <ConnectionsScreen userId={user.id} onConversation={openConversation}
     onBack={()=>setContactsMode(false)}/>:
    <ExploreScreen userId={user.id} onConversation={openConversation}
-    onOpenConnections={()=>setContactsMode(true)}/>;
+    onOpenConnections={()=>setContactsMode(true)}
+    onOpenCommunity={slug=>{setCommunitySlugRoute(slug);setTab('communities');}}/>;
   if(tab==='messages')return <ChatScreen userId={user.id} initialId={chatId}/>;
-  if(tab==='communities')return <CommunityScreen userId={user.id}/>;
+  if(tab==='communities')return <CommunityScreen userId={user.id}
+   initialSlug={communitySlugRoute} onCloseDetail={()=>setCommunitySlugRoute(null)}/>;
   if(tab==='notifications')return <NotificationsScreen userId={user.id}
    onRead={()=>void refreshUnread(user.id)} onPost={setViewPostId}
    onConnections={()=>{setContactsMode(true);setTab('connections');}}/>;
