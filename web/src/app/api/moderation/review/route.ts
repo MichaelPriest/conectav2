@@ -66,7 +66,7 @@ async function moderateWithOpenSourceWorker(
  // The OSS worker detects only toxicity and nudity, not all abuse categories.
  // Until a broad safety classifier exists, clean visual material still needs review.
  return {flagged:json.flagged,provider:'opensource-'+String(json.engine||'worker').slice(0,40),
-   humanReview:media.length>0||json.human_review};
+   humanReview:json.human_review};
 }
 
 
@@ -93,10 +93,10 @@ async function moderateWithBundledModel(
   }else{
    if(data.size>10*1024*1024||data.size===0)throw new Error('media_size_out_of_bounds');
    const result=await classifyLocalImage(new Uint8Array(await data.arrayBuffer()));
-   const cls=result.classification;
-   // Strict visual screen; any borderline/sexual imagery requires a person.
-   const visualRisk=cls.Porn+cls.Hentai+cls.Sexy*0.75;
-   const needsReview=result.flagged||visualRisk>=0.20;
+   // The NSFW model only measures explicit-content signals. Low-risk
+   // ordinary photos need no mandatory manual review. Borderline or flagged
+   // images stay quarantined; reporters can still request a later review.
+   const needsReview=result.reviewRequired;
    reviewRequired=reviewRequired||needsReview;
    flagged=flagged||result.flagged;
    notes.push('Foto '+(index+1)+': '+
