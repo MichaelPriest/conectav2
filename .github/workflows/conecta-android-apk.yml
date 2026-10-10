@@ -5,6 +5,12 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/conecta-android-apk.yml'
+      - 'mobile/app.json'
+      - 'mobile/app.config.js'
+      - 'mobile/package.json'
+      - 'mobile/src/voice-ui.tsx'
+      - 'mobile/src/native-notifications.tsx'
+      - 'mobile/src/permissions-ui.tsx'
   workflow_dispatch:
 
 permissions:
@@ -74,6 +80,14 @@ jobs:
             fi
           done
           echo "Permissões reais verificadas no pacote Conecta sideload."
+      - name: Garantir APK assinado e registrar hash SHA-256
+        run: |
+          set -euo pipefail
+          apk="android/app/build/outputs/apk/release/app-release.apk"
+          signer="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$signer"
+          "$signer" verify --verbose --print-certs "$apk"
+          sha256sum "$apk"
       - name: Publicar artefato de teste
         uses: actions/upload-artifact@v4
         with:
