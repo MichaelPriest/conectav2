@@ -77,4 +77,30 @@ export function chooseAndroidUpdate(
  return best;
 }
 
+export type AppleStoreApp={
+ bundleId:string;version:string;trackViewUrl:string;
+};
+export const APP_STORE_LOOKUP_API=
+ 'https://itunes.apple.com/lookup?bundleId=br.com.conectav2.app&country=br';
+export function chooseIosUpdate(data:unknown,installedVersion:string):AvailableUpdate|null{
+ if(!data||typeof data!=='object'||!versionParts(installedVersion))return null;
+ const rows=(data as {results?:unknown}).results;
+ if(!Array.isArray(rows))return null;
+ for(const row of rows){
+  if(!row||typeof row!=='object')continue;
+  const app=row as Partial<AppleStoreApp>;
+  if(app.bundleId!=='br.com.conectav2.app'||
+     typeof app.version!=='string'||typeof app.trackViewUrl!=='string'||
+     compareVersions(app.version,installedVersion)<=0)continue;
+  try{
+   const url=new URL(app.trackViewUrl);
+   if(url.protocol!=='https:'||url.hostname!=='apps.apple.com'||
+      !/\/id\d+/.test(url.pathname)||url.username||url.password)return null;
+   return {version:app.version,url:app.trackViewUrl,
+    notes:'Uma nova versão do Conecta está disponível na App Store.'};
+  }catch{return null;}
+ }
+ return null;
+}
+
 export const MOBILE_RELEASES_API='https://api.github.com/repos/MichaelPriest/conectav2/releases?per_page=30';
