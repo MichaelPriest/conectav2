@@ -231,7 +231,7 @@ export async function sendPostComment(postId:string,userId:string,body:string,pa
     method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
     body:JSON.stringify({id:data.id}),cache:'no-store'
    });
-  }catch{/* The database's pending status remains authoritative. */}
+  }catch{/* The database's pending moderation state remains authoritative. */}
  }
  const {data:latest}=await supabase.from('post_comments')
   .select('moderation_status').eq('id',data.id).maybeSingle();
