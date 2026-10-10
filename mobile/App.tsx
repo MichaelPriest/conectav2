@@ -34,10 +34,13 @@ import {PollCard,PollDraft} from './src/poll-ui';
 import {publishPollPost,validatePollDraft} from './src/polls';
 import {MentionInput} from './src/mentions';
 import {NativeVersionMonitor,checkVersionManually} from './src/update-ui';
+import {NativeGroupCreator,NativeGroupSettings} from './src/chat-group-ui';
+import {getPinnedMessages,setConversationMuted,toggleChatPin} from './src/chat-groups';
+import type {PinnedChatMessage} from './src/chat-groups';
 import {
- Bell,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
+ Bell,BellOff,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
  MoreHorizontal,Plus,Search,Send,ShieldCheck,Sparkles,UsersRound,Video,
- X,Globe2,LockKeyhole,UserRound,ChevronRight,ChevronLeft,Pencil,Share2,HeartHandshake,Trash2
+ X,Globe2,LockKeyhole,UserRound,ChevronRight,ChevronLeft,Pencil,Share2,HeartHandshake,Trash2,Pin,Settings2
 } from 'lucide-react-native';
 import {BottomNavigation,Brand,FeedTabs,GradientPanel,RoundIcon,
  SectionEyebrow,SectionHeader} from './src/design';
@@ -649,6 +652,10 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  const [reactions,setReactions]=useState<ChatReaction[]>([]);
  const [replyTo,setReplyTo]=useState<ChatMessage|null>(null);
  const [searchOpen,setSearchOpen]=useState(false);
+ const [creatorOpen,setCreatorOpen]=useState(false);
+ const [groupSettingsOpen,setGroupSettingsOpen]=useState(false);
+ const [pins,setPins]=useState<PinnedChatMessage[]>([]);
+ const [settingsBusy,setSettingsBusy]=useState(false);
  const activeRef=useRef<string|null>(active);
  const historyInitialized=useRef(false);
  const [hasOlder,setHasOlder]=useState(false);
@@ -661,6 +668,28 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
   try{setThreads(await loadThreads(userId));setError('');}
   catch(e){setError(errorMessage(e));}finally{setLoading(false);}
  },[userId]);
+ const loadPins=useCallback(async(id:string)=>{
+  try{
+   const rows=await getPinnedMessages(id);
+   if(activeRef.current===id)setPins(rows);
+  }catch(e){if(activeRef.current===id)setError(errorMessage(e));}
+ },[]);
+ const changeMute=async()=>{
+  if(!active||settingsBusy)return;
+  const current=threads.find(t=>t.id===active);
+  const muted=Boolean(current?.muted_until&&Date.parse(current.muted_until)>Date.now());
+  setSettingsBusy(true);setError('');
+  try{await setConversationMuted(active,userId,muted);await loadInbox();}
+  catch(e){setError(errorMessage(e));}
+  finally{setSettingsBusy(false);}
+ };
+ const changePin=async(message:ChatMessage)=>{
+  if(!active||settingsBusy)return;
+  setSettingsBusy(true);setError('');
+  try{await toggleChatPin(active,message);await loadPins(active);}
+  catch(e){setError(errorMessage(e));}
+  finally{setSettingsBusy(false);}
+ };
  const loadMessages=useCallback(async(id:string)=>{
   try{
    const loaded=await loadChatMessages(id);
@@ -703,15 +732,18 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
   historyInitialized.current=false;
   setHasOlder(false);
   if(!active)return;
-  setMessages([]);setReactions([]);setReplyTo(null);setSearchOpen(false);void loadMessages(active);
+  setMessages([]);setReactions([]);setPins([]);setReplyTo(null);setSearchOpen(false);
+  setGroupSettingsOpen(false);void loadMessages(active);void loadPins(active);
   const channel=supabase.channel('conecta-mobile-thread-'+active)
     .on('postgres_changes',{event:'*',schema:'public',table:'messages',
      filter:'conversation_id=eq.'+active},()=>{void loadMessages(active);})
     .on('postgres_changes',{event:'*',schema:'public',table:'message_reactions'},
-     ()=>{void loadMessages(active);}).subscribe();
+     ()=>{void loadMessages(active);})
+    .on('postgres_changes',{event:'*',schema:'public',table:'conversation_pins',
+     filter:'conversation_id=eq.'+active},()=>{void loadPins(active);}).subscribe();
   const timer=setInterval(()=>{void loadMessages(active);},18000);
   return()=>{clearInterval(timer);void supabase.removeChannel(channel);};
- },[active,loadMessages]);
+ },[active,loadMessages,loadPins]);
  const send=async()=>{
   if(!active||!validMessage||busy)return;
   setBusy(true);setError('');
@@ -749,6 +781,21 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
    <Avatar path={selected?.other?.avatar_path} name={selected?.title||'Conversa'} size={36}/>
    <View style={s.grow}><Text numberOfLines={1} style={s.primaryText}>{selected?.title||'Conversa'}</Text>
     <Text style={s.muted}>{selected?.group?'Grupo do Conecta':'Chat privado e seguro'}</Text></View>
+   <Pressable accessibilityRole="button"
+    accessibilityLabel={selected?.muted_until&&Date.parse(selected.muted_until)>Date.now()?
+     'Reativar notificações da conversa':'Silenciar conversa por 30 dias'}
+    disabled={settingsBusy} onPress={()=>void changeMute()}
+    style={{height:38,width:38,borderRadius:12,backgroundColor:t.subtle,
+     justifyContent:'center',alignItems:'center'}}>
+    {selected?.muted_until&&Date.parse(selected.muted_until)>Date.now()?
+     <BellOff size={19} color={t.primary}/>:<Bell size={19} color={t.primary}/>}
+   </Pressable>
+   {selected?.group&&<Pressable accessibilityRole="button" accessibilityLabel="Administrar grupo"
+    onPress={()=>setGroupSettingsOpen(true)}
+    style={{height:38,width:38,borderRadius:12,backgroundColor:t.subtle,
+     justifyContent:'center',alignItems:'center'}}>
+    <Settings2 size={19} color={t.primary}/>
+   </Pressable>}
    <Pressable accessibilityRole="button" accessibilityLabel="Pesquisar mensagens"
     accessibilityState={{expanded:searchOpen}} onPress={()=>setSearchOpen(open=>!open)}
     style={{height:38,width:38,borderRadius:12,backgroundColor:t.subtle,
@@ -758,7 +805,27 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
   </View>
   {searchOpen&&<ChatSearch conversationId={active}
    onReply={message=>setReplyTo(message)} onClose={()=>setSearchOpen(false)}/>}
+  {pins.length>0&&<View style={{paddingHorizontal:13,paddingVertical:7,
+   backgroundColor:t.subtle,borderBottomWidth:1,borderColor:t.line}}>
+   <View style={[s.row,{gap:6,marginBottom:4}]}>
+    <Pin size={15} color={t.primary}/>
+    <Text style={[s.primaryText,{fontSize:12}]}>Mensagens fixadas</Text>
+   </View>
+   {pins.map(pin=><Text key={pin.message_id} numberOfLines={1}
+    style={[s.muted,{marginVertical:2}]}>• {pin.content||'Mídia compartilhada'}</Text>)}
+  </View>}
   <ErrorNotice text={error}/>
+  <Modal visible={groupSettingsOpen} animationType="slide"
+   onRequestClose={()=>setGroupSettingsOpen(false)}>
+   <SafeAreaProvider>
+    <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
+     <NativeGroupSettings key={active} conversationId={active} userId={userId}
+      onClose={()=>setGroupSettingsOpen(false)}
+      onLeft={()=>{setGroupSettingsOpen(false);setActive(null);void loadInbox();}}
+      onUpdated={()=>void loadInbox()}/>
+    </SafeAreaView>
+   </SafeAreaProvider>
+  </Modal>
   <FlatList style={{flex:1,paddingHorizontal:12}} inverted
    data={[...messages].reverse()} keyExtractor={m=>m.id}
    contentContainerStyle={{paddingVertical:15}}
@@ -766,6 +833,8 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
     quoted={messages.find(m=>m.id===item.reply_to)||null}
     reactions={reactions.filter(reaction=>reaction.message_id===item.id)}
     onReply={message=>setReplyTo(message)}
+    pinned={pins.some(pin=>pin.message_id===item.id)}
+    onTogglePin={message=>void changePin(message)}
     onChanged={async()=>{await loadMessages(active);await loadInbox();}}/>}
    ListFooterComponent={hasOlder?<View style={{marginVertical:15,alignItems:'center'}}>
     <Action secondary disabled={loadingOlder} label={loadingOlder?'Carregando...':'Carregar mensagens antigas'}
@@ -799,8 +868,21 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
  </KeyboardAvoidingView>;
  return <FlatList style={s.screen} data={threads} keyExtractor={t=>t.id}
   refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void loadInbox()}/>}
-  ListHeaderComponent={<View><Heading title="Mensagens" subtitle="Converse em privado com suas conexões."/>
-    <ErrorNotice text={error}/></View>}
+  ListHeaderComponent={<View>
+   <Heading title="Mensagens" subtitle="Conversas, amizades e grupos do Conecta."/>
+   <Action label="Criar grupo" leading={<UsersRound size={18} color="#FFF"/>}
+    onPress={()=>setCreatorOpen(true)}/>
+   <Modal visible={creatorOpen} animationType="slide"
+    onRequestClose={()=>setCreatorOpen(false)}>
+    <SafeAreaProvider>
+     <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
+      <NativeGroupCreator userId={userId} onClose={()=>setCreatorOpen(false)}
+       onCreated={id=>{setCreatorOpen(false);setActive(id);void loadInbox();}}/>
+     </SafeAreaView>
+    </SafeAreaProvider>
+   </Modal>
+   <ErrorNotice text={error}/>
+  </View>}
   renderItem={({item})=><Pressable style={[s.card,{paddingVertical:15}]}
    accessibilityRole="button" accessibilityLabel={'Abrir conversa com '+item.title}
    onPress={()=>setActive(item.id)}>
@@ -813,7 +895,10 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
       {item.group&&<UsersRound color={t.primary} size={15}/>}
       <Text style={[s.primaryText,{fontSize:15,flex:1}]} numberOfLines={1}>{item.title}</Text>
      </View>
-     <Text style={[s.muted,{marginTop:4}]} numberOfLines={1}>{item.last}</Text>
+     <Text style={[s.muted,{marginTop:4}]} numberOfLines={1}>
+      {item.muted_until&&Date.parse(item.muted_until)>Date.now()?'🔕 ':''}
+      {item.last}
+     </Text>
     </View>
     {item.unread>0?<View style={[a.count,{backgroundColor:t.primary}]}>
      <Text style={{color:'white',fontSize:11,fontWeight:'800'}}>{item.unread}</Text>
