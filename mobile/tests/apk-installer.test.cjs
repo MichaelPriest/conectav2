@@ -60,7 +60,7 @@ test('Download progress and binary integrity helpers have bounded behavior',()=>
 test('Native installer uses a content URI, user confirmation, and downloaded data checksum',()=>{
  const installer=read('src/apk-installer.ts');
  const ui=read('src/update-ui.tsx');
- const config=JSON.parse(read('app.json')).expo;
+ const config=require('../app.config.js').expo;
  assert.match(installer,/File\.createDownloadTask\(update\.url,file,/);
  assert.match(installer,/onProgress:\(\{bytesWritten,totalBytes\}\)/);
  assert.match(installer,/Crypto\.digest\(Crypto\.CryptoDigestAlgorithm\.SHA256/);
@@ -75,4 +75,23 @@ test('Native installer uses a content URI, user confirmation, and downloaded dat
  assert.match(ui,/Linking\.openURL\(update\.url\)/);
  assert.match(ui,/checkForNativeUpdate\(\)/);
  assert.ok(config.android.permissions.includes('android.permission.REQUEST_INSTALL_PACKAGES'));
+});
+
+test('Google Play builds never request restricted APK install permission',()=>{
+ const child=require('node:child_process');
+ const root=path.join(__dirname,'..');
+ for(const [channel,expectPermission] of [['play',false],['sideload',true]]){
+  const result=child.spawnSync(process.execPath,['-e',
+   "process.stdout.write(JSON.stringify(require('./app.config.js').expo.android.permissions))"
+  ],{cwd:root,env:{...process.env,EXPO_PUBLIC_CONECTA_DISTRIBUTION:channel},
+   encoding:'utf8'});
+  assert.equal(result.status,0,result.stderr);
+  const permissions=JSON.parse(result.stdout);
+  assert.equal(permissions.includes('android.permission.REQUEST_INSTALL_PACKAGES'),expectPermission);
+ }
+ const neutral=JSON.parse(read('app.json')).expo;
+ assert.ok(!neutral.android.permissions?.includes('android.permission.REQUEST_INSTALL_PACKAGES'));
+ const eas=JSON.parse(read('eas.json'));
+ assert.equal(eas.build.production.env.EXPO_PUBLIC_CONECTA_DISTRIBUTION,'play');
+ assert.equal(eas.build.preview.env.EXPO_PUBLIC_CONECTA_DISTRIBUTION,'sideload');
 });
