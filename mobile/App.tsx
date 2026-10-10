@@ -805,8 +805,8 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
   const ids=result.items.map(p=>p.id);
   const [newLikes,newSaved]=await Promise.all([myLikes(userId,ids),mySaved(userId,ids)]);
   setPosts(current=>offset?[...current.filter(p=>!ids.includes(p.id)),...result.items]:result.items);
-  setLiked(current=>new Set([...offset?Array.from(current):[],...newLikes]));
-  setSaved(current=>new Set([...offset?Array.from(current):[],...newSaved]));
+  setLiked(current=>new Set([...(offset?Array.from(current):[]),...newLikes]));
+  setSaved(current=>new Set([...(offset?Array.from(current):[]),...newSaved]));
   setMore(result.more);
  },[community.id,userId]);
  const refresh=useCallback(async()=>{
@@ -1035,6 +1035,11 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
 
 function CommunityScreen({userId}:{userId:string}){
  const [items,setItems]=useState<Community[]>([]),[joined,setJoined]=useState<Set<string>>(new Set());
+ const [selected,setSelected]=useState<Community|null>(null);
+ const [createOpen,setCreateOpen]=useState(false);
+ const [newName,setNewName]=useState(''),[newSlug,setNewSlug]=useState('');
+ const [newDescription,setNewDescription]=useState(''),[newRules,setNewRules]=useState('');
+ const [showMine,setShowMine]=useState(false);
  const [query,setQuery]=useState(''),[busy,setBusy]=useState<string|null>(null);
  const [error,setError]=useState(''),[loading,setLoading]=useState(true);
  const load=useCallback(async()=>{
@@ -1043,7 +1048,9 @@ function CommunityScreen({userId}:{userId:string}){
   catch(e){setError(errorMessage(e));}finally{setLoading(false);}
  },[userId]);
  useEffect(()=>{void load();},[load]);
- const filtered=items.filter(x=>(x.name+' '+(x.description||'')).toLowerCase().includes(query.toLowerCase().trim()));
+ const filtered=items.filter(x=>
+  (x.name+' '+(x.description||'')).toLowerCase().includes(query.toLowerCase().trim())&&
+  (!showMine||joined.has(x.id)));
  const toggle=async(c:Community)=>{
   setBusy(c.id);setError('');
   try{
@@ -1053,11 +1060,99 @@ function CommunityScreen({userId}:{userId:string}){
    });
   }catch(e){setError(errorMessage(e));}finally{setBusy(null);}
  };
+ const submitCreate=async()=>{
+  if(busy)return;
+  setBusy('creating');setError('');
+  try{
+   const result=await createCommunity(userId,newName,newSlug,newDescription,newRules);
+   setNewName('');setNewSlug('');setNewDescription('');setNewRules('');
+   setCreateOpen(false);setSelected(result.community);
+   await load();
+   if(result.warning)Alert.alert('Comunidade criada',result.warning);
+  }catch(e){setError(errorMessage(e));}
+  finally{setBusy(null);}
+ };
+ if(selected)return <CommunityDetailScreen community={selected} userId={userId}
+  member={joined.has(selected.id)} onBack={()=>setSelected(null)}
+  onMembership={async()=>{
+   const currentlyMember=joined.has(selected.id);
+   await changeMembership(userId,selected.id,currentlyMember);
+   setJoined(old=>{
+    const next=new Set(old);
+    if(currentlyMember)next.delete(selected.id);else next.add(selected.id);
+    return next;
+   });
+  }}/>;
  return <FlatList style={s.screen} data={filtered} keyExtractor={x=>x.id}
   refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void load()}/>}
-  ListHeaderComponent={<View><Heading title="Comunidades" subtitle="Descubra pessoas com os mesmos interesses."/>
-   <Field value={query} onChangeText={setQuery} placeholder="Buscar comunidades"/>
-   <ErrorNotice text={error}/></View>}
+  ListHeaderComponent={<View>
+   <Heading eyebrow="descubra" title="Comunidades"
+    subtitle="Pessoas e ideias que têm tudo a ver com você."/>
+   <View style={[s.row,{justifyContent:'space-between',gap:10,marginBottom:10}]}>
+    <Action label="Criar comunidade" onPress={()=>setCreateOpen(true)}
+     leading={<Plus size={17} color="#FFF"/>}/>
+    <Action secondary label={showMine?'Ver todas':'Minhas'}
+     onPress={()=>setShowMine(v=>!v)}/>
+   </View>
+   <View style={[s.row,{backgroundColor:t.surface,borderColor:t.line,
+    borderWidth:1,borderRadius:13,paddingHorizontal:12,marginBottom:11}]}>
+    <Search size={18} color={t.muted}/>
+    <TextInput value={query} onChangeText={setQuery}
+     accessibilityLabel="Buscar comunidades" placeholder="Buscar comunidades"
+     placeholderTextColor={t.muted} style={{flex:1,minHeight:46,color:t.dark,
+      fontSize:14,paddingHorizontal:9}}/>
+   </View>
+   <ErrorNotice text={error}/>
+   <Modal visible={createOpen} animationType="slide"
+    onRequestClose={()=>{if(!busy)setCreateOpen(false);}}>
+    <SafeAreaProvider>
+     <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
+      <StatusBar style="dark" hidden={Platform.OS==='android'}/>
+      {Platform.OS==='android'&&<NavigationBar hidden style="light"/>}
+      <View style={s.header}>
+       <Pressable accessibilityRole="button" accessibilityLabel="Cancelar criação"
+        onPress={()=>setCreateOpen(false)} disabled={Boolean(busy)}>
+        <X size={23} color={t.dark}/>
+       </Pressable>
+       <Text style={{fontSize:17,fontWeight:'900',color:t.dark}}>Nova comunidade</Text>
+       <View style={{width:23}}/>
+      </View>
+      <ScrollView keyboardShouldPersistTaps="handled"
+       contentContainerStyle={{padding:20,paddingBottom:45,gap:7}}>
+       <GradientPanel style={{minHeight:115,marginBottom:12}}>
+        <UsersRound color="#FFF" size={29}/>
+        <Text style={{fontSize:17,fontWeight:'800',color:'#FFF',marginTop:7}}>
+         Reúna pessoas e ideias
+        </Text>
+       </GradientPanel>
+       <Text style={s.primaryText}>Nome da comunidade</Text>
+       <Field value={newName} onChangeText={value=>{
+        if(!newSlug||newSlug===communitySlug(newName))setNewSlug(communitySlug(value));
+        setNewName(value);
+       }} placeholder="Ex.: Amantes de fotografia" maxLength={100}/>
+       <Text style={[s.primaryText,{marginTop:6}]}>Endereço da comunidade</Text>
+       <Field value={newSlug} onChangeText={setNewSlug}
+        placeholder="amantes-de-fotografia" maxLength={60}
+        autoCapitalize="none"/>
+       <Text style={[s.muted,{marginBottom:6}]}>Apenas letras minúsculas, números e hífens.</Text>
+       <Text style={s.primaryText}>Descrição</Text>
+       <Field value={newDescription} onChangeText={setNewDescription}
+        placeholder="Conte o propósito deste espaço" multiline maxLength={3000}/>
+       <Text style={[s.primaryText,{marginTop:6}]}>Regras</Text>
+       <Field value={newRules} onChangeText={setNewRules}
+        placeholder="Como as pessoas devem participar?" multiline maxLength={5000}/>
+       <ErrorNotice text={error}/>
+       <Action fullWidth label={busy==='creating'?'Criando...':'Criar comunidade'}
+        disabled={Boolean(busy)||newName.trim().length<3||newSlug.trim().length<3}
+        onPress={()=>void submitCreate()}/>
+       <Text style={[s.muted,{marginTop:8}]}>
+        Esta comunidade será vinculada à sua conta e seguirá as regras de moderação do Conecta.
+       </Text>
+      </ScrollView>
+     </SafeAreaView>
+    </SafeAreaProvider>
+   </Modal>
+  </View>}
   renderItem={({item})=><View style={s.card}>
    {item.cover_path?<Media path={item.cover_path} height={153}
     radius={15} marginTop={0}/>:
@@ -1087,9 +1182,9 @@ function CommunityScreen({userId}:{userId:string}){
      leading={<UsersRound size={16} color={joined.has(item.id)?t.primary:'#FFF'}/>}
      secondary={joined.has(item.id)} disabled={busy!==null}
      onPress={()=>void toggle(item)}/>
-    <Action secondary label="Explorar"
+    <Action secondary label="Ver comunidade"
      leading={<Compass color={t.primary} size={16}/>}
-     onPress={()=>void openOfficial('/comunidades/'+item.slug)}/>
+     onPress={()=>setSelected(item)}/>
    </View>
   </View>}
   ListEmptyComponent={!loading?<View style={s.empty}><Text style={s.muted}>Nenhuma comunidade encontrada.</Text></View>:<Loading/>}/>;
