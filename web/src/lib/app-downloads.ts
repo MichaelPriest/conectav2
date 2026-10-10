@@ -18,7 +18,7 @@ export function selectLatestAndroidRelease(input:unknown):DownloadRelease|null{
   if(!row||typeof row!=='object')continue;
   const item=row as Record<string,unknown>;
   const tag=typeof item.tag_name==='string'
-   ?/^mobile-v(\\d+)\\.(\\d+)\\.(\\d+)$/.exec(item.tag_name):null;
+   ?/^mobile-v(\d+)\.(\d+)\.(\d+)$/.exec(item.tag_name):null;
   if(!tag||item.draft===true||!Array.isArray(item.assets))continue;
   const nums=tag.slice(1).map(Number) as [number,number,number];
   if(nums.some(n=>!Number.isSafeInteger(n)))continue;
@@ -37,8 +37,8 @@ export function selectLatestAndroidRelease(input:unknown):DownloadRelease|null{
    const notes=typeof item.body==='string'?item.body:'';
    const digest=typeof asset.digest==='string'&&/^sha256:[a-f0-9]{64}$/i.test(asset.digest)
      ?asset.digest.slice(7).toLowerCase():null;
-   const noteDigest=/^APK-SHA256:\\s*([a-f0-9]{64})\\s*$/im.exec(notes)?.[1]?.toLowerCase()||null;
-   const noteSize=/^APK-SIZE:\\s*(\\d+)\\s*$/im.exec(notes)?.[1]||null;
+   const noteDigest=/^APK-SHA256:\s*([a-f0-9]{64})\s*$/im.exec(notes)?.[1]?.toLowerCase()||null;
+   const noteSize=/^APK-SIZE:\s*(\d+)\s*$/im.exec(notes)?.[1]||null;
    if((digest&&noteDigest&&digest!==noteDigest)||(noteSize&&Number(noteSize)!==asset.size))continue;
    found.push({version:nums,release:{
     version,downloadUrl:url.href,
