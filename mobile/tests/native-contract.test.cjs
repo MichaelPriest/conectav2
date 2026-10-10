@@ -205,3 +205,10 @@ test('Foreground notification badge reads private unread count and updates after
  assert.match(app,/onRead:\(\)=>void/);
  assert.match(app,/unreadCount>99\?'99\+':unreadCount/);
 });
+
+test('Switching accounts clears unsent native composer media and previous drafts',()=>{
+ assert.match(app,/setDraftReady\(false\);setText\(''\);setVisibility\('public'\);setMedia\(\[\]\)/);
+ assert.match(app,/conecta-mobile-feed-draft:'\+userId/);
+ assert.match(app,/draftRevision\.current/);
+ assert.match(app,/AsyncStorage\.removeItem\(draftKey\)/);
+});
