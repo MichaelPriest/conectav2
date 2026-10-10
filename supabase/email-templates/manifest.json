@@ -1,0 +1,26 @@
+{
+  "confirmation": {
+    "subject": "Confirme seu e-mail | Conecta",
+    "file": "confirmation.html"
+  },
+  "recovery": {
+    "subject": "Recupere sua senha | Conecta",
+    "file": "recovery.html"
+  },
+  "invite": {
+    "subject": "Você recebeu um convite | Conecta",
+    "file": "invite.html"
+  },
+  "magic_link": {
+    "subject": "Seu link de acesso | Conecta",
+    "file": "magic_link.html"
+  },
+  "email_change": {
+    "subject": "Confirme a alteração do e-mail | Conecta",
+    "file": "email_change.html"
+  },
+  "reauthentication": {
+    "subject": "Seu código de segurança | Conecta",
+    "file": "reauthentication.html"
+  }
+}
