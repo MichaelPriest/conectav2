@@ -15,7 +15,7 @@ import type {ChatMessage,ChatReaction,Community,Friendship,Notice,Post,PostComme
 import {
  blockedUserIds,changeConnection,changeMembership,clearMediaCache,deleteOwnPost,loadChatMessages,loadOlderChatMessages,loadCommunities,
  loadConnections,loadFeed,loadNotifications,loadOwnPosts,loadPermittedPost,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
- publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,setUserBlocked,startChat,unreadNotificationCount,updateMyProfile,verifyAccess
+ ownPostModerationStatus,publishTextPost,readConversation,requestPostModeration,sendMessage,sendPostComment,setLike,setSavedPost,setUserBlocked,startChat,unreadNotificationCount,updateMyProfile,verifyAccess
 } from './src/data';
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
@@ -213,6 +213,24 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onDelete,onComment}:{
  const [sendingComment,setSendingComment]=useState(false);
  const [commentError,setCommentError]=useState('');
  const [loadingComments,setLoadingComments]=useState(false);
+ const [checkingReview,setCheckingReview]=useState(false);
+ const [reviewStatus,setReviewStatus]=useState(post.moderation_status);
+ useEffect(()=>{setReviewStatus(post.moderation_status);},[post.id,post.moderation_status]);
+ const retryReview=async()=>{
+  if(checkingReview||post.author_id!==userId)return;
+  setCheckingReview(true);
+  try{
+   await requestPostModeration(post.id);
+   const result=await ownPostModerationStatus(post.id);
+   setReviewStatus(result.status);
+   Alert.alert(result.status==='approved'?'Publicação aprovada':
+    result.status==='rejected'?'Publicação não aprovada':'Revisão pendente',
+    result.status==='approved'?'A análise liberou a publicação para o público permitido.':
+     result.status==='rejected'?'Este conteúdo não pode ser exibido na rede.':
+      'Ainda aguardando análise. Seu conteúdo não foi liberado para outras pessoas.');
+  }catch(e){Alert.alert('Moderação indisponível',errorMessage(e));}
+  finally{setCheckingReview(false);}
+ };
  const toggleComments=async()=>{
   if(commentsOpen){setCommentsOpen(false);setReplyTo(null);return;}
   setCommentsOpen(true);setLoadingComments(true);setCommentError('');
@@ -261,9 +279,19 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onDelete,onComment}:{
     <Trash2 size={18} color={t.muted}/>
    </Pressable>}
   </View>
-  {post.moderation_status==='pending'&&post.author_id===userId&&
-   <Text style={[s.badge,{marginTop:10}]}>⌛ Aguardando moderação automática</Text>}
-  {post.moderation_status==='rejected'&&post.author_id===userId&&
+  {reviewStatus==='pending'&&post.author_id===userId&&
+   <View style={{marginTop:10,gap:7}}>
+    <Text style={s.badge}>⌛ Em análise · visível somente para você e a moderação</Text>
+    <Pressable accessibilityRole="button" disabled={checkingReview}
+     accessibilityLabel="Verificar moderação da minha publicação"
+     onPress={()=>void retryReview()} style={{padding:9,borderWidth:1,
+      borderColor:t.line,borderRadius:9,alignSelf:'flex-start'}}>
+     <Text style={{color:t.primary,fontWeight:'800',fontSize:12}}>
+      {checkingReview?'Verificando...':'Verificar análise novamente'}
+     </Text>
+    </Pressable>
+   </View>}
+  {reviewStatus==='rejected'&&post.author_id===userId&&
    <Text style={[s.badge,{marginTop:10,color:t.danger}]}>Publicação não aprovada</Text>}
   <Text style={[s.primaryText,{fontSize:14,fontWeight:'400',lineHeight:22,marginTop:12}]}>
    {post.content}
@@ -434,14 +462,19 @@ function FeedScreen({userId,profile,composeRequest}:{
   if(!validPost||busy)return;
   setBusy(true);setError('');
   try{
-   if(pollMode)await publishPollPost(userId,text,visibility,pollOptions,pollDays);
-   else if(media.length)await publishMediaPost(userId,text,visibility,media);
-   else await publishTextPost(userId,text,visibility);
+   const id=pollMode?await publishPollPost(userId,text,visibility,pollOptions,pollDays):
+    media.length?await publishMediaPost(userId,text,visibility,media):
+    await publishTextPost(userId,text,visibility);
+   const verdict=await ownPostModerationStatus(id);
    setText('');setMedia([]);setPollMode(false);
    setPollOptions(['','']);setPollDays(7);setComposerOpen(false);
    await AsyncStorage.removeItem(draftKey).catch(()=>{});
    await refresh();
-   Alert.alert('Publicação enviada','O conteúdo segue as mesmas regras de moderação do site.');
+   Alert.alert(verdict.status==='approved'?'Publicação liberada':
+    verdict.status==='rejected'?'Publicação não aprovada':'Publicação em análise',
+    verdict.status==='approved'?'A triagem foi concluída. Sua publicação está visível conforme as opções de privacidade.':
+     verdict.status==='rejected'?'A publicação não foi liberada pela moderação.':
+      'Sua publicação foi salva e ainda aguarda análise. Somente você e a equipe autorizada podem visualizá-la.');
   }catch(e){setError(errorMessage(e));}
   finally{setBusy(false);}
  };
