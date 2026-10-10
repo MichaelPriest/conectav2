@@ -563,8 +563,14 @@ function ConnectionsScreen({userId,onConversation}:{
  return <FlatList style={s.screen} data={visible} keyExtractor={x=>x.id}
   refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void refresh()}/>}
   ListHeaderComponent={<View><Heading title="Conexões" subtitle="Pessoas que tornam a rede mais próxima."/>
-   <Field value={query} onChangeText={setQuery} placeholder="Buscar nome ou @usuário"/>
-   <View style={[s.row,{gap:7,marginVertical:8}]}>
+   <View style={{flexDirection:'row',gap:10,alignItems:'center',backgroundColor:t.surface,
+    borderColor:t.line,borderWidth:1,borderRadius:14,paddingHorizontal:12,marginBottom:8}}>
+    <Search size={19} color={t.muted}/>
+    <TextInput accessibilityLabel="Buscar pessoas" value={query} onChangeText={setQuery}
+     placeholder="Buscar nome ou @usuário" placeholderTextColor="#959CB1"
+     style={{flex:1,minHeight:48,fontSize:14,color:t.dark}}/>
+   </View>
+   <View style={[s.row,{gap:7,marginVertical:8,flexWrap:'wrap'}]}>
     {([['friends','Minhas'],['received','Convites'],['discover','Descobrir']] as const)
      .map(([id,label])=><Pressable key={id} onPress={()=>setFilter(id)} style={[s.secondary,
       filter===id&&{backgroundColor:t.primary}]}><Text style={[s.secondaryText,
@@ -572,10 +578,13 @@ function ConnectionsScreen({userId,onConversation}:{
    </View><ErrorNotice text={error}/></View>}
   renderItem={({item})=><View style={s.card}>
    <View style={[s.row,{gap:12}]}>
-    <Avatar path={item.avatar_path} name={item.display_name} size={50}/>
-    <View style={s.grow}><Text style={s.primaryText}>{item.display_name}</Text>
-     <Text style={s.muted}>@{item.handle}</Text>
-     {!!item.bio&&<Text numberOfLines={2} style={s.muted}>{item.bio}</Text>}
+    <View style={{borderWidth:2,borderColor:t.subtle,borderRadius:32,padding:3}}>
+     <Avatar path={item.avatar_path} name={item.display_name} size={52}/>
+    </View>
+    <View style={s.grow}><Text style={[s.primaryText,{fontSize:15}]}>{item.display_name}</Text>
+     <Text style={{fontSize:12,fontWeight:'700',color:t.primary}}>@{item.handle}</Text>
+     {!!item.bio&&<Text numberOfLines={2} style={[s.muted,{marginTop:5}]}>
+      {item.bio}</Text>}
     </View>
    </View>
    <View style={[s.row,{marginTop:12,gap:7,flexWrap:'wrap'}]}>
@@ -898,21 +907,42 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
  };
  return <ScrollView style={s.screen} contentContainerStyle={{paddingBottom:28}}>
   <Heading title="Meu perfil" subtitle="Seu espaço, suas histórias e sua identidade."/>
-  <View style={[s.card,{alignItems:'center',paddingVertical:19}]}>
-   <View style={{width:'100%',borderRadius:16,overflow:'hidden',marginBottom:12}}>
-    {coverPath?<Media path={coverPath} height={140}/>:
-     <View style={[a.communityCover,{height:140,justifyContent:'center'}]}>
-      <Text style={{color:'#FFF',fontWeight:'900',fontSize:24}}>conecta ✳</Text>
-     </View>}
+  <View style={[s.card,{alignItems:'center',padding:0,overflow:'hidden'}]}>
+   <View style={{width:'100%',overflow:'hidden'}}>
+    {coverPath?<Media path={coverPath} height={194} radius={0} marginTop={0}/>:
+     <GradientPanel style={{height:194,minHeight:194,borderRadius:0,
+      justifyContent:'flex-start',alignItems:'flex-start'}}>
+      <Brand light/>
+      <Text style={{fontSize:12,color:'#EDE6FF',marginTop:17}}>
+       Sua história tem lugar aqui.
+      </Text>
+     </GradientPanel>}
    </View>
-   <Avatar name={profile.display_name} path={profile.avatar_path} size={86}/>
-   <Text style={[s.title,{marginTop:12,fontSize:22}]}>{profile.display_name}</Text>
-   <Text style={s.muted}>@{profile.handle}</Text>
-   <View style={[s.row,{gap:7,marginTop:13,flexWrap:'wrap',justifyContent:'center'}]}>
-    <Action secondary disabled={busy} label="Alterar foto" onPress={()=>void pickProfilePhoto('avatar')}/>
-    <Action secondary disabled={busy} label="Alterar capa" onPress={()=>void pickProfilePhoto('cover')}/>
+   <View style={{backgroundColor:'#FFF',borderRadius:60,padding:5,
+    marginTop:-44,borderWidth:1,borderColor:t.line}}>
+    <Avatar name={profile.display_name} path={profile.avatar_path} size={87}/>
    </View>
-   <Text style={[s.muted,{marginTop:8}]}>Fotos JPG, PNG ou WebP de até 8 MB.</Text>
+   <Text style={[s.title,{marginTop:8,fontSize:23}]}>{profile.display_name}</Text>
+   <Text style={{fontSize:13,color:t.primary,fontWeight:'800',marginTop:2}}>
+    @{profile.handle}
+   </Text>
+   {!!profile.bio&&<Text style={[s.sub,{textAlign:'center',
+    paddingHorizontal:18,marginTop:10}]}>{profile.bio}</Text>}
+   <View style={[s.row,{gap:8,marginTop:16,flexWrap:'wrap',
+    justifyContent:'center',paddingHorizontal:13}]}>
+    <Action secondary disabled={busy} label="Foto"
+     leading={<Camera color={t.primary} size={17}/>}
+     onPress={()=>void pickProfilePhoto('avatar')}/>
+    <Action secondary disabled={busy} label="Capa"
+     leading={<ImagePlus color={t.primary} size={17}/>}
+     onPress={()=>void pickProfilePhoto('cover')}/>
+    <Action secondary label="Ver perfil"
+     leading={<UserRound color={t.primary} size={17}/>}
+     onPress={()=>void openOfficial('/perfil')}/>
+   </View>
+   <Text style={[s.muted,{marginTop:10,marginBottom:18}]}>
+    Imagens de até 8 MB · Seu espaço, suas regras
+   </Text>
   </View>
   <View style={s.card}>
    <Text style={s.primaryText}>Nome de exibição</Text>
