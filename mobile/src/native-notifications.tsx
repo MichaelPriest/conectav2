@@ -3,6 +3,7 @@ import {AppState,Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import {supabase} from './supabase';
+import {registerRemotePush,unregisterRemotePush} from './remote-push';
 
 const CHANNEL='conecta-social';
 const prefKey=(userId:string)=>'conecta-native-notifications:'+userId;
@@ -46,18 +47,21 @@ export async function setNativeNotificationPreference(userId:string,enabled:bool
   }
   if(!granted)throw new Error('Autorize as notificações nas configurações do celular.');
  }
+ if(enabled){
+  // A missing EAS project/FCM setup never disables foreground notifications.
+  void registerRemotePush(userId).catch(()=>{});
+ }else await unregisterRemotePush(userId);
  await AsyncStorage.setItem(prefKey(userId),enabled?'1':'0');
  for(const listener of listeners)listener(userId,enabled);
  return enabled;
 }
 /**
- * Realtime produces LOCAL notifications only when the app is actively open.
- * This is not background push: FCM/APNs credentials and a secured device-token
- * registration/dispatch service are still required.
+ * Realtime produces LOCAL notifications while the app is open; separately,
+ * opt-in Expo tokens can receive background chat alerts after FCM/APNs setup.
  */
 export function NativeForegroundNotificationBridge({
- userId,onOpenNotifications
-}:{userId:string;onOpenNotifications:()=>void}){
+ userId,onOpenNotifications,onOpenMessages
+}:{userId:string;onOpenNotifications:()=>void;onOpenMessages:()=>void}){
  const [enabled,setEnabled]=useState(false);
  useEffect(()=>{
   let live=true;setEnabled(false);
@@ -74,11 +78,22 @@ export function NativeForegroundNotificationBridge({
   const press=Notifications.addNotificationResponseReceivedListener(response=>{
    const kind=response.notification.request.content.data?.kind;
    if(kind==='native-notice')onOpenNotifications();
+   if(kind==='native-chat')onOpenMessages();
   });
   return()=>press.remove();
- },[onOpenNotifications]);
+  // The OS may launch a cold app from a notification tap.
+  void Notifications.getLastNotificationResponseAsync().then(response=>{
+   const kind=response?.notification.request.content.data?.kind;
+   if(kind==='native-chat')onOpenMessages();
+   if(kind==='native-notice')onOpenNotifications();
+  }).catch(()=>{});
+ },[onOpenNotifications,onOpenMessages]);
  useEffect(()=>{
   if(!enabled)return;
+  void registerRemotePush(userId).catch(()=>{});
+  const foreground=AppState.addEventListener('change',state=>{
+   if(state==='active')void registerRemotePush(userId).catch(()=>{});
+  });
   let live=true;
   const channel=supabase.channel('conecta-native-foreground-'+userId)
    .on('postgres_changes',{
@@ -101,7 +116,7 @@ export function NativeForegroundNotificationBridge({
      });
     }catch{/* Foreground visual notice is best-effort; inbox is authoritative. */}
    }).subscribe();
-  return()=>{live=false;void supabase.removeChannel(channel);};
+  return()=>{live=false;foreground.remove();void supabase.removeChannel(channel);};
  },[userId,enabled]);
  return null;
 }
