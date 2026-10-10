@@ -23,4 +23,11 @@ export type Friendship={id:string;requester_id:string;addressee_id:string;status
 export type Community={id:string;slug:string;name:string;description:string;cover_path:string|null;avatar_path:string|null;is_official:boolean};
 export type Notice={id:string;kind:string;created_at:string;read_at:string|null;entity_id:string|null;profiles:{display_name:string;handle:string}|null};
 export type Thread={id:string;title:string;group:boolean;other:Profile|null;unread:number;last:string;updated:string};
-export type ChatMessage={id:string;conversation_id:string;sender_id:string;content:string;created_at:string;media_path:string|null;media_type:string|null;deleted_at:string|null};
+export type ChatMessage={
+ id:string;conversation_id:string;sender_id:string;content:string;created_at:string;
+ media_path:string|null;media_type:string|null;deleted_at:string|null;
+ edited_at:string|null;reply_to:string|null;
+};
+export type ChatReaction={
+ message_id:string;user_id:string;emoji:string;created_at:string;
+};
