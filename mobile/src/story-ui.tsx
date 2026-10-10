@@ -1,5 +1,9 @@
 import React,{useCallback,useEffect,useState} from 'react';
-import {Alert,AppState,Image,Modal,Pressable,ScrollView,Text,TextInput,View} from 'react-native';
+import {Alert,AppState,Image,Modal,Platform,Pressable,ScrollView,Text,TextInput,View} from 'react-native';
+import {StatusBar} from 'expo-status-bar';
+import {NavigationBar} from 'expo-navigation-bar';
+import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
+import {Camera,ImagePlus,Plus,Sparkles,Video,X} from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import type {Story} from './models';
 import type {SelectedMedia} from './media-validation';
@@ -87,7 +91,7 @@ export function StoryRail({userId}:{userId:string}){
     <View style={{borderWidth:2,borderColor:t.pink,borderRadius:40,padding:4}}>
      <View style={{backgroundColor:t.subtle,borderRadius:30,width:47,height:47,
       justifyContent:'center',alignItems:'center'}}>
-      <Text style={{fontSize:25,color:t.primary}}>＋</Text>
+      <Plus size={27} color={t.primary} strokeWidth={2.3}/>
      </View>
     </View>
     <Text numberOfLines={1} style={s.muted}>Seu Story</Text>
@@ -134,7 +138,11 @@ export function StoryRail({userId}:{userId:string}){
   <ErrorNotice text={error}/>
   <Modal visible={Boolean(selected)} animationType="slide"
    onRequestClose={()=>setSelected(null)}>
-   <View style={{flex:1,backgroundColor:t.dark,paddingTop:55,paddingHorizontal:16,paddingBottom:35}}>
+   <SafeAreaProvider>
+    <SafeAreaView edges={['top','bottom','left','right']}
+     style={{flex:1,backgroundColor:t.dark,paddingTop:12,paddingHorizontal:16,paddingBottom:22}}>
+     <StatusBar style="light" hidden={Platform.OS==='android'}/>
+     {Platform.OS==='android'&&<NavigationBar hidden style="dark"/>}
     <View style={[s.row,{gap:10,marginBottom:16}]}>
      <Avatar path={selected?.profiles?.avatar_path} name={selected?.profiles?.display_name||'Pessoa'} size={43}/>
      <View style={{flex:1}}>
@@ -142,7 +150,7 @@ export function StoryRail({userId}:{userId:string}){
       <Text style={{color:'#E0D4F5',fontSize:12}}>{selected?formatDate(selected.created_at):''}</Text>
      </View>
      <Pressable accessibilityRole="button" accessibilityLabel="Fechar Story"
-      onPress={()=>setSelected(null)}><Text style={{color:'#FFF',fontSize:24}}>✕</Text></Pressable>
+      onPress={()=>setSelected(null)}><X color="#FFF" size={25}/></Pressable>
     </View>
     {selected?.media_type==='image'?
      <Media path={selected.media_path} height={420}/>:
@@ -158,7 +166,8 @@ export function StoryRail({userId}:{userId:string}){
      <Text style={{color:'#F4C6D5',fontSize:12,marginTop:14,textAlign:'center'}}>
       Conteúdo em análise e visível somente conforme permissões da moderação.
      </Text>}
-   </View>
+    </SafeAreaView>
+   </SafeAreaProvider>
   </Modal>
  </View>;
 }
