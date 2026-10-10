@@ -28,7 +28,8 @@
     "react-native-svg": "15.15.4",
     "lucide-react-native": "1.48.0",
     "react-native-safe-area-context": "~5.7.0",
-    "expo-navigation-bar": "~57.0.3"
+    "expo-navigation-bar": "~57.0.3",
+    "expo-splash-screen": "~57.0.9"
   },
   "devDependencies": {
     "@types/react": "19.2.7",
