@@ -11,6 +11,7 @@ import type {SelectedMedia} from './media-validation';
 import {normalizeMedia} from './media-validation';
 import {loadActiveStories,publishStory,removeStory} from './stories';
 import {loadPermittedPost,signedMedia} from './data';
+import {groupedStorySequence,firstUnseenStory,nextStoryInSequence} from './story-sequence';
 import {Avatar,Action,ErrorNotice,Loading,Media,VideoMedia,styles as s} from './ui';
 import {theme as t,formatDate} from './theme';
 
@@ -75,22 +76,8 @@ export function StoryRail({userId,onOpenPost}:{
   return()=>{sub.remove();clearInterval(timer);};
  },[refresh]);
 
- const timeline=useMemo(()=>{
-  const groups=new Map<string,Story[]>();
-  for(const story of stories){
-   if(Date.parse(story.expires_at)<=Date.now())continue;
-   const values=groups.get(story.author_id)||[];
-   values.push(story);groups.set(story.author_id,values);
-  }
-  return [...groups.entries()].sort(([a],[b])=>
-    a===userId?-1:b===userId?1:0).flatMap(([,values])=>
-     values.sort((a,b)=>a.created_at.localeCompare(b.created_at)));
- },[stories,userId]);
- const bubbles=useMemo(()=>{
-  const group=new Map<string,Story>();
-  for(const story of timeline)if(!group.has(story.author_id))group.set(story.author_id,story);
-  return [...group.values()];
- },[timeline]);
+ const sequence=useMemo(()=>groupedStorySequence(stories,userId),[stories,userId]);
+ const timeline=sequence.timeline,bubbles=sequence.bubbles;
  const selectedIndex=selected?timeline.findIndex(story=>story.id===selected.id):-1;
  const groupItems=selected?timeline.filter(story=>story.author_id===selected.author_id):[];
  const groupIndex=selected?groupItems.findIndex(story=>story.id===selected.id):-1;
@@ -101,9 +88,9 @@ export function StoryRail({userId,onOpenPost}:{
  },[refresh]);
  const close=useCallback(()=>{setSelected(null);setSharedPost(null);},[]);
  const advance=useCallback((step:1|-1)=>{
-  const target=timeline[selectedIndex+step];
+  const target=selected?nextStoryInSequence(timeline,selected.id,step):undefined;
   if(target)open(target);else close();
- },[timeline,selectedIndex,open,close]);
+ },[timeline,selected,open,close]);
  const next=useCallback(()=>advance(1),[advance]);
  const trackVideo=useCallback((fraction:number)=>setProgress(fraction),[]);
  useEffect(()=>{
@@ -192,7 +179,7 @@ export function StoryRail({userId,onOpenPost}:{
    </Pressable>
    {bubbles.map(story=><Pressable key={story.id} accessibilityRole="button"
     accessibilityLabel={'Ver Story de '+(story.profiles?.display_name||'pessoa')}
-    onPress={()=>open(story)}
+    onPress={()=>open(firstUnseenStory(timeline,story.author_id,seen)||story)}
     style={{width:75,alignItems:'center',gap:4}}>
     <View style={{borderWidth:2,borderColor:seen.has(story.id)?t.line:t.pink,borderRadius:40,padding:3}}>
      <Avatar path={story.profiles?.avatar_path} name={story.profiles?.display_name||'Pessoa'} size={49}/>
