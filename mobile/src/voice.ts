@@ -9,7 +9,7 @@ import {MAX_MEDIA_BYTES} from './media-validation';
  * HIGH_QUALITY recording uses AAC in an M4A container on Android and iOS.
  */
 export async function sendVoiceMessage(
- conversationId:string,userId:string,recordingUri:string
+ conversationId:string,userId:string,recordingUri:string,replyTo:string|null=null
 ):Promise<void>{
  if(!conversationId||!recordingUri)throw new Error('Gravação de voz indisponível.');
  const {data:{session}}=await supabase.auth.getSession();
@@ -24,7 +24,7 @@ export async function sendVoiceMessage(
  try{
   const {error}=await supabase.from('messages').insert({
    conversation_id:conversationId,sender_id:userId,content:'',
-   media_path:storage_path,media_type:'audio'
+   media_path:storage_path,media_type:'audio',reply_to:replyTo
   });
   if(error)throw error;
  }catch(e){
