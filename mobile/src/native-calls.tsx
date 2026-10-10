@@ -254,6 +254,13 @@ export function NativeCallsProvider({userId,children}:{
   },1800);
   return()=>{clearInterval(timer);void supabase.removeChannel(channel);release();};
  },[userId,release]);
+ // No background microphone/camera capture until Android/iOS call services are configured.
+ useEffect(()=>{
+  const listener=AppState.addEventListener('change',state=>{
+   if(state!=='active'&&stream.current&&rowRef.current)void hangup();
+  });
+  return()=>listener.remove();
+ },[hangup]);
  useEffect(()=>{
   if(!current||current.status!=='accepted'||!pc.current)return;
   const keep=setInterval(()=>{
