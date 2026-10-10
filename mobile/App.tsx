@@ -15,7 +15,7 @@ import type {ChatMessage,ChatReaction,Community,Friendship,Notice,Post,PostComme
 import {
  changeConnection,changeMembership,clearMediaCache,deleteOwnPost,loadChatMessages,loadOlderChatMessages,loadCommunities,
  loadConnections,loadFeed,loadNotifications,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
- publishTextPost,readConversation,sendMessage,sendPost,setLike,setSavedPost,startChat,unreadNotificationCount,updateMyProfile,verifyAccess
+ publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,startChat,unreadNotificationCount,updateMyProfile,verifyAccess
 } from './src/data';
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
 import {formatDate,theme as t} from './src/theme';
