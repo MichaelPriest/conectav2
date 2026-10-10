@@ -803,6 +803,7 @@ export default function App(){
  const [booting,setBooting]=useState(true),[error,setError]=useState('');
  const [tab,setTab]=useState<Tab>('feed');
  const [chatId,setChatId]=useState<string|null>(null);
+ const [composeRequest,setComposeRequest]=useState(0);
  const [unreadCount,setUnreadCount]=useState(0);
  const refreshUnread=useCallback(async(userId:string)=>{
   try{setUnreadCount(await unreadNotificationCount(userId));}
@@ -850,9 +851,19 @@ export default function App(){
   setUnreadCount(0);setUser(null);setProfile(null);setRestricted(null);
  };
  const openConversation=(id:string)=>{setChatId(id);setTab('messages');};
+ const navigate=(key:string)=>{
+  if(key==='create'){
+   setChatId(null);setTab('feed');setComposeRequest(previous=>previous+1);
+   return;
+  }
+  if(key==='feed'||key==='connections'||key==='communities'||
+     key==='profile'||key==='messages'||key==='reels'||key==='notifications'){
+   setChatId(null);setTab(key);
+  }
+ };
  const render=()=>{
   if(!user||!profile)return null;
-  if(tab==='feed')return <FeedScreen userId={user.id}/>;
+  if(tab==='feed')return <FeedScreen userId={user.id} profile={profile} composeRequest={composeRequest}/>;
   if(tab==='reels')return <ReelsScreen userId={user.id}/>;
   if(tab==='connections')return <ConnectionsScreen userId={user.id} onConversation={openConversation}/>;
   if(tab==='messages')return <ChatScreen userId={user.id} initialId={chatId}/>;
@@ -872,39 +883,26 @@ export default function App(){
     <Action secondary label="Sair" onPress={()=>void logout()}/>
    </View>:
    <>
-    <View style={s.header}>
-     <Pressable onPress={()=>setTab('feed')}>
-      <Text style={{fontSize:25,fontWeight:'900',letterSpacing:-1.2,color:t.primaryDark}}>conecta<Text style={{color:t.pink}}>✳</Text></Text>
+    <View style={[s.header,{paddingVertical:10,gap:9}]}>
+     <Pressable accessibilityRole="button" accessibilityLabel="Ir para o início"
+      onPress={()=>navigate('feed')} style={{flexShrink:1}}>
+      <Brand compact/>
      </Pressable>
-     <View style={[s.row,{gap:12}]}>
-      <Pressable accessibilityRole="button"
-       accessibilityLabel={unreadCount?'Notificações, '+unreadCount+' não lidas':'Notificações'}
-       onPress={()=>setTab('notifications')} hitSlop={10}
-       style={{minWidth:36,minHeight:36,justifyContent:'center',alignItems:'center'}}>
-       <Text style={{fontSize:22,color:tab==='notifications'?t.pink:t.primary}}>♧</Text>
-       {unreadCount>0&&<View style={{position:'absolute',top:0,right:0,minWidth:18,
-        height:18,borderRadius:9,backgroundColor:t.pink,alignItems:'center',
-        justifyContent:'center',paddingHorizontal:3}}>
-        <Text style={{color:'#FFF',fontWeight:'800',fontSize:9}}>
-         {unreadCount>99?'99+':unreadCount}
-        </Text>
-       </View>}
-      </Pressable>
-      <Pressable accessibilityLabel="Meu perfil" onPress={()=>setTab('profile')}>
-       <Avatar name={profile.display_name} path={profile.avatar_path} size={33}/>
-      </Pressable>
+     <View style={[s.row,{gap:7,flexShrink:0}]}>
+      <RoundIcon Icon={Search} label="Explorar pessoas" onPress={()=>navigate('connections')}
+       active={tab==='connections'}/>
+      <RoundIcon Icon={Clapperboard} label="Reels" onPress={()=>navigate('reels')}
+       active={tab==='reels'}/>
+      <RoundIcon Icon={MessageCircle} label="Conversas" onPress={()=>navigate('messages')}
+       active={tab==='messages'}/>
+      <RoundIcon Icon={Bell} label={unreadCount>0?
+       unreadCount+' notificações não lidas':'Notificações'}
+       badge={unreadCount} onPress={()=>navigate('notifications')}
+       active={tab==='notifications'}/>
      </View>
     </View>
     {render()}
-    <View style={a.nav}>
-     {TABS.map(item=><Pressable key={item.tab} accessibilityRole="tab"
-      accessibilityState={{selected:tab===item.tab}} accessibilityLabel={item.title}
-      onPress={()=>{setChatId(null);setTab(item.tab);}}
-      style={[a.navItem,tab===item.tab&&a.navSelected]}>
-      <Text style={[a.navIcon,tab===item.tab&&{color:t.primary}]}>{item.symbol}</Text>
-      <Text style={[a.navText,tab===item.tab&&{color:t.primary,fontWeight:'800'}]}>{item.title}</Text>
-     </Pressable>)}
-    </View>
+    <BottomNavigation tab={tab} onNavigate={navigate}/>
    </>}
   <NativeStatusBar barStyle="dark-content" backgroundColor={t.surface}/>
  </SafeAreaView>;
