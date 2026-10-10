@@ -14,7 +14,7 @@ import {SITE_URL,supabase} from './src/supabase';
 import type {ChatMessage,ChatReaction,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './src/models';
 import {
  blockedUserIds,changeConnection,changeMembership,clearMediaCache,deleteOwnPost,loadChatMessages,loadOlderChatMessages,loadCommunities,
- loadConnections,loadFeed,loadNotifications,loadOwnPosts,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
+ loadConnections,loadFeed,loadNotifications,loadOwnPosts,loadPermittedPost,loadPostComments,loadSavedPosts,loadThreads,markNotifications,myLikes,mySaved,
  publishTextPost,readConversation,sendMessage,sendPostComment,setLike,setSavedPost,setUserBlocked,startChat,unreadNotificationCount,updateMyProfile,verifyAccess
 } from './src/data';
 import {Action,Avatar,ErrorNotice,Field,Heading,Loading,Media,ReportContent,VideoMedia,styles as s} from './src/ui';
@@ -1468,7 +1468,67 @@ function CommunityScreen({userId}:{userId:string}){
   ListEmptyComponent={!loading?<View style={s.empty}><Text style={s.muted}>Nenhuma comunidade encontrada.</Text></View>:<Loading/>}/>;
 }
 
-function NotificationsScreen({userId,onRead}:{userId:string;onRead:()=>void}){
+function PostDetailScreen({postId,userId,onBack}:{
+ postId:string;userId:string;onBack:()=>void
+}){
+ const [post,setPost]=useState<Post|null>(null);
+ const [liked,setLiked]=useState(false),[saved,setSaved]=useState(false);
+ const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const refresh=useCallback(async()=>{
+  setLoading(true);setError('');
+  try{
+   const result=await loadPermittedPost(postId,userId);
+   setPost(result);
+   if(result){
+    const [likes,savedIds]=await Promise.all([myLikes(userId,[postId]),mySaved(userId,[postId])]);
+    setLiked(likes.has(postId));setSaved(savedIds.has(postId));
+   }
+  }catch(e){setError(errorMessage(e));}
+  finally{setLoading(false);}
+ },[postId,userId]);
+ useEffect(()=>{void refresh();},[refresh]);
+ const like=async(value:Post)=>{
+  if(busy)return;setBusy(true);setError('');
+  try{await setLike(value.id,userId,liked);setLiked(v=>!v);
+   setPost(old=>old?{...old,post_likes:[{count:Math.max(0,
+    (old.post_likes?.[0]?.count||0)+(liked?-1:1))}]}:null);
+  }catch(e){setError(errorMessage(e));}
+  finally{setBusy(false);}
+ };
+ const save=async(value:Post)=>{
+  if(busy)return;setBusy(true);setError('');
+  try{await setSavedPost(value.id,userId,saved);setSaved(v=>!v);}
+  catch(e){setError(errorMessage(e));}finally{setBusy(false);}
+ };
+ const remove=async(value:Post)=>{
+  if(busy)return;setBusy(true);setError('');
+  try{const warning=await deleteOwnPost(value,userId);setPost(null);
+   if(warning)Alert.alert('Publicação excluída',warning);
+  }catch(e){setError(errorMessage(e));}
+  finally{setBusy(false);}
+ };
+ return <ScrollView style={s.screen} contentContainerStyle={{paddingBottom:38}}>
+  <View style={[s.row,{gap:10,marginTop:14,marginBottom:13}]}>
+   <Action secondary label="Voltar" leading={<ChevronLeft size={17} color={t.primary}/>} onPress={onBack}/>
+   <Text style={[s.primaryText,{fontSize:16}]}>Publicação</Text>
+  </View>
+  {loading?<Loading text="Carregando publicação..."/>:
+   post?<PostCard post={post} userId={userId} liked={liked} saved={saved}
+    onLike={value=>void like(value)} onSave={value=>void save(value)}
+    onDelete={value=>void remove(value)}
+    onComment={()=>setPost(current=>current?{...current,
+     post_comments:[{count:(current.post_comments?.[0]?.count||0)+1}]}:null)}/>:
+   <View style={s.empty}>
+    <Text style={s.primaryText}>Publicação indisponível</Text>
+    <Text style={s.muted}>O conteúdo pode ter sido removido, restrito ou ainda estar em moderação.</Text>
+   </View>}
+  <ErrorNotice text={error}/>
+ </ScrollView>;
+}
+
+function NotificationsScreen({userId,onRead,onPost,onConnections}:{
+ userId:string;onRead:()=>void;onPost:(id:string)=>void;onConnections:()=>void
+}){
  const [items,setItems]=useState<Notice[]>([]),[loading,setLoading]=useState(true);
  const [error,setError]=useState(''),[busy,setBusy]=useState(false),[onlyUnread,setOnlyUnread]=useState(false);
  const load=useCallback(async()=>{
@@ -1503,8 +1563,10 @@ function NotificationsScreen({userId,onRead}:{userId:string;onRead:()=>void}){
    <Text style={[s.muted,{marginTop:5}]}>{formatDate(item.created_at)}</Text>
    <View style={[s.row,{gap:10,marginTop:10}]}>
     {item.kind==='friend_request'||item.kind==='friend_accept'?
-     <Action secondary label="Ver conexões ↗" onPress={()=>void openOfficial('/conexoes')}/>:
-     item.entity_id?<Action secondary label="Ver publicação ↗" onPress={()=>void openOfficial('/post/'+item.entity_id)}/>:null}
+     <Action secondary label="Ver conexões"
+      onPress={onConnections}/>:
+     item.entity_id?<Action secondary label="Ver publicação"
+      onPress={()=>onPost(item.entity_id!)}/>:null}
     {!item.read_at&&<Action secondary disabled={busy} label="Marcar lida" onPress={()=>void mark(item.id)}/>}
    </View>
   </View>}
@@ -1717,6 +1779,7 @@ export default function App(){
  const [booting,setBooting]=useState(true),[error,setError]=useState('');
  const [tab,setTab]=useState<Tab>('feed');
  const [chatId,setChatId]=useState<string|null>(null);
+ const [viewPostId,setViewPostId]=useState<string|null>(null);
  const [contactsMode,setContactsMode]=useState(false);
  const [composeRequest,setComposeRequest]=useState(0);
  const [unreadCount,setUnreadCount]=useState(0);
@@ -1770,6 +1833,7 @@ export default function App(){
  };
  const openConversation=(id:string)=>{setChatId(id);setTab('messages');};
  const navigate=(key:string)=>{
+  setViewPostId(null);
   if(key==='connections')setContactsMode(false);
   if(key==='create'){
    setChatId(null);setTab('feed');setComposeRequest(previous=>previous+1);
@@ -1782,6 +1846,8 @@ export default function App(){
  };
  const render=()=>{
   if(!user||!profile)return null;
+  if(viewPostId)return <PostDetailScreen postId={viewPostId} userId={user.id}
+   onBack={()=>setViewPostId(null)}/>;
   if(tab==='feed')return <FeedScreen userId={user.id} profile={profile} composeRequest={composeRequest}/>;
   if(tab==='reels')return <ReelsScreen userId={user.id}/>;
   if(tab==='connections')return contactsMode?
@@ -1791,7 +1857,9 @@ export default function App(){
     onOpenConnections={()=>setContactsMode(true)}/>;
   if(tab==='messages')return <ChatScreen userId={user.id} initialId={chatId}/>;
   if(tab==='communities')return <CommunityScreen userId={user.id}/>;
-  if(tab==='notifications')return <NotificationsScreen userId={user.id} onRead={()=>void refreshUnread(user.id)}/>;
+  if(tab==='notifications')return <NotificationsScreen userId={user.id}
+   onRead={()=>void refreshUnread(user.id)} onPost={setViewPostId}
+   onConnections={()=>{setContactsMode(true);setTab('connections');}}/>;
   return <ProfileScreen profile={profile} onUpdate={setProfile} onLogout={()=>void logout()}/>;
  };
  return <SafeAreaProvider>
