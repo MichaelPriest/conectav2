@@ -3,6 +3,7 @@ import {Alert,FlatList,Linking,Pressable,RefreshControl,ScrollView,Text,TextInpu
 import {ArrowLeft,Bookmark,Check,Compass,Globe2,Heart,MapPin,MessageCircle,Music2,Search,ShieldCheck,UserPlus,UsersRound,Video} from 'lucide-react-native';
 import {Action,Avatar,ErrorNotice,Heading,Loading,Media,VideoMedia,styles as s} from './ui';
 import {GradientPanel} from './design';
+import {LinkedMediaPreview} from './link-media-ui';
 import {theme as t,formatDate} from './theme';
 import type {Post,Profile,Friendship} from './models';
 import {loadNativeExplore,filterDiscovery,loadNativePublicProfile} from './explore';
@@ -44,6 +45,7 @@ function PublicPostCard({post,userId}:{post:Post;userId:string}){
    <Media key={media.storage_path} path={media.storage_path} height={207} marginTop={7}/>)}
   {!post.post_media?.length&&post.media_type==='image'&&<Media path={post.media_path} height={207}/>}
   {post.media_type==='video'&&<VideoMedia path={post.media_path}/>}
+  <LinkedMediaPreview content={post.content}/>
   <View style={[s.row,{gap:9,marginTop:13}]}>
    <Action secondary disabled={busy} label={liked?'Curtido':'Curtir'}
     leading={<Heart size={15} color={liked?t.pink:t.primary} fill={liked?t.pink:'none'}/>}
