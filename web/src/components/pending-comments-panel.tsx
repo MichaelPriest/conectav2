@@ -23,6 +23,12 @@ export function PendingCommentsPanel({communityId}:{communityId?:string}){
    setLoading(false);
  },[communityId]);
  useEffect(()=>{void load();},[load]);
+ useEffect(()=>{
+  const refresh=()=>{if(document.visibilityState==='visible')void load();};
+  window.addEventListener('focus',refresh);
+  const timer=window.setInterval(refresh,45000);
+  return()=>{window.removeEventListener('focus',refresh);window.clearInterval(timer);};
+ },[load]);
  const chosen=comments.find(item=>item.comment_id===selected);
  async function review(decision:'approve'|'reject'){
   if(busy||!chosen||reason.trim().length<10)return;
