@@ -1,0 +1,29 @@
+/* Profile theme presets: visual skins only; access and moderation rules stay unchanged. */
+.profile-layout-orkut .conecta-profile-cover{border-radius:12px;border:1px solid #bfd0e7;background:linear-gradient(130deg,#b9d7f4,#eef5fc 52%,#9abce5);color:#17365f}
+.profile-layout-orkut .conecta-profile-bio{color:#17365f}
+.profile-layout-orkut .conecta-profile-grid .panel,.profile-layout-orkut .conecta-myspace-panel .panel,.profile-layout-orkut .conecta-public-profile-panel{border:1px solid #c9d8eb;border-radius:12px;background:#f8fbff}
+.profile-layout-orkut .conecta-myspace-panel .feed-title h2{color:#245b91}
+.profile-layout-facebook .conecta-profile-cover{border-radius:10px;background:linear-gradient(125deg,#1877f2,#75a9f8)}
+.profile-layout-facebook .conecta-profile-picture{border-radius:50%;border:4px solid white}
+.profile-layout-facebook .conecta-profile-grid .panel,.profile-layout-facebook .conecta-myspace-panel .panel,.profile-layout-facebook .conecta-public-profile-panel{border-radius:12px}
+.profile-layout-instagram .conecta-profile-cover{border-radius:18px;background:linear-gradient(125deg,#833ab4,#fd1d1d 52%,#fcb045)}
+.profile-layout-instagram .conecta-profile-picture{border-radius:50%;border:3px solid #d94683}
+.profile-layout-instagram .conecta-profile-tags span{border-radius:999px}
+.profile-layout-instagram .conecta-profile-grid{grid-template-columns:1fr}
+.profile-layout-instagram .conecta-profile-grid>.stack:last-child{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));align-items:start}
+.profile-layout-creator .conecta-profile-cover{border-radius:20px;background:linear-gradient(120deg,#111827,#4338ca 55%,#0891b2)}
+.profile-layout-creator .conecta-profile-grid{grid-template-columns:minmax(0,1.5fr) minmax(220px,.65fr)}
+.profile-layout-creator .conecta-profile-grid>.panel:first-child{border-top:3px solid #6366f1}
+.profile-layout-creator .conecta-profile-tags span{border-radius:8px;background:rgba(99,102,241,.12)}
+.conecta-profile-cover.cover-forest{background:linear-gradient(130deg,#14532d,#65a30d,#bef264)}
+.conecta-profile-cover.cover-ocean{background:linear-gradient(130deg,#075985,#0891b2,#67e8f9)}
+.conecta-profile-cover.cover-graphite{background:linear-gradient(130deg,#111827,#4b5563,#9ca3af)}
+.conecta-profile-cover.cover-candy{background:linear-gradient(130deg,#ec4899,#a855f7,#38bdf8)}
+.profile-layout-orkut .conecta-profile-cover[style*="background-image"],
+.profile-layout-facebook .conecta-profile-cover[style*="background-image"],
+.profile-layout-instagram .conecta-profile-cover[style*="background-image"],
+.profile-layout-creator .conecta-profile-cover[style*="background-image"]{background-blend-mode:normal}
+@media(max-width:690px){
+ .profile-layout-instagram .conecta-profile-grid,.profile-layout-creator .conecta-profile-grid{grid-template-columns:1fr}
+ .profile-layout-instagram .conecta-profile-grid>.stack:last-child{grid-template-columns:1fr}
+}
