@@ -95,6 +95,31 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
   const [platformRole,setPlatformRole]=useState<'admin'|'moderator'|null>(null);
 
   useEffect(() => {
+    let active = true;
+    const db = supabaseBrowser();
+    async function loadInterfaceTheme() {
+      const { data, error } = await db.from('profile_details').select('layout_style').eq('user_id', profile.id).maybeSingle();
+      if (!active) return;
+      const allowed = ['classic','orkut','myspace','facebook','instagram','creator','minimal'];
+      const selected = !error && typeof data?.layout_style === 'string' && allowed.includes(data.layout_style)
+        ? data.layout_style : 'classic';
+      document.documentElement.dataset.profileTheme = selected;
+    }
+    void loadInterfaceTheme();
+    const onThemeChange = (event: Event) => {
+      const selected = (event as CustomEvent<string>).detail;
+      if (['classic','orkut','myspace','facebook','instagram','creator','minimal'].includes(selected)) {
+        document.documentElement.dataset.profileTheme = selected;
+      }
+    };
+    window.addEventListener('conecta-profile-theme-change', onThemeChange);
+    return () => {
+      active = false;
+      window.removeEventListener('conecta-profile-theme-change', onThemeChange);
+    };
+  }, [profile.id]);
+
+  useEffect(() => {
     const selected = window.localStorage.getItem('conecta-theme') === 'dark';
     setDark(selected);
     document.documentElement.dataset.theme = selected ? 'dark' : 'light';
