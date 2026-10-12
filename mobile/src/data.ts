@@ -1,4 +1,4 @@
-import {SITE_URL,supabase} from './supabase';
+import {API_SITE_URL,supabase} from './supabase';
 import type {AgeAccess,ChatMessage,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './models';
 
 // All reads and writes are executed as the signed-in user under the existing
@@ -173,7 +173,7 @@ export async function requestContentModeration(kind:'post'|'story',id:string):Pr
  if(!session?.access_token)
   return {status:'pending',reason:'Sessão de revisão indisponível. Tente novamente após entrar na conta.'};
  try{
-  const response=await fetch(SITE_URL+'/api/moderation/review',{
+  const response=await fetch(API_SITE_URL+'/api/moderation/review',{
    method:'POST',
    headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
    body:JSON.stringify({kind,id}),cache:'no-store'
@@ -227,7 +227,7 @@ export async function sendPostComment(postId:string,userId:string,body:string,pa
  const {data:{session}}=await supabase.auth.getSession();
  if(session?.access_token){
   try{
-   await fetch(SITE_URL+'/api/moderation/comment',{
+   await fetch(API_SITE_URL+'/api/moderation/comment',{
     method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
     body:JSON.stringify({id:data.id}),cache:'no-store'
    });
