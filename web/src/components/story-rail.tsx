@@ -7,6 +7,7 @@ import {supabaseBrowser} from '@/lib/supabase/browser';
 import {optimizeImage} from '@/lib/media';
 import {requestContentModeration} from '@/lib/submit-moderation';
 import {ProfileAvatar} from '@/components/profile-avatar';
+import {ReportContentButton} from '@/components/report-content-button';
 import {ModerationAppealButton} from '@/components/moderation-appeal-button';
 import type {UserProfile} from '@/lib/types';
 
@@ -273,6 +274,7 @@ export function StoryRail({userId,profile}:{userId:string;profile:UserProfile|nu
         </Link>}
         <button type="button" className="btn btn-outline" aria-label="Próximo Story"
          onClick={next}>Próximo <ChevronRight size={19}/></button>
+        {selected.author_id!==userId&&selected.moderation_status==='approved'&&<ReportContentButton targetType="story" targetId={selected.id} reporterId={userId}/>}
         {selected.author_id===userId&&<button type="button" disabled={deleting}
          onClick={()=>void removeStory()}><Trash2 size={16}/> Excluir</button>}
        </footer>
