@@ -9,7 +9,7 @@ import type {ProfileDetails} from './profile-details';
 const labels:Record<string,string>={
  violet:'Violeta',aqua:'Azul',pink:'Rosa',sunset:'Pôr do sol',midnight:'Noite',
  forest:'Floresta',ocean:'Oceano',graphite:'Grafite',candy:'Candy retrô',
- classic:'Clássico',orkut:'Orkut',myspace:'MySpace',facebook:'Facebook',instagram:'Instagram',creator:'Criador',minimal:'Minimalista'
+ classic:'Clássico',orkut:'Orkut',myspace:'MySpace',facebook:'Facebook',instagram:'Instagram',creator:'Criador',minimal:'Minimalista',aurora:'Aurora',glass:'Glass UI',neo:'Neo Editorial'
 };
 export function ProfileDetailsEditor({userId,onClose,onSaved}:{
  userId:string;onClose:()=>void;onSaved:()=>void
