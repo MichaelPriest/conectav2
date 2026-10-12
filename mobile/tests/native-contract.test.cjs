@@ -88,7 +88,7 @@ test('Native comments, bookmarks and inline videos use actual authorized databas
  const ui=read('src/ui.tsx');
  const appConfig=JSON.parse(read('app.json'));
  assert.match(data,/from\('post_comments'\)\.insert\(/);
- assert.match(data,/SITE_URL\+'\/api\/moderation\/comment'/);
+ assert.match(data,/API_SITE_URL\+'\/api\/moderation\/comment'/);
  assert.match(data,/from\('saved_posts'\)\.insert\(/);
  assert.match(data,/from\('saved_posts'\)\.delete\(/);
  assert.match(app,/loadPostComments\(/);
