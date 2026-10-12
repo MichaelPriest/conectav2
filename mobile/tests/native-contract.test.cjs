@@ -355,3 +355,17 @@ test('Compact mobile header avoids duplicating bottom navigation and keeps chat 
  assert.doesNotMatch(header,/Icon=\{Clapperboard\} label="Reels"/);
  assert.match(app,/BottomNavigation tab=\{tab\} onNavigate=\{navigate\}/);
 });
+
+test('YouTube embeds send a mobile player referrer and allow official media hosts',()=>{
+ const player=read('src/link-media-ui.tsx');
+ const links=read('src/link-media.ts');
+ assert.match(player,/provider==='YouTube'\?\{/);
+ assert.match(player,/baseUrl:'https:\/\/conectav2\.vercel\.app\/'/);
+ assert.match(player,/referrerpolicy="strict-origin-when-cross-origin"/);
+ assert.match(player,/youtubeHostAllowed\(url\.hostname\)/);
+ assert.match(player,/youtube-nocookie\.com/);
+ assert.match(player,/googlevideo\.com/);
+ assert.match(player,/url\.protocol!=='https:'/);
+ assert.match(player,/Abrir no \{media\.provider\}/);
+ assert.match(links,/youtube-nocookie\.com\/embed\//);
+});
