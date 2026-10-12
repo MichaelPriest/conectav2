@@ -8,7 +8,7 @@ import {AppState} from 'react-native';
 export const SUPABASE_URL=process.env.EXPO_PUBLIC_SUPABASE_URL||'https://opdlxxrcdsxqmlhgayfm.supabase.co';
 export const SUPABASE_PUBLISHABLE_KEY=process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY||'sb_publishable_nAEGD884flLhsFTNYhxE-A_2yOYNSFI';
 // Public/share URLs must always use the primary production site.
-export const PUBLIC_SITE_URL='https://conectav2-michael-raimundos-projects.vercel.app';
+export const PUBLIC_SITE_URL='https://conectav2.vercel.app';
 // Temporary homologation API origin; not for user-facing links.
 export const API_SITE_URL='https://conectav2-validacao.onrender.com';
 export const supabase=createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
