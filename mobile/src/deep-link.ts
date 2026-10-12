@@ -9,7 +9,7 @@ export type ConectaDestination=
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HANDLE=/^[a-z0-9][a-z0-9._-]{0,39}$/i;
 const SLUG=/^[a-z0-9][a-z0-9-]{1,59}$/;
-const OFFICIAL_HOST='conectav2-michael-raimundos-projects.vercel.app';
+const OFFICIAL_HOST='conectav2.vercel.app';
 const SCHEME_HOSTS=new Set(['','post','p','profile','comunidades','community',
  'communities','notifications','notificacoes','mensagens','messages']);
 
