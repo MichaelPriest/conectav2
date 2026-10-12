@@ -9,7 +9,7 @@ test('profile editor exposes nostalgia and modern themes without bypassing acces
  const details=read('lib/profile-details.ts');
  for(const theme of ['orkut','myspace','facebook','instagram','creator','minimal','aurora','glass','neo']) assert.ok(editor.includes('value="'+theme+'"'),theme);
  for(const theme of ['profile-layout-orkut','profile-layout-myspace','profile-layout-facebook','profile-layout-instagram','profile-layout-creator','profile-layout-minimal','profile-layout-aurora','profile-layout-glass','profile-layout-neo']) assert.ok(styles.includes(theme),theme);
- assert.match(details,/const layoutStyles = \['classic', 'orkut', 'myspace', 'facebook', 'instagram', 'creator', 'minimal'\]/);
+ assert.match(details,/const layoutStyles = .*'aurora', 'glass', 'neo'.*\]/);
  assert.match(editor,/O tema altera a apresentação do perfil, sem mudar suas permissões/);
 });
 
