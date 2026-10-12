@@ -24,10 +24,21 @@ function StoryVideo({path,onEnd,onProgress,paused}:{
  path:string;onEnd:()=>void;onProgress:(fraction:number)=>void;paused:boolean;
 }){
  const [url,setUrl]=useState<string|null>(null);
- useEffect(()=>{let current=true;setUrl(null);
-  void signedMedia(path).then(uri=>{if(current)setUrl(uri);});
+ const [mediaError,setMediaError]=useState('');
+ useEffect(()=>{let current=true;setUrl(null);setMediaError('');
+  void signedMedia(path).then(uri=>{
+   if(!current)return;
+   if(uri)setUrl(uri);
+   else setMediaError('Não foi possível abrir o vídeo protegido. Atualize os Stories e tente novamente.');
+  }).catch(error=>{
+   if(current)setMediaError(describe(error));
+  });
   return()=>{current=false;};
  },[path]);
+ if(mediaError)return <View style={{padding:18,gap:10,alignItems:'center'}}>
+  <Text style={{color:'#FFF',textAlign:'center'}}>{mediaError}</Text>
+  <Text style={{color:'#CFC4E9',fontSize:12,textAlign:'center'}}>O vídeo permanece protegido pelas permissões da publicação.</Text>
+ </View>;
  return url?<PlayingStoryVideo key={url} url={url} onEnd={onEnd}
   onProgress={onProgress} paused={paused}/>:<Loading text="Carregando vídeo protegido..."/>;
 }
