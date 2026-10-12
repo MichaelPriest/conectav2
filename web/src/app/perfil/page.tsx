@@ -15,7 +15,7 @@ import type {ProfileDetails} from '@/lib/profile-details';
 
 type Details=ProfileDetails;
 const empty=DEFAULT_PROFILE_DETAILS;
-const themes:Details['cover_theme'][]=['violet','aqua','pink','sunset','midnight'];
+const themes:Details['cover_theme'][]=['violet','aqua','pink','sunset','midnight','forest','ocean','graphite','candy'];
 
 export default function Profile(){
  const auth=useAuthProfile();
@@ -185,10 +185,16 @@ export default function Profile(){
        <label className="field-label">Sua música ou playlist (Spotify, YouTube, SoundCloud ou Apple Music)<input className="form-input" maxLength={512} value={details.music_url||''} onChange={e=>setDetails(v=>({...v,music_url:e.target.value}))} placeholder="https://open.spotify.com/track/..."/></label>
        <label className="field-label">Status do momento<input className="form-input" maxLength={140} value={details.mood_text}
          onChange={e=>setDetails(v=>({...v,mood_text:e.target.value}))} placeholder="🎵 Ouvindo minha música favorita..."/></label>
-       <label className="field-label">Estilo do meu espaço<select className="form-input" value={details.layout_style}
+       <label className="field-label">Tema completo do perfil<select className="form-input" value={details.layout_style}
          onChange={e=>setDetails(v=>({...v,layout_style:e.target.value as Details['layout_style']}))}>
-         <option value="classic">Clássico</option><option value="myspace">MySpace retrô</option><option value="minimal">Minimalista</option>
-       </select></label>
+         <option value="classic">Conecta — clássico</option>
+         <option value="orkut">Orkut nostálgico — mural e comunidades</option>
+         <option value="myspace">MySpace — perfil expressivo e música</option>
+         <option value="facebook">Facebook — perfil social clássico</option>
+         <option value="instagram">Instagram — foco visual e fotos</option>
+         <option value="creator">Criador — conteúdo em destaque</option>
+         <option value="minimal">Minimalista — visual limpo</option>
+       </select><span className="small-note">O tema altera a apresentação do perfil, sem mudar suas permissões ou quem pode ver seus conteúdos.</span></label>
        <LanguageSelect/>
        <label className="field-label">Imagem de capa do perfil (JPG, PNG ou WebP, até 8 MB)
          <input type="file" className="form-input" accept="image/jpeg,image/png,image/webp" disabled={coverSaving}
@@ -196,7 +202,7 @@ export default function Profile(){
        </label>
        {coverPath&&<button type="button" className="btn btn-outline" disabled={coverSaving} onClick={()=>void removeCover()}><Trash2 size={16}/> Remover imagem da capa</button>}
        <span className="small-note">{coverSaving?'Atualizando imagem de capa...':'Use uma foto ou imagem autoral; evite expor dados pessoais na capa.'}</span>
-       <label className="field-label">Cor da capa<select className="form-input" value={details.cover_theme} onChange={e=>setDetails(v=>({...v,cover_theme:e.target.value as Details['cover_theme']}))}>{themes.map(t=><option key={t} value={t}>{t==='violet'?'Violeta':t==='aqua'?'Água':t==='pink'?'Rosa':t==='sunset'?'Pôr do sol':'Noite'}</option>)}</select></label>
+       <label className="field-label">Cor da capa<select className="form-input" value={details.cover_theme} onChange={e=>setDetails(v=>({...v,cover_theme:e.target.value as Details['cover_theme']}))}>{themes.map(t=><option key={t} value={t}>{t==='violet'?'Violeta':t==='aqua'?'Água':t==='pink'?'Rosa':t==='sunset'?'Pôr do sol':t==='midnight'?'Noite':t==='forest'?'Floresta':t==='ocean'?'Oceano':t==='graphite'?'Grafite':'Candy retrô'}</option>)}</select></label>
        <div className="conecta-profile-emoji"><span>Emoji de assinatura: <strong>{details.favorite_emoji}</strong></span><EmojiButton label="Escolher emoji de assinatura" onSelect={emoji=>setDetails(v=>({...v,favorite_emoji:emoji}))}/></div>
        {error&&<p className="form-error" role="alert">{error}</p>}{notice&&<p className="form-success" role="status">{notice}</p>}
        <button className="btn btn-primary" type="submit" disabled={saving||!ready}><Save size={18}/> {saving?'Salvando...':'Salvar meu perfil'}</button>
