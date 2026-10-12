@@ -30,7 +30,35 @@ begin
     from public.posts p
     where p.id=new.target_id
       and p.author_id<>new.reporter_id
-      and p.community_id is null;
+      and p.community_id is null
+      and p.moderation_status='approved'
+      and exists (
+        select 1 from public.registration_age_declarations a
+        where a.user_id=new.reporter_id and a.declared_band='18_plus'
+      )
+      and not exists (
+        select 1 from public.teen_safety_preferences y
+        where y.user_id=new.reporter_id and y.mode='youth_protection'
+      )
+      and not exists (
+        select 1 from public.user_blocks b
+        where (b.blocker_id=p.author_id and b.blocked_id=new.reporter_id)
+           or (b.blocker_id=new.reporter_id and b.blocked_id=p.author_id)
+      )
+      and (
+        p.visibility='public'
+        or (
+          p.visibility='friends'
+          and exists (
+            select 1 from public.friendships f
+            where f.status='accepted'
+              and (
+                (f.requester_id=p.author_id and f.addressee_id=new.reporter_id)
+                or (f.addressee_id=p.author_id and f.requester_id=new.reporter_id)
+              )
+          )
+        )
+      );
   elsif new.target_type='story' then
     select s.caption,s.media_type,s.author_id
       into content_to_record,media_to_record,offender
@@ -110,6 +138,34 @@ with check (
         where p.id=target_id
           and p.author_id<>(select auth.uid())
           and p.community_id is null
+          and p.moderation_status='approved'
+          and exists (
+            select 1 from public.registration_age_declarations a
+            where a.user_id=(select auth.uid()) and a.declared_band='18_plus'
+          )
+          and not exists (
+            select 1 from public.teen_safety_preferences y
+            where y.user_id=(select auth.uid()) and y.mode='youth_protection'
+          )
+          and not exists (
+            select 1 from public.user_blocks b
+            where (b.blocker_id=p.author_id and b.blocked_id=(select auth.uid()))
+               or (b.blocker_id=(select auth.uid()) and b.blocked_id=p.author_id)
+          )
+          and (
+            p.visibility='public'
+            or (
+              p.visibility='friends'
+              and exists (
+                select 1 from public.friendships f
+                where f.status='accepted'
+                  and (
+                    (f.requester_id=p.author_id and f.addressee_id=(select auth.uid()))
+                    or (f.addressee_id=p.author_id and f.requester_id=(select auth.uid()))
+                  )
+              )
+            )
+          )
       )
     )
     or (
