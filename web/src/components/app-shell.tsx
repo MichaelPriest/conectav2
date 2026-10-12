@@ -100,7 +100,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
     async function loadInterfaceTheme() {
       const { data, error } = await db.from('profile_details').select('layout_style').eq('user_id', profile.id).maybeSingle();
       if (!active) return;
-      const allowed = ['classic','orkut','myspace','facebook','instagram','creator','minimal'];
+      const allowed = ['classic','orkut','myspace','facebook','instagram','creator','minimal','aurora','glass','neo'];
       const selected = !error && typeof data?.layout_style === 'string' && allowed.includes(data.layout_style)
         ? data.layout_style : 'classic';
       document.documentElement.dataset.profileTheme = selected;
