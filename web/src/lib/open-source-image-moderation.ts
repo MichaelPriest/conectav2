@@ -65,7 +65,10 @@ export async function classifyLocalImage(bytes:Uint8Array):Promise<Triage>{
  // people or skin. Keep high/uncertain explicit risk for human reviewers,
  // and let low-risk everyday photos pass the initial on-server scan.
  const sexualRisk=classes.Porn+classes.Hentai+classes.Sexy*0.75;
- const borderline=sexualRisk>=0.36;
+ // The previous 0.36 cutoff sent many ordinary portraits/people photos to
+ // manual review on the Sexy class alone. Keep explicit high-confidence flags,
+ // but reserve the borderline queue for materially stronger combined signals.
+ const borderline=sexualRisk>=0.55;
  return {
   flagged,reviewRequired:flagged||borderline,provider:'nsfwjs-mobilenet-v2',
   reason:flagged?'Possível nudez ou conteúdo sexual explícito; revisão especializada':
