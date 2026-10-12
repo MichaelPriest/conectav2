@@ -4,6 +4,7 @@ import './concept.css';
 import './landing-v3.css';
 import './apps.css';
 import './experience.css';
+import './profile-themes.css';
 import './auth-concept.css';
 import './monetization.css';
 import {LocaleProvider} from '@/lib/i18n';
