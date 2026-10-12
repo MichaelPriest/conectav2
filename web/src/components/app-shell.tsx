@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Bell, Bookmark, Compass, Clapperboard, Home, LogOut, Menu, MessageCircle, Moon, Plus, Search, Settings, Sun, Users, X, PanelLeftClose, PanelLeftOpen, HeartHandshake, ShieldCheck, Smartphone } from 'lucide-react';
+import { Bell, Bookmark, Compass, Clapperboard, Home, LogOut, Menu, MessageCircle, Moon, Plus, Search, Settings, Sun, Users, X, PanelLeftClose, PanelLeftOpen, HeartHandshake, ShieldCheck, Smartphone, MoreHorizontal, ChevronDown } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/lib/types';
 import { supabaseBrowser } from '@/lib/supabase/browser';
@@ -15,17 +15,21 @@ import {ChatPresenceProvider} from '@/components/chat-presence';
 import {ChatCallsProvider} from '@/components/chat-calls';
 import {disableChatPushDevice} from '@/components/chat-push-control';
 
+// Keep everyday destinations visible; less frequent destinations live under "Mais".
 const navItems = [
   { label: 'Início', href: '/feed', icon: Home },
   { label: 'Explorar', href: '/explorar', icon: Compass },
+  { label: 'Comunidades', href: '/comunidades', icon: Users },
+  { label: 'Mensagens', href: '/mensagens', icon: MessageCircle },
+  { label: 'Notificações', href: '/notificacoes', icon: Bell },
+];
+const moreNavItems = [
   { label: 'Reels', href: '/reels', icon: Clapperboard },
   { label: 'Publicações salvas', href: '/salvos', icon: Bookmark },
-  { label: 'Comunidades', href: '/comunidades', icon: Users },
   { label: 'Acolhimento', href: '/acolhimento', icon: HeartHandshake },
   { label: 'Conexões', href: '/conexoes', icon: Users },
-  { label: 'Notificações', href: '/notificacoes', icon: Bell },
-  { label: 'Mensagens', href: '/mensagens', icon: MessageCircle },
-  { label: 'Perfil', href: '/perfil', icon: Settings },
+  { label: 'Baixar aplicativo', href: '/apps', icon: Smartphone },
+  { label: 'Apoiar o Conecta', href: '/apoiar', icon: HeartHandshake },
 ];
 const mobileItems = [
   { label: 'Início', href: '/feed', icon: Home },
@@ -83,6 +87,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
   const router = useRouter();
   const {t}=useLocale();
   const [mobileNav, setMobileNav] = useState(false);
+  const [moreNavOpen, setMoreNavOpen] = useState(false);
   const [sidebarCollapsed,setSidebarCollapsed]=useState(false);
   const [searchValue, setSearchValue] = useState('');
   const [dark, setDark] = useState(false);
@@ -96,6 +101,13 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
     setSidebarCollapsed(window.localStorage.getItem('conecta-sidebar-collapsed')==='1');
     document.documentElement.dataset.calmMode=window.localStorage.getItem('conecta-calm-mode')==='1'?'1':'0';
   }, []);
+
+  useEffect(() => {
+    if (moreNavItems.some(item => pathname === item.href) ||
+        pathname === '/moderacao' || pathname === '/gestao-monetizacao') {
+      setMoreNavOpen(true);
+    }
+  }, [pathname]);
 
   function toggleSidebar(){
     setSidebarCollapsed(prev=>{const value=!prev;window.localStorage.setItem('conecta-sidebar-collapsed',value?'1':'0');return value;});
@@ -164,39 +176,27 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
   return <ChatPresenceProvider userId={profile.id}><ChatCallsProvider userId={profile.id}><div className={"app-layout concept-app "+(sidebarCollapsed?"conecta-sidebar-collapsed":"")}>
     <aside className={'sidebar ' + (mobileNav ? 'sidebar-open' : '')}>
       <div className="sidebar-top"><ConceptBrand href="/feed"/><button type="button" className="icon-btn conecta-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed?"Expandir menu lateral":"Recolher menu lateral"} title={sidebarCollapsed?"Expandir menu lateral":"Recolher menu lateral"} aria-expanded={!sidebarCollapsed}>{sidebarCollapsed?<PanelLeftOpen size={20}/>:<PanelLeftClose size={20}/>}</button><button className="icon-btn close-mobile" type="button" aria-label="Fechar navegação" onClick={() => setMobileNav(false)}><X size={20}/></button></div>
-      <div className="sidebar-section-label">MENU · {t('language')}</div>
+      <div className="sidebar-section-label">PRINCIPAL</div>
       <nav className="nav-links" aria-label="Principal">
-        {navItems.map(({label,href,icon:Icon}) => <Link key={href} href={href} title={t(({'Início':'home','Explorar':'explore','Reels':'reels','Comunidades':'communities','Acolhimento':'support','Conexões':'connections','Notificações':'notifications','Mensagens':'messages','Perfil':'profile','Publicar':'post'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')} onClick={()=>setMobileNav(false)} aria-current={pathname===href?'page':undefined} className={'nav-link '+(pathname===href?'nav-active':'')}>
-          <Icon size={20} strokeWidth={1.9}/><span>{t(({'Início':'home','Explorar':'explore','Reels':'reels','Comunidades':'communities','Acolhimento':'support','Conexões':'connections','Notificações':'notifications','Mensagens':'messages','Perfil':'profile','Publicar':'post'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')}</span>
+        {navItems.map(({label,href,icon:Icon}) => <Link key={href} href={href} title={t(({'Início':'home','Explorar':'explore','Comunidades':'communities','Mensagens':'messages','Notificações':'notifications'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')} onClick={()=>setMobileNav(false)} aria-current={pathname===href?'page':undefined} className={'nav-link '+(pathname===href?'nav-active':'')}>
+          <Icon size={20} strokeWidth={1.9}/><span>{t(({'Início':'home','Explorar':'explore','Comunidades':'communities','Mensagens':'messages','Notificações':'notifications'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')}</span>
           {label==='Notificações' && unread>0 && <span className="concept-nav-count">{unread>99?'99+':unread}</span>}
         </Link>)}
-        <Link href="/apps" title="Baixar aplicativos Android e iPhone" onClick={()=>setMobileNav(false)}
-          aria-current={pathname==='/apps'?'page':undefined}
-          className={'nav-link '+(pathname==='/apps'?'nav-active':'')}>
-          <Smartphone size={20} strokeWidth={1.9}/><span>Baixar aplicativo</span>
-        </Link>
-        <Link href="/apoiar" title="Apoie o Conecta" onClick={()=>setMobileNav(false)}
-          aria-current={pathname==='/apoiar'?'page':undefined}
-          className={'nav-link '+(pathname==='/apoiar'?'nav-active':'')}>
-          <HeartHandshake size={20} strokeWidth={1.9}/><span>Apoiar o Conecta</span>
-        </Link>
-        {platformRole==='admin'&&<Link href="/gestao-monetizacao" title="Interesse comercial" onClick={()=>setMobileNav(false)}
-          aria-current={pathname==='/gestao-monetizacao'?'page':undefined}
-          className={'nav-link '+(pathname==='/gestao-monetizacao'?'nav-active':'')}>
-          <Settings size={20} strokeWidth={1.9}/><span>Interesse comercial</span>
-        </Link>}
-        {platformRole&&<Link href="/moderacao" title="Moderação da plataforma" onClick={()=>setMobileNav(false)}
-          aria-current={pathname==='/moderacao'?'page':undefined}
-          className={'nav-link '+(pathname==='/moderacao'?'nav-active':'')}>
-          <ShieldCheck size={20} strokeWidth={1.9}/><span>Moderação</span>
-        </Link>}
+        <button type="button" className={'nav-link nav-more-toggle '+(moreNavOpen?'nav-active':'')} onClick={()=>setMoreNavOpen(value=>!value)} aria-expanded={moreNavOpen} aria-controls="conecta-more-nav" title="Mais opções">
+          <MoreHorizontal size={20} strokeWidth={1.9}/><span>Mais</span><ChevronDown className="nav-more-chevron" size={15} aria-hidden="true"/>
+        </button>
+        {moreNavOpen&&<div className="nav-more-links" id="conecta-more-nav" aria-label="Mais opções">
+          {moreNavItems.map(({label,href,icon:Icon})=><Link key={href} href={href} title={label} onClick={()=>setMobileNav(false)} aria-current={pathname===href?'page':undefined} className={'nav-link '+(pathname===href?'nav-active':'')}>
+            <Icon size={20} strokeWidth={1.9}/><span>{label}</span>
+          </Link>)}
+          {platformRole==='admin'&&<Link href="/gestao-monetizacao" title="Interesse comercial" onClick={()=>setMobileNav(false)} aria-current={pathname==='/gestao-monetizacao'?'page':undefined} className={'nav-link '+(pathname==='/gestao-monetizacao'?'nav-active':'')}>
+            <Settings size={20} strokeWidth={1.9}/><span>Interesse comercial</span>
+          </Link>}
+          {platformRole&&<Link href="/moderacao" title="Moderação da plataforma" onClick={()=>setMobileNav(false)} aria-current={pathname==='/moderacao'?'page':undefined} className={'nav-link '+(pathname==='/moderacao'?'nav-active':'')}>
+            <ShieldCheck size={20} strokeWidth={1.9}/><span>Moderação</span>
+          </Link>}
+        </div>}
       </nav>
-      <div className="concept-sidebar-note">
-        <span className="concept-sidebar-note-icon"><Users size={20}/></span>
-        <strong>{t('noteTitle')}</strong>
-        <p>{t('noteBody')}</p>
-        <Link href="/comunidades">{t('discover')}</Link>
-      </div>
       <div className="conecta-sidebar-language"><LanguageSelect compact/></div><div className="sidebar-bottom"><Link href="/perfil" className="sidebar-profile"><ProfileAvatar person={profile}/><span className="sidebar-profile-info"><strong>{profile.display_name}</strong><small>@{profile.handle}</small></span></Link><button onClick={logout} className="icon-btn" aria-label="Sair da conta" title={t('logout')}><LogOut size={19}/></button></div>
     </aside>
     {mobileNav && <button className="mobile-overlay" aria-label="Fechar menu" onClick={() => setMobileNav(false)}/>}
