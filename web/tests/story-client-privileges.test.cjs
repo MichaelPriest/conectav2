@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 
-const migration=fs.readFileSync(path.resolve(__dirname,'../../supabase/migrations/20261012223000_conecta_stories_insert_privilege_repair.sql'),'utf8');
+const migration=fs.readFileSync(path.resolve(__dirname,'../../supabase/migrations/20261012221500_conecta_stories_insert_privilege_repair.sql'),'utf8');
 
 test('Story table insert privilege is paired with server-managed field guards',()=>{
   assert.match(migration,/grant select, delete on table public\.stories to authenticated/i);
