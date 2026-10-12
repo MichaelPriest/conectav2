@@ -306,3 +306,51 @@ html[data-profile-theme="neo"] .theme-preview-neo{--preview-bg:#f5f1e8;--preview
 .profile-layout-neo .conecta-profile-cover{border:1px solid #171717;border-radius:3px;background:linear-gradient(110deg,#e34f2f,#f1b92b);color:#171717;box-shadow:5px 5px 0 #171717}
 .profile-layout-neo .conecta-profile-grid .panel,.profile-layout-neo .conecta-myspace-panel .panel,.profile-layout-neo .conecta-public-profile-panel{border:1px solid #252525;border-radius:3px;background:#fffdf7;box-shadow:4px 4px 0 rgba(23,23,23,.12)}
 .profile-layout-neo .conecta-profile-tags span{border:1px solid #171717;border-radius:3px;background:#f1b92b;color:#171717}
+
+
+/* Distinct page geometry per preset: these change the app layout, not just its palette. */
+html[data-profile-theme="classic"] .app-layout{grid-template-columns:258px minmax(0,1fr)}
+html[data-profile-theme="orkut"] .app-layout{grid-template-columns:238px minmax(0,1fr)}
+html[data-profile-theme="orkut"] .page-columns{max-width:1240px;grid-template-columns:minmax(0,1.7fr) minmax(250px,.8fr);gap:22px}
+html[data-profile-theme="orkut"] .post-card,html[data-profile-theme="orkut"] .composer{border-radius:10px;border-width:1px}
+html[data-profile-theme="facebook"] .page-columns{max-width:1320px;grid-template-columns:minmax(0,1.45fr) minmax(270px,.75fr);gap:24px}
+html[data-profile-theme="facebook"] .post-card,html[data-profile-theme="facebook"] .composer{border-radius:12px}
+html[data-profile-theme="myspace"] .app-layout{grid-template-columns:270px minmax(0,1fr)}
+html[data-profile-theme="myspace"] .page-columns{max-width:1280px;grid-template-columns:minmax(0,1fr) minmax(250px,.72fr);gap:22px}
+html[data-profile-theme="myspace"] .post-card,html[data-profile-theme="myspace"] .composer{border-radius:8px;border-width:1px}
+html[data-profile-theme="instagram"] .app-layout{grid-template-columns:230px minmax(0,1fr)}
+html[data-profile-theme="instagram"] .page-columns{max-width:1180px;grid-template-columns:minmax(0,1fr) minmax(220px,.62fr);gap:26px}
+html[data-profile-theme="instagram"] .post-card,html[data-profile-theme="instagram"] .composer{border-radius:22px}
+html[data-profile-theme="creator"] .app-layout{grid-template-columns:246px minmax(0,1fr)}
+html[data-profile-theme="creator"] .page-columns{max-width:1320px;grid-template-columns:minmax(0,1.55fr) minmax(260px,.7fr);gap:30px}
+html[data-profile-theme="creator"] .post-card,html[data-profile-theme="creator"] .composer{border-radius:16px;border-top:2px solid var(--brand)}
+html[data-profile-theme="minimal"] .app-layout{grid-template-columns:220px minmax(0,1fr)}
+html[data-profile-theme="minimal"] .page-columns{max-width:1180px;grid-template-columns:minmax(0,1fr) minmax(220px,.65fr);gap:18px}
+html[data-profile-theme="minimal"] .post-card,html[data-profile-theme="minimal"] .composer{border-radius:8px;padding:20px;box-shadow:none}
+html[data-profile-theme="aurora"] .app-layout{grid-template-columns:250px minmax(0,1fr)}
+html[data-profile-theme="aurora"] .page-columns{max-width:1320px;grid-template-columns:minmax(0,1.5fr) minmax(250px,.72fr);gap:30px;padding-top:34px}
+html[data-profile-theme="aurora"] .sidebar{box-shadow:8px 0 36px rgba(112,82,222,.06)}
+html[data-profile-theme="aurora"] .post-card,html[data-profile-theme="aurora"] .composer{padding:25px}
+html[data-profile-theme="glass"] .app-layout{grid-template-columns:246px minmax(0,1fr)}
+html[data-profile-theme="glass"] .page-columns{max-width:1320px;grid-template-columns:minmax(0,1.5fr) minmax(250px,.72fr);gap:28px}
+html[data-profile-theme="glass"] .panel,html[data-profile-theme="glass"] .card,html[data-profile-theme="glass"] .post-card,html[data-profile-theme="glass"] .composer{background:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.85);backdrop-filter:blur(18px) saturate(145%);box-shadow:var(--shadow)}
+html[data-profile-theme="glass"] .post-card,html[data-profile-theme="glass"] .composer{border-radius:22px}
+html[data-profile-theme="neo"] .app-layout{grid-template-columns:218px minmax(0,1fr)}
+html[data-profile-theme="neo"] .page-columns{max-width:1360px;grid-template-columns:minmax(0,1.6fr) minmax(240px,.68fr);gap:24px}
+html[data-profile-theme="neo"] .sidebar{border-right:2px solid #252525}
+html[data-profile-theme="neo"] .panel,html[data-profile-theme="neo"] .card,html[data-profile-theme="neo"] .post-card,html[data-profile-theme="neo"] .composer{border:2px solid #252525;border-radius:3px;box-shadow:5px 5px 0 rgba(23,23,23,.12)}
+html[data-profile-theme="neo"] .btn{border-radius:3px}
+html[data-profile-theme="neo"] .nav-link{border-radius:3px;font-weight:800}
+html[data-profile-theme="neo"] .page-heading h1{letter-spacing:-.07em;text-transform:uppercase}
+@media(max-width:900px){
+ html[data-profile-theme] .page-columns{grid-template-columns:minmax(0,1fr);max-width:760px}
+ html[data-profile-theme="myspace"] .app-layout,
+ html[data-profile-theme="orkut"] .app-layout,
+ html[data-profile-theme="facebook"] .app-layout,
+ html[data-profile-theme="instagram"] .app-layout,
+ html[data-profile-theme="creator"] .app-layout,
+ html[data-profile-theme="minimal"] .app-layout,
+ html[data-profile-theme="aurora"] .app-layout,
+ html[data-profile-theme="glass"] .app-layout,
+ html[data-profile-theme="neo"] .app-layout{grid-template-columns:1fr}
+}
