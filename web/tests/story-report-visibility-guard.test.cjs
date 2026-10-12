@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const migration=fs.readFileSync(path.resolve(__dirname,'../../supabase/migrations/20261012_conecta_story_report_visibility_guard.sql'),'utf8');
+const migration=fs.readFileSync(path.resolve(__dirname,'../../supabase/migrations/20261012_conecta_story_visibility_report_guard.sql'),'utf8');
 
 test('Story report evidence trigger rejects inaccessible Stories',()=>{
   assert.match(migration,/s\.moderation_status='approved'[\s\S]*s\.expires_at>now\(\)/i);
