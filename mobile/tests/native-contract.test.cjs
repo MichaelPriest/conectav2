@@ -16,6 +16,9 @@ test('External app links target production while moderation API remains separate
  assert.match(read('App.tsx'),/redirectTo:PUBLIC_SITE_URL\+'\/auth\/callback/);
  assert.match(read('App.tsx'),/const url=PUBLIC_SITE_URL\+path/);
  assert.doesNotMatch(links,/OFFICIAL_HOST='conectav2-validacao\.onrender\.com'/);
+ assert.match(read('App.tsx'),/if\\(to\\?\\.type==='messages'\\)/);
+ assert.match(read('App.tsx'),/if\\(to\\?\\.type==='community'\\)/);
+ assert.match(read('App.tsx'),/setCommunitySlugRoute\\(to\\.slug\\)/);
  assert.match(data,/API_SITE_URL\+'\/api\/moderation\/review'/);
  assert.match(data,/API_SITE_URL\+'\/api\/moderation\/comment'/);
 });
