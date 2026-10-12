@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell, Bookmark, Compass, Clapperboard, Home, LogOut, Menu, MessageCircle, Moon, Plus, Search, Settings, Sun, Users, X, PanelLeftClose, PanelLeftOpen, HeartHandshake, ShieldCheck, Smartphone, MoreHorizontal, ChevronDown } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import type { UserProfile } from '@/lib/types';
@@ -38,6 +38,30 @@ const mobileItems = [
   { label: 'Comunidades', href: '/comunidades', icon: Users },
   { label: 'Perfil', href: '/perfil', icon: Settings },
 ];
+const themeShortcutHrefs: Record<string, string[]> = {
+  classic: ['/feed', '/explorar', '/comunidades'],
+  orkut: ['/comunidades', '/mensagens', '/explorar'],
+  myspace: ['/reels', '/mensagens', '/salvos'],
+  facebook: ['/conexoes', '/notificacoes', '/comunidades'],
+  instagram: ['/reels', '/explorar', '/salvos'],
+  creator: ['/reels', '/salvos', '/apps'],
+  minimal: ['/feed', '/explorar', '/mensagens'],
+  aurora: ['/comunidades', '/acolhimento', '/mensagens'],
+  glass: ['/explorar', '/mensagens', '/notificacoes'],
+  neo: ['/feed', '/comunidades', '/reels'],
+};
+const themeMobileOrder: Record<string, string[]> = {
+  classic: ['/feed', '/explorar', '/feed#composer', '/comunidades', '/perfil'],
+  orkut: ['/comunidades', '/feed', '/feed#composer', '/explorar', '/perfil'],
+  myspace: ['/feed', '/feed#composer', '/reels', '/explorar', '/perfil'],
+  facebook: ['/feed', '/comunidades', '/feed#composer', '/explorar', '/perfil'],
+  instagram: ['/feed', '/explorar', '/feed#composer', '/reels', '/perfil'],
+  creator: ['/feed#composer', '/reels', '/explorar', '/comunidades', '/perfil'],
+  minimal: ['/feed', '/explorar', '/comunidades', '/feed#composer', '/perfil'],
+  aurora: ['/feed', '/comunidades', '/feed#composer', '/explorar', '/perfil'],
+  glass: ['/explorar', '/feed', '/feed#composer', '/comunidades', '/perfil'],
+  neo: ['/feed#composer', '/comunidades', '/feed', '/explorar', '/perfil'],
+};
 
 export function useAuthProfile() {
   const router = useRouter();
@@ -93,6 +117,8 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
   const [dark, setDark] = useState(false);
   const [unread, setUnread] = useState(0);
   const [platformRole,setPlatformRole]=useState<'admin'|'moderator'|null>(null);
+  const [profileTheme,setProfileTheme]=useState('classic');
+  const searchInputRef=useRef<HTMLInputElement|null>(null);
 
   useEffect(() => {
     let active = true;
@@ -104,12 +130,14 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
       const selected = !error && typeof data?.layout_style === 'string' && allowed.includes(data.layout_style)
         ? data.layout_style : 'classic';
       document.documentElement.dataset.profileTheme = selected;
+      setProfileTheme(selected);
     }
     void loadInterfaceTheme();
     const onThemeChange = (event: Event) => {
       const selected = (event as CustomEvent<string>).detail;
       if (['classic','orkut','myspace','facebook','instagram','creator','minimal','aurora','glass','neo'].includes(selected)) {
         document.documentElement.dataset.profileTheme = selected;
+        setProfileTheme(selected);
       }
     };
     window.addEventListener('conecta-profile-theme-change', onThemeChange);
@@ -145,6 +173,36 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
       return selected;
     });
   }
+
+  useEffect(() => {
+    function onShortcut(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const editing = !!target && (target.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(target.tagName));
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if (editing || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      const destinations: Record<string, string> = {
+        '1': '/feed', '2': '/explorar', '3': '/comunidades', '4': '/mensagens', '5': '/notificacoes'
+      };
+      if (destinations[event.key]) {
+        event.preventDefault();
+        router.push(destinations[event.key]);
+      }
+    }
+    window.addEventListener('keydown', onShortcut);
+    return () => window.removeEventListener('keydown', onShortcut);
+  }, [router]);
+
+  const shortcutPool = [...navItems, ...moreNavItems];
+  const activeQuickShortcuts = (themeShortcutHrefs[profileTheme] || themeShortcutHrefs.classic)
+    .map(href => shortcutPool.find(item => item.href === href))
+    .filter((item): item is (typeof shortcutPool)[number] => Boolean(item));
+  const activeMobileItems = [...mobileItems].sort((a,b) =>
+    (themeMobileOrder[profileTheme] || themeMobileOrder.classic).indexOf(a.href) -
+    (themeMobileOrder[profileTheme] || themeMobileOrder.classic).indexOf(b.href));
 
   function search(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -221,12 +279,18 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
           </Link>}
         </div>
       </nav>
+      <section className="theme-quick-shortcuts" aria-label="Atalhos rápidos do tema">
+        <div className="sidebar-section-label">ATALHOS</div>
+        {activeQuickShortcuts.map(({label,href,icon:Icon})=><Link key={href} href={href} title={label} onClick={()=>setMobileNav(false)} className={'nav-link theme-shortcut '+(pathname===href?'nav-active':'')} aria-current={pathname===href?'page':undefined}>
+          <Icon size={18} strokeWidth={1.9}/><span>{label}</span>
+        </Link>)}
+      </section>
       <div className="conecta-sidebar-language"><LanguageSelect compact/></div><div className="sidebar-bottom"><Link href="/perfil" className="sidebar-profile"><ProfileAvatar person={profile}/><span className="sidebar-profile-info"><strong>{profile.display_name}</strong><small>@{profile.handle}</small></span></Link><button onClick={logout} className="icon-btn" aria-label="Sair da conta" title={t('logout')}><LogOut size={19}/></button></div>
     </aside>
     {mobileNav && <button className="mobile-overlay" aria-label="Fechar menu" onClick={() => setMobileNav(false)}/>}
     <div className="workspace">
-      <header className="desktop-topbar"><button type="button" className="icon-btn conecta-topbar-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"} title={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"}>{sidebarCollapsed?<PanelLeftOpen size={20}/>:<PanelLeftClose size={20}/>}</button>
-        <form className="searchbox topbar-search" onSubmit={search}><Search size={18}/><input value={searchValue} onChange={e => setSearchValue(e.target.value)} placeholder={t('search')} aria-label="Buscar no Conecta"/></form>
+      <header className="desktop-topbar"><span className="theme-shortcut-hint" aria-hidden="true">Ctrl/⌘ K · 1–5</span><button type="button" className="icon-btn conecta-topbar-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"} title={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"}>{sidebarCollapsed?<PanelLeftOpen size={20}/>:<PanelLeftClose size={20}/>}</button>
+        <form className="searchbox topbar-search" onSubmit={search}><Search size={18}/><input ref={searchInputRef} value={searchValue} onChange={e => setSearchValue(e.target.value)} placeholder={t('search')} aria-label="Buscar no Conecta"/></form>
         <div className="topbar-actions">
           <button onClick={toggleTheme} className="icon-btn" aria-label={dark?t('light'):t('dark')} title="Alterar tema">{dark ? <Sun size={19}/> : <Moon size={19}/>}</button>
           <Link href="/notificacoes" className="icon-btn concept-notifications-link" title="Notificações" aria-label={unread>0?unread+' notificações não lidas':'Notificações'}><Bell size={19}/>{unread>0 && <span className="concept-notification-dot"/>}</Link>
@@ -237,7 +301,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
       <header className="mobile-header"><button className="icon-btn" type="button" onClick={() => setMobileNav(true)} aria-label="Abrir menu"><Menu size={22}/></button><ConceptBrand href="/feed"/><Link href="/perfil"><ProfileAvatar person={profile} size="small"/></Link></header>
       {children}
       <ChatWidget userId={profile.id}/>
-      <nav className="mobile-bottom-nav" aria-label="Navegação rápida">{mobileItems.map(({label,href,icon:Icon})=><Link aria-label={label} key={href} href={href} aria-current={pathname===href?'page':undefined} className={(pathname===href?'active ':'')+(label==='Publicar'?'concept-mobile-create':'')}><Icon size={22}/><span>{label}</span></Link>)}</nav>
+      <nav className="mobile-bottom-nav" aria-label="Navegação rápida">{activeMobileItems.map(({label,href,icon:Icon})=><Link aria-label={label} key={href} href={href} aria-current={pathname===href?'page':undefined} className={(pathname===href?'active ':'')+(label==='Publicar'?'concept-mobile-create':'')}><Icon size={22}/><span>{label}</span></Link>)}</nav>
     </div>
   </div></ChatCallsProvider></ChatPresenceProvider>;
 }
