@@ -8,7 +8,7 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const app=read('App.tsx'),data=read('src/data.ts'),config=read('src/supabase.ts');
 test('External app links target production while moderation API remains separate',()=>{
  const config=read('src/supabase.ts'),links=read('src/deep-link.ts'),data=read('src/data.ts');
- assert.match(config,/PUBLIC_SITE_URL='https:\/\/conectav2-michael-raimundos-projects\.vercel\.app'/);
+ assert.match(config,/PUBLIC_SITE_URL='https:\/\/conectav2\.vercel\.app'/);
  assert.match(config,/API_SITE_URL='https:\/\/conectav2-validacao\.onrender\.com'/);
  assert.match(links,/OFFICIAL_HOST='conectav2-michael-raimundos-projects\.vercel\.app'/);
  assert.match(read('App.tsx'),/import \{PUBLIC_SITE_URL,supabase\}/);
