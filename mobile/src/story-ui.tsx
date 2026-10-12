@@ -10,7 +10,7 @@ import type {Story,Post} from './models';
 import type {SelectedMedia} from './media-validation';
 import {normalizeMedia} from './media-validation';
 import {loadActiveStories,publishStory,removeStory} from './stories';
-import {loadPermittedPost,signedMedia} from './data';
+import {invalidateSignedMedia,loadPermittedPost,signedMedia} from './data';
 import {groupedStorySequence,firstUnseenStory,nextStoryInSequence} from './story-sequence';
 import {Avatar,Action,ErrorNotice,Loading,Media,VideoMedia,styles as s} from './ui';
 import {theme as t,formatDate} from './theme';
@@ -69,6 +69,7 @@ export function StoryRail({userId,onOpenPost}:{
  const [sharedLoading,setSharedLoading]=useState(false);
  const [progress,setProgress]=useState(0);
  const [imageUrl,setImageUrl]=useState<string|null>(null);
+ const [imageRetry,setImageRetry]=useState(0);
  const [mediaReady,setMediaReady]=useState(false);
  const [paused,setPaused]=useState(false);
  const [seen,setSeen]=useState<Set<string>>(new Set());
@@ -113,7 +114,7 @@ export function StoryRail({userId,onOpenPost}:{
   const storyId=selected?.id;
   const path=selected?.media_type==='image'?selected.media_path:null;
   let active=true;
-  setImageUrl(null);setMediaReady(false);
+  setImageUrl(null);setImageRetry(0);setMediaReady(false);
   if(path)void signedMedia(path).then(url=>{
    if(active){setImageUrl(url);if(!url)setError('Não foi possível abrir a imagem protegida.');}
   }).catch(e=>{if(active)setError(describe(e));});
@@ -314,7 +315,16 @@ export function StoryRail({userId,onOpenPost}:{
        selected?.media_type==='image'&&selected.media_path?
         imageUrl?<Image source={{uri:imageUrl}} resizeMode="contain"
          onLoad={()=>setMediaReady(true)}
-         onError={()=>setError('Não foi possível carregar a foto do Story.')}
+         onError={()=>{
+          if(selected?.media_path&&imageRetry===0){
+           const path=selected.media_path;
+           invalidateSignedMedia(path);setImageRetry(1);setMediaReady(false);
+           void signedMedia(path).then(url=>{
+            if(url)setImageUrl(url);
+            else setError('Não foi possível carregar a foto do Story. Atualize e tente novamente.');
+           }).catch(e=>setError(describe(e)));
+          }else setError('Não foi possível carregar a foto do Story. Atualize e tente novamente.');
+         }}
          style={{width:'100%',height:440}}/>:
         <Loading text="Carregando foto do Story..."/>:
        selected?.media_type==='video'&&selected.media_path?
