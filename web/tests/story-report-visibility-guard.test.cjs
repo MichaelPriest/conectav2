@@ -28,3 +28,17 @@ test('Existing message and post report paths remain present',()=>{
   assert.match(migration,/target_type='message'[\s\S]*app_private\.is_conversation_member/i);
   assert.match(migration,/target_type='post'[\s\S]*p\.community_id is null/i);
 });
+
+
+test('Private, expired, own, blocked, and pending Stories are not reportable',()=>{
+  const trigger=migration.slice(migration.indexOf("elsif new.target_type='story'"),migration.indexOf('\n  else',migration.indexOf("elsif new.target_type='story'")));
+  const policy=migration.slice(migration.indexOf("target_type='story'"));
+  for(const sql of [trigger,policy]){
+    assert.match(sql,/author_id<>/i);
+    assert.match(sql,/moderation_status='approved'/i);
+    assert.match(sql,/expires_at>now\(\)/i);
+    assert.match(sql,/visibility='public'[\s\S]*visibility='friends'/i);
+    assert.doesNotMatch(sql,/visibility='private'/i);
+    assert.match(sql,/user_blocks/i);
+  }
+});
