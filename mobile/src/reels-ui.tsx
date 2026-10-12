@@ -3,7 +3,7 @@ import {FlatList,Pressable,RefreshControl,Share,Text,View} from 'react-native';
 import type {Post} from './models';
 import {loadPublicReels,myLikes,setLike} from './data';
 import {Action,Avatar,ErrorNotice,Heading,Loading,VideoMedia,styles as s} from './ui';
-import {SITE_URL} from './supabase';
+import {PUBLIC_SITE_URL} from './supabase';
 import {theme as t,formatDate} from './theme';
 
 const describe=(e:unknown)=>e instanceof Error?e.message:'Não foi possível carregar os vídeos.';
@@ -69,7 +69,7 @@ export function ReelsScreen({userId}:{userId:string}){
       onPress={()=>void toggleLike(item)}/>
      <Text style={s.muted}>◌ {item.post_comments?.[0]?.count||0} comentários</Text>
      <Pressable accessibilityRole="button" accessibilityLabel="Compartilhar vídeo"
-      onPress={()=>{void Share.share({message:SITE_URL+'/post/'+item.id}).catch(e=>setError(describe(e)));}}>
+      onPress={()=>{void Share.share({message:PUBLIC_SITE_URL+'/post/'+item.id}).catch(e=>setError(describe(e)));}}>
       <Text style={s.secondaryText}>↗ Compartilhar</Text>
      </Pressable>
     </View>
