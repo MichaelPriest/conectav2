@@ -185,7 +185,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
         <button type="button" className={'nav-link nav-more-toggle '+(moreNavOpen?'nav-active':'')} onClick={()=>setMoreNavOpen(value=>!value)} aria-expanded={moreNavOpen} aria-controls="conecta-more-nav" title="Mais opções">
           <MoreHorizontal size={20} strokeWidth={1.9}/><span>Mais</span><ChevronDown className="nav-more-chevron" size={15} aria-hidden="true"/>
         </button>
-        {moreNavOpen&&<div className="nav-more-links" id="conecta-more-nav" aria-label="Mais opções">
+        <div className="nav-more-links" id="conecta-more-nav" aria-label="Mais opções" hidden={!moreNavOpen}>
           {moreNavItems.map(({label,href,icon:Icon})=><Link key={href} href={href} title={label} onClick={()=>setMobileNav(false)} aria-current={pathname===href?'page':undefined} className={'nav-link '+(pathname===href?'nav-active':'')}>
             <Icon size={20} strokeWidth={1.9}/><span>{label}</span>
           </Link>)}
@@ -195,7 +195,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
           {platformRole&&<Link href="/moderacao" title="Moderação da plataforma" onClick={()=>setMobileNav(false)} aria-current={pathname==='/moderacao'?'page':undefined} className={'nav-link '+(pathname==='/moderacao'?'nav-active':'')}>
             <ShieldCheck size={20} strokeWidth={1.9}/><span>Moderação</span>
           </Link>}
-        </div>}
+        </div>
       </nav>
       <div className="conecta-sidebar-language"><LanguageSelect compact/></div><div className="sidebar-bottom"><Link href="/perfil" className="sidebar-profile"><ProfileAvatar person={profile}/><span className="sidebar-profile-info"><strong>{profile.display_name}</strong><small>@{profile.handle}</small></span></Link><button onClick={logout} className="icon-btn" aria-label="Sair da conta" title={t('logout')}><LogOut size={19}/></button></div>
     </aside>
