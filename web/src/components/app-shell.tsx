@@ -103,10 +103,9 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
   }, []);
 
   useEffect(() => {
-    if (moreNavItems.some(item => pathname === item.href) ||
-        pathname === '/moderacao' || pathname === '/gestao-monetizacao') {
-      setMoreNavOpen(true);
-    }
+    const secondaryRoute = moreNavItems.some(item => pathname === item.href) ||
+      pathname === '/moderacao' || pathname === '/gestao-monetizacao';
+    setMoreNavOpen(secondaryRoute);
   }, [pathname]);
 
   function toggleSidebar(){
