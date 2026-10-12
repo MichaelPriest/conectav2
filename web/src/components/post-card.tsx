@@ -109,7 +109,7 @@ export function PostCard({ post, userId, refresh, onSavedChange }: { post: FeedP
   }
 
   async function share() {
-    const address = `https://conectav2-michael-raimundos-projects.vercel.app/post/${encodeURIComponent(post.id)}`;
+    const address = `https://conectav2.vercel.app/post/${encodeURIComponent(post.id)}`;
     if (navigator.share) { try {await navigator.share({title:'Conecta',url:address});} catch {/* usuário cancelou */} }
     else { await navigator.clipboard.writeText(address);setNotice('Link copiado!'); }
   }
