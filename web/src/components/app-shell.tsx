@@ -38,17 +38,17 @@ const mobileItems = [
   { label: 'Comunidades', href: '/comunidades', icon: Users },
   { label: 'Perfil', href: '/perfil', icon: Settings },
 ];
-const themeShortcutHrefs: Record<string, string[]> = {
-  classic: ['/feed', '/explorar', '/comunidades'],
-  orkut: ['/comunidades', '/mensagens', '/explorar'],
-  myspace: ['/reels', '/mensagens', '/salvos'],
-  facebook: ['/conexoes', '/notificacoes', '/comunidades'],
-  instagram: ['/reels', '/explorar', '/salvos'],
-  creator: ['/reels', '/salvos', '/apps'],
-  minimal: ['/feed', '/explorar', '/mensagens'],
-  aurora: ['/comunidades', '/acolhimento', '/mensagens'],
-  glass: ['/explorar', '/mensagens', '/notificacoes'],
-  neo: ['/feed', '/comunidades', '/reels'],
+const themePrimaryOrder: Record<string, string[]> = {
+  classic: ['/feed', '/explorar', '/comunidades', '/mensagens', '/notificacoes'],
+  orkut: ['/comunidades', '/mensagens', '/feed', '/explorar', '/notificacoes'],
+  myspace: ['/feed', '/mensagens', '/explorar', '/comunidades', '/notificacoes'],
+  facebook: ['/feed', '/conexoes', '/comunidades', '/mensagens', '/notificacoes'],
+  instagram: ['/feed', '/explorar', '/mensagens', '/notificacoes', '/comunidades'],
+  creator: ['/feed', '/explorar', '/mensagens', '/comunidades', '/notificacoes'],
+  minimal: ['/feed', '/explorar', '/mensagens', '/comunidades', '/notificacoes'],
+  aurora: ['/feed', '/comunidades', '/mensagens', '/explorar', '/notificacoes'],
+  glass: ['/explorar', '/feed', '/mensagens', '/notificacoes', '/comunidades'],
+  neo: ['/feed', '/comunidades', '/explorar', '/mensagens', '/notificacoes'],
 };
 const themeMobileOrder: Record<string, string[]> = {
   classic: ['/feed', '/explorar', '/feed#composer', '/comunidades', '/perfil'],
@@ -196,10 +196,10 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
     return () => window.removeEventListener('keydown', onShortcut);
   }, [router]);
 
-  const shortcutPool = [...navItems, ...moreNavItems];
-  const activeQuickShortcuts = (themeShortcutHrefs[profileTheme] || themeShortcutHrefs.classic)
-    .map(href => shortcutPool.find(item => item.href === href))
-    .filter((item): item is (typeof shortcutPool)[number] => Boolean(item));
+  const activeNavItems = [...navItems].sort((a,b) => {
+    const order = themePrimaryOrder[profileTheme] || themePrimaryOrder.classic;
+    return order.indexOf(a.href) - order.indexOf(b.href);
+  });
   const activeMobileItems = [...mobileItems].sort((a,b) => {
     const order = themeMobileOrder[profileTheme] || themeMobileOrder.classic;
     const rank = (href: string) => {
@@ -265,7 +265,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
       <div className="sidebar-top"><ConceptBrand href="/feed"/><button type="button" className="icon-btn conecta-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed?"Expandir menu lateral":"Recolher menu lateral"} title={sidebarCollapsed?"Expandir menu lateral":"Recolher menu lateral"} aria-expanded={!sidebarCollapsed}>{sidebarCollapsed?<PanelLeftOpen size={20}/>:<PanelLeftClose size={20}/>}</button><button className="icon-btn close-mobile" type="button" aria-label="Fechar navegação" onClick={() => setMobileNav(false)}><X size={20}/></button></div>
       <div className="sidebar-section-label">PRINCIPAL</div>
       <nav className="nav-links" aria-label="Principal">
-        {navItems.map(({label,href,icon:Icon}) => <Link key={href} href={href} title={t(({'Início':'home','Explorar':'explore','Comunidades':'communities','Mensagens':'messages','Notificações':'notifications'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')} onClick={()=>setMobileNav(false)} aria-current={pathname===href?'page':undefined} className={'nav-link '+(pathname===href?'nav-active':'')}>
+        {activeNavItems.map(({label,href,icon:Icon}) => <Link key={href} href={href} title={t(({'Início':'home','Explorar':'explore','Comunidades':'communities','Mensagens':'messages','Notificações':'notifications'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')} onClick={()=>setMobileNav(false)} aria-current={pathname===href?'page':undefined} className={'nav-link '+(pathname===href?'nav-active':'')}>
           <Icon size={20} strokeWidth={1.9}/><span>{t(({'Início':'home','Explorar':'explore','Comunidades':'communities','Mensagens':'messages','Notificações':'notifications'} as Record<string, Parameters<typeof t>[0]>)[label]||'home')}</span>
           {label==='Notificações' && unread>0 && <span className="concept-nav-count">{unread>99?'99+':unread}</span>}
         </Link>)}
@@ -284,17 +284,11 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
           </Link>}
         </div>
       </nav>
-      <section className="theme-quick-shortcuts" aria-label="Atalhos rápidos do tema">
-        <div className="sidebar-section-label">ATALHOS</div>
-        {activeQuickShortcuts.map(({label,href,icon:Icon})=><Link key={href} href={href} title={label} onClick={()=>setMobileNav(false)} className={'nav-link theme-shortcut '+(pathname===href?'nav-active':'')} aria-current={pathname===href?'page':undefined}>
-          <Icon size={18} strokeWidth={1.9}/><span>{label}</span>
-        </Link>)}
-      </section>
       <div className="conecta-sidebar-language"><LanguageSelect compact/></div><div className="sidebar-bottom"><Link href="/perfil" className="sidebar-profile"><ProfileAvatar person={profile}/><span className="sidebar-profile-info"><strong>{profile.display_name}</strong><small>@{profile.handle}</small></span></Link><button onClick={logout} className="icon-btn" aria-label="Sair da conta" title={t('logout')}><LogOut size={19}/></button></div>
     </aside>
     {mobileNav && <button className="mobile-overlay" aria-label="Fechar menu" onClick={() => setMobileNav(false)}/>}
     <div className="workspace">
-      <header className="desktop-topbar"><span className="theme-shortcut-hint" aria-hidden="true">Ctrl/⌘ K · Alt+1–5</span><button type="button" className="icon-btn conecta-topbar-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"} title={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"}>{sidebarCollapsed?<PanelLeftOpen size={20}/>:<PanelLeftClose size={20}/>}</button>
+      <header className="desktop-topbar"><button type="button" className="icon-btn conecta-topbar-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"} title={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"}>{sidebarCollapsed?<PanelLeftOpen size={20}/>:<PanelLeftClose size={20}/>}</button>
         <form className="searchbox topbar-search" onSubmit={search}><Search size={18}/><input ref={searchInputRef} value={searchValue} onChange={e => setSearchValue(e.target.value)} placeholder={t('search')} aria-label="Buscar no Conecta"/></form>
         <div className="topbar-actions">
           <button onClick={toggleTheme} className="icon-btn" aria-label={dark?t('light'):t('dark')} title="Alterar tema">{dark ? <Sun size={19}/> : <Moon size={19}/>}</button>
