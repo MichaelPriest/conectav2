@@ -47,7 +47,9 @@ export function ReportContentButton({targetType,targetId,reporterId,communityId}
   }catch(e){
    const code=(e as {code?:string})?.code;
    setError(code==='23505'?'Você já denunciou esse conteúdo.':
-    e instanceof Error?e.message:'Não foi possível enviar a denúncia.');
+    code==='23503'?'Esse conteúdo não está mais disponível para denúncia.':
+    code==='42501'?'Não foi possível confirmar sua permissão para denunciar. Atualize a página e tente novamente.':
+    'Não foi possível enviar a denúncia. Tente novamente.');
   }finally{setBusy(false);}
  }
  if(sent)return <small className="conecta-report-sent" role="status"><Check size={13}/> Denúncia recebida</small>;
