@@ -642,3 +642,9 @@ html[data-profile-theme] .topbar-divider{height:26px;flex:0 0 1px}
 @media(max-width:690px){
  html[data-profile-theme] .desktop-topbar{display:none}
 }
+
+
+/* Backward-compatibility guard: the old duplicate ATALHOS block must never render. */
+.theme-quick-shortcuts,
+.sidebar-shortcuts,
+.conecta-sidebar-shortcuts{display:none!important}
