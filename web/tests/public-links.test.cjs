@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const source=fs.readFileSync(path.resolve(__dirname,'../src/components/post-card.tsx'),'utf8');
-const production='https://conectav2-michael-raimundos-projects.vercel.app';
+const production='https://conectav2.vercel.app';
 test('Shared post URLs always use the primary production host',()=>{
  assert.ok(source.includes(production+'/post/${encodeURIComponent(post.id)}'));
  assert.ok(!source.includes('window.location.origin}/post/'));
