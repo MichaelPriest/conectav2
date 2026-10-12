@@ -19,6 +19,7 @@ const navItems = [
   { label: 'Início', href: '/feed', icon: Home },
   { label: 'Explorar', href: '/explorar', icon: Compass },
   { label: 'Reels', href: '/reels', icon: Clapperboard },
+  { label: 'Publicações salvas', href: '/salvos', icon: Bookmark },
   { label: 'Comunidades', href: '/comunidades', icon: Users },
   { label: 'Acolhimento', href: '/acolhimento', icon: HeartHandshake },
   { label: 'Conexões', href: '/conexoes', icon: Users },
