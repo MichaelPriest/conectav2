@@ -12,7 +12,7 @@ export type ProfileDetails = {
   favorite_emoji: string;
   cover_theme: 'violet' | 'aqua' | 'pink' | 'sunset' | 'midnight' | 'forest' | 'ocean' | 'graphite' | 'candy';
   mood_text: string;
-  layout_style: 'classic' | 'orkut' | 'myspace' | 'facebook' | 'instagram' | 'creator' | 'minimal';
+  layout_style: 'classic' | 'orkut' | 'myspace' | 'facebook' | 'instagram' | 'creator' | 'minimal' | 'aurora' | 'glass' | 'neo';
 };
 
 export const DEFAULT_PROFILE_DETAILS: ProfileDetails = {
@@ -28,7 +28,7 @@ export const DEFAULT_PROFILE_DETAILS: ProfileDetails = {
 };
 
 const coverThemes = ['violet', 'aqua', 'pink', 'sunset', 'midnight', 'forest', 'ocean', 'graphite', 'candy'] as const;
-const layoutStyles = ['classic', 'orkut', 'myspace', 'facebook', 'instagram', 'creator', 'minimal'] as const;
+const layoutStyles = ['classic', 'orkut', 'myspace', 'facebook', 'instagram', 'creator', 'minimal', 'aurora', 'glass', 'neo'] as const;
 
 function textOrEmpty(value: unknown): string {
   return typeof value === 'string' ? value : '';
