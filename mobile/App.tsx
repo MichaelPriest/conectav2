@@ -10,7 +10,7 @@ import {NavigationBar} from 'expo-navigation-bar';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {User} from '@supabase/supabase-js';
-import {SITE_URL,supabase} from './src/supabase';
+import {PUBLIC_SITE_URL,supabase} from './src/supabase';
 import type {ChatMessage,ChatReaction,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './src/models';
 import {
  blockedUserIds,changeConnection,changeMembership,clearMediaCache,deleteOwnPost,loadChatMessages,loadOlderChatMessages,loadCommunities,
@@ -66,7 +66,7 @@ const noticeNames:Record<string,string>={
  mention:'mencionou você',community:'interagiu em sua comunidade'
 };
 const openOfficial=async(path:string)=>{
- const url=SITE_URL+path;
+ const url=PUBLIC_SITE_URL+path;
  if(await Linking.canOpenURL(url))await Linking.openURL(url);
 };
 const errorMessage=(error:unknown)=>error instanceof Error?error.message:
@@ -89,7 +89,7 @@ function SignIn({onSignedIn}:{onSignedIn:()=>void}){
   setBusy(true);setError('');
   try{
    const {error:resetError}=await supabase.auth.resetPasswordForEmail(address,{
-    redirectTo:SITE_URL+'/auth/callback?next=/auth/redefinir-senha'
+    redirectTo:PUBLIC_SITE_URL+'/auth/callback?next=/auth/redefinir-senha'
    });
    if(resetError)throw resetError;
    setRecoverSent(true);
@@ -334,7 +334,7 @@ function PostCard({post,userId,liked,saved,onLike,onSave,onDelete,onComment}:{
     {label:'Comentar',Icon:MessageCircle,selected:commentsOpen,handler:()=>void toggleComments()},
     {label:'Salvar',Icon:Bookmark,selected:saved,handler:()=>onSave(post)},
     {label:'Enviar',Icon:Share2,selected:false,handler:()=>void Share.share({
-      message:SITE_URL+'/post/'+encodeURIComponent(post.id)
+      message:PUBLIC_SITE_URL+'/post/'+encodeURIComponent(post.id)
      }).catch(()=>Alert.alert('Compartilhamento indisponível','Não foi possível abrir o compartilhamento.'))}
    ] as const).map(({label,Icon,selected,handler})=><Pressable key={label}
     accessibilityRole="button" accessibilityLabel={label}
