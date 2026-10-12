@@ -62,3 +62,17 @@ test('missing or invalid older fields cannot crash profile save', () => {
 test('interest values longer than database policy are rejected', () => {
   assert.throws(() => prepareProfileDetails(null, 'x'.repeat(33)), /até 32 caracteres/);
 });
+
+test('all legacy and modern profile theme presets normalize and remain valid choices', () => {
+  const layouts = ['classic', 'orkut', 'myspace', 'facebook', 'instagram', 'creator', 'minimal'];
+  for (const layout_style of layouts) {
+    assert.equal(normalizeProfileDetails({ layout_style }).layout_style, layout_style);
+    assert.equal(prepareProfileDetails({ layout_style }, '').layout_style, layout_style);
+  }
+});
+test('new cover palettes normalize without breaking legacy records', () => {
+  for (const cover_theme of ['forest', 'ocean', 'graphite', 'candy']) {
+    assert.equal(normalizeProfileDetails({ cover_theme }).cover_theme, cover_theme);
+  }
+  assert.equal(normalizeProfileDetails({ cover_theme: 'unknown' }).cover_theme, 'violet');
+});
