@@ -42,3 +42,18 @@ test('Private, expired, own, blocked, and pending Stories are not reportable',()
     assert.match(sql,/user_blocks/i);
   }
 });
+
+
+test('Post reports require approved content visible to the reporter',()=>{
+  const trigger=migration.slice(migration.indexOf("elsif new.target_type='post'"),migration.indexOf("elsif new.target_type='story'"));
+  const policy=migration.slice(migration.indexOf("target_type='post'"),migration.indexOf("target_type='story'"));
+  for(const sql of [trigger,policy]){
+    assert.match(sql,/community_id is null/i);
+    assert.match(sql,/moderation_status='approved'/i);
+    assert.match(sql,/registration_age_declarations[\\s\\S]*declared_band='18_plus'/i);
+    assert.match(sql,/teen_safety_preferences[\\s\\S]*youth_protection/i);
+    assert.match(sql,/user_blocks/i);
+    assert.match(sql,/visibility='public'[\\s\\S]*visibility='friends'[\\s\\S]*friendships f/i);
+    assert.doesNotMatch(sql,/visibility='private'/i);
+  }
+});
