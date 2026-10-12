@@ -11,7 +11,7 @@ import {ModerationAppealsPanel} from '@/components/moderation-appeals-panel';
 
 type QueueItem={
  report_id:string;
- target_type:'post'|'message';
+ target_type:'post'|'message'|'story';
  target_id:string;
  reason:string;
  evidence_excerpt:string;
@@ -166,7 +166,7 @@ export default function PlatformModeration(){
           className={'conecta-safety-list-item '+(selected===report.report_id?'selected':'')}
           onClick={()=>setSelected(report.report_id)}>
          <span className="conecta-safety-list-heading">
-          <strong><Flag size={15}/> {report.target_type==='message'?'Mensagem privada':'Publicação do feed'}</strong>
+          <strong><Flag size={15}/> {report.target_type==='message'?'Mensagem privada':report.target_type==='story'?'Story':'Publicação do feed'}</strong>
           <span className={'conecta-safety-status '+report.status}>{labels[report.status]}</span>
          </span>
          <span className="conecta-safety-reason">{report.reason}</span>
@@ -181,7 +181,7 @@ export default function PlatformModeration(){
         <div className="conecta-safety-detail-content">
          <div className="conecta-safety-detail-heading"><span className={'conecta-safety-status '+item.status}>{labels[item.status]}</span>
           <small>{new Date(item.created_at).toLocaleString('pt-BR')}</small></div>
-         <h2>{item.target_type==='message'?'Denúncia de mensagem privada':'Denúncia de publicação'}</h2>
+         <h2>{item.target_type==='message'?'Denúncia de mensagem privada':item.target_type==='story'?'Denúncia de Story':'Denúncia de publicação'}</h2>
          <div className="conecta-safety-facts">
           <div><span>Conta denunciada</span><strong><UserRound size={14}/> {item.reported_author_handle?'@'+item.reported_author_handle:'Conta não disponível'}</strong></div>
           <div><span>Histórico no Conecta</span><strong>{item.reports_against_author} denúncia(s) sobre esta conta</strong></div>
@@ -193,7 +193,7 @@ export default function PlatformModeration(){
           <blockquote>{item.evidence_excerpt||'[Sem texto; pode conter conteúdo multimídia]'}</blockquote>
           <small>Visualização restrita e limitada ao material denunciado. Não abre histórico completo do chat nem concede acesso a outras conversas.</small>
          </div>
-         {item.target_type==='post'&&<Link className="rail-link" href={'/post/'+item.target_id}>Abrir publicação, se ainda estiver disponível <ArrowLeft size={15}/></Link>}
+         {item.target_type==='post'&&<Link className="rail-link" href={'/post/'+item.target_id}>Abrir publicação, se ainda estiver disponível <ArrowLeft size={15}/></Link>}{item.target_type==='story'&&<p className="small-note">Stories expiram automaticamente; a evidência protegida acima é a referência disponível para a análise.</p>}
          <div className="conecta-safety-decision">
           <h3>Registrar decisão</h3>
           <label className="field-label">Justificativa para encerramento
