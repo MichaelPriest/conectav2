@@ -50,7 +50,7 @@ test('apps page is reachable from public homepage and authenticated sidebar',()=
  const shell=fs.readFileSync(path.resolve(__dirname,'../src/components/app-shell.tsx'),'utf8');
  const page=fs.readFileSync(path.resolve(__dirname,'../src/app/apps/page.tsx'),'utf8');
  assert.match(home,/href="\/apps"/);
- assert.match(shell,/href="\/apps"/);
+ assert.match(shell,/label: 'Baixar aplicativo', href: '\/apps', icon: Smartphone/);
  assert.match(page,/latestAndroidRelease\(\)/);
  assert.match(page,/Download|Baixar APK Android/);
  assert.match(page,/Ainda não há instalador público para iPhones físicos/);
