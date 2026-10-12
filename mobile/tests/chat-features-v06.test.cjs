@@ -79,7 +79,7 @@ test('Ephemeral chat typing avoids sharing drafts, and exposes TTL state only',(
 test('Recovery is native, but reset link uses authenticated web recovery callback',()=>{
  const app=read('App.tsx');
  assert.match(app,/supabase\.auth\.resetPasswordForEmail\(address,/);
- assert.match(app,/redirectTo:SITE_URL\+'\/auth\/callback\?next=\/auth\/redefinir-senha'/);
+ assert.match(app,/redirectTo:PUBLIC_SITE_URL\+'\/auth\/callback\?next=\/auth\/redefinir-senha'/);
  assert.match(app,/label="Esqueci minha senha"/);
  assert.match(app,/E-mail de recuperação/);
  assert.match(app,/label="Cancelar convite"/);
