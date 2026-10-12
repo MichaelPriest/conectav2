@@ -19,7 +19,7 @@ test('selected preset skins the whole signed-in interface and loads from saved p
  assert.match(shell,/from\('profile_details'\)\.select\('layout_style'\)/);
  assert.match(shell,/dataset\.profileTheme = selected/);
  assert.match(shell,/conecta-profile-theme-change/);
- for(const theme of ['orkut','myspace','facebook','instagram','creator','minimal']){
+ for(const theme of ['orkut','myspace','facebook','instagram','creator','minimal','aurora','glass','neo']){
   assert.ok(styles.includes('html[data-profile-theme="'+theme+'"]'),theme+' global theme');
  }
  for(const surface of ['.sidebar','.desktop-topbar','.mobile-header','.mobile-bottom-nav','.post-card','.composer','.btn-primary']){
