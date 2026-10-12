@@ -57,7 +57,7 @@ jobs:
       - name: Monetization access control regression tests
         run: node --test tests/monetization-access.test.cjs
       - name: Story sharing and report visibility security regressions
-        run: node --test tests/story-sharing.test.cjs tests/story-report-visibility-guard.test.cjs tests/story-safety-reports.test.cjs
+        run: node --test tests/story-sharing.test.cjs tests/story-report-visibility-guard.test.cjs tests/story-safety-reports.test.cjs tests/story-client-privileges.test.cjs
       - name: Verify official Android release links and app download navigation
         run: node --test tests/app-downloads.test.cjs tests/saved-posts.test.cjs tests/sidebar-navigation.test.cjs tests/public-links.test.cjs
       - name: Check TypeScript
