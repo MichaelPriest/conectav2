@@ -110,14 +110,14 @@ test('Deep links accept only official Conecta hosts and UUID post identifiers',(
  const id='f2bc906a-4cb1-4797-872e-5bdca1234567';
  assert.deepEqual(parseConectaLink('conecta://post/'+id),{type:'post',id});
  assert.deepEqual(parseConectaLink('conecta:///post/'+id),{type:'post',id});
- assert.deepEqual(parseConectaLink('https://conectav2-validacao.onrender.com/post/'+id),
+ assert.deepEqual(parseConectaLink('https://conectav2.vercel.app/post/'+id),
   {type:'post',id});
  assert.deepEqual(parseConectaLink('conecta://notifications'),{type:'notifications'});
- assert.deepEqual(parseConectaLink('https://conectav2-validacao.onrender.com/notificacoes'),{
+ assert.deepEqual(parseConectaLink('https://conectav2.vercel.app/notificacoes'),{
   type:'notifications'
  });
  for(const bad of [
-  'https://conectav2-validacao.onrender.com.attacker.net/post/'+id,
+  'https://conectav2.vercel.app.attacker.net/post/'+id,
   'https://other.example.com/post/'+id,
   'http://conectav2-validacao.onrender.com/post/'+id,
   'conecta://post/%2e%2e/notifications',
