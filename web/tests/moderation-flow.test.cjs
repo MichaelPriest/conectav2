@@ -27,6 +27,9 @@ test('Ordinary photos do not universally require human moderation; suspicious fr
  assert.match(route,/humanReview:json\.human_review/);
  assert.doesNotMatch(route,/humanReview:media\.length>0/);
  assert.match(video,/if\(result\.reviewRequired\)uncertain=true/);
+ assert.match(route,/const hasVideo=media\.some\(item=>item\.type==='video'\)/);
+ assert.match(route,/engine==='openai'&&!hasVideo\?await moderateWithFreeApi\(content,imageUrls\):\s*await moderateWithBundledModel\(content,media,admin\)/);
+ assert.doesNotMatch(route,/media\.some\(m=>m\.type==='video'\)&&engine==='openai'[\s\S]{0,120}return reply\(\{status:'pending'/);
 });
 test('Reviewers can safely load and retry protected photos and Stories without losing their decision',()=>{
  const ui=read('src/components/pending-content-panel.tsx');
