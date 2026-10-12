@@ -95,7 +95,7 @@ test('Native comments, bookmarks and inline videos use actual authorized databas
  assert.match(app,/sendPostComment\(/);
  assert.match(app,/loadSavedPosts\(/);
  assert.match(app,/setSavedPost\(/);
- assert.match(ui,/useVideoPlayer\(url\)/);
+ assert.match(ui,/useVideoPlayer\(\{uri:url\}\)/);
  assert.match(ui,/signedMedia\(path\)/);
  assert.ok(appConfig.expo.plugins.some(plugin=>plugin[0]==='expo-video'));
 });
