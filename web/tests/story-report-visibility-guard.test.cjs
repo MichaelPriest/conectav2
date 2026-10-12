@@ -50,10 +50,10 @@ test('Post reports require approved content visible to the reporter',()=>{
   for(const sql of [trigger,policy]){
     assert.match(sql,/community_id is null/i);
     assert.match(sql,/moderation_status='approved'/i);
-    assert.match(sql,/registration_age_declarations[\\s\\S]*declared_band='18_plus'/i);
-    assert.match(sql,/teen_safety_preferences[\\s\\S]*youth_protection/i);
+    assert.match(sql,/registration_age_declarations[\s\S]*declared_band='18_plus'/i);
+    assert.match(sql,/teen_safety_preferences[\s\S]*youth_protection/i);
     assert.match(sql,/user_blocks/i);
-    assert.match(sql,/visibility='public'[\\s\\S]*visibility='friends'[\\s\\S]*friendships f/i);
+    assert.match(sql,/visibility='public'[\s\S]*visibility='friends'[\s\S]*friendships f/i);
     assert.doesNotMatch(sql,/visibility='private'/i);
   }
 });
