@@ -6,8 +6,11 @@ const path=require('node:path');
 
 const migration=fs.readFileSync(path.resolve(__dirname,'../../supabase/migrations/20261012223000_conecta_stories_insert_privilege_repair.sql'),'utf8');
 
-test('Story privilege repair is restricted to authenticated clients and approved columns',()=>{
-  assert.match(migration,/grant select, delete on table public\.stories to authenticated/i);
-  assert.match(migration,/grant insert\s*\(author_id,\s*caption,\s*media_path,\s*media_type,\s*visibility,\s*shared_post_id\)\s*on table public\.stories to authenticated/i);
+test('Story table insert privilege is paired with server-managed field guards',()=>{
+  assert.match(migration,/grant select, delete on table public\\.stories to authenticated/i);
+  assert.match(migration,/grant insert on table public\\.stories to authenticated/i);
+  assert.match(migration,/new\\.id := gen_random_uuid\\(\\)[\\s\\S]*new\\.created_at := now\\(\\)[\\s\\S]*new\\.expires_at := now\\(\\) \\+ interval '24 hours'[\\s\\S]*new\\.moderation_status := 'pending'/i);
+  assert.match(migration,/new\\.author_id is distinct from \\(select auth\\.uid\\(\\)\\)/i);
+  assert.match(migration,/revoke all on function app_private\\.guard_story_post_share\\(\\)[\\s\\S]*from public, anon, authenticated/i);
   assert.doesNotMatch(migration,/grant all|to public|to anon|grant update/i);
 });
