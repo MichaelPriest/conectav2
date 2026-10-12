@@ -12,3 +12,17 @@ test('profile editor exposes nostalgia and modern themes without bypassing acces
  assert.match(details,/const layoutStyles = \['classic', 'orkut', 'myspace', 'facebook', 'instagram', 'creator', 'minimal'\]/);
  assert.match(editor,/O tema altera a apresentação do perfil, sem mudar suas permissões/);
 });
+
+test('selected preset skins the whole signed-in interface and loads from saved profile details',()=>{
+ const shell=fs.readFileSync(path.resolve(__dirname,'../src/components/app-shell.tsx'),'utf8');
+ const styles=fs.readFileSync(path.resolve(__dirname,'../src/app/profile-themes.css'),'utf8');
+ assert.match(shell,/from\('profile_details'\)\.select\('layout_style'\)/);
+ assert.match(shell,/dataset\.profileTheme = selected/);
+ assert.match(shell,/conecta-profile-theme-change/);
+ for(const theme of ['orkut','myspace','facebook','instagram','creator','minimal']){
+  assert.ok(styles.includes('html[data-profile-theme="'+theme+'"]'),theme+' global theme');
+ }
+ for(const surface of ['.sidebar','.desktop-topbar','.mobile-header','.mobile-bottom-nav','.post-card','.composer','.btn-primary']){
+  assert.ok(styles.includes(surface),surface+' is themed');
+ }
+});
