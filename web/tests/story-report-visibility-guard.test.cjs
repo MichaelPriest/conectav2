@@ -46,7 +46,8 @@ test('Private, expired, own, blocked, and pending Stories are not reportable',()
 
 test('Post reports require approved content visible to the reporter',()=>{
   const trigger=migration.slice(migration.indexOf("elsif new.target_type='post'"),migration.indexOf("elsif new.target_type='story'"));
-  const policy=migration.slice(migration.indexOf("target_type='post'"),migration.indexOf("target_type='story'"));
+  const policyStart=migration.indexOf('create policy "report own visible concern"');
+  const policy=migration.slice(policyStart).slice(migration.slice(policyStart).indexOf("target_type='post'"),migration.slice(policyStart).indexOf("target_type='story'"));
   for(const sql of [trigger,policy]){
     assert.match(sql,/community_id is null/i);
     assert.match(sql,/moderation_status='approved'/i);
