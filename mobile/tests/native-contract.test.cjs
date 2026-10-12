@@ -51,7 +51,7 @@ test('Age declaration and onboarding restrictions cannot be skipped by mobile vi
  assert.ok(app.includes("'/onboarding'"));
 });
 test('Publishing does not bypass current server moderation',()=>{
- assert.ok(data.includes("SITE_URL+'/api/moderation/review'"));
+ assert.ok(data.includes("API_SITE_URL+'/api/moderation/review'"));
  assert.ok(data.includes("Authorization:'Bearer '+session.access_token"));
  assert.ok(data.includes('pending moderation state'));
  assert.ok(!data.includes('moderation_status:\'approved\''));
