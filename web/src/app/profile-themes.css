@@ -38,3 +38,136 @@
 .profile-layout-minimal .conecta-profile-grid .panel,.profile-layout-minimal .conecta-myspace-panel .panel,.profile-layout-minimal .conecta-public-profile-panel{border:1px solid #e5e7eb;border-radius:10px;box-shadow:none}
 .profile-layout-minimal .conecta-profile-tags span{border-radius:5px;background:#f3f4f6;color:#374151}
 .profile-layout-minimal .conecta-profile-grid{gap:18px}
+
+
+/* Full-network interface skins. The selected preset applies to navigation,
+   feed, cards, forms, buttons and mobile navigation—not only profile pages. */
+html[data-profile-theme="orkut"]{
+ --ink:#17365f;--muted:#607b9d;--brand:#3d78bd;--brand2:#2f65a4;--line:#cbd9ea;--bg:#eaf1fa;--panel:#fafdff;--shadow:0 5px 18px rgba(37,76,125,.10);
+}
+html[data-profile-theme="myspace"]{
+ --ink:#e8edff;--muted:#aab7d8;--brand:#9b8cff;--brand2:#7865f5;--line:#2b3763;--bg:#10152d;--panel:#1a2140;--shadow:0 10px 28px rgba(0,0,0,.22);
+}
+html[data-profile-theme="facebook"]{
+ --ink:#1c2c45;--muted:#66758b;--brand:#1877f2;--brand2:#0866ff;--line:#dce3ed;--bg:#f0f2f5;--panel:#fff;--shadow:0 2px 7px rgba(20,45,80,.08);
+}
+html[data-profile-theme="instagram"]{
+ --ink:#28212d;--muted:#827584;--brand:#d94683;--brand2:#833ab4;--line:#f0dce7;--bg:#fff9fc;--panel:#fff;--shadow:0 8px 28px rgba(131,58,180,.08);
+}
+html[data-profile-theme="creator"]{
+ --ink:#e5edf7;--muted:#9aaec4;--brand:#22d3ee;--brand2:#6366f1;--line:#26374c;--bg:#0b1220;--panel:#111c2e;--shadow:0 12px 34px rgba(0,0,0,.25);
+}
+html[data-profile-theme="minimal"]{
+ --ink:#20242c;--muted:#747b86;--brand:#475569;--brand2:#334155;--line:#e5e7eb;--bg:#f8fafc;--panel:#fff;--shadow:none;
+}
+html[data-profile-theme="orkut"] body,
+html[data-profile-theme="facebook"] body,
+html[data-profile-theme="instagram"] body,
+html[data-profile-theme="minimal"] body{background:var(--bg);color:var(--ink)}
+html[data-profile-theme="myspace"] body,
+html[data-profile-theme="creator"] body{background:var(--bg);color:var(--ink)}
+html[data-profile-theme="orkut"] .sidebar,
+html[data-profile-theme="orkut"] .desktop-topbar,
+html[data-profile-theme="orkut"] .mobile-header,
+html[data-profile-theme="orkut"] .mobile-bottom-nav{background:#fafdff;border-color:#cbd9ea}
+html[data-profile-theme="orkut"] .nav-link:hover,
+html[data-profile-theme="orkut"] .nav-active{background:#dceafa;color:#245b91}
+html[data-profile-theme="orkut"] .nav-indicator{background:#3d78bd}
+html[data-profile-theme="orkut"] .brand-mark{background:linear-gradient(135deg,#2f65a4,#79b4ed)}
+html[data-profile-theme="myspace"] .sidebar,
+html[data-profile-theme="myspace"] .desktop-topbar,
+html[data-profile-theme="myspace"] .mobile-header,
+html[data-profile-theme="myspace"] .mobile-bottom-nav{background:#151b36;border-color:#2b3763;color:#e8edff}
+html[data-profile-theme="myspace"] .brand,
+html[data-profile-theme="myspace"] .sidebar-profile-info strong,
+html[data-profile-theme="myspace"] .topbar-account{color:#eef1ff}
+html[data-profile-theme="myspace"] .nav-link{color:#aab7d8}
+html[data-profile-theme="myspace"] .nav-link:hover,
+html[data-profile-theme="myspace"] .nav-active{background:#2a3158;color:#fff}
+html[data-profile-theme="myspace"] .nav-indicator{background:#9b8cff}
+html[data-profile-theme="facebook"] .sidebar,
+html[data-profile-theme="facebook"] .desktop-topbar,
+html[data-profile-theme="facebook"] .mobile-header,
+html[data-profile-theme="facebook"] .mobile-bottom-nav{background:#fff;border-color:#dce3ed}
+html[data-profile-theme="facebook"] .nav-link:hover,
+html[data-profile-theme="facebook"] .nav-active{background:#e7f3ff;color:#0866ff}
+html[data-profile-theme="facebook"] .nav-indicator{background:#1877f2}
+html[data-profile-theme="instagram"] .sidebar,
+html[data-profile-theme="instagram"] .desktop-topbar,
+html[data-profile-theme="instagram"] .mobile-header,
+html[data-profile-theme="instagram"] .mobile-bottom-nav{background:#fff;border-color:#f0dce7}
+html[data-profile-theme="instagram"] .nav-link:hover,
+html[data-profile-theme="instagram"] .nav-active{background:#fff0f6;color:#c13584}
+html[data-profile-theme="instagram"] .nav-indicator{background:linear-gradient(#833ab4,#fd1d1d,#fcb045)}
+html[data-profile-theme="instagram"] .btn-primary{background:linear-gradient(115deg,#833ab4,#e1306c,#fd8d32);box-shadow:none}
+html[data-profile-theme="creator"] .sidebar,
+html[data-profile-theme="creator"] .desktop-topbar,
+html[data-profile-theme="creator"] .mobile-header,
+html[data-profile-theme="creator"] .mobile-bottom-nav{background:#111c2e;border-color:#26374c;color:#e5edf7}
+html[data-profile-theme="creator"] .brand,
+html[data-profile-theme="creator"] .sidebar-profile-info strong,
+html[data-profile-theme="creator"] .topbar-account{color:#f1f5f9}
+html[data-profile-theme="creator"] .nav-link{color:#9aaec4}
+html[data-profile-theme="creator"] .nav-link:hover,
+html[data-profile-theme="creator"] .nav-active{background:#1e3049;color:#67e8f9}
+html[data-profile-theme="creator"] .nav-indicator{background:#22d3ee}
+html[data-profile-theme="minimal"] .sidebar,
+html[data-profile-theme="minimal"] .desktop-topbar,
+html[data-profile-theme="minimal"] .mobile-header,
+html[data-profile-theme="minimal"] .mobile-bottom-nav{background:#fff;border-color:#e5e7eb}
+html[data-profile-theme="minimal"] .nav-link:hover,
+html[data-profile-theme="minimal"] .nav-active{background:#f1f5f9;color:#334155}
+html[data-profile-theme="minimal"] .nav-indicator{background:#475569}
+html[data-profile-theme="orkut"] .panel,
+html[data-profile-theme="orkut"] .card,
+html[data-profile-theme="orkut"] .post-card,
+html[data-profile-theme="orkut"] .composer{border-color:#cbd9ea;border-radius:12px;box-shadow:var(--shadow)}
+html[data-profile-theme="facebook"] .panel,
+html[data-profile-theme="facebook"] .card,
+html[data-profile-theme="facebook"] .post-card,
+html[data-profile-theme="facebook"] .composer{border-color:#dce3ed;border-radius:12px;box-shadow:var(--shadow)}
+html[data-profile-theme="instagram"] .panel,
+html[data-profile-theme="instagram"] .card,
+html[data-profile-theme="instagram"] .post-card,
+html[data-profile-theme="instagram"] .composer{border-color:#f0dce7;border-radius:17px;box-shadow:var(--shadow)}
+html[data-profile-theme="myspace"] .panel,
+html[data-profile-theme="myspace"] .card,
+html[data-profile-theme="myspace"] .post-card,
+html[data-profile-theme="myspace"] .composer,
+html[data-profile-theme="creator"] .panel,
+html[data-profile-theme="creator"] .card,
+html[data-profile-theme="creator"] .post-card,
+html[data-profile-theme="creator"] .composer{background:var(--panel);color:var(--ink);border-color:var(--line);box-shadow:var(--shadow)}
+html[data-profile-theme="minimal"] .panel,
+html[data-profile-theme="minimal"] .card,
+html[data-profile-theme="minimal"] .post-card,
+html[data-profile-theme="minimal"] .composer{border-color:#e5e7eb;border-radius:10px;box-shadow:none}
+html[data-profile-theme="myspace"] .form-input,
+html[data-profile-theme="myspace"] input,
+html[data-profile-theme="myspace"] textarea,
+html[data-profile-theme="myspace"] select,
+html[data-profile-theme="creator"] .form-input,
+html[data-profile-theme="creator"] input,
+html[data-profile-theme="creator"] textarea,
+html[data-profile-theme="creator"] select{background:#0d1428;color:var(--ink);border-color:var(--line)}
+html[data-profile-theme="myspace"] .composer textarea,
+html[data-profile-theme="creator"] .composer textarea{background:#0d1428;color:var(--ink)}
+html[data-profile-theme="myspace"] .btn-outline,
+html[data-profile-theme="creator"] .btn-outline{background:transparent;color:var(--ink);border-color:var(--line)}
+html[data-profile-theme="orkut"] .btn-primary{background:linear-gradient(125deg,#3d78bd,#2f65a4);box-shadow:none}
+html[data-profile-theme="facebook"] .btn-primary{background:#1877f2;box-shadow:none}
+html[data-profile-theme="myspace"] .btn-primary{background:linear-gradient(125deg,#7865f5,#4f46e5);box-shadow:none}
+html[data-profile-theme="creator"] .btn-primary{background:linear-gradient(125deg,#0891b2,#4f46e5);box-shadow:none}
+html[data-profile-theme="minimal"] .btn-primary{background:#334155;box-shadow:none}
+html[data-profile-theme="myspace"] .muted,
+html[data-profile-theme="myspace"] .small-note,
+html[data-profile-theme="myspace"] .page-heading p,
+html[data-profile-theme="creator"] .muted,
+html[data-profile-theme="creator"] .small-note,
+html[data-profile-theme="creator"] .page-heading p{color:var(--muted)}
+html[data-profile-theme="myspace"] .feed-title h2,
+html[data-profile-theme="myspace"] .post-meta strong,
+html[data-profile-theme="myspace"] .composer-top strong,
+html[data-profile-theme="creator"] .feed-title h2,
+html[data-profile-theme="creator"] .post-meta strong,
+html[data-profile-theme="creator"] .composer-top strong{color:var(--ink)}
