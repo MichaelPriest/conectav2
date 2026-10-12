@@ -195,9 +195,12 @@ export default function Profile(){
          <option value="instagram">Instagram — foco visual e fotos</option>
          <option value="creator">Criador — conteúdo em destaque</option>
          <option value="minimal">Minimalista — visual limpo</option>
+         <option value="aurora">Aurora — social de próxima geração</option>
+         <option value="glass">Glass — transparências e profundidade</option>
+         <option value="neo">Neo — editorial ousado</option>
        </select><span className="small-note">O tema altera a apresentação do perfil, sem mudar suas permissões ou quem pode ver seus conteúdos.</span></label>
        <section className="theme-preview-section" aria-labelledby="theme-preview-title">
-         <div className="theme-preview-heading"><div><h3 id="theme-preview-title">Prévia dos temas da rede</h3><p>Selecione uma opção para experimentar a aparência em toda a interface. A escolha só fica salva quando você clicar em “Salvar meu perfil”.</p></div><span className="theme-preview-count">7 estilos</span></div>
+         <div className="theme-preview-heading"><div><h3 id="theme-preview-title">Prévia dos temas da rede</h3><p>Selecione uma opção para experimentar a aparência em toda a interface. A escolha só fica salva quando você clicar em “Salvar meu perfil”.</p></div><span className="theme-preview-count">10 estilos</span></div>
          <div className="theme-preview-grid">
            {([
              {id:'classic',title:'Conecta clássico',desc:'Visual original',tone:'classic'},
@@ -206,7 +209,10 @@ export default function Profile(){
              {id:'facebook',title:'Facebook',desc:'Azul e social',tone:'facebook'},
              {id:'instagram',title:'Instagram',desc:'Visual e fotográfico',tone:'instagram'},
              {id:'creator',title:'Creator',desc:'Mídia e destaque',tone:'creator'},
-             {id:'minimal',title:'Minimalista',desc:'Leve e discreto',tone:'minimal'}
+             {id:'minimal',title:'Minimalista',desc:'Leve e discreto',tone:'minimal'},
+             {id:'aurora',title:'Aurora',desc:'Gradientes vivos e espaços conectados',tone:'aurora'},
+             {id:'glass',title:'Glass UI',desc:'Camadas translúcidas e brilho suave',tone:'glass'},
+             {id:'neo',title:'Neo Editorial',desc:'Tipografia marcante e blocos expressivos',tone:'neo'}
            ] as const).map(theme=><button type="button" key={theme.id} className={'theme-preview-card theme-preview-'+theme.tone+(details.layout_style===theme.id?' is-selected':'')} aria-pressed={details.layout_style===theme.id} onClick={()=>{setDetails(v=>({...v,layout_style:theme.id}));window.dispatchEvent(new CustomEvent('conecta-profile-theme-change',{detail:theme.id}));}}>
              <span className="theme-preview-window"><span className="theme-preview-top"><i/><i/><i/></span><span className="theme-preview-body"><span className="theme-preview-sidebar"><i/><i/><i/><i/></span><span className="theme-preview-feed"><i className="theme-preview-composer"/><i className="theme-preview-post"><b/><em/><em/><em/></i><i className="theme-preview-post short"><b/><em/><em/></i></span><span className="theme-preview-rail"><i/><i/></span></span></span>
              <span className="theme-preview-label"><strong>{theme.title}</strong><small>{theme.desc}</small></span>
