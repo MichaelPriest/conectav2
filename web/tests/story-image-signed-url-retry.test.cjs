@@ -19,3 +19,7 @@ test('failed Story image displays recovery feedback inside the Story modal',()=>
   assert.match(source,/imageError\?<View[\s\S]*Não foi possível carregar esta foto protegida/);
   assert.match(source,/Fechar Story/);
 });
+
+test('signed URL rejection clears loading and exposes the modal recovery state',()=>{
+  assert.match(source,/\.catch\(e=>\{if\(active\)\{setImageUrl\(null\);setImageError\(true\);setError\(describe\(e\)\);\}\}\)/);
+});
