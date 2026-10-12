@@ -314,3 +314,15 @@ test('Post deletion remains author-only and cleans signed user-owned uploads',()
  assert.match(app,/accessibilityLabel="Excluir publicação"/);
  assert.match(app,/deleteOwnPost\(post,userId\)/);
 });
+
+test('Compact mobile header avoids duplicating bottom navigation and keeps chat reachable',()=>{
+ const app=read('App.tsx');
+ const header=app.slice(app.indexOf('<View style={[s.header,{paddingVertical:10,gap:9}]}'),app.indexOf('{render()}',app.indexOf('<View style={[s.header,{paddingVertical:10,gap:9}]}')));
+ assert.match(header,/label="Conversas"/);
+ assert.match(header,/label="Mais opções"/);
+ assert.match(header,/label=\{unreadCount>0\?/);
+ assert.match(header,/text:'Reels'/);
+ assert.doesNotMatch(header,/label="Explorar pessoas"/);
+ assert.doesNotMatch(header,/Icon=\{Clapperboard\} label="Reels"/);
+ assert.match(app,/BottomNavigation tab=\{tab\} onNavigate=\{navigate\}/);
+});
