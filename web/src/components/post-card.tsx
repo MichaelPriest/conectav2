@@ -26,6 +26,7 @@ export function PostCard({ post, userId, refresh, onSavedChange }: { post: FeedP
   const [pendingLike, setPendingLike] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [saved,setSaved] = useState(false);
+  const [sharingStory,setSharingStory] = useState(false);
   const [replyTo,setReplyTo]=useState<PostComment|null>(null);
   const [comments, setComments] = useState<PostComment[]>([]);
   const [comment, setComment] = useState('');
@@ -114,6 +115,31 @@ export function PostCard({ post, userId, refresh, onSavedChange }: { post: FeedP
     else { await navigator.clipboard.writeText(address);setNotice('Link copiado!'); }
   }
 
+  async function shareToStory() {
+    if (sharingStory) return;
+    if (post.visibility !== 'public' || post.moderation_status !== 'approved' || post.community_id) {
+      setNotice('Somente publicações públicas aprovadas fora de comunidades podem ser compartilhadas nos Stories.');
+      return;
+    }
+    setSharingStory(true);
+    setNotice('');
+    try {
+      const { error } = await supabaseBrowser().from('stories').insert({
+        author_id: userId,
+        shared_post_id: post.id,
+        visibility: 'friends',
+      });
+      if (error) {
+        setNotice('Não foi possível compartilhar nos Stories: ' + error.message);
+        return;
+      }
+      setNotice('Publicação adicionada aos seus Stories por 24 horas.');
+      window.dispatchEvent(new Event('conecta:stories-updated'));
+    } finally {
+      setSharingStory(false);
+    }
+  }
+
   async function remove() {
     if (!window.confirm('Excluir esta publicação?')) return;
     const { error }=await supabaseBrowser().from('posts').delete().eq('id',post.id).eq('author_id',userId);
@@ -160,7 +186,7 @@ export function PostCard({ post, userId, refresh, onSavedChange }: { post: FeedP
           </button>)}
         </div>)}{parseMusicUrl(post.content)&&<MusicEmbed url={post.content}/>}<PollCard postId={post.id} userId={userId}/></div>
     <div className="post-stats"><span>{post.post_likes?.[0]?.count||0} curtidas</span><span>{post.post_comments?.[0]?.count||0} comentários</span></div>
-    <div className="post-actions"><button aria-pressed={liked} disabled={pendingLike} onClick={like} className={liked?'liked':''}><LikesIcon size={19} fill={liked?'currentColor':'none'}/> Curtir</button><button onClick={openComments}><MessageCircle size={19}/> Comentar</button><button onClick={share}><Share2 size={19}/> Compartilhar</button><button onClick={save} aria-pressed={saved} title="Salvar publicação"><Bookmark size={18} fill={saved?'currentColor':'none'}/> {saved?'Salvo':'Salvar'}</button>{post.author_id!==userId&&<ReportContentButton targetType="post" targetId={post.id} reporterId={userId} communityId={post.community_id}/>}</div>
+    <div className="post-actions"><button aria-pressed={liked} disabled={pendingLike} onClick={like} className={liked?'liked':''}><LikesIcon size={19} fill={liked?'currentColor':'none'}/> Curtir</button><button onClick={openComments}><MessageCircle size={19}/> Comentar</button><button onClick={share}><Share2 size={19}/> Compartilhar</button>{post.visibility==='public'&&post.moderation_status==='approved'&&!post.community_id&&<button onClick={()=>void shareToStory()} disabled={sharingStory}><Share2 size={19}/> {sharingStory?'Adicionando...':'Nos Stories'}</button>}<button onClick={save} aria-pressed={saved} title="Salvar publicação"><Bookmark size={18} fill={saved?'currentColor':'none'}/> {saved?'Salvo':'Salvar'}</button>{post.author_id!==userId&&<ReportContentButton targetType="post" targetId={post.id} reporterId={userId} communityId={post.community_id}/>}</div>
     {notice && <div className="inline-notice" role="status">{notice}</div>}
     {activeMediaIndex!==null&&media[activeMediaIndex]&&<div className="media-lightbox" role="presentation" onMouseDown={event=>{if(event.target===event.currentTarget)setActiveMediaIndex(null);}}>
       <div role="dialog" aria-modal="true" aria-label="Visualização de mídia" className="media-lightbox-body">
