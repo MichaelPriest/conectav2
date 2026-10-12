@@ -10,7 +10,7 @@ import type {Story,Post} from './models';
 import type {SelectedMedia} from './media-validation';
 import {normalizeMedia} from './media-validation';
 import {loadActiveStories,publishStory,removeStory} from './stories';
-import {loadPermittedPost,signedMedia} from './data';
+import {invalidateSignedMedia,loadPermittedPost,signedMedia} from './data';
 import {groupedStorySequence,firstUnseenStory,nextStoryInSequence} from './story-sequence';
 import {Avatar,Action,ErrorNotice,Loading,Media,VideoMedia,styles as s} from './ui';
 import {theme as t,formatDate} from './theme';
@@ -24,10 +24,21 @@ function StoryVideo({path,onEnd,onProgress,paused}:{
  path:string;onEnd:()=>void;onProgress:(fraction:number)=>void;paused:boolean;
 }){
  const [url,setUrl]=useState<string|null>(null);
- useEffect(()=>{let current=true;setUrl(null);
-  void signedMedia(path).then(uri=>{if(current)setUrl(uri);});
+ const [mediaError,setMediaError]=useState('');
+ useEffect(()=>{let current=true;setUrl(null);setMediaError('');
+  void signedMedia(path).then(uri=>{
+   if(!current)return;
+   if(uri)setUrl(uri);
+   else setMediaError('Não foi possível abrir o vídeo protegido. Atualize os Stories e tente novamente.');
+  }).catch(error=>{
+   if(current)setMediaError(describe(error));
+  });
   return()=>{current=false;};
  },[path]);
+ if(mediaError)return <View style={{padding:18,gap:10,alignItems:'center'}}>
+  <Text style={{color:'#FFF',textAlign:'center'}}>{mediaError}</Text>
+  <Text style={{color:'#CFC4E9',fontSize:12,textAlign:'center'}}>O vídeo permanece protegido pelas permissões da publicação.</Text>
+ </View>;
  return url?<PlayingStoryVideo key={url} url={url} onEnd={onEnd}
   onProgress={onProgress} paused={paused}/>:<Loading text="Carregando vídeo protegido..."/>;
 }
@@ -58,6 +69,8 @@ export function StoryRail({userId,onOpenPost}:{
  const [sharedLoading,setSharedLoading]=useState(false);
  const [progress,setProgress]=useState(0);
  const [imageUrl,setImageUrl]=useState<string|null>(null);
+ const [imageRetry,setImageRetry]=useState(0);
+ const [imageError,setImageError]=useState(false);
  const [mediaReady,setMediaReady]=useState(false);
  const [paused,setPaused]=useState(false);
  const [seen,setSeen]=useState<Set<string>>(new Set());
@@ -102,10 +115,10 @@ export function StoryRail({userId,onOpenPost}:{
   const storyId=selected?.id;
   const path=selected?.media_type==='image'?selected.media_path:null;
   let active=true;
-  setImageUrl(null);setMediaReady(false);
+  setImageUrl(null);setImageRetry(0);setImageError(false);setMediaReady(false);
   if(path)void signedMedia(path).then(url=>{
-   if(active){setImageUrl(url);if(!url)setError('Não foi possível abrir a imagem protegida.');}
-  }).catch(e=>{if(active)setError(describe(e));});
+   if(active){setImageUrl(url);setImageError(!url);if(!url)setError('Não foi possível abrir a imagem protegida.');}
+  }).catch(e=>{if(active){setImageUrl(null);setImageError(true);setError(describe(e));}});
   return()=>{active=false;};
  },[selected?.id,selected?.media_path,selected?.media_type]);
 
@@ -301,9 +314,23 @@ export function StoryRail({userId,onOpenPost}:{
         Publicação não disponível ou privacidade alterada.
        </Text>:
        selected?.media_type==='image'&&selected.media_path?
+        imageError?<View style={{padding:20,gap:12,alignItems:'center'}}>
+         <Text style={{color:'#FFF',textAlign:'center'}}>Não foi possível carregar esta foto protegida.</Text>
+         <Text style={{color:'#CFC4E9',fontSize:12,textAlign:'center'}}>A imagem não foi liberada nem compartilhada publicamente. Feche e abra o Story para tentar novamente.</Text>
+         <Action secondary label="Fechar Story" onPress={close}/>
+        </View>:
         imageUrl?<Image source={{uri:imageUrl}} resizeMode="contain"
          onLoad={()=>setMediaReady(true)}
-         onError={()=>setError('Não foi possível carregar a foto do Story.')}
+         onError={()=>{
+          if(selected?.media_path&&imageRetry===0){
+           const path=selected.media_path;
+           invalidateSignedMedia(path);setImageRetry(1);setMediaReady(false);
+           void signedMedia(path).then(url=>{
+            if(url){setImageUrl(url);setImageError(false);}
+            else {setImageUrl(null);setImageError(true);setError('Não foi possível carregar a foto do Story. Atualize e tente novamente.');}
+           }).catch(e=>{setImageUrl(null);setImageError(true);setError(describe(e));});
+          }else {setImageUrl(null);setImageError(true);setError('Não foi possível carregar a foto do Story. Atualize e tente novamente.');}
+         }}
          style={{width:'100%',height:440}}/>:
         <Loading text="Carregando foto do Story..."/>:
        selected?.media_type==='video'&&selected.media_path?
