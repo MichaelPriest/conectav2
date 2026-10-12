@@ -25,13 +25,26 @@ function LinkedAudio({url}:{url:string}){
   </Text>
  </Pressable>;
 }
-function ProviderPlayer({embed,provider,onError}:{
+function youtubeHostAllowed(hostname:string):boolean{
+ const host=hostname.toLowerCase();
+ return [
+  'youtube-nocookie.com','youtube.com','googlevideo.com','ytimg.com',
+  'googleapis.com','google.com','gstatic.com'
+ ].some(domain=>host===domain||host.endsWith('.'+domain));
+}
+function ProviderPlayer({embed,provider,onError}:{ 
  embed:string;provider:LinkedMedia['provider'];onError:()=>void
 }){
  const host=new URL(embed).hostname;
  const height=provider==='YouTube'?240:provider==='SoundCloud'?190:160;
+ // YouTube's mobile player needs a real document origin/referrer. Loading the
+ // embed URL as the WebView's top document can produce error 153 on Android.
+ const source=provider==='YouTube'?{
+  html:'<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta name="referrer" content="strict-origin-when-cross-origin"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}iframe{border:0;width:100%;height:100%}</style></head><body><iframe src="'+embed+'" title="Player do YouTube" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></body></html>',
+  baseUrl:'https://conectav2.vercel.app/'
+ }:{uri:embed};
  return <WebView
-  source={{uri:embed}}
+  source={source}
   style={{height,width:'100%',borderRadius:12,marginTop:10,
    backgroundColor:'#F5F3FC'}}
   javaScriptEnabled domStorageEnabled
@@ -44,7 +57,14 @@ function ProviderPlayer({embed,provider,onError}:{
    if(request.url==='about:blank')return true;
    try{
     const url=new URL(request.url);
-    return url.protocol==='https:'&&url.hostname===host;
+    if(url.protocol!=='https:')return false;
+    if(provider==='YouTube'){
+     // YouTube's player uses separate, known Google media/CDN hosts. The
+     // previous exact-host check blocked those internal player navigations.
+     return youtubeHostAllowed(url.hostname)||
+      url.hostname==='conectav2.vercel.app';
+    }
+    return url.hostname===host;
    }catch{return false;}
   }}
   onError={onError}
