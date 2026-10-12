@@ -59,23 +59,37 @@ function trustedShareLink(raw:string):boolean{
 export function screenTextAutomatically(text:string):AutomaticTextVerdict{
  const value=text.trim();
  if(!value)return {reviewRequired:false,reason:'Sem texto para classificar.',engine:'profanity-br-v0.1.1'};
- if(value.length>500){
-  return {reviewRequired:true,reason:'Texto longo requer avaliação contextual.',engine:'profanity-br-v0.1.1'};
+ // Long captions are not automatically suspicious. Bound work and split only
+ // at word boundaries so ordinary long posts can still pass deterministic triage.
+ if(value.length>4000){
+  return {reviewRequired:true,reason:'Texto excede o limite de triagem automática.',engine:'profanity-br-v0.1.1'};
  }
  const contentWithoutTrustedMediaUrls=value.replace(/https:\/\/[^\s<>"']+/gi,
   raw=>trustedShareLink(raw)?' ':raw);
  if(signalPatterns.some(re=>re.test(contentWithoutTrustedMediaUrls))){
   return {reviewRequired:true,reason:'Possível risco contextual, dados pessoais ou conteúdo sensível.',engine:'profanity-br-v0.1.1'};
  }
- // Strong personal insults or heavy vulgarity need context. Mild profanity can
- // appear in discussions; ordinary Portuguese is not blocked by word alone.
- const analysis=analisar(value,{
-  locale:'pt-BR',
-  limites:{vulgaridadeMax:2,alvoSeveridadeMax:1}
- });
- if(analysis.excedeuLimites ||
-   analysis.hits.some(hit=>hit.confianca==='ambigua')){
-  return {reviewRequired:true,reason:'Linguagem ofensiva ou ambígua para análise humana.',engine:'profanity-br-v0.1.1'};
+ // Keep URLs out of the lexical model so IDs in valid media links are not
+ // mistaken for language. Scan chunks instead of sending every long caption
+ // to human review merely because it crossed the old 500-character cutoff.
+ const lexicalText=contentWithoutTrustedMediaUrls.replace(/https?:\/\/[^\s<>"']+/gi,' ');
+ const words=lexicalText.split(/\s+/).filter(Boolean);
+ const chunks:string[]=[];
+ let chunk='';
+ for(const word of words){
+  if(chunk&&chunk.length+word.length+1>450){chunks.push(chunk);chunk='';}
+  chunk+=(chunk?' ':'')+word;
+ }
+ if(chunk)chunks.push(chunk);
+ for(const part of chunks){
+  const analysis=analisar(part,{
+   locale:'pt-BR',
+   limites:{vulgaridadeMax:2,alvoSeveridadeMax:1}
+  });
+  if(analysis.excedeuLimites ||
+    analysis.hits.some(hit=>hit.confianca==='ambigua')){
+   return {reviewRequired:true,reason:'Linguagem ofensiva ou ambígua para análise humana.',engine:'profanity-br-v0.1.1'};
+  }
  }
  return {reviewRequired:false,reason:'Triagem lexical PT-BR concluída sem alerta conhecido.',engine:'profanity-br-v0.1.1'};
 }
