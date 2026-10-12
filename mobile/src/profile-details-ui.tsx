@@ -8,7 +8,8 @@ import type {ProfileDetails} from './profile-details';
 
 const labels:Record<string,string>={
  violet:'Violeta',aqua:'Azul',pink:'Rosa',sunset:'Pôr do sol',midnight:'Noite',
- classic:'Clássico',myspace:'MySpace',minimal:'Minimalista'
+ forest:'Floresta',ocean:'Oceano',graphite:'Grafite',candy:'Candy retrô',
+ classic:'Clássico',orkut:'Orkut',myspace:'MySpace',facebook:'Facebook',instagram:'Instagram',creator:'Criador',minimal:'Minimalista'
 };
 export function ProfileDetailsEditor({userId,onClose,onSaved}:{
  userId:string;onClose:()=>void;onSaved:()=>void
@@ -58,7 +59,7 @@ export function ProfileDetailsEditor({userId,onClose,onSaved}:{
    </View>
    <View style={{flex:1}}>
     <Text style={{fontSize:20,fontWeight:'900',color:t.dark}}>Personalizar perfil</Text>
-    <Text style={s.muted}>Do clássico ao MySpace, no estilo Conecta.</Text>
+    <Text style={s.muted}>Temas nostálgicos e modernos, sincronizados com seu perfil web.</Text>
    </View>
    <Pressable accessibilityRole="button" accessibilityLabel="Fechar personalização"
     onPress={onClose}><X color={t.dark} size={22}/></Pressable>
