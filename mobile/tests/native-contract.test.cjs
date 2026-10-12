@@ -6,6 +6,16 @@ const path=require('node:path');
 const root=path.join(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const app=read('App.tsx'),data=read('src/data.ts'),config=read('src/supabase.ts');
+test('External app links target production while moderation API remains separate',()=>{
+ const config=read('src/supabase.ts'),links=read('src/deep-link.ts'),data=read('src/data.ts');
+ assert.match(config,/PUBLIC_SITE_URL='https:\/\/conectav2-michael-raimundos-projects\.vercel\.app'/);
+ assert.match(config,/API_SITE_URL='https:\/\/conectav2-validacao\.onrender\.com'/);
+ assert.match(links,/OFFICIAL_HOST='conectav2-michael-raimundos-projects\.vercel\.app'/);
+ assert.doesNotMatch(links,/OFFICIAL_HOST='conectav2-validacao\.onrender\.com'/);
+ assert.match(data,/API_SITE_URL\+'\/api\/moderation\/review'/);
+ assert.match(data,/API_SITE_URL\+'\/api\/moderation\/comment'/);
+});
+
 test('Native Android/iOS app is real React Native, not a WebView',()=>{
  const json=JSON.parse(read('app.json'));
  assert.equal(json.expo.android.package,'br.com.conectav2.app');
