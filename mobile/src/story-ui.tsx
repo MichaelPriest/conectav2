@@ -118,7 +118,7 @@ export function StoryRail({userId,onOpenPost}:{
   setImageUrl(null);setImageRetry(0);setImageError(false);setMediaReady(false);
   if(path)void signedMedia(path).then(url=>{
    if(active){setImageUrl(url);setImageError(!url);if(!url)setError('Não foi possível abrir a imagem protegida.');}
-  }).catch(e=>{if(active)setError(describe(e));});
+  }).catch(e=>{if(active){setImageUrl(null);setImageError(true);setError(describe(e));}});
   return()=>{active=false;};
  },[selected?.id,selected?.media_path,selected?.media_type]);
 
