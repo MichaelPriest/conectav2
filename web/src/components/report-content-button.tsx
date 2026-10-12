@@ -14,7 +14,7 @@ const reasons=[
 ] as const;
 
 type ReportProps={
- targetType:'message'|'post';
+ targetType:'message'|'post'|'story';
  targetId:string;
  reporterId:string;
  communityId?:string|null;
@@ -53,12 +53,12 @@ export function ReportContentButton({targetType,targetId,reporterId,communityId}
  if(sent)return <small className="conecta-report-sent" role="status"><Check size={13}/> Denúncia recebida</small>;
  return <div className="conecta-report-area">
   <button type="button" className="conecta-report-toggle" aria-expanded={open}
-   aria-label={targetType==='message'?'Denunciar mensagem':'Denunciar publicação'}
+   aria-label={targetType==='message'?'Denunciar mensagem':targetType==='story'?'Denunciar Story':'Denunciar publicação'}
    onClick={()=>{setOpen(v=>!v);setError('');}}>
    <Flag size={14}/> Denunciar
   </button>
   {open&&<form className="conecta-report-form" onSubmit={submit}>
-    <div className="conecta-report-header"><strong><ShieldAlert size={16}/> Denunciar {targetType==='message'?'mensagem':'publicação'}</strong>
+    <div className="conecta-report-header"><strong><ShieldAlert size={16}/> Denunciar {targetType==='message'?'mensagem':targetType==='story'?'Story':'publicação'}</strong>
      <button type="button" aria-label="Fechar denúncia" onClick={()=>setOpen(false)}><X size={16}/></button></div>
     <p>O conteúdo será encaminhado para análise. A denúncia não avisa a pessoa denunciada.</p>
     <label>Motivo
