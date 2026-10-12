@@ -47,8 +47,13 @@ export function StoryRail({userId,profile}:{userId:string;profile:UserProfile|nu
    void refresh();
    const onFocus=()=>{void refresh();};
    window.addEventListener('focus',onFocus);
+   window.addEventListener('conecta:stories-updated',onFocus);
    const tick=window.setInterval(()=>{if(!document.hidden)void refresh();},60000);
-   return()=>{window.removeEventListener('focus',onFocus);window.clearInterval(tick);};
+   return()=>{
+     window.removeEventListener('focus',onFocus);
+     window.removeEventListener('conecta:stories-updated',onFocus);
+     window.clearInterval(tick);
+   };
  },[refresh]);
  useEffect(()=>{
    if(!file){setPreview('');return;}
