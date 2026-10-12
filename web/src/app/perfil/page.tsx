@@ -196,6 +196,24 @@ export default function Profile(){
          <option value="creator">Criador — conteúdo em destaque</option>
          <option value="minimal">Minimalista — visual limpo</option>
        </select><span className="small-note">O tema altera a apresentação do perfil, sem mudar suas permissões ou quem pode ver seus conteúdos.</span></label>
+       <section className="theme-preview-section" aria-labelledby="theme-preview-title">
+         <div className="theme-preview-heading"><div><h3 id="theme-preview-title">Prévia dos temas da rede</h3><p>Selecione uma opção para experimentar a aparência em toda a interface. A escolha só fica salva quando você clicar em “Salvar meu perfil”.</p></div><span className="theme-preview-count">7 estilos</span></div>
+         <div className="theme-preview-grid">
+           {([
+             {id:'classic',title:'Conecta clássico',desc:'Visual original',tone:'classic'},
+             {id:'orkut',title:'Orkut retrô',desc:'Comunidades e nostalgia',tone:'orkut'},
+             {id:'myspace',title:'MySpace',desc:'Escuro e personalizado',tone:'myspace'},
+             {id:'facebook',title:'Facebook',desc:'Azul e social',tone:'facebook'},
+             {id:'instagram',title:'Instagram',desc:'Visual e fotográfico',tone:'instagram'},
+             {id:'creator',title:'Creator',desc:'Mídia e destaque',tone:'creator'},
+             {id:'minimal',title:'Minimalista',desc:'Leve e discreto',tone:'minimal'}
+           ] as const).map(theme=><button type="button" key={theme.id} className={'theme-preview-card theme-preview-'+theme.tone+(details.layout_style===theme.id?' is-selected':'')} aria-pressed={details.layout_style===theme.id} onClick={()=>{setDetails(v=>({...v,layout_style:theme.id}));window.dispatchEvent(new CustomEvent('conecta-profile-theme-change',{detail:theme.id}));}}>
+             <span className="theme-preview-window"><span className="theme-preview-top"><i/><i/><i/></span><span className="theme-preview-body"><span className="theme-preview-sidebar"><i/><i/><i/><i/></span><span className="theme-preview-feed"><i className="theme-preview-composer"/><i className="theme-preview-post"><b/><em/><em/><em/></i><i className="theme-preview-post short"><b/><em/><em/></i></span><span className="theme-preview-rail"><i/><i/></span></span></span>
+             <span className="theme-preview-label"><strong>{theme.title}</strong><small>{theme.desc}</small></span>
+             {details.layout_style===theme.id&&<span className="theme-preview-current">Selecionado</span>}
+           </button>)}
+         </div>
+       </section>
        <LanguageSelect/>
        <label className="field-label">Imagem de capa do perfil (JPG, PNG ou WebP, até 8 MB)
          <input type="file" className="form-input" accept="image/jpeg,image/png,image/webp" disabled={coverSaving}
