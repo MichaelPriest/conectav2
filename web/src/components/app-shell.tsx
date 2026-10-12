@@ -108,7 +108,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
     void loadInterfaceTheme();
     const onThemeChange = (event: Event) => {
       const selected = (event as CustomEvent<string>).detail;
-      if (['classic','orkut','myspace','facebook','instagram','creator','minimal'].includes(selected)) {
+      if (['classic','orkut','myspace','facebook','instagram','creator','minimal','aurora','glass','neo'].includes(selected)) {
         document.documentElement.dataset.profileTheme = selected;
       }
     };
