@@ -32,3 +32,12 @@ test('Story reports retain the reported author and are identifiable in the moder
  assert.match(page,/target_type==='story'\?'Story'/);
  assert.match(page,/target_type==='story'\?'Denúncia de Story'/);
 });
+
+test('duplicate and unavailable-content report errors are shown without leaking database details',()=>{
+ const button=read('src/components/report-content-button.tsx');
+ assert.match(button,/code==='23505'\?'Você já denunciou esse conteúdo\.'/);
+ assert.match(button,/code==='23503'\?'Esse conteúdo não está mais disponível para denúncia\.'/);
+ assert.match(button,/Não foi possível enviar a denúncia\. Tente novamente\./);
+ const intake=read('../supabase/migrations/20261009_conecta_safety_reports_and_community_rls_fix.sql');
+ assert.match(intake,/unique_safety_report unique\(reporter_id,target_type,target_id\)/i);
+});
