@@ -354,3 +354,169 @@ html[data-profile-theme="neo"] .page-heading h1{letter-spacing:-.07em;text-trans
  html[data-profile-theme="glass"] .app-layout,
  html[data-profile-theme="neo"] .app-layout{grid-template-columns:1fr}
 }
+
+
+/* Site-wide theme contract: every authenticated route inherits the selected design system. */
+html[data-profile-theme]{
+ color-scheme:light;
+ --theme-radius:16px;
+ --theme-border-width:1px;
+ --theme-card-padding:20px;
+ --theme-page-max:1440px;
+ --theme-nav-bg:var(--panel);
+ --theme-focus:color-mix(in srgb,var(--brand) 28%,transparent);
+}
+html[data-profile-theme="myspace"],html[data-profile-theme="creator"]{color-scheme:dark}
+html[data-profile-theme="classic"]{--ink:#22213a;--muted:#77758e;--brand:#7656e8;--brand2:#5d48c9;--line:#e7e4f4;--bg:#f7f6fc;--panel:#fff;--shadow:0 8px 28px #33265d0d;--theme-radius:18px}
+html[data-profile-theme="orkut"]{--theme-radius:10px;--theme-card-padding:17px;--theme-page-max:1280px;--theme-nav-bg:#fafdff}
+html[data-profile-theme="myspace"]{--theme-radius:8px;--theme-card-padding:18px;--theme-page-max:1320px;--theme-nav-bg:#151b36}
+html[data-profile-theme="facebook"]{--theme-radius:12px;--theme-card-padding:18px;--theme-page-max:1320px;--theme-nav-bg:#fff}
+html[data-profile-theme="instagram"]{--theme-radius:20px;--theme-card-padding:22px;--theme-page-max:1180px;--theme-nav-bg:#fff}
+html[data-profile-theme="creator"]{--theme-radius:16px;--theme-card-padding:22px;--theme-page-max:1360px;--theme-nav-bg:#111c2e}
+html[data-profile-theme="minimal"]{--theme-radius:7px;--theme-card-padding:16px;--theme-page-max:1180px;--theme-nav-bg:#fff}
+html[data-profile-theme="aurora"]{--theme-radius:22px;--theme-card-padding:24px;--theme-page-max:1340px}
+html[data-profile-theme="glass"]{--theme-radius:22px;--theme-card-padding:22px;--theme-page-max:1340px}
+html[data-profile-theme="neo"]{--theme-radius:3px;--theme-border-width:2px;--theme-card-padding:20px;--theme-page-max:1360px}
+
+html[data-profile-theme] body{background-color:var(--bg)!important;color:var(--ink)}
+html[data-profile-theme] .workspace{background:transparent}
+html[data-profile-theme] .section-page,
+html[data-profile-theme] .page-columns,
+html[data-profile-theme] .content-column,
+html[data-profile-theme] .right-rail,
+html[data-profile-theme] .profile-form,
+html[data-profile-theme] .section-toolbar{color:var(--ink)}
+html[data-profile-theme] .section-page{max-width:var(--theme-page-max)}
+html[data-profile-theme] .page-heading h1,
+html[data-profile-theme] .page-heading h2,
+html[data-profile-theme] .page-heading h3,
+html[data-profile-theme] .feed-title h2,
+html[data-profile-theme] .panel h2,
+html[data-profile-theme] .card h2,
+html[data-profile-theme] .panel h3,
+html[data-profile-theme] .card h3{color:var(--ink)}
+html[data-profile-theme] .page-heading p,
+html[data-profile-theme] .muted,
+html[data-profile-theme] .small-note,
+html[data-profile-theme] .feed-title span,
+html[data-profile-theme] .field-label,
+html[data-profile-theme] .section-eyebrow{color:var(--muted)}
+html[data-profile-theme] .panel,
+html[data-profile-theme] .card,
+html[data-profile-theme] .tile-card,
+html[data-profile-theme] .post-card,
+html[data-profile-theme] .composer,
+html[data-profile-theme] .profile-header,
+html[data-profile-theme] .modal-card,
+html[data-profile-theme] .rail-card,
+html[data-profile-theme] .status-card,
+html[data-profile-theme] .auth-card,
+html[data-profile-theme] .auth-panel,
+html[data-profile-theme] .onboarding-card,
+html[data-profile-theme] .discover-panel,
+html[data-profile-theme] .detail-header,
+html[data-profile-theme] .empty-state{
+ background:var(--panel);color:var(--ink);border-color:var(--line);
+ border-radius:var(--theme-radius);box-shadow:var(--shadow)
+}
+html[data-profile-theme] .panel,
+html[data-profile-theme] .card,
+html[data-profile-theme] .tile-card,
+html[data-profile-theme] .post-card,
+html[data-profile-theme] .composer,
+html[data-profile-theme] .rail-card{padding:var(--theme-card-padding)}
+html[data-profile-theme] .searchbox,
+html[data-profile-theme] .form-input,
+html[data-profile-theme] .form-select,
+html[data-profile-theme] input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+html[data-profile-theme] textarea,
+html[data-profile-theme] select,
+html[data-profile-theme] .comment-form,
+html[data-profile-theme] .comments-panel .comment>div{
+ background:var(--panel);color:var(--ink);border-color:var(--line);border-radius:calc(var(--theme-radius)*.65)
+}
+html[data-profile-theme] input::placeholder,
+html[data-profile-theme] textarea::placeholder{color:var(--muted);opacity:.82}
+html[data-profile-theme] .btn,
+html[data-profile-theme] button:not(.icon-btn):not(.nav-link):not(.theme-preview-card):not(.composer-preview-remove){
+ border-radius:calc(var(--theme-radius)*.65)
+}
+html[data-profile-theme] .btn-primary{background:var(--brand);border-color:var(--brand);color:#fff}
+html[data-profile-theme] .btn-outline,
+html[data-profile-theme] .filter-pill{background:var(--panel);color:var(--ink);border-color:var(--line)}
+html[data-profile-theme] .nav-link{border-radius:calc(var(--theme-radius)*.6)}
+html[data-profile-theme] .sidebar,
+html[data-profile-theme] .desktop-topbar,
+html[data-profile-theme] .mobile-header,
+html[data-profile-theme] .mobile-bottom-nav{
+ background:var(--theme-nav-bg);color:var(--ink);border-color:var(--line)
+}
+html[data-profile-theme] .sidebar-profile-info strong,
+html[data-profile-theme] .topbar-account,
+html[data-profile-theme] .brand{color:var(--ink)}
+html[data-profile-theme] .nav-link{color:var(--muted)}
+html[data-profile-theme] .nav-link:hover,
+html[data-profile-theme] .nav-active{background:color-mix(in srgb,var(--brand) 12%,var(--panel));color:var(--brand)}
+html[data-profile-theme] .mobile-bottom-nav a{color:var(--muted)}
+html[data-profile-theme] .mobile-bottom-nav a.active{color:var(--brand)}
+html[data-profile-theme] .post-head,
+html[data-profile-theme] .post-meta,
+html[data-profile-theme] .post-actions,
+html[data-profile-theme] .composer-top,
+html[data-profile-theme] .composer-bottom,
+html[data-profile-theme] .modal-actions,
+html[data-profile-theme] .section-toolbar{border-color:var(--line)}
+html[data-profile-theme] .post-body,
+html[data-profile-theme] .post-meta strong,
+html[data-profile-theme] .post-stats,
+html[data-profile-theme] .comment,
+html[data-profile-theme] .comment strong,
+html[data-profile-theme] .tile-meta,
+html[data-profile-theme] .rail-row{color:var(--ink)}
+html[data-profile-theme] .post-actions button,
+html[data-profile-theme] .composer-tools button,
+html[data-profile-theme] .rail-link{color:var(--brand)}
+html[data-profile-theme] .modal-overlay{background:rgba(10,14,30,.58)}
+html[data-profile-theme] .conecta-chat-widget,
+html[data-profile-theme] .conecta-chat-panel,
+html[data-profile-theme] .conecta-chat-widget-list,
+html[data-profile-theme] .conecta-call-panel,
+html[data-profile-theme] .conecta-chat-push-feedback{background:var(--panel);color:var(--ink);border-color:var(--line)}
+html[data-profile-theme] .conecta-chat-widget button,
+html[data-profile-theme] .conecta-chat-panel button{border-color:var(--line)}
+html[data-profile-theme] .conecta-chat-widget input,
+html[data-profile-theme] .conecta-chat-panel input,
+html[data-profile-theme] .conecta-chat-panel textarea{background:var(--panel);color:var(--ink);border-color:var(--line)}
+html[data-profile-theme] table,
+html[data-profile-theme] th,
+html[data-profile-theme] td{border-color:var(--line)}
+html[data-profile-theme] th{background:color-mix(in srgb,var(--brand) 8%,var(--panel));color:var(--ink)}
+html[data-profile-theme] .form-error{color:#c22d4a}
+html[data-profile-theme] .form-success{color:#16805d}
+html[data-profile-theme] :focus-visible{outline-color:var(--brand);box-shadow:0 0 0 3px var(--theme-focus)}
+
+html[data-profile-theme="orkut"] .workspace{background:linear-gradient(180deg,#eaf1fa,#f4f8fd)}
+html[data-profile-theme="orkut"] .post-card,html[data-profile-theme="orkut"] .composer{border-top:4px solid #3d78bd}
+html[data-profile-theme="myspace"] body,html[data-profile-theme="creator"] body{background-image:radial-gradient(ellipse at top,#28345e 0,transparent 55%)}
+html[data-profile-theme="myspace"] .post-card,html[data-profile-theme="myspace"] .composer{background:linear-gradient(145deg,#1a2140,#141a33);border-color:#34416e}
+html[data-profile-theme="myspace"] .post-body,html[data-profile-theme="myspace"] .comment,html[data-profile-theme="myspace"] .post-meta strong{color:#e8edff}
+html[data-profile-theme="facebook"] .workspace{background:#f0f2f5}
+html[data-profile-theme="facebook"] .post-card,html[data-profile-theme="facebook"] .composer{border:1px solid #dce3ed}
+html[data-profile-theme="instagram"] .workspace{background:linear-gradient(180deg,#fff7fb,#fff 50%)}
+html[data-profile-theme="instagram"] .post-card,html[data-profile-theme="instagram"] .composer{border-top:2px solid #d94683}
+html[data-profile-theme="creator"] .post-card,html[data-profile-theme="creator"] .composer{background:#111c2e;border-top:2px solid #22d3ee}
+html[data-profile-theme="creator"] .post-body,html[data-profile-theme="creator"] .comment,html[data-profile-theme="creator"] .post-meta strong{color:#e5edf7}
+html[data-profile-theme="minimal"] .panel,html[data-profile-theme="minimal"] .card,html[data-profile-theme="minimal"] .post-card,html[data-profile-theme="minimal"] .composer{box-shadow:none;border-radius:6px}
+html[data-profile-theme="aurora"] .workspace{background:radial-gradient(ellipse at 0 0,#e7dcff70,transparent 45%),radial-gradient(ellipse at 100% 0,#ffd7ee70,transparent 45%)}
+html[data-profile-theme="aurora"] .panel,html[data-profile-theme="aurora"] .card,html[data-profile-theme="aurora"] .post-card,html[data-profile-theme="aurora"] .composer{border:1px solid #e4ddff}
+html[data-profile-theme="glass"] .workspace{background:radial-gradient(ellipse at 0 0,#c8efff99,transparent 45%),radial-gradient(ellipse at 100% 0,#e6d5ff99,transparent 45%)}
+html[data-profile-theme="glass"] .panel,html[data-profile-theme="glass"] .card,html[data-profile-theme="glass"] .tile-card,html[data-profile-theme="glass"] .post-card,html[data-profile-theme="glass"] .composer,html[data-profile-theme="glass"] .modal-card{background:rgba(255,255,255,.68);backdrop-filter:blur(18px) saturate(145%);border:1px solid rgba(255,255,255,.85)}
+html[data-profile-theme="neo"] .workspace{background-image:linear-gradient(#17171709 1px,transparent 1px),linear-gradient(90deg,#17171709 1px,transparent 1px);background-size:20px 20px}
+html[data-profile-theme="neo"] .panel,html[data-profile-theme="neo"] .card,html[data-profile-theme="neo"] .tile-card,html[data-profile-theme="neo"] .post-card,html[data-profile-theme="neo"] .composer,html[data-profile-theme="neo"] .modal-card{border:2px solid #252525;border-radius:3px;box-shadow:5px 5px 0 #1717171a}
+html[data-profile-theme="neo"] .page-heading h1,html[data-profile-theme="neo"] .feed-title h2{text-transform:uppercase;letter-spacing:-.06em}
+html[data-profile-theme="neo"] .btn-primary{background:#e34f2f;color:#fff;border:2px solid #171717;box-shadow:3px 3px 0 #171717}
+@media(max-width:780px){
+ html[data-profile-theme] .section-page{padding-inline:14px}
+ html[data-profile-theme] .panel,html[data-profile-theme] .card,html[data-profile-theme] .post-card,html[data-profile-theme] .composer{padding:16px}
+ html[data-profile-theme="neo"] .mobile-bottom-nav{border-top:2px solid #171717}
+}
