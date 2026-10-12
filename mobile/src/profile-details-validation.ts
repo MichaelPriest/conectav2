@@ -1,5 +1,5 @@
 export const PROFILE_THEMES=['violet','aqua','pink','sunset','midnight','forest','ocean','graphite','candy'] as const;
-export const PROFILE_LAYOUTS=['classic','orkut','myspace','facebook','instagram','creator','minimal'] as const;
+export const PROFILE_LAYOUTS=['classic','orkut','myspace','facebook','instagram','creator','minimal','aurora','glass','neo'] as const;
 export type ProfileTheme=typeof PROFILE_THEMES[number];
 export type ProfileLayout=typeof PROFILE_LAYOUTS[number];
 export type ProfileDetails={
