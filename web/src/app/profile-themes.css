@@ -298,3 +298,11 @@ html[data-profile-theme="neo"] .theme-preview-neo{--preview-bg:#f5f1e8;--preview
  html[data-profile-theme="glass"] .card,
  html[data-profile-theme="glass"] .post-card{backdrop-filter:blur(12px)}
 }
+
+.profile-layout-aurora .conecta-profile-cover{border-radius:22px;background:linear-gradient(125deg,#7758f5,#b14be0 58%,#e34fbd);box-shadow:0 12px 28px rgba(119,88,245,.2)}
+.profile-layout-aurora .conecta-profile-grid .panel,.profile-layout-aurora .conecta-myspace-panel .panel,.profile-layout-aurora .conecta-public-profile-panel{border:1px solid #e4ddff;border-radius:20px;box-shadow:0 10px 30px rgba(119,88,245,.1)}
+.profile-layout-glass .conecta-profile-cover{border-radius:22px;background:linear-gradient(125deg,#087fbc,#7657d9);box-shadow:0 12px 28px rgba(8,127,188,.18)}
+.profile-layout-glass .conecta-profile-grid .panel,.profile-layout-glass .conecta-myspace-panel .panel,.profile-layout-glass .conecta-public-profile-panel{border:1px solid rgba(255,255,255,.8);border-radius:20px;background:rgba(255,255,255,.78);backdrop-filter:blur(16px)}
+.profile-layout-neo .conecta-profile-cover{border:1px solid #171717;border-radius:3px;background:linear-gradient(110deg,#e34f2f,#f1b92b);color:#171717;box-shadow:5px 5px 0 #171717}
+.profile-layout-neo .conecta-profile-grid .panel,.profile-layout-neo .conecta-myspace-panel .panel,.profile-layout-neo .conecta-public-profile-panel{border:1px solid #252525;border-radius:3px;background:#fffdf7;box-shadow:4px 4px 0 rgba(23,23,23,.12)}
+.profile-layout-neo .conecta-profile-tags span{border:1px solid #171717;border-radius:3px;background:#f1b92b;color:#171717}
