@@ -1,7 +1,7 @@
 import {Platform} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import {SITE_URL,supabase} from './supabase';
+import {API_SITE_URL,supabase} from './supabase';
 
 const PROJECT_ID=process.env.EXPO_PUBLIC_EAS_PROJECT_ID||'';
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -20,7 +20,7 @@ async function callDeviceRoute(method:'POST'|'DELETE',token:string,userId:string
  const {data:{session}}=await supabase.auth.getSession();
  if(session?.user.id!==userId||!session.access_token)
   throw new Error('Faça login novamente para configurar notificações remotas.');
- const response=await fetch(SITE_URL+'/api/mobile/push/devices',{
+ const response=await fetch(API_SITE_URL+'/api/mobile/push/devices',{
   method,
   headers:{'Content-Type':'application/json',Authorization:'Bearer '+session.access_token},
   body:JSON.stringify({token,platform:Platform.OS})
