@@ -1,7 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {ActivityIndicator,Image,Pressable,StyleSheet,Text,TextInput,View} from 'react-native';
 import {VideoView,useVideoPlayer} from 'expo-video';
-import {reportSafety,signedMedia} from './data';
+import {invalidateSignedMedia,reportSafety,signedMedia} from './data';
 import {theme as t} from './theme';
 export const styles=StyleSheet.create({
  page:{flex:1,backgroundColor:t.bg},
@@ -63,24 +63,46 @@ export function Media({path,height=185,width='100%',radius=15,marginTop=12,onPre
   accessibilityLabel="Ampliar imagem" onPress={onPress}
   style={{width,overflow:'hidden'}}>{image}</Pressable>:image;
 }
-function InlineVideo({url,height}:{url:string;height:number}){
- const player=useVideoPlayer(url);
+function InlineVideo({url,onError}:{url:string;onError:(message:string)=>void}){
+ const player=useVideoPlayer({uri:url});
+ useEffect(()=>{
+  const subscription=player.addListener('statusChange',event=>{
+   if(event.status==='error')onError(event.error?.message||'O Android não conseguiu abrir este arquivo de vídeo.');
+  });
+  return()=>subscription.remove();
+ },[player,onError]);
  return <VideoView player={player} nativeControls fullscreenOptions={{enable:true}}
-  style={{width:'100%',height,borderRadius:14,marginTop:10}}/>;
+  contentFit="contain"
+  style={{width:'100%',height:240,borderRadius:14,marginTop:10}}/>;
 }
 export function VideoMedia({path}:{path:string|null|undefined}){
  const [url,setUrl]=useState<string|null>(null);
  const [activated,setActivated]=useState(false);
+ const [error,setError]=useState('');
+ const [attempt,setAttempt]=useState(0);
  useEffect(()=>{
-  let active=true;setUrl(null);setActivated(false);
-  void signedMedia(path).then(value=>{if(active)setUrl(value);});
+  let active=true;
+  setUrl(null);setError('');setActivated(false);
+  void signedMedia(path).then(value=>{
+   if(!active)return;
+   if(value)setUrl(value);
+   else setError('Não foi possível obter o acesso seguro ao vídeo. Verifique a conexão e tente novamente.');
+  }).catch(()=>{
+   if(active)setError('Não foi possível preparar o vídeo. Verifique a conexão e tente novamente.');
+  });
   return()=>{active=false;};
- },[path]);
+ },[path,attempt]);
  if(!path)return null;
- return <View style={{marginTop:10}}>
-  {!activated?<Action secondary label="▶ Assistir vídeo" onPress={()=>setActivated(true)}/>:
-   url?<InlineVideo url={url} height={240}/>:
-    <Text style={styles.muted}>Não foi possível carregar o vídeo autorizado.</Text>}
+ return <View style={{marginTop:10,gap:8}}>
+  {error?<View style={{padding:12,backgroundColor:t.subtle,borderRadius:12,gap:8}}>
+   <Text accessibilityRole="alert" style={styles.muted}>{error}</Text>
+   <Action secondary label="Tentar carregar novamente" onPress={()=>{
+    invalidateSignedMedia(path);setError('');setUrl(null);setActivated(false);setAttempt(value=>value+1);
+   }}/>
+  </View>:!activated?
+   <Action secondary label="▶ Assistir vídeo" onPress={()=>setActivated(true)}/>:
+   url?<InlineVideo key={url} url={url} onError={message=>setError('Falha no player: '+message)}/>:
+   <Loading text="Preparando vídeo..."/>}
  </View>;
 }
 export function Action({label,onPress,secondary=false,disabled=false,leading,fullWidth=false}:{

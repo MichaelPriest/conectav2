@@ -100,6 +100,18 @@ test('Native comments, bookmarks and inline videos use actual authorized databas
  assert.ok(appConfig.expo.plugins.some(plugin=>plugin[0]==='expo-video'));
 });
 
+test('Native video player uses a URI source, exposes playback errors and can refresh signed media',()=>{
+ const ui=read('src/ui.tsx');
+ const data=read('src/data.ts');
+ assert.match(ui,/useVideoPlayer\(\{uri:url\}\)/);
+ assert.match(ui,/player\.addListener\('statusChange'/);
+ assert.match(ui,/event\.status==='error'/);
+ assert.match(ui,/contentFit="contain"/);
+ assert.match(ui,/invalidateSignedMedia\(path\)/);
+ assert.match(ui,/Tentar carregar novamente/);
+ assert.match(data,/createSignedUrl\(path,1800\)/);
+ assert.match(data,/export function invalidateSignedMedia\(path:string\)/);
+});
 test('Native safety reporting uses same RLS-protected web workflow',()=>{
  const ui=read('src/ui.tsx');
  assert.match(data,/from\('safety_reports'\)\.insert\(/);
