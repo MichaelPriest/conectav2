@@ -42,7 +42,7 @@ const themePrimaryOrder: Record<string, string[]> = {
   classic: ['/feed', '/explorar', '/comunidades', '/mensagens', '/notificacoes'],
   orkut: ['/comunidades', '/mensagens', '/feed', '/explorar', '/notificacoes'],
   myspace: ['/feed', '/mensagens', '/explorar', '/comunidades', '/notificacoes'],
-  facebook: ['/feed', '/conexoes', '/comunidades', '/mensagens', '/notificacoes'],
+  facebook: ['/feed', '/comunidades', '/mensagens', '/explorar', '/notificacoes'],
   instagram: ['/feed', '/explorar', '/mensagens', '/notificacoes', '/comunidades'],
   creator: ['/feed', '/explorar', '/mensagens', '/comunidades', '/notificacoes'],
   minimal: ['/feed', '/explorar', '/mensagens', '/comunidades', '/notificacoes'],
