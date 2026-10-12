@@ -1880,8 +1880,10 @@ export default function App(){
   const open=(url:string|null)=>{
    if(!live||!url)return;
    const to=parseConectaLink(url);
-   if(to?.type==='post'){setViewPostId(to.id);setTab('feed');}
-   if(to?.type==='notifications'){setViewPostId(null);setTab('notifications');}
+   if(to?.type==='post'){setChatId(null);setCommunitySlugRoute(null);setViewPostId(to.id);setTab('feed');}
+   if(to?.type==='notifications'){setViewPostId(null);setChatId(null);setCommunitySlugRoute(null);setTab('notifications');}
+   if(to?.type==='messages'){setViewPostId(null);setChatId(null);setCommunitySlugRoute(null);setTab('messages');}
+   if(to?.type==='community'){setViewPostId(null);setChatId(null);setCommunitySlugRoute(to.slug);setTab('communities');}
   };
   void Linking.getInitialURL().then(open).catch(()=>{});
   const listener=Linking.addEventListener('url',event=>open(event.url));
