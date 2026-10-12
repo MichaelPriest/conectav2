@@ -27,3 +27,14 @@
  .profile-layout-instagram .conecta-profile-grid,.profile-layout-creator .conecta-profile-grid{grid-template-columns:1fr}
  .profile-layout-instagram .conecta-profile-grid>.stack:last-child{grid-template-columns:1fr}
 }
+
+/* MySpace: expressive, music-forward cards; Minimal: calmer typography and whitespace. */
+.profile-layout-myspace .conecta-profile-cover{border:1px solid #263c72;border-radius:8px;background:linear-gradient(125deg,#101a40,#334b8e 58%,#7c3aed);box-shadow:inset 0 0 0 1px #ffffff20}
+.profile-layout-myspace .conecta-profile-grid .panel,.profile-layout-myspace .conecta-myspace-panel .panel,.profile-layout-myspace .conecta-public-profile-panel{border:1px solid #c4cce5;border-radius:8px;background:linear-gradient(180deg,#fff,#f5f7ff)}
+.profile-layout-myspace .conecta-profile-grid .panel h2,.profile-layout-myspace .conecta-myspace-panel .feed-title h2{color:#293f7a}
+.profile-layout-myspace .conecta-profile-tags span{background:#e7eaff;border:1px solid #c4ccef;border-radius:5px}
+.profile-layout-minimal .conecta-profile-cover{border-radius:8px;background:linear-gradient(125deg,#e5e7eb,#f8fafc 55%,#dbeafe);color:#111827;box-shadow:none}
+.profile-layout-minimal .conecta-profile-bio{color:#111827}
+.profile-layout-minimal .conecta-profile-grid .panel,.profile-layout-minimal .conecta-myspace-panel .panel,.profile-layout-minimal .conecta-public-profile-panel{border:1px solid #e5e7eb;border-radius:10px;box-shadow:none}
+.profile-layout-minimal .conecta-profile-tags span{border-radius:5px;background:#f3f4f6;color:#374151}
+.profile-layout-minimal .conecta-profile-grid{gap:18px}
