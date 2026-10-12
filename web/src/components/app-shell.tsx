@@ -183,11 +183,11 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
         searchInputRef.current?.focus();
         return;
       }
-      if (editing || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      if (editing || event.ctrlKey || event.metaKey || event.shiftKey) return;
       const destinations: Record<string, string> = {
         '1': '/feed', '2': '/explorar', '3': '/comunidades', '4': '/mensagens', '5': '/notificacoes'
       };
-      if (destinations[event.key]) {
+      if (event.altKey && destinations[event.key]) {
         event.preventDefault();
         router.push(destinations[event.key]);
       }
@@ -200,9 +200,14 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
   const activeQuickShortcuts = (themeShortcutHrefs[profileTheme] || themeShortcutHrefs.classic)
     .map(href => shortcutPool.find(item => item.href === href))
     .filter((item): item is (typeof shortcutPool)[number] => Boolean(item));
-  const activeMobileItems = [...mobileItems].sort((a,b) =>
-    (themeMobileOrder[profileTheme] || themeMobileOrder.classic).indexOf(a.href) -
-    (themeMobileOrder[profileTheme] || themeMobileOrder.classic).indexOf(b.href));
+  const activeMobileItems = [...mobileItems].sort((a,b) => {
+    const order = themeMobileOrder[profileTheme] || themeMobileOrder.classic;
+    const rank = (href: string) => {
+      const configured = order.indexOf(href);
+      return configured >= 0 ? configured : order.length + mobileItems.findIndex(item => item.href === href);
+    };
+    return rank(a.href) - rank(b.href);
+  });
 
   function search(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -289,7 +294,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
     </aside>
     {mobileNav && <button className="mobile-overlay" aria-label="Fechar menu" onClick={() => setMobileNav(false)}/>}
     <div className="workspace">
-      <header className="desktop-topbar"><span className="theme-shortcut-hint" aria-hidden="true">Ctrl/⌘ K · 1–5</span><button type="button" className="icon-btn conecta-topbar-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"} title={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"}>{sidebarCollapsed?<PanelLeftOpen size={20}/>:<PanelLeftClose size={20}/>}</button>
+      <header className="desktop-topbar"><span className="theme-shortcut-hint" aria-hidden="true">Ctrl/⌘ K · Alt+1–5</span><button type="button" className="icon-btn conecta-topbar-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"} title={sidebarCollapsed?"Expandir sidebar":"Recolher sidebar"}>{sidebarCollapsed?<PanelLeftOpen size={20}/>:<PanelLeftClose size={20}/>}</button>
         <form className="searchbox topbar-search" onSubmit={search}><Search size={18}/><input ref={searchInputRef} value={searchValue} onChange={e => setSearchValue(e.target.value)} placeholder={t('search')} aria-label="Buscar no Conecta"/></form>
         <div className="topbar-actions">
           <button onClick={toggleTheme} className="icon-btn" aria-label={dark?t('light'):t('dark')} title="Alterar tema">{dark ? <Sun size={19}/> : <Moon size={19}/>}</button>
