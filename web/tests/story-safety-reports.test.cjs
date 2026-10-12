@@ -22,3 +22,13 @@ test('Story report button is only offered for another user\'s Story and submits 
  assert.match(button,/targetType:'message'\|'post'\|'story'/);
  assert.match(button,/target_type:targetType,target_id:targetId/);
 });
+
+test('Story reports retain the reported author and are identifiable in the moderation queue',()=>{
+ const migration=read('../supabase/migrations/20261012_conecta_story_safety_reports.sql');
+ const page=read('src/app/moderacao/page.tsx');
+ assert.match(migration,/select s\.caption,s\.media_type,s\.author_id into content_to_record,media_to_record,offender/i);
+ assert.match(migration,/new\.reported_author_id:=offender/i);
+ assert.match(page,/target_type:'post'\|'message'\|'story'/);
+ assert.match(page,/target_type==='story'\?'Story'/);
+ assert.match(page,/target_type==='story'\?'Denúncia de Story'/);
+});
