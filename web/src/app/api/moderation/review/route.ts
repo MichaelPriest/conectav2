@@ -141,8 +141,9 @@ export async function POST(request:NextRequest){
  if(media.length===0&&row.media_path)
   media.push({path:row.media_path as string,type:row.media_type as MediaKind});
  if(media.length>5)return reply({status:'pending',error:'Número de mídias exige revisão manual.'},200);
- if(media.some(m=>m.type==='video')&&engine==='openai')
-  return reply({status:'pending',reason:'Vídeos aguardam análise de quadros e revisão humana.'});
+ // The OpenAI moderation endpoint does not accept video. Route a single video
+ // through the bundled FFmpeg+NSFWJS scan instead of sending every video to
+ // human review solely because the text/image API was selected.
  if(media.some(m=>m.type!=='image'&&m.type!=='video'))return reply({status:'pending'});
  if(media.some(m=>!m.path.startsWith(user.id+'/')))
   return reply({status:'pending',error:'Caminho de mídia inválido.'},422);
@@ -161,9 +162,10 @@ export async function POST(request:NextRequest){
   imageUrls.push(data.signedUrl);
  }
  try{
+  const hasVideo=media.some(item=>item.type==='video');
   const result=engine==='worker'?
     await moderateWithOpenSourceWorker(content,media,admin):
-    engine==='openai'?await moderateWithFreeApi(content,imageUrls):
+    engine==='openai'&&!hasVideo?await moderateWithFreeApi(content,imageUrls):
     await moderateWithBundledModel(content,media,admin);
   const next=(result.flagged||result.humanReview)?'pending':'approved';
   const now=new Date().toISOString();
