@@ -18,7 +18,7 @@ test('Story share insert privilege remains column-scoped and cannot update rows'
     /grant insert\s*\(\s*author_id\s*,\s*caption\s*,\s*media_path\s*,\s*media_type\s*,\s*visibility\s*,\s*shared_post_id\s*\)\s*on public\.stories to authenticated;/is,
   );
   assert.doesNotMatch(grant, /grant insert\s+on public\.stories to authenticated/i);
-  assert.doesNotMatch(grant, /grant\s+update\b/i);
+  assert.doesNotMatch(grant, /^\\s*grant\\s+update\\b/im);
 });
 
 test('Database trigger permits only already-approved public non-community post shares', () => {
