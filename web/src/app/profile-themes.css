@@ -603,3 +603,42 @@ html[data-profile-theme="neo"] .nav-link{font-weight:800}
  .theme-quick-shortcuts .theme-shortcut svg{width:20px;height:20px}
  html[data-profile-theme] .section-page{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
 }
+
+
+/* Refined global topbar: navigation toggle, flexible search and compact actions. */
+html[data-profile-theme] .desktop-topbar{
+  display:flex;align-items:center;gap:clamp(8px,1.2vw,16px);
+  min-width:0;padding-inline:clamp(14px,2vw,28px);
+}
+html[data-profile-theme] .conecta-topbar-sidebar-toggle{flex:0 0 auto}
+html[data-profile-theme] .topbar-search{
+  flex:1 1 360px;width:auto;min-width:0;max-width:680px;
+  margin:0 auto 0 0;display:flex;align-items:center;gap:10px;
+}
+html[data-profile-theme] .topbar-search input{width:100%;min-width:0}
+html[data-profile-theme] .topbar-actions{
+  display:flex;align-items:center;justify-content:flex-end;gap:8px;
+  flex:0 0 auto;min-width:0;margin-left:auto;
+}
+html[data-profile-theme] .topbar-account{
+  display:flex;align-items:center;gap:9px;min-width:0;max-width:230px;
+}
+html[data-profile-theme] .topbar-account>span:not(.concept-account-handle){
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+html[data-profile-theme] .concept-account-handle{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px}
+html[data-profile-theme] .topbar-divider{height:26px;flex:0 0 1px}
+@media(max-width:1100px){
+ html[data-profile-theme] .concept-account-handle{display:none}
+ html[data-profile-theme] .topbar-account{max-width:150px}
+ html[data-profile-theme] .desktop-topbar{gap:8px;padding-inline:14px}
+}
+@media(max-width:820px){
+ html[data-profile-theme] .desktop-topbar{gap:7px}
+ html[data-profile-theme] .topbar-search{flex-basis:160px}
+ html[data-profile-theme] .topbar-account>span{display:none}
+ html[data-profile-theme] .topbar-account{max-width:none;padding:0}
+}
+@media(max-width:690px){
+ html[data-profile-theme] .desktop-topbar{display:none}
+}
