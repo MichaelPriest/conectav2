@@ -21,7 +21,7 @@ function ago(value: string) {
   return new Date(value).toLocaleDateString('pt-BR');
 }
 
-export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: string; refresh: () => Promise<void> }) {
+export function PostCard({ post, userId, refresh, onSavedChange }: { post: FeedPost; userId: string; refresh: () => Promise<void>; onSavedChange?: (saved: boolean) => void }) {
   const [liked, setLiked] = useState(false);
   const [pendingLike, setPendingLike] = useState(false);
   const [commentsOpen, setCommentsOpen] = useState(false);
@@ -64,7 +64,7 @@ export function PostCard({ post, userId, refresh }: { post: FeedPost; userId: st
       await db.from('saved_posts').delete().eq('user_id',userId).eq('post_id',post.id):
       await db.from('saved_posts').insert({user_id:userId,post_id:post.id});
     if(e)setNotice(e.message);
-    else {setSaved(v=>!v);setNotice(saved?'Removido dos salvos.':'Publicação salva!');}
+    else {const nextSaved=!saved;setSaved(nextSaved);onSavedChange?.(nextSaved);setNotice(saved?'Removido dos salvos.':'Publicação salva!');}
   }
 
   async function like() {
