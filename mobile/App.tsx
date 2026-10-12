@@ -2000,16 +2000,17 @@ export default function App(){
       <Brand compact/>
      </Pressable>
      <View style={[s.row,{gap:compactHeader?4:7,flexShrink:0}]}>
-      <RoundIcon compact={compactHeader} Icon={Search} label="Explorar pessoas"
-       onPress={()=>navigate('connections')} active={tab==='connections'}/>
-      <RoundIcon compact={compactHeader} Icon={Clapperboard} label="Reels"
-       onPress={()=>navigate('reels')} active={tab==='reels'}/>
       <RoundIcon compact={compactHeader} Icon={MessageCircle} label="Conversas"
        onPress={()=>navigate('messages')} active={tab==='messages'}/>
       <RoundIcon compact={compactHeader} Icon={Bell} label={unreadCount>0?
        unreadCount+' notificações não lidas':'Notificações'}
        badge={unreadCount} onPress={()=>navigate('notifications')}
        active={tab==='notifications'}/>
+      <RoundIcon compact={compactHeader} Icon={MoreHorizontal} label="Mais opções"
+       onPress={()=>Alert.alert('Mais opções','Escolha uma área do Conecta.',[
+        {text:'Reels',onPress:()=>navigate('reels')},
+        {text:'Cancelar',style:'cancel'}
+       ])} active={tab==='reels'}/>
      </View>
     </View>
     {render()}
