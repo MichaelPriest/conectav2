@@ -41,7 +41,8 @@ test('automatic PT-BR moderation screens ordinary and risky comments on the serv
   assert.equal(contextual.reviewRequired,true,'external links require a check');
   const threat=screenTextAutomatically('Eu vou te matar amanhã.');
   assert.equal(threat.reviewRequired,true,'threats require moderation');
-  assert.equal(screenTextAutomatically('um texto '.repeat(150)).reviewRequired,true);
+  assert.equal(screenTextAutomatically('um texto '.repeat(150)).reviewRequired,false,'long ordinary captions should not be routed to human review only because of length');
+  assert.equal(screenTextAutomatically('texto comum '.repeat(100)+' Eu vou te matar amanhã.').reviewRequired,true,'risk signals still trigger review inside longer captions');
  }finally{await cleanup();}
 },{timeout:30000});
 test('server extracts real video frames with FFmpeg and classifies with NSFWJS',async()=>{
