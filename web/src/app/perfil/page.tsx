@@ -133,6 +133,7 @@ export default function Profile(){
        user_id:auth.user.id,...payload,updated_at:new Date().toISOString()
      },{onConflict:'user_id'});
      if(detailError)throw detailError;
+     window.dispatchEvent(new CustomEvent('conecta-profile-theme-change',{detail:payload.layout_style}));
      detailsSaved=true;
      const {data:updated,error:profileError}=await db.from('profiles').update({
        display_name:(name||'').trim(),handle:username,bio:(bio||'').trim(),updated_at:new Date().toISOString(),
