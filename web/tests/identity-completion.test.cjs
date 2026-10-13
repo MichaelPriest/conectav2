@@ -25,6 +25,10 @@ test('Adult self-declaration completes BASIC registration only',()=>{
  assert.equal(x.ageVerified,false);
  assert.equal(x.grantsAdultPrivileges,false);
  assert.equal(x.adsAllowed,false);
+ assert.equal(x.ageAssurance,'unknown');
+ assert.equal(x.ageDeclarationTrusted,false);
+ assert.equal(x.adultRestrictedAccess,false);
+ assert.equal(x.minorProtectionsRequired,true);
 });
 test('Teen statements and unexpected values fail closed',()=>{
  for(const band of ['13_15','16_17','under_13','unknown','invalid']){
