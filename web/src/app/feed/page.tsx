@@ -1,8 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { Camera, Globe2, ImagePlus, Loader2, Send, Smile, Sparkles, Video, X } from 'lucide-react';
+import { Camera, Globe2, ImagePlus, Loader2, Send, Smile, Sparkles, Video, X, BarChart3 } from 'lucide-react';
 import { GuardedPage, useAuthProfile } from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import { PostCard } from '@/components/post-card';
@@ -18,7 +17,7 @@ import {EmojiButton} from '@/components/emoji-button';
 import {MentionInput} from '@/components/mention-input';
 import {PollDraft,validatePoll} from '@/components/poll-draft';
 import {attachPoll} from '@/lib/create-poll';
-import {BarChart3} from 'lucide-react';
+import {PostDrafts} from '@/components/post-drafts';
 
 const PAGE_SIZE=15;
 
@@ -149,7 +148,7 @@ export default function FeedPage() {
               {files.map((file,index)=><div className="composer-preview-item" key={file.name+index}>
                 {previews[index]&&(file.type.startsWith('video/')
                   ?<video src={previews[index]} controls preload="metadata"/>
-                  :<img src={previews[index]} alt={'Prévia '+(index+1)}/>)}
+                  :<img src={previews[index]} alt={'Prévia '+(index+1)}/>)} 
                 <button className="composer-preview-remove" type="button" onClick={()=>setFiles(previous=>previous.filter((_,i)=>i!==index))} aria-label={'Remover mídia '+(index+1)}><X size={15}/></button>
               </div>)}
             </div>
@@ -166,6 +165,10 @@ export default function FeedPage() {
             <div className="concept-composer-submit"><select aria-label="Privacidade da publicação" value={privacy} onChange={e=>setPrivacy(e.target.value as typeof privacy)}><option value="public">Público</option><option value="friends">Amigos</option><option value="private">Só eu</option></select><button className="btn btn-primary" type="submit" disabled={busy||(!text.trim()&&files.length===0)}>{busy?<Loader2 className="spin" size={17}/>:<Send size={17}/>} Publicar</button></div>
           </div>
         </form>
+        {user&&<PostDrafts userId={user.id} current={{text,privacy,pollMode,pollOptions,pollDays}} onRestore={draft=>{
+          setText(draft.text);setPrivacy(draft.privacy);setPollMode(draft.pollMode);
+          setPollOptions(draft.pollOptions);setPollDays(draft.pollDays);setFiles([]);
+        }}/>}
         <p className="small-note conecta-moderation-disclosure">Fotos, vídeos e textos sinalizados passam por triagem e podem aguardar revisão humana. Quando a moderação externa estiver ativada, mídia e texto publicados poderão ser avaliados por um provedor de IA. Evite compartilhar dados sensíveis de crianças.</p>
         {message&&<p role="alert" className="form-error">{message}</p>}
       </section>
