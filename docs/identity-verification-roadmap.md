@@ -1,0 +1,31 @@
+# Conecta V2 — identity verification roadmap
+
+## Current implementation boundary
+
+The repository already contains browser-side camera/liveness challenges, Tesseract OCR for legacy RG documents, a local CIN QR/JWS preflight, and a gov.br/ITI signed-PDF integrity flow. These are useful preflight signals, but none alone proves that the account owner is the document holder or creates an official age decision.
+
+The `/api/identity/methods` endpoint intentionally reports capability and cost class only. It does not create verification records, upload documents, call a paid provider, change profile flags, or grant adult privileges.
+
+## Free-first architecture
+
+1. **Local preflight (no per-check provider fee):** document OCR and CIN QR parsing stay in the browser where possible. Return only a coarse result and discard source images/tokens after processing. Never log CPF, birth date, QR/JWT, selfie, or document images.
+2. **Liveness preflight:** use the existing Human camera challenge as an anti-static-capture signal. It must not be labelled identity verification or age verification.
+3. **Signed-document integrity:** keep the existing challenge-bound PDF workflow and official ITI signature-checking links. A valid signature is an integrity signal, not proof that gov.br has authenticated a Conecta account.
+4. **Official decision:** only a documented, authorized identity provider or an officially supported integration with a verified callback can set a server-side identity/age status. Until that exists, restricted/adult privileges stay locked.
+5. **Paid provider:** disabled by default. Before activation, document actual provider pricing per attempt, retries, taxes/currency, cancellation/refund behavior, user consent, and authenticated webhook signature verification. Never estimate a fee or charge a fixed markup as if it were the provider's real cost.
+
+## Open-source research candidates
+
+- `@vladmandic/human` (MIT) — already in the project for browser-side face/liveness signals; not an identity database.
+- `tesseract.js` (Apache-2.0) — already in the project for OCR; OCR output is user-editable and must not be trusted as a verified claim.
+- `@zxing/browser` (MIT) — already in the project for QR decoding; decoding a QR is not the same as verifying issuer status.
+- `helviojunior/digital-document-checker` — prior research candidate for CIN QR/JWS format. The bundled public-key provenance, revocation, and live document status are not independently verified; keep its output experimental.
+- `Idswyft Community` and `DeepGuard KYC` — prior open-source research candidates only. Before adopting either, review current upstream activity, license text, supported document/biometric methods, model/data licenses, security posture, deployment requirements, and whether it actually supports Brazil's current official documents. Do not claim compliance or production readiness based on repository availability alone.
+
+## Release gates
+
+- Keep production and the active Supabase project unchanged until a separately approved homologation run.
+- Never create mock identities, simulate successful provider callbacks, or weaken RLS/age restrictions to make tests pass.
+- Add regression tests for invalid/tampered signatures, replay, expired challenges, cross-origin requests, rate limits, and webhook authenticity.
+- Avoid retaining raw biometrics and identity documents. Record only the minimum status, provider reference, timestamps, consent/policy version, and auditable reason codes where legally justified.
+- Any official status change must be performed server-side after validating the provider response; client state and mutable profile metadata are never authoritative.
