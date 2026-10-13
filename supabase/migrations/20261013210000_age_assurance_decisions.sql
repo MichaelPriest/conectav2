@@ -26,4 +26,4 @@ comment on column public.age_assurance_decisions.evidence_reference_hash is
 
 alter table public.age_assurance_decisions enable row level security;
 revoke all on table public.age_assurance_decisions from public, anon, authenticated;
-grant select, insert, update, delete on table public.age_assurance_decisions to service_role;
+grant select on table public.age_assurance_decisions to service_role;
