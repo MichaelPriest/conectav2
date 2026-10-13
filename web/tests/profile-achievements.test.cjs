@@ -7,7 +7,7 @@ const read = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 
 test('catalog contains exactly 100 real achievement definitions including the unique first user', () => {
   const sql = read('../supabase/migrations/20261013200000_conecta_100_achievements.sql');
-  const rows = sql.split(/\r?\n/).filter(line => /^\('(?:first-user|posts-|connections-|comments-|likes-|stories-|communities-|polls-|messages-|saved_posts-)/.test(line));
+  const rows = sql.split(/\r?\n/).filter(line => /^\('(?:first-user|posts-|connections-|comments-|likes-|stories-|communities-|polls-|messages-|saved-posts-)/.test(line));
   assert.equal(rows.length, 100);
   assert.ok(sql.includes("'first-user','Primeiro usuário do Conecta'"));
   assert.ok(sql.includes("'founder',1,0"));
