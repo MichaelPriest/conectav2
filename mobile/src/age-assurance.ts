@@ -47,9 +47,15 @@ export type AgeSignalSubmissionResult = {
  * Integrity token. Only the server may persist a decision; failures fail closed.
  */
 export async function submitPlayAgeSignal(signal: PlayAgeSignalResult): Promise<AgeSignalSubmissionResult> {
-  if (signal.status !== 'shared' || typeof signal.ageLower !== 'number' ||
-      typeof signal.userStatus !== 'number') {
+  if (signal.status !== 'shared' || typeof signal.userStatus !== 'number') {
     return {status: 'preflight_only', message: 'Não há um sinal compartilhado utilizável. As proteções padrão permanecem ativas.'};
+  }
+  // In SDK 0.0.4, VERIFIED itself means 18+; age bounds may be null for that status.
+  const normalizedAgeLower = typeof signal.ageLower === 'number'
+    ? signal.ageLower
+    : signal.userStatus === 0 ? 18 : null;
+  if (normalizedAgeLower === null) {
+    return {status: 'preflight_only', message: 'O Google Play não forneceu uma faixa etária suficiente. As proteções padrão permanecem ativas.'};
   }
   // Current Play Age Signals SDK status values: VERIFIED=0, SUPERVISED=1.
   // DECLARED/UNKNOWN/pending/denied states are never accepted as a verified decision.
@@ -61,7 +67,7 @@ export async function submitPlayAgeSignal(signal: PlayAgeSignalResult): Promise<
   if (!session?.access_token) return {status: 'unauthorized', message: 'Entre novamente na sua conta para continuar.'};
 
   const payload = {
-    ageLower: signal.ageLower,
+    ageLower: normalizedAgeLower,
     ageUpper: typeof signal.ageUpper === 'number' ? signal.ageUpper : null,
     userStatus: signal.userStatus,
     mostRecentApprovalDate: typeof signal.mostRecentApprovalDate === 'number'
@@ -170,6 +176,9 @@ export async function requestPlayIntegrityToken(requestHash: string): Promise<{
 export function describePlayAgeSignal(result: PlayAgeSignalResult): string {
   switch (result.status) {
     case 'shared': {
+      if (result.userStatus === 0 && typeof result.ageLower !== 'number') {
+        return 'O Google Play informa status VERIFIED, correspondente a 18+; o servidor ainda precisa validar a integridade antes de aceitar o sinal.';
+      }
       if (typeof result.ageLower !== 'number') {
         return 'O Google Play não forneceu uma faixa etária utilizável. Nenhuma permissão foi alterada.';
       }
