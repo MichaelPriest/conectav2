@@ -42,7 +42,7 @@ test('explore derives hashtags only from the public discovery result and support
 
 test('profile achievements load the 100 real server-calculated awards',()=>{
  const component=read('components/profile-achievements.tsx');
- const migration=read('../supabase/migrations/20261013200000_conecta_100_achievements.sql');
+ const migration=fs.readFileSync(path.resolve(__dirname,'../../supabase/migrations/20261013200000_conecta_100_achievements.sql'),'utf8');
  const page=read('app/perfil/page.tsx');
  assert.match(component,/rpc\('get_my_achievements'\)/);
  assert.match(component,/\{unlocked\}\/100 desbloqueadas/);
