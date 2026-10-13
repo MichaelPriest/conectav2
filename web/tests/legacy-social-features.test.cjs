@@ -8,7 +8,7 @@ const read=relative=>fs.readFileSync(path.resolve(__dirname,'../src',relative),'
 test('publication drafts are scoped to the signed-in user and bounded',()=>{
  const component=read('components/post-drafts.tsx');
  assert.match(component,/STORAGE_PREFIX = 'conecta:post-drafts:v1:'/);
- assert.match(component,/getItem\\(STORAGE_PREFIX.*userId\\)/);
+ assert.ok(component.includes('getItem(STORAGE_PREFIX + userId)'));
  assert.match(component,/const MAX_DRAFTS = 20/);
  assert.match(component,/slice\(0, MAX_DRAFTS\)/);
  assert.match(component,/drafts\.filter\(draft => draft\.id !== id\)/);
