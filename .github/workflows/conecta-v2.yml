@@ -60,6 +60,8 @@ jobs:
         run: node --test tests/story-sharing.test.cjs
       - name: Verify official Android release links and app download navigation
         run: node --test tests/app-downloads.test.cjs tests/saved-posts.test.cjs tests/sidebar-navigation.test.cjs tests/public-links.test.cjs
+      - name: Legacy social drafts and hashtag discovery regressions
+        run: node --test tests/legacy-social-features.test.cjs
       - name: Check TypeScript
         run: npm run typecheck
       - name: Regression tests for nullable profile details

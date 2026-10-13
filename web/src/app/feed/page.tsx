@@ -1,8 +1,7 @@
 'use client';
 
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import { Camera, Globe2, ImagePlus, Loader2, Send, Smile, Sparkles, Video, X } from 'lucide-react';
+import { Camera, Globe2, ImagePlus, Loader2, Send, Smile, Sparkles, Video, X, BarChart3 } from 'lucide-react';
 import { GuardedPage, useAuthProfile } from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import { PostCard } from '@/components/post-card';
@@ -18,7 +17,7 @@ import {EmojiButton} from '@/components/emoji-button';
 import {MentionInput} from '@/components/mention-input';
 import {PollDraft,validatePoll} from '@/components/poll-draft';
 import {attachPoll} from '@/lib/create-poll';
-import {BarChart3} from 'lucide-react';
+import {PostDrafts} from '@/components/post-drafts';
 
 const PAGE_SIZE=15;
 
@@ -36,6 +35,7 @@ export default function FeedPage() {
   const [pollDays,setPollDays]=useState(7);
   const [hasMore,setHasMore]=useState(false);
   const [offset,setOffset]=useState(0);
+  const [feedFilter,setFeedFilter]=useState<'all'|'mine'|'media'>('all');
   const picker=useRef<HTMLInputElement>(null);
   const [fileMode,setFileMode]=useState<'image'|'video'>('image');
   const [previews,setPreviews]=useState<string[]>([]);
@@ -67,9 +67,12 @@ export default function FeedPage() {
     if(!user)return;
     setLoadingFeed(true);setMessage('');
     const db=supabaseBrowser();
-    const {data,error:queryError}=await db.from('posts')
+    let query=db.from('posts')
       .select('id,author_id,community_id,moderation_status,moderation_reason,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
-      .is('community_id',null).order('created_at',{ascending:false})
+      .is('community_id',null);
+    if(feedFilter==='mine')query=query.eq('author_id',user.id);
+    if(feedFilter==='media')query=query.or('media_type.not.is.null,media_path.not.is.null');
+    const {data,error:queryError}=await query.order('created_at',{ascending:false})
       .range(from,from+PAGE_SIZE-1);
     if(queryError){setMessage(queryError.message);setLoadingFeed(false);return;}
     const rows=(data||[]) as unknown as FeedPost[];
@@ -78,7 +81,7 @@ export default function FeedPage() {
     setOffset(from+rows.length);
     setHasMore(rows.length===PAGE_SIZE);
     setLoadingFeed(false);
-  },[user]);
+  },[user,feedFilter]);
 
   useEffect(()=>{if(user)void fetchPosts();},[user,fetchPosts]);
 
@@ -149,7 +152,7 @@ export default function FeedPage() {
               {files.map((file,index)=><div className="composer-preview-item" key={file.name+index}>
                 {previews[index]&&(file.type.startsWith('video/')
                   ?<video src={previews[index]} controls preload="metadata"/>
-                  :<img src={previews[index]} alt={'Prévia '+(index+1)}/>)}
+                  :<img src={previews[index]} alt={'Prévia '+(index+1)}/>)} 
                 <button className="composer-preview-remove" type="button" onClick={()=>setFiles(previous=>previous.filter((_,i)=>i!==index))} aria-label={'Remover mídia '+(index+1)}><X size={15}/></button>
               </div>)}
             </div>
@@ -166,10 +169,19 @@ export default function FeedPage() {
             <div className="concept-composer-submit"><select aria-label="Privacidade da publicação" value={privacy} onChange={e=>setPrivacy(e.target.value as typeof privacy)}><option value="public">Público</option><option value="friends">Amigos</option><option value="private">Só eu</option></select><button className="btn btn-primary" type="submit" disabled={busy||(!text.trim()&&files.length===0)}>{busy?<Loader2 className="spin" size={17}/>:<Send size={17}/>} Publicar</button></div>
           </div>
         </form>
+        {user&&<PostDrafts userId={user.id} current={{text,privacy,pollMode,pollOptions,pollDays}} onRestore={draft=>{
+          setText(draft.text);setPrivacy(draft.privacy);setPollMode(draft.pollMode);
+          setPollOptions(draft.pollOptions);setPollDays(draft.pollDays);setFiles([]);
+        }}/>}
         <p className="small-note conecta-moderation-disclosure">Fotos, vídeos e textos sinalizados passam por triagem e podem aguardar revisão humana. Quando a moderação externa estiver ativada, mídia e texto publicados poderão ser avaliados por um provedor de IA. Evite compartilhar dados sensíveis de crianças.</p>
         {message&&<p role="alert" className="form-error">{message}</p>}
       </section>
       <div className="feed-title concept-feed-title"><h2>Publicações recentes</h2><span>Mais recentes primeiro</span></div>
+      <div className="conecta-feed-filters" role="group" aria-label="Filtrar publicações">
+        <button type="button" className={'btn '+(feedFilter==='all'?'btn-primary':'btn-outline')} aria-pressed={feedFilter==='all'} onClick={()=>setFeedFilter('all')}>Todas</button>
+        <button type="button" className={'btn '+(feedFilter==='mine'?'btn-primary':'btn-outline')} aria-pressed={feedFilter==='mine'} onClick={()=>setFeedFilter('mine')}>Minhas publicações</button>
+        <button type="button" className={'btn '+(feedFilter==='media'?'btn-primary':'btn-outline')} aria-pressed={feedFilter==='media'} onClick={()=>setFeedFilter('media')}>Fotos e vídeos</button>
+      </div>
       <div className="feed-list">{posts.length===0&&!loadingFeed&&<div className="empty-state card concept-empty-feed"><span className="concept-empty-illustration"><Sparkles size={34}/></span><h3>Boas histórias começam aqui.</h3><p>O Conecta está esperando sua primeira publicação. Convide amigos, conte algo e faça parte desta comunidade.</p><a className="btn btn-primary" href="#composer">Criar primeira publicação</a></div>}{posts.map((p,i)=><div key={p.id}>
         <PostCard post={p} userId={user?.id||''} refresh={()=>fetchPosts()}/>
         {i===5&&<DiscreetAdSlot format="mobile"/>}

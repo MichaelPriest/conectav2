@@ -30,7 +30,7 @@ export default function CommunityDetail(){
  const [community,setCommunity]=useState<Community|null>(null);
  const [coverUrl,setCoverUrl]=useState<string|null>(null),[avatarUrl,setAvatarUrl]=useState<string|null>(null);
  const [member,setMember]=useState(false),[count,setCount]=useState(0);
- const [posts,setPosts]=useState<FeedPost[]>([]),[text,setText]=useState('');
+ const [posts,setPosts]=useState<FeedPost[]>([]),[pollPostIds,setPollPostIds]=useState<string[]>([]),[text,setText]=useState('');
  const [files,setFiles]=useState<File[]>([]),[pollMode,setPollMode]=useState(false);
  const [pollOptions,setPollOptions]=useState(['','']),[pollDays,setPollDays]=useState(7);
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[hasMore,setHasMore]=useState(false),[offset,setOffset]=useState(0);
@@ -51,6 +51,12 @@ export default function CommunityDetail(){
     .eq('community_id',id).order('created_at',{ascending:false}).range(from,from+PAGE_SIZE-1);
    if(e){setError(e.message);return;}
    const rows=(data||[]) as unknown as FeedPost[];
+   const pollResult=rows.length?await db.from('post_polls').select('post_id').in('post_id',rows.map(row=>row.id)):{data:[],error:null};
+   if(pollResult.error)setError(pollResult.error.message);
+   else {
+     const found=(pollResult.data||[]).map(row=>row.post_id as string);
+     setPollPostIds(previous=>append?[...new Set([...previous,...found])]:found);
+   }
    const hydrated=await hydratePostMedia(db,rows);
    setPosts(previous=>append?[...previous,...hydrated]:hydrated);
    setOffset(from+rows.length);setHasMore(rows.length===PAGE_SIZE);
@@ -173,7 +179,7 @@ export default function CommunityDetail(){
  }
  const visible=posts.filter(p=>tab==='all'||(tab==='photos'&&p.media?.some(m=>m.type==='image'))||
    (tab==='videos'&&p.media?.some(m=>m.type==='video'))||
-   (tab==='polls'&&false));
+   (tab==='polls'&&pollPostIds.includes(p.id)));
  return <GuardedPage {...auth}><main className="section-page">
    <Link href="/comunidades" className="rail-link"><ArrowLeft size={16}/> Voltar às comunidades</Link>
    {loading?<div className="centered-loading">Carregando comunidade...</div>:!community?<div className="empty-state card"><h3>Comunidade não encontrada</h3></div>:<>
@@ -224,8 +230,8 @@ export default function CommunityDetail(){
       {!member&&<div className="panel"><MessageCircle size={22}/><p>Participe para compartilhar suas publicações.</p></div>}
       <div className="feed-title" style={{marginTop:22}}><h2>Publicações da comunidade</h2></div>
       <div className="conecta-profile-tabs">
-        {(['all','photos','videos'] as const).map(t=><button key={t} className={tab===t?'active':''} type="button" onClick={()=>setTab(t)}>
-          {t==='all'?'Tudo':t==='photos'?'Fotos':t==='videos'?'Vídeos':''}</button>)}
+        {(['all','photos','videos','polls'] as const).map(t=><button key={t} className={tab===t?'active':''} type="button" onClick={()=>setTab(t)}>
+          {t==='all'?'Tudo':t==='photos'?'Fotos':t==='videos'?'Vídeos':'Enquetes'}</button>)}
       </div>
       <div className="feed-list">{visible.length===0&&<div className="empty-state card"><MessageCircle size={23}/><h3>Nenhuma publicação nessa categoria</h3></div>}
       {visible.map(p=><PostCard key={p.id} post={p} userId={auth.user?.id||''} refresh={()=>fetchPosts(community.id)}/>)}</div>

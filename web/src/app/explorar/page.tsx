@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Compass, Search, UserRound, Users, Video, ArrowUpRight, Sparkles } from 'lucide-react';
+import { Compass, Search, Users, Video, ArrowUpRight, Hash } from 'lucide-react';
 import { GuardedPage, useAuthProfile } from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
 import { supabaseBrowser } from '@/lib/supabase/browser';
@@ -11,6 +11,8 @@ import type { UserProfile } from '@/lib/types';
 type Community = {id:string;slug:string;name:string;description:string;owner_id:string};
 type DiscoveryPost = {id:string;content:string;created_at:string;author_id:string;media_path:string|null;media_type:string|null;mediaUrl?:string|null;profiles:{display_name:string;handle:string}|null};
 type Filter = 'Tudo'|'Pessoas'|'Comunidades'|'Vídeos'|'Publicações';
+
+const normalizeDiscoveryText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/^[@#]+/,'').trim().toLocaleLowerCase('pt-BR');
 
 export default function Explorar() {
   const auth=useAuthProfile();
@@ -35,7 +37,7 @@ export default function Explorar() {
       const [p,c,post]=await Promise.all([
         db.from('profiles').select('id,handle,display_name,bio,avatar_path').order('created_at',{ascending:false}).limit(60),
         db.from('communities').select('id,slug,name,description,owner_id').order('created_at',{ascending:false}).limit(50),
-        db.from('posts').select('id,content,created_at,author_id,media_path,media_type,profiles!posts_author_id_fkey(display_name,handle,avatar_path)').eq('visibility','public').is('community_id',null).order('created_at',{ascending:false}).limit(20)
+        db.from('posts').select('id,content,created_at,author_id,media_path,media_type,profiles!posts_author_id_fkey(display_name,handle,avatar_path)').eq('visibility','public').is('community_id',null).order('created_at',{ascending:false}).limit(100)
       ]);
       if(!active)return;
       const failure=p.error||c.error||post.error;
@@ -44,7 +46,6 @@ export default function Explorar() {
         setPeople((p.data||[]) as UserProfile[]);
         setCommunities((c.data||[]) as Community[]);
         const unprocessed=(post.data||[]) as unknown as DiscoveryPost[];
-        const db=supabaseBrowser();
         const decorated=await Promise.all(unprocessed.map(async item => {
           if(!item.media_path)return item;
           const {data:media}=await db.storage.from('social-media').createSignedUrl(item.media_path,3600);
@@ -58,27 +59,42 @@ export default function Explorar() {
     return ()=>{active=false;};
   },[auth.user]);
 
-  const needle=search.toLocaleLowerCase('pt-BR').trim();
-  const visiblePeople=useMemo(()=>people.filter(p=>p.id!==auth.user?.id&&(!needle||(p.display_name+' '+p.handle+' '+p.bio).toLowerCase().includes(needle))),[people,needle,auth.user]);
-  const visibleCommunities=useMemo(()=>communities.filter(c=>!needle||(c.name+' '+c.description).toLowerCase().includes(needle)),[communities,needle]);
-  const visiblePosts=useMemo(()=>posts.filter(p=>!needle||(p.content+' '+(p.profiles?.display_name||'')).toLowerCase().includes(needle)),[posts,needle]);
-  const showPeople=filter==='Tudo'||filter==='Pessoas',showCommunities=filter==='Tudo'||filter==='Comunidades',showPosts=filter==='Tudo'||filter==='Publicações'||filter==='Vídeos';
+  const needle=normalizeDiscoveryText(search);
+  const visiblePeople=useMemo(()=>people.filter(p=>p.id!==auth.user?.id&&(!needle||normalizeDiscoveryText(p.display_name+' '+p.handle+' '+p.bio).includes(needle))),[people,needle,auth.user]);
+  const visibleCommunities=useMemo(()=>communities.filter(c=>!needle||normalizeDiscoveryText(c.name+' '+c.description).includes(needle)),[communities,needle]);
+  const visiblePosts=useMemo(()=>posts.filter(p=>!needle||normalizeDiscoveryText(p.content+' '+(p.profiles?.display_name||'')).includes(needle)),[posts,needle]);
+  const hashtags=useMemo(()=>{
+    const counts=new Map<string,number>();
+    for(const post of posts){
+      for(const match of post.content.matchAll(/#[\wÀ-ÿ]{2,40}/g)){
+        const tag=match[0].toLocaleLowerCase('pt-BR');
+        counts.set(tag,(counts.get(tag)||0)+1);
+      }
+    }
+    return [...counts.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'pt-BR')).slice(0,24);
+  },[posts]);
+  const visibleHashtags=hashtags.filter(([tag])=>!needle||normalizeDiscoveryText(tag).includes(needle));
+  const showPeople=filter==='Tudo'||filter==='Pessoas',showCommunities=filter==='Tudo'||filter==='Comunidades',showPosts=filter==='Tudo'||filter==='Publicações'||filter==='Vídeos',showHashtags=filter==='Tudo';
   const filteredPosts=filter==='Vídeos'?visiblePosts.filter(p=>p.media_type==='video'):visiblePosts;
-  const hasContent=(showPeople&&visiblePeople.length>0)||(showCommunities&&visibleCommunities.length>0)||(showPosts&&filteredPosts.length>0);
+  const hasContent=(showPeople&&visiblePeople.length>0)||(showCommunities&&visibleCommunities.length>0)||(showPosts&&filteredPosts.length>0)||(showHashtags&&visibleHashtags.length>0);
 
   return <GuardedPage {...auth}>
     <main className="section-page">
-      <div className="page-heading"><div><span className="section-eyebrow">DESCUBRA</span><h1>Explorar <span className="wave">✳</span></h1><p>Pessoas, conversas e comunidades para inspirar você.</p></div></div>
+      <div className="page-heading"><div><span className="section-eyebrow">DESCUBRA</span><h1>Explorar <span className="wave">✳</span></h1><p>Pessoas, conversas, comunidades e hashtags para inspirar você.</p></div></div>
       <div className="section-toolbar">
-        <label className="searchbox"><Search size={18}/><input aria-label="Buscar no explorar" placeholder="Buscar pessoas, comunidades, publicações..." value={search} onChange={e=>setSearch(e.target.value)}/></label>
+        <label className="searchbox"><Search size={18}/><input aria-label="Buscar no explorar" placeholder="Buscar pessoas, comunidades, hashtags e publicações..." value={search} onChange={e=>setSearch(e.target.value)}/></label>
       </div>
       <div className="filter-pills" role="group" aria-label="Tipo de conteúdo">
-        {(['Tudo','Pessoas','Comunidades','Vídeos'] as Filter[]).map(f=><button className={'filter-pill '+(filter===f?'active':'')} type="button" key={f} onClick={()=>setFilter(f)}>{f}</button>)}
+        {(['Tudo','Pessoas','Comunidades','Publicações','Vídeos'] as Filter[]).map(f=><button className={'filter-pill '+(filter===f?'active':'')} type="button" key={f} onClick={()=>setFilter(f)}>{f}</button>)}
         <Link href="/reels" className="filter-pill"><Video size={16} style={{verticalAlign:'middle'}}/> Abrir Reels</Link>
       </div>
       {error&&<p className="form-error" role="alert">{error}</p>}
       {loading&&<div className="centered-loading">Carregando descoberta...</div>}
       {!loading&&<>
+        {showHashtags&&visibleHashtags.length>0&&<section className="concept-discovery-hashtags">
+          <div className="feed-title" style={{margin:'30px 0 16px'}}><h2><Hash size={19} style={{verticalAlign:'middle'}}/> Hashtags em destaque</h2><span>Encontradas em publicações públicas</span></div>
+          <div className="concept-discovery-hashtag-list">{visibleHashtags.map(([tag,count])=><button type="button" className="concept-discovery-hashtag" key={tag} onClick={()=>{setSearch(tag);setFilter('Publicações');}}><Hash size={15}/><strong>{tag.slice(1)}</strong><span>{count}</span></button>)}</div>
+        </section>}
         {showPeople&&visiblePeople.length>0&&<section><div className="feed-title" style={{margin:'30px 0 16px'}}><h2>Pessoas para conhecer</h2><span>{visiblePeople.length} resultados</span></div><div className="tiles-grid concept-discovery-cards">{visiblePeople.map(p=><article className="tile-card" key={p.id}><div className="concept-person-cover"><ProfileAvatar person={p} size="large"/></div><h3>{p.display_name}</h3><span className="tile-meta">@{p.handle}</span><p>{p.bio||'Conheça mais sobre essa pessoa.'}</p><Link className="btn btn-outline" href={'/p/'+p.handle}>Ver perfil <ArrowUpRight size={16}/></Link></article>)}</div></section>}
         {showCommunities&&visibleCommunities.length>0&&<section><div className="feed-title" style={{margin:'30px 0 16px'}}><h2>Comunidades</h2><Link href="/comunidades">Ver todas</Link></div><div className="tiles-grid concept-discovery-cards">{visibleCommunities.map(c=><article className="tile-card" key={c.id}><div className="concept-group-cover"><span className="tile-avatar"><Users size={25}/></span></div><h3>{c.name}</h3><p>{c.description||'Encontre pessoas com o mesmo interesse.'}</p><Link className="btn btn-outline" href={'/comunidades/'+c.slug}>Conhecer <ArrowUpRight size={16}/></Link></article>)}</div></section>}
         {showPosts&&filteredPosts.length>0&&<section className="concept-explore-section">

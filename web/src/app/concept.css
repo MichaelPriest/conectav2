@@ -82,3 +82,68 @@
 @media(max-width:850px){.concept-home-intro h1{display:none}.concept-stage{height:610px}.concept-laptop{left:15%;width:95%;top:-50px;transform:scale(.78);transform-origin:left top}.concept-welcome-device{top:190px;left:0;transform:scale(.75) rotate(-3deg)}.concept-explore-device{top:220px;right:0;transform:scale(.78)}.concept-home-bottom{margin-top:-30px}.concept-home-header-links>a:first-child{display:none}}
 @media(max-width:640px){.concept-home-header{padding:20px}.concept-home-header-links .btn{padding:10px;font-size:11px}.concept-brand-stack .concept-brand{font-size:31px}.concept-brand-stack .concept-brand-symbol{width:44px;height:44px;font-size:33px}.concept-brand-stack .concept-brand-symbol:before{border-width:8px}.concept-brand-stack .concept-brand-dot{width:10px;height:10px;top:21px}.concept-brand-stack>span{margin-left:54px;margin-top:-8px;font-size:10px}.concept-home-intro{padding:10px 20px 0}.concept-home-intro p{font-size:14px}.concept-home-pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}.concept-home-pillar{width:auto;font-size:9px}.concept-round-icon{width:39px;height:39px}.concept-stage{height:495px;margin-top:30px}.concept-laptop{left:4%;width:850px;height:600px;top:0;transform:scale(.39)}.concept-welcome-device{top:220px;left:6%;transform:scale(.56) rotate(-3deg)}.concept-explore-device{top:221px;right:3%;transform:scale(.59)}.concept-home-bottom{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 17px;gap:21px 12px;margin-top:0}.concept-value{display:block}.concept-value h2{font-size:12px}.concept-value p{font-size:10px}.concept-home-cta{padding:20px;display:block;text-align:left;margin-top:30px}.concept-home-cta .btn{margin-top:17px}.concept-home-cta h2{font-size:20px}.concept-home-footer{display:grid;justify-content:center;text-align:center;padding:22px}.concept-home-footer .concept-brand{justify-content:center}}
 @media(max-width:390px){.concept-laptop{transform:scale(.34)}.concept-explore-device{transform:scale(.53);right:0}.concept-welcome-device{transform:scale(.5);left:1%}}
+
+
+/* Legacy social feature: accessible, responsive local publication drafts. */
+.conecta-post-drafts{display:grid;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-color,#e2e8f0)}
+.conecta-post-drafts-actions,.conecta-post-draft-buttons{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.conecta-post-drafts-actions .btn,.conecta-post-draft-buttons .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.conecta-post-drafts-list{display:grid;gap:9px}
+.conecta-post-draft-item{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:12px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px;background:var(--card-bg,#fff)}
+.conecta-post-draft-copy{min-width:0;flex:1}
+.conecta-post-draft-copy strong{font-size:13px}
+.conecta-post-draft-copy p{margin:5px 0;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.conecta-post-draft-copy time{font-size:11px;color:var(--text-light,#718096)}
+@media(max-width:540px){.conecta-post-draft-item{display:grid}.conecta-post-draft-buttons{justify-content:flex-start}}
+
+
+.concept-discovery-hashtag-list{display:flex;flex-wrap:wrap;gap:9px}
+.concept-discovery-hashtag{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid var(--border-color,#e2e8f0);border-radius:999px;background:var(--card-bg,#fff);color:var(--text-color,#2d3748);cursor:pointer;transition:transform .15s ease,border-color .15s ease}
+.concept-discovery-hashtag:hover{transform:translateY(-1px);border-color:var(--primary-color,#4a90e2)}
+.concept-discovery-hashtag strong{font-size:13px}
+.concept-discovery-hashtag span{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--bg-color,#f8fafc);font-size:11px;color:var(--text-light,#718096)}
+
+
+/* Legacy-inspired achievements, calculated from actual account records. */
+.conecta-achievements{margin:20px 0;display:grid;gap:14px}
+.conecta-achievements-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.conecta-achievements-heading h2{display:flex;align-items:center;gap:8px;margin:4px 0 0}
+.conecta-achievements-count{font-size:12px;font-weight:700;border:1px solid var(--border-color,#e2e8f0);border-radius:999px;padding:6px 10px}
+.conecta-achievements-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.conecta-achievement{display:flex;align-items:flex-start;gap:11px;min-width:0;padding:13px;border:1px solid var(--border-color,#e2e8f0);border-radius:13px}
+.conecta-achievement.is-unlocked{background:var(--card-bg,#fff)}
+.conecta-achievement.is-locked{background:var(--bg-color,#f8fafc)}
+.conecta-achievement-icon{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:var(--bg-color,#f8fafc);border:1px solid var(--border-color,#e2e8f0)}
+.conecta-achievement.is-unlocked .conecta-achievement-icon{background:#f0eaff;color:#6841c6;border-color:#d9c9ff}
+.conecta-achievement-copy{min-width:0;flex:1}
+.conecta-achievement-copy strong{font-size:13px}
+.conecta-achievement-copy p{margin:3px 0 6px;font-size:12px;color:var(--text-light,#718096)}
+.conecta-achievement-copy small{font-size:11px;color:var(--text-light,#718096)}
+.conecta-achievement-progress{height:5px;overflow:hidden;border-radius:999px;background:var(--border-color,#e2e8f0);margin:8px 0 5px}
+.conecta-achievement-progress span{display:block;height:100%;background:var(--primary-color,#4a90e2);border-radius:inherit}
+@media(max-width:620px){.conecta-achievements-grid{grid-template-columns:minmax(0,1fr)}}
+
+
+.conecta-profile-visits{display:grid;gap:13px;margin:20px 0}
+.conecta-profile-visits-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.conecta-profile-visits-heading h2{display:flex;align-items:center;gap:8px;margin:4px 0 0}
+.conecta-profile-visits-heading .btn,.conecta-profile-visits> .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.conecta-profile-visits-empty{display:flex;align-items:center;gap:12px;padding:16px;border:1px dashed var(--border-color,#e2e8f0);border-radius:12px;color:var(--text-light,#718096)}
+.conecta-profile-visits-empty p{margin:0;font-size:13px}
+.conecta-profile-visitors{display:grid;gap:8px}
+.conecta-profile-visitor{display:flex;align-items:center;gap:12px;padding:11px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px}
+.conecta-profile-visitor-avatar{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:50%;overflow:hidden;background:var(--bg-color,#f8fafc);text-decoration:none}
+.conecta-profile-visitor-avatar img{width:100%;height:100%;object-fit:cover}
+.conecta-profile-visitor-avatar span{font-weight:700}
+.conecta-profile-visitor-info{display:grid;gap:2px;min-width:0}
+.conecta-profile-visitor-info a{color:inherit;text-decoration:none}
+.conecta-profile-visitor-info strong{font-size:13px}
+.conecta-profile-visitor-info span,.conecta-profile-visitor-info small{font-size:11px;color:var(--text-light,#718096);overflow-wrap:anywhere}
+@media(max-width:540px){.conecta-profile-visits-heading{align-items:flex-start}.conecta-profile-visits-heading .btn{width:100%}}
+
+
+/* Legacy-style feed filters: compact, accessible and responsive. */
+.conecta-feed-filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px;}
+.conecta-feed-filters .btn{min-height:38px;border-radius:999px;padding:8px 14px;font-size:.9rem;}
+.conecta-feed-filters .btn[aria-pressed="true"]{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent,#7657d5) 24%,transparent);}
+@media(max-width:480px){.conecta-feed-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}.conecta-feed-filters .btn:last-child{grid-column:1/-1;}}

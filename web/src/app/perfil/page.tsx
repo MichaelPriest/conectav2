@@ -9,6 +9,8 @@ import {EmojiButton} from '@/components/emoji-button';
 import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
 import {ProfileTimeline} from '@/components/profile-timeline';
 import {MySpacePanel} from '@/components/myspace-panel';
+import {ProfileAchievements} from '@/components/profile-achievements';
+import {ProfileVisits} from '@/components/profile-visits';
 import {LanguageSelect} from '@/lib/i18n';
 import {normalizeProfileDetails,prepareProfileDetails,DEFAULT_PROFILE_DETAILS} from '@/lib/profile-details';
 import type {ProfileDetails} from '@/lib/profile-details';
@@ -242,6 +244,8 @@ export default function Profile(){
      </div>
    </div>
    {details.mood_text&&<section className="panel conecta-myspace-status"><strong>Meu status ✦</strong><p>{details.mood_text}</p></section>}
+   {auth.user&&<ProfileAchievements profileId={auth.user.id}/>}
+   {auth.user&&<ProfileVisits profileId={auth.user.id}/>}
    {auth.user&&<MySpacePanel profileId={auth.user.id} viewerId={auth.user.id} isSelf/>}
    {auth.user&&<ProfileTimeline profileId={auth.user.id} viewerId={auth.user.id} isSelf/>}
  </main></GuardedPage>;
