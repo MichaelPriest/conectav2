@@ -14,6 +14,7 @@
     "test:origin": "node --test tests/identity-origin.test.cjs",
     "test:legacy-rg": "node --test tests/legacy-rg-ocr.test.cjs",
     "test:completion": "node --test tests/identity-completion.test.cjs",
+    "test:identity-methods": "node --test tests/identity-methods.test.cjs",
     "test:moderation": "node --test tests/oss-moderation-safety.test.cjs",
     "test:automod": "node --test tests/automatic-moderation.test.cjs"
   },
