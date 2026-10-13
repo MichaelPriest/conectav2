@@ -114,17 +114,17 @@ insert into public.achievement_catalog(id,title,description,category,metric,targ
 ('messages-75','Comunicador experiente','Alcance 75 mensagens enviadas.','Mensagens','messages',75,86),
 ('messages-100','Mensageiro incansável','Alcance 100 mensagens enviadas.','Mensagens','messages',100,87),
 ('messages-250','Mestre da comunicação','Alcance 250 mensagens enviadas.','Mensagens','messages',250,88),
-('saved_posts-1','Primeiro favorito','Alcance 1 publicação salva.','Favoritos','saved_posts',1,89),
-('saved_posts-2','Boa lembrança','Alcance 2 publicações salvas.','Favoritos','saved_posts',2,90),
-('saved_posts-3','Colecionador iniciante','Alcance 3 publicações salvas.','Favoritos','saved_posts',3,91),
-('saved_posts-5','Biblioteca pessoal','Alcance 5 publicações salvas.','Favoritos','saved_posts',5,92),
-('saved_posts-10','Curadoria em formação','Alcance 10 publicações salvas.','Favoritos','saved_posts',10,93),
-('saved_posts-20','Colecionador frequente','Alcance 20 publicações salvas.','Favoritos','saved_posts',20,94),
-('saved_posts-30','Arquivo de ideias','Alcance 30 publicações salvas.','Favoritos','saved_posts',30,95),
-('saved_posts-50','Curador dedicado','Alcance 50 publicações salvas.','Favoritos','saved_posts',50,96),
-('saved_posts-75','Biblioteca viva','Alcance 75 publicações salvas.','Favoritos','saved_posts',75,97),
-('saved_posts-100','Curador incansável','Alcance 100 publicações salvas.','Favoritos','saved_posts',100,98),
-('saved_posts-250','Memória do Conecta','Alcance 250 publicações salvas.','Favoritos','saved_posts',250,99)
+('saved-posts-1','Primeiro favorito','Alcance 1 publicação salva.','Favoritos','saved_posts',1,89),
+('saved-posts-2','Boa lembrança','Alcance 2 publicações salvas.','Favoritos','saved_posts',2,90),
+('saved-posts-3','Colecionador iniciante','Alcance 3 publicações salvas.','Favoritos','saved_posts',3,91),
+('saved-posts-5','Biblioteca pessoal','Alcance 5 publicações salvas.','Favoritos','saved_posts',5,92),
+('saved-posts-10','Curadoria em formação','Alcance 10 publicações salvas.','Favoritos','saved_posts',10,93),
+('saved-posts-20','Colecionador frequente','Alcance 20 publicações salvas.','Favoritos','saved_posts',20,94),
+('saved-posts-30','Arquivo de ideias','Alcance 30 publicações salvas.','Favoritos','saved_posts',30,95),
+('saved-posts-50','Curador dedicado','Alcance 50 publicações salvas.','Favoritos','saved_posts',50,96),
+('saved-posts-75','Biblioteca viva','Alcance 75 publicações salvas.','Favoritos','saved_posts',75,97),
+('saved-posts-100','Curador incansável','Alcance 100 publicações salvas.','Favoritos','saved_posts',100,98),
+('saved-posts-250','Memória do Conecta','Alcance 250 publicações salvas.','Favoritos','saved_posts',250,99)
 on conflict (id) do update set title=excluded.title, description=excluded.description, category=excluded.category, metric=excluded.metric, target=excluded.target, sort_order=excluded.sort_order;
 create or replace function public.get_my_achievements()
 returns table (
