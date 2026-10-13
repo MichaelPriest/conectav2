@@ -42,7 +42,8 @@ import {useNativeChatPresence} from './src/chat-presence';
 import {ExploreScreen} from './src/explore-ui';
 import {ProfileDetailsEditor} from './src/profile-details-ui';
 import {NativePermissionsCenter} from './src/permissions-ui';
-import {requestPlayAgeSignals,describePlayAgeSignal} from './src/age-assurance';
+import {requestPlayAgeSignals,describePlayAgeSignal,submitPlayAgeSignal} from './src/age-assurance';
+import type {PlayAgeSignalResult} from './src/age-assurance';
 import {NativeForegroundNotificationBridge} from './src/native-notifications';
 import {unregisterRemotePush} from './src/remote-push';
 import {MediaGallery} from './src/media-gallery';
@@ -1677,15 +1678,29 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
  const [detailsOpen,setDetailsOpen]=useState(false);
  const [permissionsOpen,setPermissionsOpen]=useState(false);
  const [ageSignalBusy,setAgeSignalBusy]=useState(false);
+ const [ageSignalSubmitBusy,setAgeSignalSubmitBusy]=useState(false);
+ const [ageSignalResult,setAgeSignalResult]=useState<PlayAgeSignalResult|null>(null);
  const checkPlayAgeSignal=async()=>{
   if(ageSignalBusy)return;
   setAgeSignalBusy(true);
   try{
    const result=await requestPlayAgeSignals();
-   Alert.alert('Aferição de idade',describePlayAgeSignal(result)+'\n\nEste é um sinal preliminar do dispositivo. O servidor do Conecta ainda precisa validar sua origem e integridade; nenhum recurso restrito será liberado por esta consulta.');
+   setAgeSignalResult(result);
+   Alert.alert('Aferição de idade',describePlayAgeSignal(result)+'\n\nO resultado ainda não altera as permissões do Conecta. Se houver um sinal compartilhado, você poderá escolher enviá-lo ao servidor para validação de integridade.');
   }catch{
+   setAgeSignalResult(null);
    Alert.alert('Aferição de idade','Não foi possível consultar o sinal de idade. As proteções padrão permanecem ativas.');
   }finally{setAgeSignalBusy(false);}
+ };
+ const submitAgeSignalToServer=async()=>{
+  if(!ageSignalResult||ageSignalSubmitBusy)return;
+  setAgeSignalSubmitBusy(true);
+  try{
+   const result=await submitPlayAgeSignal(ageSignalResult);
+   Alert.alert(result.status==='verified'?'Faixa etária validada':'Validação não concluída',result.message+'\n\nSe não houver confirmação do servidor, as proteções padrão permanecem ativas.');
+  }catch{
+   Alert.alert('Validação não concluída','Não foi possível validar o sinal. As proteções padrão permanecem ativas.');
+  }finally{setAgeSignalSubmitBusy(false);}
  };
  const [ownPosts,setOwnPosts]=useState<Post[]>([]);
  const [ownLiked,setOwnLiked]=useState<Set<string>>(new Set());
@@ -1851,7 +1866,17 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
     <Action secondary disabled={ageSignalBusy}
      label={ageSignalBusy?'Consultando Google Play...':'Consultar faixa etária do Google Play'}
      leading={<ShieldCheck size={16} color={t.primary}/>} onPress={()=>void checkPlayAgeSignal()}/>
-    <Text style={[s.muted,{marginTop:5,marginBottom:8}]}>A consulta é opcional. O resultado não é enviado nem armazenado e ainda não libera recursos restritos.</Text>
+    <Text style={[s.muted,{marginTop:5,marginBottom:8}]}>A consulta é opcional. O resultado fica no aparelho até você escolher enviá-lo para validação; consultar sozinho não libera recursos restritos.</Text>
+    {ageSignalResult?.status==='shared'&&typeof ageSignalResult.ageLower==='number'&&
+     typeof ageSignalResult.ageRangeSource==='string'&&['TIER_B','TIER_C','TIER_D'].includes(ageSignalResult.ageRangeSource)&&
+     <Action secondary disabled={ageSignalSubmitBusy}
+      label={ageSignalSubmitBusy?'Validando no servidor...':'Enviar faixa ao Conecta para validação segura'}
+      leading={<ShieldCheck size={16} color={t.primary}/>}
+      onPress={()=>Alert.alert('Enviar faixa etária ao Conecta?', 'Serão enviados apenas a faixa etária, a origem informada pelo Google Play e um token de integridade. Nenhum documento ou selfie será enviado. Se a validação falhar, as proteções padrão permanecem ativas.', [
+       {text:'Cancelar',style:'cancel'},
+       {text:'Enviar e validar',onPress:()=>void submitAgeSignalToServer()}
+      ])}/>
+    }
    </>}
    <View style={{height:8}}/>
    <Action secondary label="Abrir perfil no site ↗" onPress={()=>void openOfficial('/perfil')}/>
