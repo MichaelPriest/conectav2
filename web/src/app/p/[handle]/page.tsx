@@ -50,8 +50,14 @@ export default function PublicProfile(){
          }
          setPosts(n.count||0);
          setConnection(relation.data as Connection|null);
-         setBlocked(Boolean(block.data?.some(b=>b.blocker_id===auth.user!.id)));
-         setBlockedBy(Boolean(block.data?.some(b=>b.blocker_id===p.id)));
+         const viewerBlocked = Boolean(block.data?.some(b=>b.blocker_id===auth.user!.id));
+         const ownerBlocked = Boolean(block.data?.some(b=>b.blocker_id===p.id));
+         setBlocked(viewerBlocked);
+         setBlockedBy(ownerBlocked);
+         if (auth.user!.id !== p.id && !viewerBlocked && !ownerBlocked) {
+           // The database function records only when the profile owner opted in.
+           void db.rpc('record_profile_visit', { p_profile_id: p.id });
+         }
        }
        if(p.avatar_path){
          const {data:media}=await db.storage.from('social-media').createSignedUrl(p.avatar_path,3600);
