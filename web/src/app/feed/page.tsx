@@ -71,7 +71,7 @@ export default function FeedPage() {
       .select('id,author_id,community_id,moderation_status,moderation_reason,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
       .is('community_id',null);
     if(feedFilter==='mine')query=query.eq('author_id',user.id);
-    if(feedFilter==='media')query=query.not('media_type','is',null);
+    if(feedFilter==='media')query=query.or('media_type.not.is.null,media_path.not.is.null');
     const {data,error:queryError}=await query.order('created_at',{ascending:false})
       .range(from,from+PAGE_SIZE-1);
     if(queryError){setMessage(queryError.message);setLoadingFeed(false);return;}
