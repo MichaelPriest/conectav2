@@ -42,6 +42,7 @@ import {useNativeChatPresence} from './src/chat-presence';
 import {ExploreScreen} from './src/explore-ui';
 import {ProfileDetailsEditor} from './src/profile-details-ui';
 import {NativePermissionsCenter} from './src/permissions-ui';
+import {requestPlayAgeSignals,describePlayAgeSignal} from './src/age-assurance';
 import {NativeForegroundNotificationBridge} from './src/native-notifications';
 import {unregisterRemotePush} from './src/remote-push';
 import {MediaGallery} from './src/media-gallery';
@@ -1675,6 +1676,17 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  const [detailsOpen,setDetailsOpen]=useState(false);
  const [permissionsOpen,setPermissionsOpen]=useState(false);
+ const [ageSignalBusy,setAgeSignalBusy]=useState(false);
+ const checkPlayAgeSignal=async()=>{
+  if(ageSignalBusy)return;
+  setAgeSignalBusy(true);
+  try{
+   const result=await requestPlayAgeSignals();
+   Alert.alert('Aferição de idade',describePlayAgeSignal(result)+'\n\nEste é um sinal preliminar do dispositivo. O servidor do Conecta ainda precisa validar sua origem e integridade; nenhum recurso restrito será liberado por esta consulta.');
+  }catch{
+   Alert.alert('Aferição de idade','Não foi possível consultar o sinal de idade. As proteções padrão permanecem ativas.');
+  }finally{setAgeSignalBusy(false);}
+ };
  const [ownPosts,setOwnPosts]=useState<Post[]>([]);
  const [ownLiked,setOwnLiked]=useState<Set<string>>(new Set());
  const [ownSaved,setOwnSaved]=useState<Set<string>>(new Set());
@@ -1834,6 +1846,13 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
    <View style={{height:8}}/>
    <Action secondary label="Permissões e privacidade"
     leading={<ShieldCheck size={16} color={t.primary}/>} onPress={()=>setPermissionsOpen(true)}/>
+   {Platform.OS==='android'&&<>
+    <View style={{height:8}}/>
+    <Action secondary disabled={ageSignalBusy}
+     label={ageSignalBusy?'Consultando Google Play...':'Consultar faixa etária do Google Play'}
+     leading={<ShieldCheck size={16} color={t.primary}/>} onPress={()=>void checkPlayAgeSignal()}/>
+    <Text style={[s.muted,{marginTop:5,marginBottom:8}]}>A consulta é opcional. O resultado não é enviado nem armazenado e ainda não libera recursos restritos.</Text>
+   </>}
    <View style={{height:8}}/>
    <Action secondary label="Abrir perfil no site ↗" onPress={()=>void openOfficial('/perfil')}/>
    <View style={{height:8}}/>
