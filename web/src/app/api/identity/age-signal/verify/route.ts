@@ -36,7 +36,11 @@ export async function POST(request:NextRequest){
 
  let body:Record<string,unknown>;
  try{
-  body=await request.json() as Record<string,unknown>;
+  const rawBody=await request.text();
+  if(Buffer.byteLength(rawBody,'utf8')>30_000){
+   return NextResponse.json({error:'Solicitação muito grande.'},{status:413,headers});
+  }
+  body=JSON.parse(rawBody) as Record<string,unknown>;
  }catch{
   return NextResponse.json({error:'Corpo da solicitação inválido.'},{status:400,headers});
  }
