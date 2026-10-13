@@ -1867,7 +1867,8 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
      label={ageSignalBusy?'Consultando Google Play...':'Consultar faixa etária do Google Play'}
      leading={<ShieldCheck size={16} color={t.primary}/>} onPress={()=>void checkPlayAgeSignal()}/>
     <Text style={[s.muted,{marginTop:5,marginBottom:8}]}>A consulta é opcional. O resultado fica no aparelho até você escolher enviá-lo para validação; consultar sozinho não libera recursos restritos.</Text>
-    {ageSignalResult?.status==='shared'&&typeof ageSignalResult.ageLower==='number'&&
+    {ageSignalResult?.status==='shared'&&
+     (typeof ageSignalResult.ageLower==='number'||(ageSignalResult.userStatus===0&&ageSignalResult.ageLower==null))&&
      typeof ageSignalResult.userStatus==='number'&&[0,1].includes(ageSignalResult.userStatus)&&
      <Action secondary disabled={ageSignalSubmitBusy}
       label={ageSignalSubmitBusy?'Validando no servidor...':'Enviar faixa ao Conecta para validação segura'}
