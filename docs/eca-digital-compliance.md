@@ -3,6 +3,14 @@
 **Status:** engineering requirements and release checklist; not a legal opinion or a declaration of compliance.  
 **Scope:** Brazilian social network with user profiles, feeds, communities, chat, calls, stories, media uploads, recommendations and potential advertising.
 
+## Engineering work started on 2026-10-13
+
+- Added `web/src/lib/age-assurance-policy.ts`: trusted server-decision policy with fail-closed defaults; unknown age and all minor bands remain in protected mode and cannot access adult-restricted features.
+- Added `GET /api/identity/age-policy`: authenticates the user and reads only the coarse result from a service-role-only table. Missing configuration, schema or database errors return an unavailable/protected result; the endpoint does not accept age claims from request bodies.
+- Added migration `supabase/migrations/20261013210000_age_assurance_decisions.sql`: stores only a coarse age band, method, policy version, timestamp and opaque evidence-reference hash; no exact birth date, document image, QR token, selfie or biometric template. Client roles have no table privileges.
+- Added tests for policy decisions, fail-closed behavior, route authentication and migration permissions. These tests have been added to package scripts but have **not yet been executed in CI**.
+- The migration has **not** been applied to Supabase. No age-verification method currently writes a trusted decision to this table. Therefore the new endpoint remains `pending` or `unavailable` until a trustworthy signal integration is implemented and tested. This work does not yet make the entire application ECA Digital compliant.
+
 ## Legal baseline to track
 
 - Lei nº 15.211/2025 (ECA Digital), especially arts. 1, 3–10, 13–18.
