@@ -45,6 +45,15 @@ export async function GET(request:NextRequest){
         details:'Desafio de movimento ajuda a detectar captura estática, mas não é prova oficial de identidade.'
       },
       {
+        id:'cin-server-signature-preflight',
+        label:'Validação criptográfica da CIN no servidor',
+        cost:'free',
+        status:'available',
+        verifiesIdentity:false,
+        verifiesAge:false,
+        details:'Confere a assinatura JWS da CIN no servidor usando a chave pública experimental já incorporada ao projeto. Não consulta validade atual no MJSP e não confirma que quem apresenta o documento é seu titular.'
+      },
+      {
         id:'govbr-signed-document',
         label:'Conferência de documento assinado',
         cost:'free',
