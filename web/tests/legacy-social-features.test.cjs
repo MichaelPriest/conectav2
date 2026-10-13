@@ -38,3 +38,19 @@ test('explore derives hashtags only from the public discovery result and support
  assert.match(page,/Hashtags em destaque/);
  assert.match(page,/setSearch\(tag\);setFilter\('Publicações'\)/);
 });
+
+
+test('profile achievements are derived from real Supabase counts and profile fields',()=>{
+ const component=read('components/profile-achievements.tsx');
+ const page=read('app/perfil/page.tsx');
+ assert.match(component,/from\('posts'\)\.select\('id', \{ count: 'exact', head: true \}\)/);
+ assert.match(component,/from\('friendships'\)/);
+ assert.match(component,/from\('profile_details'\)/);
+ assert.match(component,/first-post/);
+ assert.match(component,/ten-friends/);
+ assert.match(component,/profile-custom/);
+ assert.match(component,/interests/);
+ assert.match(component,/music/);
+ assert.match(page,/ProfileAchievements profileId=\{auth\.user\.id\}/);
+ assert.doesNotMatch(component,/insert\(|upsert\(|update\(/);
+});
