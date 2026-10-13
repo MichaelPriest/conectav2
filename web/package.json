@@ -18,7 +18,8 @@
     "test:identity-methods": "node --test tests/identity-methods.test.cjs",
     "test:moderation": "node --test tests/oss-moderation-safety.test.cjs",
     "test:automod": "node --test tests/automatic-moderation.test.cjs",
-    "test:age-policy": "node --test tests/age-assurance-policy.test.cjs"
+    "test:age-policy": "node --test tests/age-assurance-policy.test.cjs",
+    "test:age-policy-route": "node --test tests/age-policy-route.test.cjs"
   },
   "dependencies": {
     "@huggingface/transformers": "3.8.1",
