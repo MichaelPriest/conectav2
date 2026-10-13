@@ -118,6 +118,9 @@ export async function verifyPlayIntegrityToken(
       signal: AbortSignal.timeout(10_000)
     }
   );
+  if (response.status === 401 || response.status === 403) {
+    throw new PlayIntegrityVerificationError('not_configured', 'Google Play Integrity API access is not configured correctly.');
+  }
   if (!response.ok) {
     throw new PlayIntegrityVerificationError('invalid_token', 'Google could not decode the integrity token.');
   }
