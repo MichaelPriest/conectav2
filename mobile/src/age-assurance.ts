@@ -12,6 +12,11 @@ export type PlayAgeSignalResult = {
 
 type NativeAgeSignalsModule = {
   requestAgeSignals(): Promise<PlayAgeSignalResult>;
+  requestIntegrityToken(requestHash: string, cloudProjectNumber: number): Promise<{
+    status: 'ok' | 'unavailable' | 'invalid_request' | 'error';
+    integrityToken?: string;
+    reason?: string;
+  }>;
 };
 
 /**
@@ -38,6 +43,31 @@ function describeSource(source: PlayAgeSignalResult['ageRangeSource']): string {
     case 'TIER_C': return 'idade avaliada por método do Google Play';
     case 'TIER_D': return 'documento oficial com selfie ou identidade digital, segundo o Google Play';
     default: return 'origem não identificada';
+  }
+}
+
+
+/**
+ * Requests a Play Integrity token bound to a SHA-256 request hash. The token
+ * must be decoded and checked on the server; never treat this client result as
+ * verification and never log/store the token.
+ */
+export async function requestPlayIntegrityToken(requestHash: string): Promise<{
+  status: 'ok' | 'unavailable' | 'invalid_request' | 'error';
+  integrityToken?: string;
+  reason?: string;
+}> {
+  if (Platform.OS !== 'android') return {status: 'unavailable', reason: 'android_only'};
+  if (!/^[0-9a-f]{64}$/i.test(requestHash)) return {status: 'invalid_request'};
+  const projectNumber = Number(process.env.EXPO_PUBLIC_GOOGLE_CLOUD_PROJECT_NUMBER);
+  if (!Number.isSafeInteger(projectNumber) || projectNumber <= 0) {
+    return {status: 'unavailable', reason: 'google_cloud_project_not_configured'};
+  }
+  try {
+    const nativeModule = requireNativeModule<NativeAgeSignalsModule>('ConectaPlayAgeSignals');
+    return await nativeModule.requestIntegrityToken(requestHash, projectNumber);
+  } catch {
+    return {status: 'unavailable', reason: 'native_module_unavailable'};
   }
 }
 
