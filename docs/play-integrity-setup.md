@@ -31,6 +31,7 @@ The server-side verifier checks the decoded token's package, signing certificate
 1. Review and apply these migrations to the validation Supabase project in order:
    - 20261013210000_age_assurance_decisions.sql
    - 20261013230000_age_assurance_challenges.sql
+   - 20261013240000_age_assurance_audit.sql
 2. Deploy the current branch to the Render validation service only after CI and code review.
 3. Build a new Android binary with the native module; an OTA JavaScript update cannot add native code to an already-installed APK.
 4. Test via Google Play internal testing with the actual package/signing certificate. Verify that missing configuration, sideloaded/unrecognized apps, expired tokens, replayed challenges, DECLARED status (self-declared age) and declined sharing never create a trusted adult decision.
