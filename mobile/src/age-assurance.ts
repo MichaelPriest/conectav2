@@ -1,6 +1,6 @@
 import {Platform} from 'react-native';
 import {requireNativeModule} from 'expo-modules-core';
-import {CryptoDigestAlgorithm,digestStringAsync} from 'expo-crypto';
+import {CryptoDigestAlgorithm,CryptoEncoding,digestStringAsync} from 'expo-crypto';
 import {API_SITE_URL,supabase} from './supabase';
 
 export type PlayAgeSignalResult = {
@@ -97,7 +97,7 @@ export async function submitPlayAgeSignal(signal: PlayAgeSignalResult): Promise<
         ? 'null'
         : String(payload.significantChangeApprovalDate)
     ].join('|');
-    const requestHash = await digestStringAsync(CryptoDigestAlgorithm.SHA256, canonical);
+    const requestHash = await digestStringAsync(CryptoDigestAlgorithm.SHA256, canonical, {encoding: CryptoEncoding.HEX});
     const integrity = await requestPlayIntegrityToken(requestHash);
     if (integrity.status !== 'ok' || !integrity.integrityToken) {
       return {status: 'unavailable', message: 'A integridade do aplicativo não pôde ser confirmada. As proteções padrão permanecem ativas.'};
