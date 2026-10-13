@@ -99,8 +99,8 @@ export async function POST(request:NextRequest){
  }
 
  const ageBand=classifyAgeBand(ageLower,signal.ageUpper);
- // Self-declared age is not sufficient to persist a trusted decision. It may
- // still trigger the protective experience, but it never becomes verified.
+ // SDK 0.0.4 status is authoritative only for VERIFIED adults and SUPERVISED
+ // minors. DECLARED, UNKNOWN, pending and denied statuses remain unverified.
  const statusMatchesAgeBand=(userStatus===0&&ageBand==='18_plus')||
   (userStatus===1&&ageBand!==null&&ageBand!=='18_plus');
  if(!statusMatchesAgeBand||!ageBand){
