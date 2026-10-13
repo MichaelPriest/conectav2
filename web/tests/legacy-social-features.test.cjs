@@ -69,6 +69,9 @@ test('profile visit history requires opt-in and enforces authenticated non-block
  assert.match(migration,/user_blocks/);
  assert.match(migration,/revoke all on function public\.record_profile_visit\(uuid\) from public, anon/);
  assert.match(component,/Histórico ativado/);
+ assert.match(component,/featureUnavailable/);
+ assert.match(component,/migração necessária precisa ser aplicada/);
+ assert.match(component,/disabled=\{busy \|\| loading \|\| featureUnavailable\}/);
  assert.match(component,/profile_visits/);
  assert.match(component,/delete\(\)\.eq\('profile_id', profileId\)/);
  assert.match(publicPage,/record_profile_visit/);
