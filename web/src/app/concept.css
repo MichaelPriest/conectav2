@@ -102,3 +102,23 @@
 .concept-discovery-hashtag:hover{transform:translateY(-1px);border-color:var(--primary-color,#4a90e2)}
 .concept-discovery-hashtag strong{font-size:13px}
 .concept-discovery-hashtag span{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--bg-color,#f8fafc);font-size:11px;color:var(--text-light,#718096)}
+
+
+/* Legacy-inspired achievements, calculated from actual account records. */
+.conecta-achievements{margin:20px 0;display:grid;gap:14px}
+.conecta-achievements-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.conecta-achievements-heading h2{display:flex;align-items:center;gap:8px;margin:4px 0 0}
+.conecta-achievements-count{font-size:12px;font-weight:700;border:1px solid var(--border-color,#e2e8f0);border-radius:999px;padding:6px 10px}
+.conecta-achievements-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.conecta-achievement{display:flex;align-items:flex-start;gap:11px;min-width:0;padding:13px;border:1px solid var(--border-color,#e2e8f0);border-radius:13px}
+.conecta-achievement.is-unlocked{background:var(--card-bg,#fff)}
+.conecta-achievement.is-locked{background:var(--bg-color,#f8fafc)}
+.conecta-achievement-icon{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;border-radius:12px;background:var(--bg-color,#f8fafc);border:1px solid var(--border-color,#e2e8f0)}
+.conecta-achievement.is-unlocked .conecta-achievement-icon{background:#f0eaff;color:#6841c6;border-color:#d9c9ff}
+.conecta-achievement-copy{min-width:0;flex:1}
+.conecta-achievement-copy strong{font-size:13px}
+.conecta-achievement-copy p{margin:3px 0 6px;font-size:12px;color:var(--text-light,#718096)}
+.conecta-achievement-copy small{font-size:11px;color:var(--text-light,#718096)}
+.conecta-achievement-progress{height:5px;overflow:hidden;border-radius:999px;background:var(--border-color,#e2e8f0);margin:8px 0 5px}
+.conecta-achievement-progress span{display:block;height:100%;background:var(--primary-color,#4a90e2);border-radius:inherit}
+@media(max-width:620px){.conecta-achievements-grid{grid-template-columns:minmax(0,1fr)}}
