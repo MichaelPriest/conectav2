@@ -40,17 +40,18 @@ test('explore derives hashtags only from the public discovery result and support
 });
 
 
-test('profile achievements are derived from real Supabase counts and profile fields',()=>{
+test('profile achievements load the 100 real server-calculated awards',()=>{
  const component=read('components/profile-achievements.tsx');
+ const migration=read('../supabase/migrations/20261013200000_conecta_100_achievements.sql');
  const page=read('app/perfil/page.tsx');
- assert.match(component,/from\('posts'\)\.select\('id', \{ count: 'exact', head: true \}\)/);
- assert.match(component,/from\('friendships'\)/);
- assert.match(component,/from\('profile_details'\)/);
- assert.match(component,/first-post/);
- assert.match(component,/ten-friends/);
- assert.match(component,/profile-custom/);
- assert.match(component,/interests/);
- assert.match(component,/music/);
+ assert.match(component,/rpc\('get_my_achievements'\)/);
+ assert.match(component,/\{unlocked\}\/100 desbloqueadas/);
+ assert.match(component,/Primeiro usuário do Conecta/);
+ assert.match(component,/Buscar conquista/);
+ assert.match(component,/Apenas desbloqueadas/);
+ assert.match(migration,/create table if not exists public\.achievement_catalog/);
+ assert.match(migration,/create table if not exists public\.user_achievements/);
+ assert.match(migration,/order by p\.created_at asc, p\.id asc limit 1/);
  assert.match(page,/ProfileAchievements profileId=\{auth\.user\.id\}/);
  assert.doesNotMatch(component,/insert\(|upsert\(|update\(/);
 });
