@@ -26,7 +26,10 @@ export async function POST(request:NextRequest){
   .select('id',{count:'exact',head:true})
   .eq('user_id',context.user.id)
   .gte('created_at',since);
- if(!rateError&&(count||0)>=10){
+ if(rateError){
+  return NextResponse.json({status:'unavailable',error:'Não foi possível aplicar o limite de tentativas.'},{status:503,headers});
+ }
+ if((count||0)>=10){
   return NextResponse.json({status:'rate_limited',error:'Muitas tentativas. Aguarde alguns minutos.'},{status:429,headers});
  }
 
