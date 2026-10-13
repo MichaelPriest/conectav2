@@ -34,7 +34,8 @@ test('unknown, self-declared, OCR and browser-only signals fail closed', () => {
     { ...adult, status: 'pending' },
     { ...adult, evidenceReference: 'x' },
     { ...adult, verifiedAt: 'not-a-date' },
-    { ...adult, verifiedAt: '2099-01-01T00:00:00.000Z' }
+    { ...adult, verifiedAt: '2099-01-01T00:00:00.000Z' },
+    { ...adult, verifiedAt: '2020-01-01T00:00:00.000Z' }
   ]) {
     const result = ageAssurancePolicy(input);
     assert.equal(result.ageAssurance, 'unknown');
