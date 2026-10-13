@@ -35,6 +35,7 @@ export default function FeedPage() {
   const [pollDays,setPollDays]=useState(7);
   const [hasMore,setHasMore]=useState(false);
   const [offset,setOffset]=useState(0);
+  const [feedFilter,setFeedFilter]=useState<'all'|'mine'|'media'>('all');
   const picker=useRef<HTMLInputElement>(null);
   const [fileMode,setFileMode]=useState<'image'|'video'>('image');
   const [previews,setPreviews]=useState<string[]>([]);
@@ -66,9 +67,12 @@ export default function FeedPage() {
     if(!user)return;
     setLoadingFeed(true);setMessage('');
     const db=supabaseBrowser();
-    const {data,error:queryError}=await db.from('posts')
+    let query=db.from('posts')
       .select('id,author_id,community_id,moderation_status,moderation_reason,content,visibility,media_path,media_type,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path),post_likes(count),post_comments(count),post_media(storage_path,media_type,position)')
-      .is('community_id',null).order('created_at',{ascending:false})
+      .is('community_id',null);
+    if(feedFilter==='mine')query=query.eq('author_id',user.id);
+    if(feedFilter==='media')query=query.not('media_type','is',null);
+    const {data,error:queryError}=await query.order('created_at',{ascending:false})
       .range(from,from+PAGE_SIZE-1);
     if(queryError){setMessage(queryError.message);setLoadingFeed(false);return;}
     const rows=(data||[]) as unknown as FeedPost[];
@@ -77,7 +81,7 @@ export default function FeedPage() {
     setOffset(from+rows.length);
     setHasMore(rows.length===PAGE_SIZE);
     setLoadingFeed(false);
-  },[user]);
+  },[user,feedFilter]);
 
   useEffect(()=>{if(user)void fetchPosts();},[user,fetchPosts]);
 
@@ -173,6 +177,11 @@ export default function FeedPage() {
         {message&&<p role="alert" className="form-error">{message}</p>}
       </section>
       <div className="feed-title concept-feed-title"><h2>Publicações recentes</h2><span>Mais recentes primeiro</span></div>
+      <div className="conecta-feed-filters" role="group" aria-label="Filtrar publicações">
+        <button type="button" className={'btn '+(feedFilter==='all'?'btn-primary':'btn-outline')} aria-pressed={feedFilter==='all'} onClick={()=>setFeedFilter('all')}>Todas</button>
+        <button type="button" className={'btn '+(feedFilter==='mine'?'btn-primary':'btn-outline')} aria-pressed={feedFilter==='mine'} onClick={()=>setFeedFilter('mine')}>Minhas publicações</button>
+        <button type="button" className={'btn '+(feedFilter==='media'?'btn-primary':'btn-outline')} aria-pressed={feedFilter==='media'} onClick={()=>setFeedFilter('media')}>Fotos e vídeos</button>
+      </div>
       <div className="feed-list">{posts.length===0&&!loadingFeed&&<div className="empty-state card concept-empty-feed"><span className="concept-empty-illustration"><Sparkles size={34}/></span><h3>Boas histórias começam aqui.</h3><p>O Conecta está esperando sua primeira publicação. Convide amigos, conte algo e faça parte desta comunidade.</p><a className="btn btn-primary" href="#composer">Criar primeira publicação</a></div>}{posts.map((p,i)=><div key={p.id}>
         <PostCard post={p} userId={user?.id||''} refresh={()=>fetchPosts()}/>
         {i===5&&<DiscreetAdSlot format="mobile"/>}
