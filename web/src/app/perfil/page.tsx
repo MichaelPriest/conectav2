@@ -1,7 +1,7 @@
 'use client';
 import {FormEvent,useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
-import {Camera,ExternalLink,Save,ShieldCheck,Sparkles,Trash2,Settings} from 'lucide-react';
+import {Camera,ExternalLink,Save,Sparkles,Trash2,Settings} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {optimizeImage} from '@/lib/media';
@@ -195,12 +195,8 @@ export default function Profile(){
        <button className="btn btn-primary" type="submit" disabled={saving||!ready}><Save size={18}/> {saving?'Salvando...':'Salvar meu perfil'}</button>
      </form>
      <div className="stack">
-       <section className="panel"><h2><ShieldCheck size={20} color="#825bec" style={{verticalAlign:'middle'}}/> Conecta ID</h2>
-         <p className="muted">Verificação opcional por um fornecedor especializado, com prova de vida e documentos quando exigidos.</p>
-         <Link href="/verificar-identidade" className="btn btn-outline"><Camera size={17}/> Verificar identidade</Link></section>
        <section className="panel"><h2><Sparkles size={19}/> Prévia da sua música</h2>{details.music_url&&parseMusicUrl(details.music_url)
           ?<MusicEmbed url={details.music_url}/>:<p className="small-note">Adicione um link de Spotify, YouTube, SoundCloud ou Apple Music para exibir um player no seu perfil. O visitante escolhe quando carregá-lo.</p>}</section>
-       <section className="panel"><h2>Seu espaço, sua privacidade</h2><p className="small-note">Cidade, interesses e música, quando preenchidos, serão visíveis para outros usuários. Não informe endereço residencial ou dados pessoais sensíveis.</p></section>
      </div>
    </div>
    {details.mood_text&&<section className="panel conecta-myspace-status"><strong>Meu status ✦</strong><p>{details.mood_text}</p></section>}
