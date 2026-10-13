@@ -102,15 +102,16 @@ export function ChatGroupCallButtons({conversationId,userId,title}:{conversation
   if(!conversationId||busyRef.current)return;
   busyRef.current=true;setBusy(true);setError('');
   try{
+   const media=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:kind==='video'});
+   localRef.current=media;setLocal(media);setMicOn(true);setCameraOn(kind==='video');
    const {data:id,error:e}=await dbRef.current.rpc('start_group_call',{_conversation:conversationId,_kind:kind});
    if(e||!id)throw e||new Error('Não foi possível criar a chamada.');
    const row:Session={id:String(id),conversation_id:conversationId,created_by:userId,kind,status:'active',expires_at:new Date(Date.now()+7200000).toISOString()};
    sessionRef.current=row;setSession(row);lastSignal.current=0;handled.current.clear();
-   const media=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:kind==='video'});
-   localRef.current=media;setLocal(media);setMicOn(true);setCameraOn(kind==='video');
-   await dbRef.current.rpc('join_group_call',{_session:row.id});
+   const {error:joinError}=await dbRef.current.rpc('join_group_call',{_session:row.id});
+   if(joinError)throw joinError;
    await refresh();
-  }catch(e){setError(errText(e));if(sessionRef.current)await dispose(true);}
+  }catch(e){setError(errText(e));if(sessionRef.current)await dispose(true);else{localRef.current?.getTracks().forEach(t=>t.stop());localRef.current=null;setLocal(null);}}
   finally{busyRef.current=false;setBusy(false);}
  }
  async function join(){
