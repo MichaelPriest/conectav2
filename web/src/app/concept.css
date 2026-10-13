@@ -82,3 +82,16 @@
 @media(max-width:850px){.concept-home-intro h1{display:none}.concept-stage{height:610px}.concept-laptop{left:15%;width:95%;top:-50px;transform:scale(.78);transform-origin:left top}.concept-welcome-device{top:190px;left:0;transform:scale(.75) rotate(-3deg)}.concept-explore-device{top:220px;right:0;transform:scale(.78)}.concept-home-bottom{margin-top:-30px}.concept-home-header-links>a:first-child{display:none}}
 @media(max-width:640px){.concept-home-header{padding:20px}.concept-home-header-links .btn{padding:10px;font-size:11px}.concept-brand-stack .concept-brand{font-size:31px}.concept-brand-stack .concept-brand-symbol{width:44px;height:44px;font-size:33px}.concept-brand-stack .concept-brand-symbol:before{border-width:8px}.concept-brand-stack .concept-brand-dot{width:10px;height:10px;top:21px}.concept-brand-stack>span{margin-left:54px;margin-top:-8px;font-size:10px}.concept-home-intro{padding:10px 20px 0}.concept-home-intro p{font-size:14px}.concept-home-pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:2px}.concept-home-pillar{width:auto;font-size:9px}.concept-round-icon{width:39px;height:39px}.concept-stage{height:495px;margin-top:30px}.concept-laptop{left:4%;width:850px;height:600px;top:0;transform:scale(.39)}.concept-welcome-device{top:220px;left:6%;transform:scale(.56) rotate(-3deg)}.concept-explore-device{top:221px;right:3%;transform:scale(.59)}.concept-home-bottom{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 17px;gap:21px 12px;margin-top:0}.concept-value{display:block}.concept-value h2{font-size:12px}.concept-value p{font-size:10px}.concept-home-cta{padding:20px;display:block;text-align:left;margin-top:30px}.concept-home-cta .btn{margin-top:17px}.concept-home-cta h2{font-size:20px}.concept-home-footer{display:grid;justify-content:center;text-align:center;padding:22px}.concept-home-footer .concept-brand{justify-content:center}}
 @media(max-width:390px){.concept-laptop{transform:scale(.34)}.concept-explore-device{transform:scale(.53);right:0}.concept-welcome-device{transform:scale(.5);left:1%}}
+
+
+/* Legacy social feature: accessible, responsive local publication drafts. */
+.conecta-post-drafts{display:grid;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border-color,#e2e8f0)}
+.conecta-post-drafts-actions,.conecta-post-draft-buttons{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.conecta-post-drafts-actions .btn,.conecta-post-draft-buttons .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.conecta-post-drafts-list{display:grid;gap:9px}
+.conecta-post-draft-item{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:12px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px;background:var(--card-bg,#fff)}
+.conecta-post-draft-copy{min-width:0;flex:1}
+.conecta-post-draft-copy strong{font-size:13px}
+.conecta-post-draft-copy p{margin:5px 0;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.conecta-post-draft-copy time{font-size:11px;color:var(--text-light,#718096)}
+@media(max-width:540px){.conecta-post-draft-item{display:grid}.conecta-post-draft-buttons{justify-content:flex-start}}
