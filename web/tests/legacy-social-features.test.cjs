@@ -91,8 +91,11 @@ test('feed filters query real posts and restart pagination when changed',()=>{
 });
 
 
-test('hashtag discovery parses hashtags and strips the search prefix correctly',()=>{
+test('explore search normalizes accents and optional @ or # prefixes',()=>{
  const page=read('app/explorar/page.tsx');
  assert.ok(page.includes('matchAll(/#[\\wÀ-ÿ]{2,40}/g)'));
- assert.ok(page.includes("needle.replace(/^#/,'').trim()"));
+ assert.match(page,/normalizeDiscoveryText = \\(value: string\\) => value\\.normalize\\('NFD'\\)/);
+ assert.match(page,/replace\\(\\/\\^\\[@#\\]\\+\\//);
+ assert.ok(page.includes('normalizeDiscoveryText(tag).includes(needle)'));
+ assert.ok(page.includes('normalizeDiscoveryText(p.display_name'));
 });

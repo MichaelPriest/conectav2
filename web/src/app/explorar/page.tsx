@@ -12,6 +12,8 @@ type Community = {id:string;slug:string;name:string;description:string;owner_id:
 type DiscoveryPost = {id:string;content:string;created_at:string;author_id:string;media_path:string|null;media_type:string|null;mediaUrl?:string|null;profiles:{display_name:string;handle:string}|null};
 type Filter = 'Tudo'|'Pessoas'|'Comunidades'|'Vídeos'|'Publicações';
 
+const normalizeDiscoveryText = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/^[@#]+/,'').trim().toLocaleLowerCase('pt-BR');
+
 export default function Explorar() {
   const auth=useAuthProfile();
   const [people,setPeople]=useState<UserProfile[]>([]);
@@ -57,10 +59,10 @@ export default function Explorar() {
     return ()=>{active=false;};
   },[auth.user]);
 
-  const needle=search.toLocaleLowerCase('pt-BR').trim();
-  const visiblePeople=useMemo(()=>people.filter(p=>p.id!==auth.user?.id&&(!needle||(p.display_name+' '+p.handle+' '+p.bio).toLowerCase().includes(needle))),[people,needle,auth.user]);
-  const visibleCommunities=useMemo(()=>communities.filter(c=>!needle||(c.name+' '+c.description).toLowerCase().includes(needle)),[communities,needle]);
-  const visiblePosts=useMemo(()=>posts.filter(p=>!needle||(p.content+' '+(p.profiles?.display_name||'')).toLocaleLowerCase('pt-BR').includes(needle)),[posts,needle]);
+  const needle=normalizeDiscoveryText(search);
+  const visiblePeople=useMemo(()=>people.filter(p=>p.id!==auth.user?.id&&(!needle||normalizeDiscoveryText(p.display_name+' '+p.handle+' '+p.bio).includes(needle))),[people,needle,auth.user]);
+  const visibleCommunities=useMemo(()=>communities.filter(c=>!needle||normalizeDiscoveryText(c.name+' '+c.description).includes(needle)),[communities,needle]);
+  const visiblePosts=useMemo(()=>posts.filter(p=>!needle||normalizeDiscoveryText(p.content+' '+(p.profiles?.display_name||'')).includes(needle)),[posts,needle]);
   const hashtags=useMemo(()=>{
     const counts=new Map<string,number>();
     for(const post of posts){
@@ -71,7 +73,7 @@ export default function Explorar() {
     }
     return [...counts.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'pt-BR')).slice(0,24);
   },[posts]);
-  const visibleHashtags=hashtags.filter(([tag])=>!needle||tag.includes(needle)||tag.slice(1).includes(needle.replace(/^#/,'').trim()));
+  const visibleHashtags=hashtags.filter(([tag])=>!needle||normalizeDiscoveryText(tag).includes(needle));
   const showPeople=filter==='Tudo'||filter==='Pessoas',showCommunities=filter==='Tudo'||filter==='Comunidades',showPosts=filter==='Tudo'||filter==='Publicações'||filter==='Vídeos',showHashtags=filter==='Tudo';
   const filteredPosts=filter==='Vídeos'?visiblePosts.filter(p=>p.media_type==='video'):visiblePosts;
   const hasContent=(showPeople&&visiblePeople.length>0)||(showCommunities&&visibleCommunities.length>0)||(showPosts&&filteredPosts.length>0)||(showHashtags&&visibleHashtags.length>0);
