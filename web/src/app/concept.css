@@ -140,3 +140,10 @@
 .conecta-profile-visitor-info strong{font-size:13px}
 .conecta-profile-visitor-info span,.conecta-profile-visitor-info small{font-size:11px;color:var(--text-light,#718096);overflow-wrap:anywhere}
 @media(max-width:540px){.conecta-profile-visits-heading{align-items:flex-start}.conecta-profile-visits-heading .btn{width:100%}}
+
+
+/* Legacy-style feed filters: compact, accessible and responsive. */
+.conecta-feed-filters{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px;}
+.conecta-feed-filters .btn{min-height:38px;border-radius:999px;padding:8px 14px;font-size:.9rem;}
+.conecta-feed-filters .btn[aria-pressed="true"]{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent,#7657d5) 24%,transparent);}
+@media(max-width:480px){.conecta-feed-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}.conecta-feed-filters .btn:last-child{grid-column:1/-1;}}
