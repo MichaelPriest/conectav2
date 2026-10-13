@@ -10,6 +10,10 @@ The repository already contains browser-side camera/liveness challenges, Tessera
 
 The `/api/identity/methods` endpoint intentionally reports capability and cost class only. It does not create verification records, upload documents, call a paid provider, change profile flags, or grant adult privileges.
 
+## Android bridge progress — 2026-10-13
+
+The mobile branch now includes a local Expo module for Play Age Signals SDK `0.0.4` and a user-initiated account action. It handles shared/not-shared/verification-required states and displays the age band only as a preflight signal. The app does not upload this result or unlock age-restricted features. Next required step is a server-side Play Integrity verification flow bound to the exact signal payload and authenticated Conecta account; this requires configuring the Google Cloud/Play Console project and credentials in the deployment environment. Native build and real-device testing remain pending.
+
 ## Free platform age signals (priority over face-age estimation)
 
 - Android: assess Google Play Age Signals API and bind the returned age band to a verified Play Integrity result before accepting it. It may not be available for sideloaded builds or every device/account. Official docs: https://developer.android.com/google/play/age-signals/use-age-signals-api
