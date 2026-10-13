@@ -21,6 +21,10 @@ function classifyAgeBand(lower:number,upper:number|null):AgeBand|null{
 }
 
 export async function POST(request:NextRequest){
+ const declaredLength=Number(request.headers.get('content-length')||0);
+ if(declaredLength>30_000){
+  return NextResponse.json({error:'Solicitação muito grande.'},{status:413,headers});
+ }
  if(!isTrustedIdentityOrigin(request.headers,request.url,process.env)){
   return NextResponse.json({error:'Origem não autorizada.'},{status:403,headers});
  }
