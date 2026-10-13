@@ -245,7 +245,7 @@ export default function Profile(){
    </div>
    {details.mood_text&&<section className="panel conecta-myspace-status"><strong>Meu status ✦</strong><p>{details.mood_text}</p></section>}
    {auth.user&&<ProfileAchievements profileId={auth.user.id}/>}
-   {auth.user&&<ProfileVisits profileId={auth.user.id}/ >}
+   {auth.user&&<ProfileVisits profileId={auth.user.id}/>}
    {auth.user&&<MySpacePanel profileId={auth.user.id} viewerId={auth.user.id} isSelf/>}
    {auth.user&&<ProfileTimeline profileId={auth.user.id} viewerId={auth.user.id} isSelf/>}
  </main></GuardedPage>;
