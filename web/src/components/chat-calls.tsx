@@ -3,6 +3,7 @@ import {createContext,useCallback,useContext,useEffect,useRef,useState} from 're
 import {Phone,PhoneOff,Video,Mic,MicOff,VideoOff,Check,Loader2,Volume2,VolumeX,BellRing,PhoneMissed} from 'lucide-react';
 import {ChatCallTones,DEFAULT_CALL_TONES,sanitizeCallTonePreferences,type CallTonePreferences} from '@/lib/chat-call-tones';
 import {supabaseBrowser} from '@/lib/supabase/browser';
+import {getChatRtcConfiguration} from '@/lib/chat-rtc-config';
 
 type CallKind='audio'|'video';
 type CallRow={id:string;conversation_id:string;caller_id:string;callee_id:string;kind:CallKind;
@@ -11,11 +12,6 @@ type CallContext={busy:boolean;hasCall:boolean;error:string;
  missedCount:number;acknowledgeMissed:()=>void;
  start:(conversationId:string,recipientId:string,recipientName:string,kind:CallKind)=>Promise<void>};
 const Context=createContext<CallContext|null>(null);
-// Public STUN endpoints only; relaying traffic requires an authenticated TURN account.
-const config:RTCConfiguration={iceServers:[{urls:[
-  'stun:stun.cloudflare.com:3478',
-  'stun:stun.l.google.com:19302'
-]}]};
 const intervalMs=1800;
 const idlePollMs=12000;
 const negotiationTimeoutMs=47000;
@@ -132,7 +128,8 @@ export function ChatCallsProvider({userId,children}:{userId:string;children:Reac
    audio:{echoCancellation:true,noiseSuppression:true},video:kind==='video'
   });
   streamRef.current=media;setLocal(media);setMicOn(true);setCamOn(kind==='video');
-  const pc=new RTCPeerConnection(config);pcRef.current=pc;
+  const rtcConfig=await getChatRtcConfiguration();
+  const pc=new RTCPeerConnection(rtcConfig);pcRef.current=pc;
   pc.onicecandidate=(event)=>{
    if(!event.candidate||pcRef.current!==pc)return;
    const active=currentRef.current;
