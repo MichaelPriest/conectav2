@@ -46,7 +46,11 @@ function isTrustedDecision(value: unknown): value is TrustedAgeDecision {
       candidate.evidenceReference.length > 256) return false;
   if (typeof candidate.verifiedAt !== 'string') return false;
   const timestamp = Date.parse(candidate.verifiedAt);
-  if (!Number.isFinite(timestamp) || timestamp > Date.now() + 60_000) return false;
+  const now = Date.now();
+  // Re-check platform signals periodically so revoked supervision or updated
+  // age status cannot remain trusted indefinitely.
+  const maxDecisionAgeMs = 60 * 24 * 60 * 60 * 1000;
+  if (!Number.isFinite(timestamp) || timestamp > now + 60_000 || now - timestamp > maxDecisionAgeMs) return false;
   return true;
 }
 
