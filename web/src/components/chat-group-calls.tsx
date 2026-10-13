@@ -2,12 +2,12 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Phone,PhoneOff,Video,Mic,MicOff,VideoOff,Users,Loader2} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
+import {getChatRtcConfiguration} from '@/lib/chat-rtc-config';
 
 type Kind='audio'|'video';
 type Session={id:string;conversation_id:string;created_by:string;kind:Kind;status:'ringing'|'active'|'ended';expires_at:string};
 type Participant={user_id:string;status:string};
 type Signal={id:number;sender_id:string;signal:Record<string,unknown>};
-const rtcConfig:RTCConfiguration={iceServers:[{urls:['stun:stun.cloudflare.com:3478','stun:stun.l.google.com:19302']}]};
 const errText=(e:unknown)=>e instanceof Error?e.message:'Não foi possível iniciar a chamada em grupo.';
 
 export function ChatGroupCallButtons({conversationId,userId,title}:{conversationId:string|null|undefined;userId:string;title:string}){
@@ -86,6 +86,7 @@ export function ChatGroupCallButtons({conversationId,userId,title}:{conversation
  }
  async function makePeer(peerId:string,offerer:boolean):Promise<RTCPeerConnection>{
   const existing=pcs.current.get(peerId);if(existing)return existing;
+  const rtcConfig=await getChatRtcConfiguration();
   const pc=new RTCPeerConnection(rtcConfig);pcs.current.set(peerId,pc);
   for(const track of localRef.current?.getTracks()||[])pc.addTrack(track,localRef.current!);
   pc.onicecandidate=e=>{if(e.candidate)void sendSignal(peerId,{candidate:e.candidate.toJSON()}).catch(()=>{});};

@@ -55,3 +55,16 @@ O workflow do GitHub Actions roda uma validação por atualização do PR, com c
 - O Supabase exige permitir URLs de redirecionamento em Authentication > URL Configuration: `https://conectav2.vercel.app/auth/callback*` e domínios efetivamente usados, com URL principal `https://conectav2.vercel.app`. Configuração da URL de autenticação precisa ser verificada na dashboard caso não esteja acessível via conector.
 - Antes de testes reais, validar cadastro e login com duas contas que possuam e-mails acessíveis; testes sem usuários reais não comprovam o envio de e-mails.
 - Deploys automáticos temporariamente suspensos usando Ignored Build Step; publicar apenas um build validado.
+
+
+## Chamadas WebRTC e TURN opcional
+
+As chamadas individuais e em grupo usam STUN por padrão. Para melhorar a conexão em redes restritivas, o Conecta aceita um servidor TURN próprio, com credenciais temporárias geradas no servidor e nunca expõe o segredo compartilhado no navegador.
+
+1. Repositório gratuito recomendado: [coturn/coturn](https://github.com/coturn/coturn), implementação open-source de STUN/TURN. O software é gratuito; a hospedagem pública e o tráfego de retransmissão não são necessariamente gratuitos.
+2. Hospede coturn em um servidor com suporte a UDP e portas de retransmissão TURN; um host HTTP comum não basta. Configure autenticação TURN REST com um segredo forte e configure o firewall/portas de retransmissão conforme a documentação do coturn.
+3. Configure no ambiente **server-side** do Next.js (Render ou Vercel): `TURN_URLS` com URLs `turn:`/`turns:` separadas por vírgula e `TURN_SHARED_SECRET` com o mesmo segredo de autenticação TURN REST usado no coturn.
+4. Não use prefixo `NEXT_PUBLIC_` nessas variáveis e nunca coloque o segredo no cliente. A rota autenticada `/api/chat/turn-credentials` gera usuário/credencial HMAC com validade de 10 minutos. Sem as duas variáveis, as chamadas continuam com STUN.
+5. Depois de configurar, teste chamadas entre redes diferentes (por exemplo, Wi-Fi e rede móvel), confira que a conexão ICE selecionou relay quando necessário e monitore uso de banda/custos.
+
+Não existe um relay TURN de produção confiável e ilimitado que possamos garantir como gratuito. O código coturn é gratuito, mas manter um relay acessível pela Internet requer um host e largura de banda.
