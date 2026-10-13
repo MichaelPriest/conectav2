@@ -3,8 +3,8 @@ import {createHash} from 'node:crypto';
 export type AgeSignalPayload = {
   ageLower: number;
   ageUpper: number | null;
-  ageRangeSource: string;
-  significantChangeApprovalDate: number | null;
+  userStatus: number;
+  mostRecentApprovalDate: number | null;
 };
 
 export function canonicalAgeSignalRequest(challenge: string, payload: AgeSignalPayload): string {
@@ -13,10 +13,10 @@ export function canonicalAgeSignalRequest(challenge: string, payload: AgeSignalP
     challenge,
     String(payload.ageLower),
     payload.ageUpper === null ? 'null' : String(payload.ageUpper),
-    payload.ageRangeSource,
-    payload.significantChangeApprovalDate === null
+    String(payload.userStatus),
+    payload.mostRecentApprovalDate === null
       ? 'null'
-      : String(payload.significantChangeApprovalDate)
+      : String(payload.mostRecentApprovalDate)
   ].join('|');
 }
 
