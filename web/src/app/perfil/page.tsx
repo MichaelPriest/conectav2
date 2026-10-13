@@ -1,7 +1,7 @@
 'use client';
 import {FormEvent,useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
-import {Camera,ExternalLink,ImagePlus,MapPin,Save,ShieldCheck,Sparkles,Trash2} from 'lucide-react';
+import {Camera,ExternalLink,Save,ShieldCheck,Sparkles,Trash2,Settings} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {optimizeImage} from '@/lib/media';
@@ -10,14 +10,11 @@ import {MusicEmbed,parseMusicUrl} from '@/components/music-embed';
 import {ProfileTimeline} from '@/components/profile-timeline';
 import {MySpacePanel} from '@/components/myspace-panel';
 import {ProfileAchievements} from '@/components/profile-achievements';
-import {ProfileVisits} from '@/components/profile-visits';
-import {LanguageSelect} from '@/lib/i18n';
 import {normalizeProfileDetails,prepareProfileDetails,DEFAULT_PROFILE_DETAILS} from '@/lib/profile-details';
 import type {ProfileDetails} from '@/lib/profile-details';
 
 type Details=ProfileDetails;
 const empty=DEFAULT_PROFILE_DETAILS;
-const themes:Details['cover_theme'][]=['violet','aqua','pink','sunset','midnight','forest','ocean','graphite','candy'];
 
 export default function Profile(){
  const auth=useAuthProfile();
@@ -160,7 +157,7 @@ export default function Profile(){
    }finally{setSaving(false);}
  }
  return <GuardedPage {...auth}><main className={"section-page conecta-profile-page profile-layout-"+details.layout_style}>
-   <div className="page-heading"><div><span className="section-eyebrow">SEU ESPAÇO NO CONECTA</span><h1>Meu perfil <span className="wave">✳</span></h1><p>Personalize a sua história e escolha o que compartilhar.</p></div></div>
+   <div className="page-heading"><div><span className="section-eyebrow">SEU ESPAÇO NO CONECTA</span><h1>Meu perfil <span className="wave">✳</span></h1><p>Edite suas informações pessoais e o conteúdo que apresenta à comunidade.</p></div><Link href="/configuracoes" className="btn btn-outline"><Settings size={17}/> Configurações</Link></div>
    <div className={'conecta-profile-cover cover-'+details.cover_theme} style={coverUrl?{backgroundImage:'linear-gradient(0deg,#17153498,#35226255),url('+JSON.stringify(coverUrl)+')'}:undefined}>
      {coverUrl&&<span className="conecta-profile-cover-label">Capa personalizada</span>}
      <div className="conecta-profile-bio">
@@ -188,49 +185,12 @@ export default function Profile(){
        <label className="field-label">Sua música ou playlist (Spotify, YouTube, SoundCloud ou Apple Music)<input className="form-input" maxLength={512} value={details.music_url||''} onChange={e=>setDetails(v=>({...v,music_url:e.target.value}))} placeholder="https://open.spotify.com/track/..."/></label>
        <label className="field-label">Status do momento<input className="form-input" maxLength={140} value={details.mood_text}
          onChange={e=>setDetails(v=>({...v,mood_text:e.target.value}))} placeholder="🎵 Ouvindo minha música favorita..."/></label>
-       <label className="field-label">Tema completo do perfil<select className="form-input" value={details.layout_style}
-         onChange={e=>setDetails(v=>({...v,layout_style:e.target.value as Details['layout_style']}))}>
-         <option value="classic">Conecta — clássico</option>
-         <option value="orkut">Orkut nostálgico — mural e comunidades</option>
-         <option value="myspace">MySpace — perfil expressivo e música</option>
-         <option value="facebook">Facebook — perfil social clássico</option>
-         <option value="instagram">Instagram — foco visual e fotos</option>
-         <option value="creator">Criador — conteúdo em destaque</option>
-         <option value="minimal">Minimalista — visual limpo</option>
-         <option value="aurora">Aurora — social de próxima geração</option>
-         <option value="glass">Glass — transparências e profundidade</option>
-         <option value="neo">Neo — editorial ousado</option>
-       </select><span className="small-note">O tema altera a apresentação do perfil, sem mudar suas permissões ou quem pode ver seus conteúdos.</span></label>
-       <section className="theme-preview-section" aria-labelledby="theme-preview-title">
-         <div className="theme-preview-heading"><div><h3 id="theme-preview-title">Prévia dos temas da rede</h3><p>Selecione uma opção para experimentar a aparência em toda a interface. A escolha só fica salva quando você clicar em “Salvar meu perfil”.</p></div><span className="theme-preview-count">10 estilos</span></div>
-         <div className="theme-preview-grid">
-           {([
-             {id:'classic',title:'Conecta clássico',desc:'Visual original',tone:'classic'},
-             {id:'orkut',title:'Orkut retrô',desc:'Comunidades e nostalgia',tone:'orkut'},
-             {id:'myspace',title:'MySpace',desc:'Escuro e personalizado',tone:'myspace'},
-             {id:'facebook',title:'Facebook',desc:'Azul e social',tone:'facebook'},
-             {id:'instagram',title:'Instagram',desc:'Visual e fotográfico',tone:'instagram'},
-             {id:'creator',title:'Creator',desc:'Mídia e destaque',tone:'creator'},
-             {id:'minimal',title:'Minimalista',desc:'Leve e discreto',tone:'minimal'},
-             {id:'aurora',title:'Aurora',desc:'Gradientes vivos e espaços conectados',tone:'aurora'},
-             {id:'glass',title:'Glass UI',desc:'Camadas translúcidas e brilho suave',tone:'glass'},
-             {id:'neo',title:'Neo Editorial',desc:'Tipografia marcante e blocos expressivos',tone:'neo'}
-           ] as const).map(theme=><button type="button" key={theme.id} className={'theme-preview-card theme-preview-'+theme.tone+(details.layout_style===theme.id?' is-selected':'')} aria-pressed={details.layout_style===theme.id} onClick={()=>{setDetails(v=>({...v,layout_style:theme.id}));window.dispatchEvent(new CustomEvent('conecta-profile-theme-change',{detail:theme.id}));}}>
-             <span className="theme-preview-window"><span className="theme-preview-top"><i/><i/><i/></span><span className="theme-preview-body"><span className="theme-preview-sidebar"><i/><i/><i/><i/></span><span className="theme-preview-feed"><i className="theme-preview-composer"/><i className="theme-preview-post"><b/><em/><em/><em/></i><i className="theme-preview-post short"><b/><em/><em/></i></span><span className="theme-preview-rail"><i/><i/></span></span></span>
-             <span className="theme-preview-label"><strong>{theme.title}</strong><small>{theme.desc}</small></span>
-             {details.layout_style===theme.id&&<span className="theme-preview-current">Selecionado</span>}
-           </button>)}
-         </div>
-       </section>
-       <LanguageSelect/>
        <label className="field-label">Imagem de capa do perfil (JPG, PNG ou WebP, até 8 MB)
          <input type="file" className="form-input" accept="image/jpeg,image/png,image/webp" disabled={coverSaving}
            onChange={e=>{void uploadCover(e.target.files?.[0]||null);e.target.value='';}}/>
        </label>
        {coverPath&&<button type="button" className="btn btn-outline" disabled={coverSaving} onClick={()=>void removeCover()}><Trash2 size={16}/> Remover imagem da capa</button>}
        <span className="small-note">{coverSaving?'Atualizando imagem de capa...':'Use uma foto ou imagem autoral; evite expor dados pessoais na capa.'}</span>
-       <label className="field-label">Cor da capa<select className="form-input" value={details.cover_theme} onChange={e=>setDetails(v=>({...v,cover_theme:e.target.value as Details['cover_theme']}))}>{themes.map(t=><option key={t} value={t}>{t==='violet'?'Violeta':t==='aqua'?'Água':t==='pink'?'Rosa':t==='sunset'?'Pôr do sol':t==='midnight'?'Noite':t==='forest'?'Floresta':t==='ocean'?'Oceano':t==='graphite'?'Grafite':'Candy retrô'}</option>)}</select></label>
-       <div className="conecta-profile-emoji"><span>Emoji de assinatura: <strong>{details.favorite_emoji}</strong></span><EmojiButton label="Escolher emoji de assinatura" onSelect={emoji=>setDetails(v=>({...v,favorite_emoji:emoji}))}/></div>
        {error&&<p className="form-error" role="alert">{error}</p>}{notice&&<p className="form-success" role="status">{notice}</p>}
        <button className="btn btn-primary" type="submit" disabled={saving||!ready}><Save size={18}/> {saving?'Salvando...':'Salvar meu perfil'}</button>
      </form>
@@ -245,7 +205,6 @@ export default function Profile(){
    </div>
    {details.mood_text&&<section className="panel conecta-myspace-status"><strong>Meu status ✦</strong><p>{details.mood_text}</p></section>}
    {auth.user&&<ProfileAchievements profileId={auth.user.id}/>}
-   {auth.user&&<ProfileVisits profileId={auth.user.id}/>}
    {auth.user&&<MySpacePanel profileId={auth.user.id} viewerId={auth.user.id} isSelf/>}
    {auth.user&&<ProfileTimeline profileId={auth.user.id} viewerId={auth.user.id} isSelf/>}
  </main></GuardedPage>;
