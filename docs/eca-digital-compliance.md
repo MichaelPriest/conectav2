@@ -24,6 +24,21 @@ Official sources:
 - https://www.gov.br/anpd/pt-br/assuntos/eca-digital/
 - https://www.gov.br/anpd/pt-br/assuntos/noticias/anpd-publica-orientacoes-preliminares-e-cronograma-para-afericao-de-idade-no-ambiente-digital
 
+## Free platform age signals to prioritize
+
+Before inventing facial age estimation, integrate the platform-provided signals where available. They reduce data collection and do not have a per-verification provider fee, but are not automatically available to every device/account and do not remove Conecta's legal responsibility.
+
+- **Android / Google Play:** evaluate the Play Age Signals API. It returns age bands such as 0–12, 13–15, 16–17 and 18+. Google recommends using Play Integrity to help verify that the response comes from an untampered app on a certified Android device. An Expo integration will require a native module/config plugin and server-side integrity verification; a sideloaded APK or device outside Google Play may not provide a usable signal.
+  - Official documentation: https://developer.android.com/google/play/age-signals/use-age-signals-api
+  - Response integrity guidance: https://developer.android.com/google/play/age-signals/understand-age-signals-responses
+- **iOS / Apple:** evaluate the Declared Age Range API. It can return an age range and information about the declaration method when the user or guardian consents, but requires Apple capability/entitlement, supported OS/SDK versions, and handling for declined/unavailable results. Apple explicitly says the developer remains responsible for legal compliance.
+  - Official documentation: https://developer.apple.com/documentation/declaredagerange
+  - Brazil guidance: https://developer.apple.com/news/?id=f5zj08ey
+- **Web:** do not assume a browser can access app-store/OS age signals. Keep age-restricted access locked unless a trusted signal can be securely obtained, or a documented document/credential method has been fully validated.
+- **Fallback:** do not replace a missing platform signal with self-declaration, OCR, a face-age guess, or client-side liveness. Use the protective experience and offer a review/verification path.
+
+The platform signal is only accepted as a trusted decision after the method and provenance are verified, the result is bound to the authenticated Conecta account, and replay/spoofing protections are implemented. A raw age band sent by the app must not be inserted directly into `age_assurance_decisions`.
+
 ## Non-negotiable age and identity rules
 
 1. A typed date of birth, OCR result, browser state, profile metadata, QR decode, liveness-only result or signed-PDF integrity check is not by itself verified age or identity.
