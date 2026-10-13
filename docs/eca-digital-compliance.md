@@ -24,6 +24,14 @@ Official sources:
 - https://www.gov.br/anpd/pt-br/assuntos/eca-digital/
 - https://www.gov.br/anpd/pt-br/assuntos/noticias/anpd-publica-orientacoes-preliminares-e-cronograma-para-afericao-de-idade-no-ambiente-digital
 
+## Android implementation added to the mobile branch (2026-10-13)
+
+- Added a local Expo native module at `mobile/modules/age-signals/` using the current Play Age Signals SDK `0.0.4` two-step flow (`requestAgeSignalsAccess`, then `checkAgeSignals`). The previous `0.0.3` API is no longer supported, so new integration work must use the current docs: https://developer.android.com/google/play/age-signals/request-age-signals
+- Added an explicit user-triggered option in the mobile profile/account area. The user can decline sharing; no signal is requested silently at startup.
+- The current client bridge returns the coarse age band to the app for a local preflight display only. It does not send it to the server, write a database row, or grant any privilege. This is deliberate: the app result is not yet backed by server-verified Play Integrity attestation.
+- The bridge does not collect the Play install ID. It handles unavailable, declined and verification-required states without converting them to adult status.
+- Added `mobile/tests/age-assurance.test.cjs`. These are source-level safeguards; native Android compilation, device tests, Play Console configuration and the server-side Play Integrity verification are still pending. No CI success is claimed.
+
 ## Free platform age signals to prioritize
 
 Before inventing facial age estimation, integrate the platform-provided signals where available. They reduce data collection and do not have a per-verification provider fee, but are not automatically available to every device/account and do not remove Conecta's legal responsibility.
