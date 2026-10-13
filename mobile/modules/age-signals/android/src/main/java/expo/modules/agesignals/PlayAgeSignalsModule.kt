@@ -70,8 +70,8 @@ class PlayAgeSignalsModule : Module() {
                     "status" to "shared",
                     "ageLower" to result.ageLower(),
                     "ageUpper" to result.ageUpper(),
-                    "ageRangeSource" to result.ageRangeSource(),
-                    "significantChangeApprovalDate" to result.significantChangeApprovalDate()?.time
+                    "userStatus" to result.userStatus(),
+                    "mostRecentApprovalDate" to result.mostRecentApprovalDate()?.time
                   ))
                 }
                 .addOnFailureListener {
