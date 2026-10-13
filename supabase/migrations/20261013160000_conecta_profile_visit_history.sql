@@ -69,7 +69,7 @@ begin
   values (p_profile_id, v_viewer_id, now(), 1)
   on conflict (profile_id, viewer_id) do update
     set last_viewed_at = now(),
-        view_count = least(public.profile_visits.view_count + 1, 1000000);
+        view_count = least(profile_visits.view_count + 1, 1000000);
 end;
 $$;
 
