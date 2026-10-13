@@ -55,6 +55,9 @@ export async function POST(request:NextRequest){
     !(approval===null||(typeof approval==='number'&&Number.isSafeInteger(approval)&&approval>0&&approval<=Date.now()+30_000))){
   return NextResponse.json({error:'Os dados de faixa etária são inválidos.'},{status:400,headers});
  }
+ if(typeof ageLower==='number'&&typeof ageUpper==='number'&&ageUpper<ageLower){
+  return NextResponse.json({error:'A faixa etária retornada é inconsistente.'},{status:400,headers});
+ }
 
  const signal:AgeSignalPayload={
   ageLower,
