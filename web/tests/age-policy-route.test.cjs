@@ -29,6 +29,6 @@ test('age decision table stores coarse bands only and denies client table access
   assert.match(migration, /age_band in \('0_12', '13_15', '16_17', '18_plus'\)/);
   assert.match(migration, /enable row level security/i);
   assert.match(migration, /revoke all on table public\.age_assurance_decisions from public, anon, authenticated/i);
-  assert.match(migration, /grant select, insert, update, delete on table public\.age_assurance_decisions to service_role/i);
+  assert.match(migration, /grant select on table public\.age_assurance_decisions to service_role/i);
   assert.doesNotMatch(migration, /date_of_birth|document_image|selfie|biometric_template/i);
 });
