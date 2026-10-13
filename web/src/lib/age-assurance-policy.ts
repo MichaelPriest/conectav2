@@ -5,7 +5,7 @@
  * the input from request JSON, user_metadata, profile fields, OCR output,
  * browser liveness results, or an unverified CIN/JWS preflight.
  */
-export type TrustedAgeBand = 'under_12' | '12_15' | '16_17' | '18_plus';
+export type TrustedAgeBand = '0_12' | '13_15' | '16_17' | '18_plus';
 export type TrustedAgeSource =
   | 'verified_platform_age_signal'
   | 'verified_age_credential'
@@ -39,7 +39,7 @@ function isTrustedDecision(value: unknown): value is TrustedAgeDecision {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<TrustedAgeDecision>;
   if (candidate.status !== 'verified') return false;
-  if (!candidate.ageBand || !(['under_12', '12_15', '16_17', '18_plus'] as const).includes(candidate.ageBand)) return false;
+  if (!candidate.ageBand || !(['0_12', '13_15', '16_17', '18_plus'] as const).includes(candidate.ageBand)) return false;
   if (!candidate.source || !trustedSources.has(candidate.source)) return false;
   if (typeof candidate.evidenceReference !== 'string' ||
       candidate.evidenceReference.trim().length < 8 ||
