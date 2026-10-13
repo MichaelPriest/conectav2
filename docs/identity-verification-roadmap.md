@@ -10,9 +10,11 @@ The repository already contains browser-side camera/liveness challenges, Tessera
 
 The `/api/identity/methods` endpoint intentionally reports capability and cost class only. It does not create verification records, upload documents, call a paid provider, change profile flags, or grant adult privileges.
 
-## Android bridge progress — 2026-10-13
+## Android bridge and server verification progress — 2026-10-13
 
-The mobile branch now includes a local Expo module for Play Age Signals SDK `0.0.4` and a user-initiated account action. It handles shared/not-shared/verification-required states and displays the age band only as a preflight signal. The app does not upload this result or unlock age-restricted features. Next required step is a server-side Play Integrity verification flow bound to the exact signal payload and authenticated Conecta account; this requires configuring the Google Cloud/Play Console project and credentials in the deployment environment. Native build and real-device testing remain pending.
+The mobile branch now includes a local Expo module for Play Age Signals SDK `0.0.4` and Play Integrity SDK `1.5.0`, a user-initiated age signal request, and a second explicit consent step before sending only the coarse range/source plus an Integrity token. The server now issues short-lived one-time challenges, decodes the token with Google, validates package/signing certificate/device integrity/request hash/freshness, consumes the challenge atomically and stores only an accepted coarse age band. `TIER_A` self-declaration never becomes a trusted decision. Required environment setup is documented in [`docs/play-integrity-setup.md`](./play-integrity-setup.md).
+
+This is still not production-ready: the migrations are not applied, Google Cloud/Play Console credentials and the actual Play signing digest are not configured, the current sideloaded APK may not receive `PLAY_RECOGNIZED`, native compilation and real-device tests have not been run, CI is not confirmed, and each feature API still needs server-side policy enforcement. No restricted feature should be enabled based on this work until those gates pass.
 
 ## Free platform age signals (priority over face-age estimation)
 
