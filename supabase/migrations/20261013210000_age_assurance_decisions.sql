@@ -4,7 +4,7 @@
 -- Only trusted server-side integrations may write through the service role.
 create table if not exists public.age_assurance_decisions (
   user_id uuid primary key references auth.users(id) on delete cascade,
-  age_band text not null check (age_band in ('under_12', '12_15', '16_17', '18_plus')),
+  age_band text not null check (age_band in ('0_12', '13_15', '16_17', '18_plus')),
   method text not null check (method in (
     'verified_platform_age_signal',
     'verified_age_credential',
