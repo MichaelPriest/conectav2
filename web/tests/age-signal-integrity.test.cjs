@@ -23,8 +23,8 @@ const verifier = fs.readFileSync(path.join(root, 'src/lib/play-integrity.ts'), '
 const migration = fs.readFileSync(path.join(root, '../supabase/migrations/20261013230000_age_assurance_challenges.sql'), 'utf8');
 
 test('canonical age payload binds the one-time challenge, bounds, source and approval date', () => {
-  const payload = {ageLower: 18, ageUpper: null, ageRangeSource: 'TIER_D', significantChangeApprovalDate: null};
-  assert.equal(canonicalAgeSignalRequest('a'.repeat(64), payload), 'conecta-age-v1|' + 'a'.repeat(64) + '|18|null|TIER_D|null');
+  const payload = {ageLower: 18, ageUpper: null, userStatus: 0, mostRecentApprovalDate: null};
+  assert.equal(canonicalAgeSignalRequest('a'.repeat(64), payload), 'conecta-age-v1|' + 'a'.repeat(64) + '|18|null|0|null');
   assert.match(hashAgeSignalRequest('a'.repeat(64), payload), /^[0-9a-f]{64}$/);
   assert.notEqual(hashAgeSignalRequest('a'.repeat(64), payload), hashAgeSignalRequest('b'.repeat(64), payload));
 });
@@ -32,7 +32,7 @@ test('canonical age payload binds the one-time challenge, bounds, source and app
 test('verification decodes token on the server and rejects self-declared age for trusted storage', () => {
   assert.match(route, /verifyPlayIntegrityToken\(integrityToken,requestHash\)/);
   assert.match(route, /consume_age_assurance_challenge/);
-  assert.match(route, /ageRangeSource==='TIER_A'/);
+  assert.match(route, /userStatus===0&&ageBand==='18_plus'/);
   assert.match(route, /age_assurance_decisions/);
   assert.match(route, /Cache-Control/);
   assert.doesNotMatch(route, /body\.ageBand/);
