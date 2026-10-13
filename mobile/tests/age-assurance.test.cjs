@@ -18,6 +18,8 @@ test('Play Age Signals bridge handles unavailable and declined states without gr
   assert.match(adapter, /never.*unlock adult-only features/s);
   assert.match(adapter, /requestPlayIntegrityToken/);
   assert.match(adapter, /userStatus/);
+  assert.match(adapter, /normalizedAgeLower/);
+  assert.match(adapter, /userStatus === 0 \? 18 : null/);
   assert.doesNotMatch(adapter, /ageRangeSource/);
   assert.doesNotMatch(adapter, /significantChangeApprovalDate/);
   assert.match(adapter, /google_cloud_project_not_configured/);
