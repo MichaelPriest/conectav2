@@ -54,8 +54,8 @@ jobs:
         run: node --test tests/chat-v4-group-permissions.test.cjs
       - name: Conecta 100 achievements and unique first-user award
         run: node --test tests/profile-achievements.test.cjs
-      - name: Privacy and Web Push regression tests
-        run: node --test tests/chat-web-push.test.cjs tests/chat-web-push-subject.test.cjs tests/chat-push-signature.test.cjs tests/chat-push-origin.test.cjs tests/mobile-push-security.test.cjs tests/chat-presence.test.cjs tests/chat-calls.test.cjs tests/chat-calls-realtime.test.cjs tests/chat-rtc-connectivity.test.cjs tests/chat-trickle-ice.test.cjs tests/chat-call-tones.test.cjs
+      - name: Privacy, Web Push, group calls and TURN regression tests
+        run: node --test tests/chat-web-push.test.cjs tests/chat-web-push-subject.test.cjs tests/chat-push-signature.test.cjs tests/chat-push-origin.test.cjs tests/mobile-push-security.test.cjs tests/chat-presence.test.cjs tests/chat-calls.test.cjs tests/chat-calls-realtime.test.cjs tests/chat-rtc-connectivity.test.cjs tests/chat-trickle-ice.test.cjs tests/chat-call-tones.test.cjs tests/chat-group-calls.test.cjs tests/chat-turn-credentials.test.cjs
       - name: Monetization access control regression tests
         run: node --test tests/monetization-access.test.cjs
       - name: Story sharing security regressions
