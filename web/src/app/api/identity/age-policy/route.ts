@@ -55,13 +55,14 @@ export async function GET(request:NextRequest){
   verifiedAt:data.verified_at
  }:null;
  const policy=ageAssurancePolicy(decision);
+ const currentDecision=policy.ageAssurance!=='unknown';
  return NextResponse.json({
   ...policy,
-  status:data?'available':'pending',
+  status:currentDecision?'available':'pending',
   policyVersion:data?.policy_version??'age-assurance-v1',
   verifiedAt:data?.verified_at??null,
-  message:data
+  message:currentDecision
    ?'A proteção etária foi consultada no servidor.'
-   :'Não há aferição confiável registrada. Os recursos restritos continuam bloqueados.'
+   :'Não há aferição confiável vigente. Os recursos restritos continuam bloqueados.'
  },{headers});
 }
