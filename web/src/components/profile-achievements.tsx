@@ -1,90 +1,108 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Award, BookOpen, Heart, Image, Music2, Users, UserRoundCheck, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Award, Bookmark, BookOpen, Heart, MessageCircle, MessageSquare, Search, Sparkles, Trophy, Users, Vote } from 'lucide-react';
 import { supabaseBrowser } from '@/lib/supabase/browser';
 
 type Achievement = {
   id: string;
   title: string;
   description: string;
-  unlocked: boolean;
-  progress: number;
+  category: string;
+  metric: string;
   target: number;
-  icon: 'post' | 'friends' | 'profile' | 'interests' | 'music';
+  progress: number;
+  unlocked: boolean;
+  unlocked_at: string | null;
 };
 
-function AchievementIcon({ type }: { type: Achievement['icon'] }) {
-  if (type === 'post') return <BookOpen size={19} />;
-  if (type === 'friends') return <Users size={19} />;
-  if (type === 'profile') return <Image size={19} />;
-  if (type === 'interests') return <Heart size={19} />;
-  return <Music2 size={19} />;
+function AchievementIcon({ metric }: { metric: string }) {
+  if (metric === 'posts') return <BookOpen size={19} />;
+  if (metric === 'connections') return <Users size={19} />;
+  if (metric === 'comments') return <MessageCircle size={19} />;
+  if (metric === 'likes') return <Heart size={19} />;
+  if (metric === 'stories') return <Sparkles size={19} />;
+  if (metric === 'communities') return <Users size={19} />;
+  if (metric === 'polls') return <Vote size={19} />;
+  if (metric === 'messages') return <MessageSquare size={19} />;
+  if (metric === 'saved_posts') return <Bookmark size={19} />;
+  return <Trophy size={19} />;
 }
 
 export function ProfileAchievements({ profileId }: { profileId: string }) {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [category, setCategory] = useState('Todas');
+  const [showUnlockedOnly, setShowUnlockedOnly] = useState(false);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     let active = true;
     async function load() {
+      setLoading(true);
+      setError('');
       const db = supabaseBrowser();
-      const [posts, friends, details] = await Promise.all([
-        db.from('posts').select('id', { count: 'exact', head: true }).eq('author_id', profileId),
-        db.from('friendships').select('id', { count: 'exact', head: true }).eq('status', 'accepted')
-          .or('requester_id.eq.' + profileId + ',addressee_id.eq.' + profileId),
-        db.from('profile_details').select('interests,music_url,cover_path,headline').eq('user_id', profileId).maybeSingle(),
-      ]);
+      const { data, error: rpcError } = await db.rpc('get_my_achievements');
       if (!active) return;
-      const failure = posts.error || friends.error || details.error;
-      if (failure) {
-        setError('Não foi possível carregar as conquistas agora.');
+      if (rpcError) {
+        setError(/get_my_achievements|schema cache|function .* does not exist/i.test(rpcError.message || '')
+          ? 'As 100 conquistas ainda não estão disponíveis nesta instância. A migration precisa ser aplicada no banco de homologação.'
+          : 'Não foi possível carregar as conquistas agora.');
         setLoading(false);
         return;
       }
-      const postCount = posts.count || 0;
-      const friendCount = friends.count || 0;
-      const profile = details.data;
-      const profileComplete = Boolean(profile?.headline?.trim() && profile?.cover_path);
-      const interestsCount = Array.isArray(profile?.interests) ? profile.interests.length : 0;
-      const musicAdded = Boolean(profile?.music_url?.trim());
-      const next: Achievement[] = [
-        { id: 'first-post', title: 'Primeira história', description: 'Faça sua primeira publicação', unlocked: postCount >= 1, progress: Math.min(postCount, 1), target: 1, icon: 'post' },
-        { id: 'ten-posts', title: 'Voz ativa', description: 'Compartilhe 10 publicações', unlocked: postCount >= 10, progress: Math.min(postCount, 10), target: 10, icon: 'post' },
-        { id: 'fifty-posts', title: 'Criador constante', description: 'Compartilhe 50 publicações', unlocked: postCount >= 50, progress: Math.min(postCount, 50), target: 50, icon: 'post' },
-        { id: 'first-friend', title: 'Primeira conexão', description: 'Conecte-se com alguém', unlocked: friendCount >= 1, progress: Math.min(friendCount, 1), target: 1, icon: 'friends' },
-        { id: 'ten-friends', title: 'Rede em crescimento', description: 'Tenha 10 conexões aceitas', unlocked: friendCount >= 10, progress: Math.min(friendCount, 10), target: 10, icon: 'friends' },
-        { id: 'profile-custom', title: 'Perfil com personalidade', description: 'Adicione um título e uma capa', unlocked: profileComplete, progress: Number(Boolean(profile?.headline?.trim())) + Number(Boolean(profile?.cover_path)), target: 2, icon: 'profile' },
-        { id: 'interests', title: 'Interesses compartilhados', description: 'Adicione pelo menos 3 interesses', unlocked: interestsCount >= 3, progress: Math.min(interestsCount, 3), target: 3, icon: 'interests' },
-        { id: 'music', title: 'Trilha sonora', description: 'Adicione música ao seu perfil', unlocked: musicAdded, progress: Number(musicAdded), target: 1, icon: 'music' },
-      ];
-      setAchievements(next);
+      const rows = (data || []) as Achievement[];
+      // The RPC only returns awards for the authenticated account. Do not let a
+      // profile URL select another person's achievement progress.
+      setAchievements(rows.map(item => ({ ...item, progress: Number(item.progress || 0), target: Number(item.target || 1) })));
       setLoading(false);
     }
     void load();
     return () => { active = false; };
   }, [profileId]);
 
+  const categories = useMemo(() => ['Todas', ...Array.from(new Set(achievements.map(item => item.category)))], [achievements]);
+  const filtered = useMemo(() => achievements
+    .filter(item => category === 'Todas' || item.category === category)
+    .filter(item => !showUnlockedOnly || item.unlocked)
+    .filter(item => !search.trim() || (item.title + ' ' + item.description + ' ' + item.category).toLocaleLowerCase('pt-BR').includes(search.trim().toLocaleLowerCase('pt-BR')))
+    .sort((a, b) => Number(b.unlocked) - Number(a.unlocked) || a.target - b.target || a.title.localeCompare(b.title, 'pt-BR')),
+  [achievements, category, showUnlockedOnly, search]);
+
   const unlocked = achievements.filter(item => item.unlocked).length;
   return <section className="panel conecta-achievements" aria-labelledby="conecta-achievements-title">
     <div className="conecta-achievements-heading">
-      <div><span className="section-eyebrow">SUAS CONQUISTAS</span><h2 id="conecta-achievements-title"><Award size={20} /> Conquistas do Conecta</h2></div>
-      {!loading && !error && <span className="conecta-achievements-count">{unlocked}/{achievements.length} desbloqueadas</span>}
+      <div><span className="section-eyebrow">DESAFIOS E MARCOS</span><h2 id="conecta-achievements-title"><Award size={20} /> Conquistas do Conecta</h2></div>
+      {!loading && !error && <span className="conecta-achievements-count">{unlocked}/100 desbloqueadas</span>}
     </div>
-    <p className="small-note">Conquistas calculadas a partir de suas publicações, conexões e informações de perfil. Elas são atualizadas ao abrir esta área.</p>
-    {error && <p className="form-error" role="alert">{error}</p>}
-    {loading ? <p className="muted">Calculando suas conquistas...</p> : !error && <div className="conecta-achievements-grid">
-      {achievements.map(item => <article className={'conecta-achievement '+(item.unlocked?'is-unlocked':'is-locked')} key={item.id}>
-        <span className="conecta-achievement-icon">{item.unlocked?<Sparkles size={19}/>:<AchievementIcon type={item.icon}/>}</span>
-        <div className="conecta-achievement-copy"><strong>{item.title}</strong><p>{item.description}</p>
-          {!item.unlocked && <div className="conecta-achievement-progress" aria-label={'Progresso: '+item.progress+' de '+item.target}>
-            <span style={{width: Math.round(item.progress / item.target * 100)+'%'}} />
-          </div>}
-          <small>{item.unlocked?'Desbloqueada':item.progress+' de '+item.target}</small>
-        </div>
-      </article>)}
+    <p className="small-note">São 100 conquistas calculadas no banco a partir de atividades reais. A conquista exclusiva “Primeiro usuário do Conecta” é atribuída à primeira conta registrada; as demais acompanham sua participação na rede.</p>
+    {!loading && !error && <div className="conecta-achievements-toolbar">
+      <label className="conecta-achievements-search"><Search size={16}/><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Buscar conquista..." aria-label="Buscar conquista"/></label>
+      <label className="conecta-achievements-filter">Categoria
+        <select value={category} onChange={event => setCategory(event.target.value)} aria-label="Filtrar por categoria">
+          {categories.map(item => <option key={item} value={item}>{item}</option>)}
+        </select>
+      </label>
+      <label className="conecta-achievements-toggle"><input type="checkbox" checked={showUnlockedOnly} onChange={event => setShowUnlockedOnly(event.target.checked)}/> Apenas desbloqueadas</label>
     </div>}
+    {error && <p className="form-error" role="alert">{error}</p>}
+    {loading ? <p className="muted">Calculando suas conquistas...</p> : !error && <>
+      <div className="conecta-achievements-progress-summary" aria-label={unlocked+' de 100 conquistas desbloqueadas'}>
+        <span style={{ width: (unlocked / 100 * 100) + '%' }} />
+      </div>
+      {filtered.length === 0 ? <p className="muted">Nenhuma conquista corresponde a esse filtro.</p> : <div className="conecta-achievements-grid">
+        {filtered.map(item => <article className={'conecta-achievement '+(item.unlocked?'is-unlocked':'is-locked')} key={item.id}>
+          <span className="conecta-achievement-icon">{item.unlocked?<Sparkles size={19}/>:<AchievementIcon metric={item.metric}/>}</span>
+          <div className="conecta-achievement-copy"><strong>{item.title}</strong><p>{item.description}</p>
+            {!item.unlocked && <div className="conecta-achievement-progress" aria-label={'Progresso: '+Math.min(item.progress,item.target)+' de '+item.target}>
+              <span style={{width: Math.round(Math.min(item.progress,item.target) / item.target * 100)+'%'} } />
+            </div>}
+            <small>{item.unlocked ? 'Desbloqueada' : Math.min(item.progress,item.target)+' de '+item.target}</small>
+          </div>
+        </article>)}
+      </div>}
+      <p className="small-note">Exibindo {filtered.length} de 100 conquistas.</p>
+    </>}
   </section>;
 }
