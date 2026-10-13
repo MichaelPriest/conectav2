@@ -23,7 +23,7 @@ test('Play Age Signals bridge handles unavailable and declined states without gr
 test('profile UI makes the age-signal request user-initiated and explains it is only preliminary', () => {
   assert.match(app, /Consultar faixa etária do Google Play/);
   assert.match(app, /nenhum recurso restrito será liberado por esta consulta/);
-  assert.match(app, /O resultado não é enviado nem armazenado/);
+  assert.match(app, /O resultado fica no aparelho até você escolher enviá-lo/);
 });
 
 test('native bridge uses the current two-step access and signal request flow', () => {
