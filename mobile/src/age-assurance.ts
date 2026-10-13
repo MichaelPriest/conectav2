@@ -7,8 +7,8 @@ export type PlayAgeSignalResult = {
   status: 'shared' | 'not_shared' | 'verification_required' | 'unavailable' | 'unknown' | 'error';
   ageLower?: number | null;
   ageUpper?: number | null;
-  ageRangeSource?: string | number | null;
-  significantChangeApprovalDate?: number | null;
+  userStatus?: number | null;
+  mostRecentApprovalDate?: number | null;
   reason?: string;
 };
 
@@ -24,8 +24,7 @@ type NativeAgeSignalsModule = {
 /**
  * Reads the OS/store-provided age band on Android only.
  * This is a local preflight signal: never upload it as a trusted decision or
- * unlock adult-only features until a server-side integrity/attestation flow
- * validates its provenance and binds it to the authenticated account.
+ * unlock adult-only features until server-side integrity validation succeeds.
  */
 export async function requestPlayAgeSignals(): Promise<PlayAgeSignalResult> {
   if (Platform.OS !== 'android') return {status: 'unavailable', reason: 'android_only'};
@@ -33,11 +32,9 @@ export async function requestPlayAgeSignals(): Promise<PlayAgeSignalResult> {
     const nativeModule = requireNativeModule<NativeAgeSignalsModule>('ConectaPlayAgeSignals');
     return await nativeModule.requestAgeSignals();
   } catch {
-    // Expo Go, an older installed binary, or a build without the native module.
     return {status: 'unavailable', reason: 'native_module_unavailable'};
   }
 }
-
 
 export type AgeSignalSubmissionResult = {
   status: 'verified' | 'preflight_only' | 'unavailable' | 'rejected' | 'unauthorized';
@@ -46,17 +43,18 @@ export type AgeSignalSubmissionResult = {
 };
 
 /**
- * Explicitly submits a shared Play age signal together with a request-hash-bound
- * Integrity token. Only the server may persist a decision; failures never fall
- * back to client-side approval.
+ * Explicitly submits a shared Play age signal with a request-hash-bound
+ * Integrity token. Only the server may persist a decision; failures fail closed.
  */
 export async function submitPlayAgeSignal(signal: PlayAgeSignalResult): Promise<AgeSignalSubmissionResult> {
   if (signal.status !== 'shared' || typeof signal.ageLower !== 'number' ||
-      typeof signal.ageRangeSource !== 'string') {
+      typeof signal.userStatus !== 'number') {
     return {status: 'preflight_only', message: 'Não há um sinal compartilhado utilizável. As proteções padrão permanecem ativas.'};
   }
-  if (!['TIER_B', 'TIER_C', 'TIER_D'].includes(signal.ageRangeSource)) {
-    return {status: 'preflight_only', message: 'A origem do sinal não é suficiente para registrar uma decisão confiável. As proteções padrão permanecem ativas.'};
+  // Current Play Age Signals SDK status values: VERIFIED=0, SUPERVISED=1.
+  // DECLARED/UNKNOWN/pending/denied states are never accepted as a verified decision.
+  if (![0, 1].includes(signal.userStatus)) {
+    return {status: 'preflight_only', message: 'O Google Play não forneceu um status de verificação suficiente. As proteções padrão permanecem ativas.'};
   }
 
   const {data:{session}} = await supabase.auth.getSession();
@@ -65,9 +63,9 @@ export async function submitPlayAgeSignal(signal: PlayAgeSignalResult): Promise<
   const payload = {
     ageLower: signal.ageLower,
     ageUpper: typeof signal.ageUpper === 'number' ? signal.ageUpper : null,
-    ageRangeSource: signal.ageRangeSource,
-    significantChangeApprovalDate: typeof signal.significantChangeApprovalDate === 'number'
-      ? signal.significantChangeApprovalDate
+    userStatus: signal.userStatus,
+    mostRecentApprovalDate: typeof signal.mostRecentApprovalDate === 'number'
+      ? signal.mostRecentApprovalDate
       : null
   };
   const headers = {
@@ -92,10 +90,10 @@ export async function submitPlayAgeSignal(signal: PlayAgeSignalResult): Promise<
       challengeBody.challenge,
       String(payload.ageLower),
       payload.ageUpper === null ? 'null' : String(payload.ageUpper),
-      payload.ageRangeSource,
-      payload.significantChangeApprovalDate === null
+      String(payload.userStatus),
+      payload.mostRecentApprovalDate === null
         ? 'null'
-        : String(payload.significantChangeApprovalDate)
+        : String(payload.mostRecentApprovalDate)
     ].join('|');
     const requestHash = await digestStringAsync(CryptoDigestAlgorithm.SHA256, canonical, {encoding: CryptoEncoding.HEX});
     const integrity = await requestPlayIntegrityToken(requestHash);
@@ -134,21 +132,21 @@ export async function submitPlayAgeSignal(signal: PlayAgeSignalResult): Promise<
   }
 }
 
-function describeSource(source: PlayAgeSignalResult['ageRangeSource']): string {
-  switch (source) {
-    case 'TIER_A': return 'origem declarada pelo próprio usuário (não comprova maioridade)';
-    case 'TIER_B': return 'faixa gerenciada por responsável no Google';
-    case 'TIER_C': return 'idade avaliada por método do Google Play';
-    case 'TIER_D': return 'documento oficial com selfie ou identidade digital, segundo o Google Play';
+function describeSource(status: PlayAgeSignalResult['userStatus']): string {
+  switch (status) {
+    case 0: return 'Google Play informa idade verificada para adulto';
+    case 1: return 'faixa etária gerenciada por responsável no Google';
+    case 2: return 'aprovação do responsável pendente';
+    case 3: return 'aprovação do responsável negada';
+    case 4: return 'idade desconhecida ou não verificada';
+    case 5: return 'idade declarada, sem verificação independente';
     default: return 'origem não identificada';
   }
 }
 
-
 /**
  * Requests a Play Integrity token bound to a SHA-256 request hash. The token
- * must be decoded and checked on the server; never treat this client result as
- * verification and never log/store the token.
+ * must be decoded and checked on the server; never log or persist the token.
  */
 export async function requestPlayIntegrityToken(requestHash: string): Promise<{
   status: 'ok' | 'unavailable' | 'invalid_request' | 'error';
@@ -156,7 +154,7 @@ export async function requestPlayIntegrityToken(requestHash: string): Promise<{
   reason?: string;
 }> {
   if (Platform.OS !== 'android') return {status: 'unavailable', reason: 'android_only'};
-  if (!/^[0-9a-f]{64}$/i.test(requestHash)) return {status: 'invalid_request'};
+  if (!/^[0-9a-f]{64}$/.test(requestHash)) return {status: 'invalid_request'};
   const projectNumber = Number(process.env.EXPO_PUBLIC_GOOGLE_CLOUD_PROJECT_NUMBER);
   if (!Number.isSafeInteger(projectNumber) || projectNumber <= 0) {
     return {status: 'unavailable', reason: 'google_cloud_project_not_configured'};
@@ -178,7 +176,7 @@ export function describePlayAgeSignal(result: PlayAgeSignalResult): string {
       const band = typeof result.ageUpper === 'number'
         ? 'Faixa informada pelo Google Play: ' + result.ageLower + '–' + result.ageUpper + ' anos.'
         : 'Faixa informada pelo Google Play: ' + result.ageLower + '+ anos.';
-      return band + '\nOrigem: ' + describeSource(result.ageRangeSource) + '.';
+      return band + '\nStatus: ' + describeSource(result.userStatus) + '.';
     }
     case 'not_shared':
       return 'A faixa etária não foi compartilhada. As proteções padrão permanecem ativas.';
