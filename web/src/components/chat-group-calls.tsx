@@ -24,13 +24,14 @@ export function ChatGroupCallButtons({conversationId,userId,title}:{conversation
  const sessionRef=useRef<Session|null>(null);
  const lastSignal=useRef(0);
  const handled=useRef(new Set<number>());
+ const candidateBuffer=useRef(new Map<string,RTCIceCandidateInit[]>());
  const busyRef=useRef(false);
 
  const dispose=useCallback(async(leave=true)=>{
   const active=sessionRef.current;
   if(leave&&active)await dbRef.current.rpc('leave_group_call',{_session:active.id});
   for(const pc of pcs.current.values())pc.close();
-  pcs.current.clear();localRef.current?.getTracks().forEach(t=>t.stop());localRef.current=null;
+  pcs.current.clear();candidateBuffer.current.clear();localRef.current?.getTracks().forEach(t=>t.stop());localRef.current=null;
   sessionRef.current=null;setSession(null);setLocal(null);setRemotes({});setParticipants([]);
   setMicOn(true);setCameraOn(true);busyRef.current=false;setBusy(false);
  },[]);
@@ -58,12 +59,17 @@ export function ChatGroupCallButtons({conversationId,userId,title}:{conversation
     try{
      if(signal.type==='offer'&&signal.sdp){
       await pc.setRemoteDescription({type:'offer',sdp:signal.sdp});
+      for(const candidate of candidateBuffer.current.get(item.sender_id)||[]){try{await pc.addIceCandidate(candidate);}catch{}}
+      candidateBuffer.current.delete(item.sender_id);
       const answer=await pc.createAnswer();await pc.setLocalDescription(answer);
       await sendSignal(item.sender_id,{type:'answer',sdp:pc.localDescription?.sdp});
      }else if(signal.type==='answer'&&signal.sdp&&!pc.remoteDescription){
       await pc.setRemoteDescription({type:'answer',sdp:signal.sdp});
+      for(const candidate of candidateBuffer.current.get(item.sender_id)||[]){try{await pc.addIceCandidate(candidate);}catch{}}
+      candidateBuffer.current.delete(item.sender_id);
      }else if(signal.candidate?.candidate){
-      await pc.addIceCandidate(signal.candidate);
+      if(pc.remoteDescription)await pc.addIceCandidate(signal.candidate);
+      else candidateBuffer.current.set(item.sender_id,[...(candidateBuffer.current.get(item.sender_id)||[]),signal.candidate]);
      }
     }catch{/* Stale ICE or duplicate SDP can be safely ignored. */}
    }
