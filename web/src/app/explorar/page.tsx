@@ -64,14 +64,14 @@ export default function Explorar() {
   const hashtags=useMemo(()=>{
     const counts=new Map<string,number>();
     for(const post of posts){
-      for(const match of post.content.matchAll(/#[\\wÀ-ÿ]{2,40}/g)){
+      for(const match of post.content.matchAll(/#[\wÀ-ÿ]{2,40}/g)){
         const tag=match[0].toLocaleLowerCase('pt-BR');
         counts.set(tag,(counts.get(tag)||0)+1);
       }
     }
     return [...counts.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'pt-BR')).slice(0,24);
   },[posts]);
-  const visibleHashtags=hashtags.filter(([tag])=>!needle||tag.includes(needle)||tag.slice(1).includes(needle.replace(/^#/,' ' ).trim()));
+  const visibleHashtags=hashtags.filter(([tag])=>!needle||tag.includes(needle)||tag.slice(1).includes(needle.replace(/^#/,'').trim()));
   const showPeople=filter==='Tudo'||filter==='Pessoas',showCommunities=filter==='Tudo'||filter==='Comunidades',showPosts=filter==='Tudo'||filter==='Publicações'||filter==='Vídeos',showHashtags=filter==='Tudo';
   const filteredPosts=filter==='Vídeos'?visiblePosts.filter(p=>p.media_type==='video'):visiblePosts;
   const hasContent=(showPeople&&visiblePeople.length>0)||(showCommunities&&visibleCommunities.length>0)||(showPosts&&filteredPosts.length>0)||(showHashtags&&visibleHashtags.length>0);
