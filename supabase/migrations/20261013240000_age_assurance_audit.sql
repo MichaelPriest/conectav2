@@ -21,7 +21,7 @@ create index if not exists age_assurance_audit_events_user_created_idx
 
 alter table public.age_assurance_audit_events enable row level security;
 revoke all on table public.age_assurance_audit_events from public, anon, authenticated;
-grant select, insert, update, delete on table public.age_assurance_audit_events to service_role;
+grant select on table public.age_assurance_audit_events to service_role;
 
 -- Write the current decision and append its audit event atomically.
 create or replace function public.record_age_assurance_decision(
