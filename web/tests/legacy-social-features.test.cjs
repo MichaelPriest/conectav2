@@ -54,3 +54,23 @@ test('profile achievements are derived from real Supabase counts and profile fie
  assert.match(page,/ProfileAchievements profileId=\{auth\.user\.id\}/);
  assert.doesNotMatch(component,/insert\(|upsert\(|update\(/);
 });
+
+
+test('profile visit history requires opt-in and enforces authenticated non-blocked visits',()=>{
+ const migration=fs.readFileSync(path.resolve(__dirname,'../../supabase/migrations/20261013160000_conecta_profile_visit_history.sql'),'utf8');
+ const component=read('components/profile-visits.tsx');
+ const publicPage=read('app/p/[handle]/page.tsx');
+ assert.match(migration,/profile_views_enabled boolean not null default false/);
+ assert.match(migration,/profile_id = \(select auth\.uid\(\)\)/);
+ assert.match(migration,/viewer_id uuid not null/);
+ assert.match(migration,/viewer_id = v_viewer_id/);
+ assert.match(migration,/profile_views_enabled = true/);
+ assert.match(migration,/auth\.uid\(\)/);
+ assert.match(migration,/user_blocks/);
+ assert.match(migration,/revoke all on function public\.record_profile_visit\(uuid\) from public, anon/);
+ assert.match(component,/Histórico ativado/);
+ assert.match(component,/profile_visits/);
+ assert.match(component,/delete\(\)\.eq\('profile_id', profileId\)/);
+ assert.match(publicPage,/record_profile_visit/);
+ assert.match(publicPage,/!viewerBlocked && !ownerBlocked/);
+});
