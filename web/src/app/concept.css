@@ -95,3 +95,10 @@
 .conecta-post-draft-copy p{margin:5px 0;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .conecta-post-draft-copy time{font-size:11px;color:var(--text-light,#718096)}
 @media(max-width:540px){.conecta-post-draft-item{display:grid}.conecta-post-draft-buttons{justify-content:flex-start}}
+
+
+.concept-discovery-hashtag-list{display:flex;flex-wrap:wrap;gap:9px}
+.concept-discovery-hashtag{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid var(--border-color,#e2e8f0);border-radius:999px;background:var(--card-bg,#fff);color:var(--text-color,#2d3748);cursor:pointer;transition:transform .15s ease,border-color .15s ease}
+.concept-discovery-hashtag:hover{transform:translateY(-1px);border-color:var(--primary-color,#4a90e2)}
+.concept-discovery-hashtag strong{font-size:13px}
+.concept-discovery-hashtag span{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--bg-color,#f8fafc);font-size:11px;color:var(--text-light,#718096)}
