@@ -121,17 +121,16 @@ export async function POST(request:NextRequest){
  const evidenceReferenceHash=createHash('sha256')
   .update([context.user.id,challengeHash,requestHash,String(integrity.timestampMillis)].join('|'),'utf8')
   .digest('hex');
- const {error:saveError}=await admin.from('age_assurance_decisions').upsert({
-  user_id:context.user.id,
-  age_band:ageBand,
-  method:'verified_platform_age_signal',
-  policy_version:'play-age-signals-v1',
-  evidence_reference_hash:evidenceReferenceHash,
-  verified_at:verifiedAt,
-  updated_at:new Date().toISOString()
- },{onConflict:'user_id'});
- if(saveError){
-  return NextResponse.json({status:'unavailable',error:'Não foi possível salvar a decisão de idade.'},{status:503,headers});
+ const {data:recorded,error:saveError}=await admin.rpc('record_age_assurance_decision',{
+  p_user_id:context.user.id,
+  p_age_band:ageBand,
+  p_method:'verified_platform_age_signal',
+  p_policy_version:'play-age-signals-v1',
+  p_evidence_reference_hash:evidenceReferenceHash,
+  p_verified_at:verifiedAt
+ });
+ if(saveError||recorded!==true){
+  return NextResponse.json({status:'unavailable',error:'Não foi possível salvar a decisão de idade e seu registro de auditoria.'},{status:503,headers});
  }
 
  return NextResponse.json({
