@@ -93,6 +93,6 @@ test('feed filters query real posts and restart pagination when changed',()=>{
 
 test('hashtag discovery parses hashtags and strips the search prefix correctly',()=>{
  const page=read('app/explorar/page.tsx');
- assert.match(page,/matchAll\(\/#\[\\wÀ-ÿ\]\{2,40\}\/g\)/);
- assert.match(page,/needle\.replace\(\/\^#\/,' '\)/);
+ assert.ok(page.includes('matchAll(/#[\\wÀ-ÿ]{2,40}/g)'));
+ assert.ok(page.includes("needle.replace(/^#/,'').trim()"));
 });
