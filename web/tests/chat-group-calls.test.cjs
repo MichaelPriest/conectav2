@@ -13,7 +13,7 @@ test('group calls have member-scoped database access and server-authorized signa
   'public.start_group_call','public.join_group_call','public.send_group_call_signal',
   'public.leave_group_call',"c.is_group=true",'conversation_members',
   "t.mode='youth_protection'",'revoke all on function public.send_group_call_signal',
-  'octet_length(_signal::text)>65536','recipient_id','status='joined'',
+  'octet_length(_signal::text)>65536','recipient_id',"status='joined'",
   "alter publication supabase_realtime add table public.group_call_signals"
  ])assert.ok(sql.includes(expected),expected);
  assert.ok(!sql.includes('grant insert on public.group_call_signals'));
