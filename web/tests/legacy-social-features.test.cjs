@@ -63,7 +63,7 @@ test('profile visit history requires opt-in and enforces authenticated non-block
  assert.match(migration,/profile_views_enabled boolean not null default false/);
  assert.match(migration,/profile_id = \(select auth\.uid\(\)\)/);
  assert.match(migration,/viewer_id uuid not null/);
- assert.match(migration,/viewer_id = v_viewer_id/);
+ assert.match(migration,/values \(p_profile_id, v_viewer_id, now\(\), 1\)/);
  assert.match(migration,/profile_views_enabled = true/);
  assert.match(migration,/auth\.uid\(\)/);
  assert.match(migration,/user_blocks/);
