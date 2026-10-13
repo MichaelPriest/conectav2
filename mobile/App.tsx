@@ -1868,7 +1868,7 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
      leading={<ShieldCheck size={16} color={t.primary}/>} onPress={()=>void checkPlayAgeSignal()}/>
     <Text style={[s.muted,{marginTop:5,marginBottom:8}]}>A consulta é opcional. O resultado fica no aparelho até você escolher enviá-lo para validação; consultar sozinho não libera recursos restritos.</Text>
     {ageSignalResult?.status==='shared'&&typeof ageSignalResult.ageLower==='number'&&
-     typeof ageSignalResult.ageRangeSource==='string'&&['TIER_B','TIER_C','TIER_D'].includes(ageSignalResult.ageRangeSource)&&
+     typeof ageSignalResult.userStatus==='number'&&[0,1].includes(ageSignalResult.userStatus)&&
      <Action secondary disabled={ageSignalSubmitBusy}
       label={ageSignalSubmitBusy?'Validando no servidor...':'Enviar faixa ao Conecta para validação segura'}
       leading={<ShieldCheck size={16} color={t.primary}/>}
