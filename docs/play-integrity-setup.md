@@ -33,7 +33,7 @@ The server-side verifier checks the decoded token's package, signing certificate
    - 20261013230000_age_assurance_challenges.sql
 2. Deploy the current branch to the Render validation service only after CI and code review.
 3. Build a new Android binary with the native module; an OTA JavaScript update cannot add native code to an already-installed APK.
-4. Test via Google Play internal testing with the actual package/signing certificate. Verify that missing configuration, sideloaded/unrecognized apps, expired tokens, replayed challenges, TIER_A self-declaration and declined sharing never create a trusted adult decision.
+4. Test via Google Play internal testing with the actual package/signing certificate. Verify that missing configuration, sideloaded/unrecognized apps, expired tokens, replayed challenges, DECLARED status (self-declared age) and declined sharing never create a trusted adult decision.
 5. Confirm the GET /api/identity/age-policy result after verification. Do not enable restricted access until the individual feature APIs enforce the server-side policy.
 
 ## Free-tier / availability limitation
