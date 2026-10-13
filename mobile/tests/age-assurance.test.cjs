@@ -17,6 +17,7 @@ test('Play Age Signals bridge handles unavailable and declined states without gr
   assert.match(adapter, /never upload it as a trusted decision/);
   assert.match(adapter, /never.*unlock adult-only features/s);
   assert.match(adapter, /requestPlayIntegrityToken/);
+  assert.match(adapter, /userStatus/);
   assert.match(adapter, /google_cloud_project_not_configured/);
 });
 
@@ -32,6 +33,8 @@ test('native bridge uses the current two-step access and signal request flow', (
   assert.match(native, /AgeSignalsStatus\.NOT_SHARED/);
   assert.match(native, /AgeSignalsStatus\.VERIFICATION_REQUIRED/);
   assert.match(native, /checkAgeSignals/);
+  assert.match(native, /userStatus\(\)/);
+  assert.match(native, /mostRecentApprovalDate\(\)/);
   assert.match(native, /requestIntegrityToken/);
   assert.match(native, /setRequestHash\(requestHash\)/);
   assert.match(gradle, /com\.google\.android\.play:integrity:1\.5\.0/);
