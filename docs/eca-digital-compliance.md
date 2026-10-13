@@ -6,7 +6,7 @@
 ## Engineering work started on 2026-10-13
 
 - Added `web/src/lib/age-assurance-policy.ts`: trusted server-decision policy with fail-closed defaults; unknown age and all minor bands remain in protected mode and cannot access adult-restricted features.
-- Added `GET /api/identity/age-policy`: authenticates the user and reads only the coarse result from a service-role-only table. Missing configuration, schema or database errors return an unavailable/protected result; the endpoint does not accept age claims from request bodies.
+- Added `GET /api/identity/age-policy`: authenticates the user and reads only the coarse result from a service-role-only table. Decisions older than 60 days are treated as unknown and fail closed; missing configuration, schema or database errors return an unavailable/protected result.
 - Added `POST /api/identity/age-signal/challenge` and `POST /api/identity/age-signal/verify`: the server creates a short-lived one-time challenge, verifies the Play Integrity token via Google, checks package/signing certificate/device integrity/request hash/freshness, atomically consumes the challenge and only then stores an accepted coarse age band. The current SDK status codes accept only VERIFIED adult status or SUPERVISED minor status; declared, unknown, pending and denied statuses never become trusted decisions.
 - Added migrations `supabase/migrations/20261013210000_age_assurance_decisions.sql` and `supabase/migrations/20261013230000_age_assurance_challenges.sql`. They store coarse bands, policy/method metadata, timestamps and hashes only. Client roles have no access.
 - Added tests for policy decisions, challenge/hash binding, fail-closed behavior and verifier requirements. They have **not yet been executed in CI**.
