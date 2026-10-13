@@ -56,8 +56,8 @@ begin
  if not exists(select 1 from public.conversations c where c.id=_conversation and c.is_group=true)
  or not exists(select 1 from public.conversation_members m where m.conversation_id=_conversation and m.user_id=me)
  then raise exception 'Apenas membros podem iniciar chamadas neste grupo.' using errcode='42501'; end if;
- if exists(select 1 from public.teen_safety_preferences t where t.user_id=me and t.mode='youth_protection')
- then raise exception 'Chamada não permitida pelas configurações de segurança.' using errcode='42501'; end if;
+ if exists(select 1 from public.teen_safety_preferences t join public.conversation_members m on m.user_id=t.user_id where m.conversation_id=_conversation and t.mode='youth_protection')
+ then raise exception 'Chamada não permitida pelas configurações de segurança do grupo.' using errcode='42501'; end if;
  if exists(select 1 from public.group_call_sessions s where s.conversation_id=_conversation and s.status in ('ringing','active') and s.expires_at>now())
  then raise exception 'Já existe uma chamada ativa neste grupo.' using errcode='23505'; end if;
  insert into public.group_call_sessions(conversation_id,created_by,kind,status) values(_conversation,me,_kind,'active') returning id into result;
@@ -72,8 +72,8 @@ begin
  select s.conversation_id into conv from public.group_call_sessions s where s.id=_session and s.status in ('ringing','active') and s.expires_at>now();
  if me is null or conv is null or not exists(select 1 from public.conversation_members m where m.conversation_id=conv and m.user_id=me)
  then raise exception 'Chamada indisponível ou acesso não permitido.' using errcode='42501'; end if;
- if exists(select 1 from public.teen_safety_preferences t where t.user_id=me and t.mode='youth_protection')
- then raise exception 'Chamada não permitida pelas configurações de segurança.' using errcode='42501'; end if;
+ if exists(select 1 from public.teen_safety_preferences t join public.conversation_members m on m.user_id=t.user_id where m.conversation_id=conv and t.mode='youth_protection')
+ then raise exception 'Chamada não permitida pelas configurações de segurança do grupo.' using errcode='42501'; end if;
  if (select count(*) from public.group_call_participants p where p.session_id=_session and p.status='joined')>=8
  and not exists(select 1 from public.group_call_participants p where p.session_id=_session and p.user_id=me and p.status='joined')
  then raise exception 'Esta chamada já atingiu o limite de 8 participantes.' using errcode='54000'; end if;
@@ -92,6 +92,7 @@ begin
  or not exists(select 1 from public.group_call_participants p where p.session_id=_session and p.user_id=me and p.status='joined')
  or not exists(select 1 from public.group_call_participants p where p.session_id=_session and p.user_id=_recipient and p.status='joined')
  or not exists(select 1 from public.group_call_sessions s join public.conversation_members m on m.conversation_id=s.conversation_id where s.id=_session and s.status='active' and s.expires_at>now() and m.user_id=me)
+ or not exists(select 1 from public.group_call_sessions s join public.conversation_members m on m.conversation_id=s.conversation_id where s.id=_session and m.user_id=_recipient)
  then raise exception 'Sinal de chamada não autorizado.' using errcode='42501'; end if;
  insert into public.group_call_signals(session_id,sender_id,recipient_id,signal)
  values(_session,me,_recipient,_signal) returning id into result;
@@ -105,7 +106,10 @@ begin
  update public.group_call_participants set status='left',left_at=now()
  where session_id=_session and user_id=me and status='joined';
  if not exists(select 1 from public.group_call_participants p where p.session_id=_session and p.status='joined')
- then update public.group_call_sessions set status='ended',ended_at=now() where id=_session; end if;
+ then
+  update public.group_call_sessions set status='ended',ended_at=now() where id=_session;
+  delete from public.group_call_signals where session_id=_session;
+ end if;
  delete from public.group_call_signals where session_id=_session and created_at<now()-interval '1 hour';
 end; $$;
 
