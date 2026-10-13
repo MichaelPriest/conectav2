@@ -122,3 +122,21 @@
 .conecta-achievement-progress{height:5px;overflow:hidden;border-radius:999px;background:var(--border-color,#e2e8f0);margin:8px 0 5px}
 .conecta-achievement-progress span{display:block;height:100%;background:var(--primary-color,#4a90e2);border-radius:inherit}
 @media(max-width:620px){.conecta-achievements-grid{grid-template-columns:minmax(0,1fr)}}
+
+
+.conecta-profile-visits{display:grid;gap:13px;margin:20px 0}
+.conecta-profile-visits-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.conecta-profile-visits-heading h2{display:flex;align-items:center;gap:8px;margin:4px 0 0}
+.conecta-profile-visits-heading .btn,.conecta-profile-visits> .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.conecta-profile-visits-empty{display:flex;align-items:center;gap:12px;padding:16px;border:1px dashed var(--border-color,#e2e8f0);border-radius:12px;color:var(--text-light,#718096)}
+.conecta-profile-visits-empty p{margin:0;font-size:13px}
+.conecta-profile-visitors{display:grid;gap:8px}
+.conecta-profile-visitor{display:flex;align-items:center;gap:12px;padding:11px;border:1px solid var(--border-color,#e2e8f0);border-radius:12px}
+.conecta-profile-visitor-avatar{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border-radius:50%;overflow:hidden;background:var(--bg-color,#f8fafc);text-decoration:none}
+.conecta-profile-visitor-avatar img{width:100%;height:100%;object-fit:cover}
+.conecta-profile-visitor-avatar span{font-weight:700}
+.conecta-profile-visitor-info{display:grid;gap:2px;min-width:0}
+.conecta-profile-visitor-info a{color:inherit;text-decoration:none}
+.conecta-profile-visitor-info strong{font-size:13px}
+.conecta-profile-visitor-info span,.conecta-profile-visitor-info small{font-size:11px;color:var(--text-light,#718096);overflow-wrap:anywhere}
+@media(max-width:540px){.conecta-profile-visits-heading{align-items:flex-start}.conecta-profile-visits-heading .btn{width:100%}}
