@@ -27,7 +27,14 @@ export function completionResult(state:RegistrationCompletion){
   state, message:messages[state],
   canFinishBasic:state==='adult_basic_ready',
   next:state==='adult_basic_ready'?'/feed':state==='profile_required'||state==='age_declaration_required'?'/onboarding':null,
+  // A self-declared 18+ band is only enough to complete basic onboarding.
+  // Until a trusted server-side age signal exists, restricted access remains denied
+  // and the safer minor-protection defaults apply to unknown-age accounts.
   identityVerified:false, ageVerified:false,
+  ageAssurance:'unknown' as const,
+  ageDeclarationTrusted:false,
+  adultRestrictedAccess:false,
+  minorProtectionsRequired:true,
   grantsAdultPrivileges:false, adsAllowed:false
  } as const;
 }
