@@ -21,15 +21,21 @@ export function ProfileVisits({ profileId }: { profileId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [featureUnavailable, setFeatureUnavailable] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
+    setFeatureUnavailable(false);
     const db = supabaseBrowser();
     const { data: setting, error: settingError } = await db.from('profile_details')
       .select('profile_views_enabled').eq('user_id', profileId).maybeSingle();
     if (settingError) {
-      setError('Não foi possível carregar a configuração do histórico de visitas.');
+      const missingMigration = /profile_views_enabled|schema cache|column .* does not exist/i.test(settingError.message || '');
+      setFeatureUnavailable(missingMigration);
+      setError(missingMigration
+        ? 'O histórico de visitas ainda não está habilitado nesta instância. A migração necessária precisa ser aplicada pelo responsável pelo banco de validação.'
+        : 'Não foi possível carregar a configuração do histórico de visitas.');
       setLoading(false);
       return;
     }
@@ -93,12 +99,12 @@ export function ProfileVisits({ profileId }: { profileId: string }) {
   return <section className="panel conecta-profile-visits" aria-labelledby="conecta-profile-visits-title">
     <div className="conecta-profile-visits-heading">
       <div><span className="section-eyebrow">PRIVACIDADE E CONEXÕES</span><h2 id="conecta-profile-visits-title"><History size={20}/> Quem visitou meu perfil</h2></div>
-      <button type="button" className="btn btn-outline" disabled={busy || loading} onClick={() => void toggle()}>
+      <button type="button" className="btn btn-outline" disabled={busy || loading || featureUnavailable} onClick={() => void toggle()}>
         {enabled ? <EyeOff size={16}/> : <Eye size={16}/>} {enabled ? 'Desativar' : 'Ativar histórico'}
       </button>
     </div>
     <p className="small-note">O histórico começa desativado. Quando ativado, registra visitas autenticadas de outras pessoas, exceto visitas próprias e relações bloqueadas. Só você pode consultar sua lista.</p>
-    {error && <p className="form-error" role="alert">{error}</p>}
+    {error && <p className={featureUnavailable ? 'small-note' : 'form-error'} role={featureUnavailable ? 'status' : 'alert'}>{error}</p>}
     {notice && <p className="form-success" role="status">{notice}</p>}
     {!enabled ? <div className="conecta-profile-visits-empty"><EyeOff size={22}/><p>O histórico está desativado. Ative se quiser registrar visitas futuras.</p></div>
       : loading ? <p className="muted">Carregando histórico...</p>
