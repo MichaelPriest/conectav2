@@ -45,12 +45,12 @@ test('unknown, self-declared, OCR and browser-only signals fail closed', () => {
 });
 
 test('verified minor can use basic social features but never adult-restricted features', () => {
-  const result = ageAssurancePolicy({ ...adult, ageBand: '12_15' });
+  const result = ageAssurancePolicy({ ...adult, ageBand: '13_15' });
   assert.equal(result.ageAssurance, 'verified_minor');
   assert.equal(result.canUseBasicSocialFeatures, true);
   assert.equal(result.canAccessAdultRestrictedFeatures, false);
   assert.equal(result.mustApplyMinorProtections, true);
-  for (const ageBand of ['under_12', '16_17']) {
+  for (const ageBand of ['0_12', '16_17']) {
     const minor = ageAssurancePolicy({ ...adult, ageBand });
     assert.equal(minor.ageAssurance, 'verified_minor');
     assert.equal(minor.canAccessAdultRestrictedFeatures, false);
