@@ -79,7 +79,8 @@ async function googleAccessToken(account: ServiceAccount): Promise<string> {
     body: new URLSearchParams({
       grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
       assertion
-    })
+    }),
+    signal: AbortSignal.timeout(10_000)
   });
   if (!response.ok) throw new PlayIntegrityVerificationError('not_configured', 'Google OAuth token exchange failed.');
   const body = await response.json() as {access_token?: string};
@@ -113,7 +114,8 @@ export async function verifyPlayIntegrityToken(
         Authorization: 'Bearer ' + accessToken,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({integrityToken})
+      body: JSON.stringify({integrityToken}),
+      signal: AbortSignal.timeout(10_000)
     }
   );
   if (!response.ok) {
