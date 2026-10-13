@@ -99,3 +99,13 @@ test('explore search normalizes accents and optional @ or # prefixes',()=>{
  assert.ok(page.includes('normalizeDiscoveryText(tag).includes(needle)'));
  assert.ok(page.includes('normalizeDiscoveryText(p.display_name'));
 });
+
+
+test('community poll filter uses actual poll records and includes a visible Enquetes tab',()=>{
+ const page=read('app/comunidades/[slug]/page.tsx');
+ assert.ok(page.includes("db.from('post_polls').select('post_id').in('post_id',rows.map(row=>row.id))"));
+ assert.ok(page.includes("tab==='polls'&&pollPostIds.includes(p.id)"));
+ assert.ok(page.includes("['all','photos','videos','polls'] as const"));
+ assert.ok(page.includes("'Enquetes'"));
+ assert.doesNotMatch(page,/tab==='polls'&&false/);
+});
