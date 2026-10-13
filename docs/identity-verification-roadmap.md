@@ -1,5 +1,9 @@
 # Conecta V2 — identity verification roadmap
 
+## ECA Digital / protection of minors
+
+The legal implementation checklist is maintained in [`docs/eca-digital-compliance.md`](./eca-digital-compliance.md). This is an engineering baseline, not a legal-compliance certification. The current identity endpoints are not yet a complete reliable age-assurance system. Until a trustworthy server-validated age decision exists, no self-declared age, OCR/QR result, browser liveness signal, or signed-document integrity result may unlock 18+ content or adult-only privileges. Minor privacy defaults, parental supervision where applicable, server-side restrictions, purpose limitation and auditability must be reviewed across the feed, communities, uploads, Stories/Reels, DMs and calls.
+
 ## Current implementation boundary
 
 The repository already contains browser-side camera/liveness challenges, Tesseract OCR for legacy RG documents, a local CIN QR/JWS preflight, and a gov.br/ITI signed-PDF integrity flow. These are useful preflight signals, but none alone proves that the account owner is the document holder or creates an official age decision.
