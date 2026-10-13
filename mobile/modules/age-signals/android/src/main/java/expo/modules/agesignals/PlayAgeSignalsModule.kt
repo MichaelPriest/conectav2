@@ -1,9 +1,9 @@
 package expo.modules.agesignals
 
 import com.google.android.play.agesignals.AgeSignalsManagerFactory
-import com.google.android.play.agesignals.model.AgeSignalsAccessRequest
-import com.google.android.play.agesignals.model.AgeSignalsRequest
-import com.google.android.play.agesignals.model.AgeSignalsStatus
+import com.google.android.play.agesignals.AgeSignalsAccessRequest
+import com.google.android.play.agesignals.AgeSignalsRequest
+import com.google.android.play.agesignals.AgeSignalsStatus
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import expo.modules.kotlin.Promise
