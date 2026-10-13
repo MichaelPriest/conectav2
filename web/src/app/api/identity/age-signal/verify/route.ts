@@ -45,13 +45,13 @@ export async function POST(request:NextRequest){
  const integrityToken=body.integrityToken;
  const ageLower=body.ageLower;
  const ageUpper=body.ageUpper;
- const ageRangeSource=body.ageRangeSource;
- const approval=body.significantChangeApprovalDate;
+ const userStatus=body.userStatus;
+ const approval=body.mostRecentApprovalDate;
  if(typeof challenge!=='string'||!/^[0-9a-f]{64}$/.test(challenge)||
     typeof integrityToken!=='string'||integrityToken.length<100||integrityToken.length>20000||
     !Number.isInteger(ageLower)||typeof ageLower!=='number'||ageLower<0||ageLower>18||
     !(ageUpper===null||(typeof ageUpper==='number'&&Number.isInteger(ageUpper)&&ageUpper>=0&&ageUpper<=18))||
-    typeof ageRangeSource!=='string'||!['TIER_A','TIER_B','TIER_C','TIER_D'].includes(ageRangeSource)||
+    typeof userStatus!=='number'||!Number.isInteger(userStatus)||userStatus<0||userStatus>5||
     !(approval===null||(typeof approval==='number'&&Number.isSafeInteger(approval)&&approval>0&&approval<=Date.now()+30_000))){
   return NextResponse.json({error:'Os dados de faixa etária são inválidos.'},{status:400,headers});
  }
@@ -62,8 +62,8 @@ export async function POST(request:NextRequest){
  const signal:AgeSignalPayload={
   ageLower,
   ageUpper:ageUpper as number|null,
-  ageRangeSource,
-  significantChangeApprovalDate:approval as number|null
+  userStatus,
+  mostRecentApprovalDate:approval as number|null
  };
  const requestHash=hashAgeSignalRequest(challenge,signal);
  let integrity:{timestampMillis:number;packageName:string};
@@ -101,7 +101,9 @@ export async function POST(request:NextRequest){
  const ageBand=classifyAgeBand(ageLower,signal.ageUpper);
  // Self-declared age is not sufficient to persist a trusted decision. It may
  // still trigger the protective experience, but it never becomes verified.
- if(ageRangeSource==='TIER_A'||!ageBand||(ageRangeSource==='TIER_B'&&ageBand==='18_plus')){
+ const statusMatchesAgeBand=(userStatus===0&&ageBand==='18_plus')||
+  (userStatus===1&&ageBand!==null&&ageBand!=='18_plus');
+ if(!statusMatchesAgeBand||!ageBand){
   return NextResponse.json({
    status:'preflight_only',
    ageAssurance:'unknown',
