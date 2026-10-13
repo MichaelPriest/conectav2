@@ -19,7 +19,7 @@ create index if not exists profile_visits_profile_last_viewed_idx
 
 alter table public.profile_visits enable row level security;
 revoke all on public.profile_visits from anon, authenticated;
-grant select on public.profile_visits to authenticated;
+grant select, delete on public.profile_visits to authenticated;
 
 drop policy if exists "Profile owners can read enabled visit history" on public.profile_visits;
 create policy "Profile owners can read enabled visit history"
@@ -75,3 +75,8 @@ $$;
 
 revoke all on function public.record_profile_visit(uuid) from public, anon;
 grant execute on function public.record_profile_visit(uuid) to authenticated;
+
+drop policy if exists "Participants can delete profile visit history" on public.profile_visits;
+create policy "Participants can delete profile visit history"
+on public.profile_visits for delete to authenticated
+using (profile_id = (select auth.uid()) or viewer_id = (select auth.uid()));
