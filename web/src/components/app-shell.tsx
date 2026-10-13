@@ -28,6 +28,7 @@ const moreNavItems = [
   { label: 'Publicações salvas', href: '/salvos', icon: Bookmark },
   { label: 'Acolhimento', href: '/acolhimento', icon: HeartHandshake },
   { label: 'Conexões', href: '/conexoes', icon: Users },
+  { label: 'Configurações', href: '/configuracoes', icon: Settings },
   { label: 'Baixar aplicativo', href: '/apps', icon: Smartphone },
   { label: 'Apoiar o Conecta', href: '/apoiar', icon: HeartHandshake },
 ];
