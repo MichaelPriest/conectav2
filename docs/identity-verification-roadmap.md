@@ -10,6 +10,13 @@ The repository already contains browser-side camera/liveness challenges, Tessera
 
 The `/api/identity/methods` endpoint intentionally reports capability and cost class only. It does not create verification records, upload documents, call a paid provider, change profile flags, or grant adult privileges.
 
+## Free platform age signals (priority over face-age estimation)
+
+- Android: assess Google Play Age Signals API and bind the returned age band to a verified Play Integrity result before accepting it. It may not be available for sideloaded builds or every device/account. Official docs: https://developer.android.com/google/play/age-signals/use-age-signals-api
+- iOS: assess Apple's Declared Age Range API; it needs the entitlement/capability, supported SDK/OS, and consent/guardian handling. It is a useful signal, not a blanket compliance guarantee. Official docs: https://developer.apple.com/documentation/declaredagerange
+- Web: no automatic assumption of access to OS/store signals; use a trusted validated method or keep adult-only access locked.
+- Never let the mobile app write a raw age band directly to the server-authoritative table. Verify signal provenance, account binding, integrity and replay protections server-side.
+
 ## Free-first architecture
 
 1. **Local preflight (no per-check provider fee):** document OCR and CIN QR parsing stay in the browser where possible. Return only a coarse result and discard source images/tokens after processing. Never log CPF, birth date, QR/JWT, selfie, or document images.
