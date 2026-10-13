@@ -5,7 +5,7 @@ export type PlayAgeSignalResult = {
   status: 'shared' | 'not_shared' | 'verification_required' | 'unavailable' | 'unknown' | 'error';
   ageLower?: number | null;
   ageUpper?: number | null;
-  ageRangeSource?: number | null;
+  ageRangeSource?: string | number | null;
   significantChangeApprovalDate?: number | null;
   reason?: string;
 };
@@ -31,16 +31,27 @@ export async function requestPlayAgeSignals(): Promise<PlayAgeSignalResult> {
   }
 }
 
+function describeSource(source: PlayAgeSignalResult['ageRangeSource']): string {
+  switch (source) {
+    case 'TIER_A': return 'origem declarada pelo próprio usuário (não comprova maioridade)';
+    case 'TIER_B': return 'faixa gerenciada por responsável no Google';
+    case 'TIER_C': return 'idade avaliada por método do Google Play';
+    case 'TIER_D': return 'documento oficial com selfie ou identidade digital, segundo o Google Play';
+    default: return 'origem não identificada';
+  }
+}
+
 export function describePlayAgeSignal(result: PlayAgeSignalResult): string {
   switch (result.status) {
-    case 'shared':
+    case 'shared': {
       if (typeof result.ageLower !== 'number') {
         return 'O Google Play não forneceu uma faixa etária utilizável. Nenhuma permissão foi alterada.';
       }
-      if (typeof result.ageUpper === 'number') {
-        return 'Faixa informada pelo Google Play: ' + result.ageLower + '–' + result.ageUpper + ' anos.';
-      }
-      return 'Faixa informada pelo Google Play: ' + result.ageLower + '+ anos.';
+      const band = typeof result.ageUpper === 'number'
+        ? 'Faixa informada pelo Google Play: ' + result.ageLower + '–' + result.ageUpper + ' anos.'
+        : 'Faixa informada pelo Google Play: ' + result.ageLower + '+ anos.';
+      return band + '\nOrigem: ' + describeSource(result.ageRangeSource) + '.';
+    }
     case 'not_shared':
       return 'A faixa etária não foi compartilhada. As proteções padrão permanecem ativas.';
     case 'verification_required':
