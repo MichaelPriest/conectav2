@@ -83,7 +83,7 @@ test('feed filters query real posts and restart pagination when changed',()=>{
  const page=read('app/feed/page.tsx');
  assert.match(page,/useState<'all'\|'mine'\|'media'>\('all'\)/);
  assert.match(page,/feedFilter==='mine'\)query=query\.eq\('author_id',user\.id\)/);
- assert.match(page,/feedFilter==='media'\)query=query\.not\('media_type','is',null\)/);
+ assert.match(page,/feedFilter==='media'\)query=query\.or\('media_type\.not\.is\.null,media_path\.not\.is\.null'\)/);
  assert.match(page,/aria-label="Filtrar publicações"/);
  assert.match(page,/Minhas publicações/);
  assert.match(page,/Fotos e vídeos/);
