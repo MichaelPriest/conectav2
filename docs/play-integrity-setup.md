@@ -42,7 +42,7 @@ The Age Signals and Integrity SDK calls do not have a per-verification fee, but 
 
 ## Privacy notes
 
-- The client sends only the coarse age band, source tier, one-time challenge and Integrity token after the user explicitly confirms submission.
+- The client sends only the coarse age band, Play SDK status value, one-time challenge and Integrity token after the user explicitly confirms submission.
 - Raw documents, selfies, exact birth date and Play install ID are not collected by this flow.
 - Integrity tokens are decoded on the server and must never be logged or stored.
 - The database retains a coarse age band and a hash reference, not the raw token or challenge.
