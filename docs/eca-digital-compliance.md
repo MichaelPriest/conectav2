@@ -25,29 +25,21 @@ Official sources:
 - https://www.gov.br/anpd/pt-br/assuntos/eca-digital/
 - https://www.gov.br/anpd/pt-br/assuntos/noticias/anpd-publica-orientacoes-preliminares-e-cronograma-para-afericao-de-idade-no-ambiente-digital
 
-## Android implementation added to the mobile branch (2026-10-13)
+## First-release distribution: sideloaded Android APK and web
 
-- Added a local Expo native module at `mobile/modules/age-signals/` using Play Age Signals SDK `0.0.4` and Play Integrity SDK `1.5.0`. It requests the age-sharing state, reads the coarse age range, and can request an integrity token bound to a SHA-256 request hash. Current docs: https://developer.android.com/google/play/age-signals/request-age-signals and https://developer.android.com/google/play/integrity.
-- Added an explicit user-triggered option in the mobile profile/account area. The user can decline sharing; no signal is requested silently at startup. A second confirmation is required before sending the coarse age signal and integrity token to the validation server.
-- Added `POST /api/identity/age-signal/challenge` and `POST /api/identity/age-signal/verify`. The server creates a short-lived one-time challenge, decodes the opaque token through Google's API, validates package name, signing certificate, `PLAY_RECOGNIZED`, `MEETS_DEVICE_INTEGRITY`, request hash and freshness, and consumes the challenge atomically before storing an accepted coarse age band.
-- Self-declared status value `DECLARED status`, ambiguous ranges, missing credentials, unrecognized app/device, invalid/stale tokens and replayed challenges never create a trusted adult decision. No document, selfie, exact birth date or Play install ID is collected by this flow.
-- Added `supabase/migrations/20261013230000_age_assurance_challenges.sql` and `web/tests/age-signal-integrity.test.cjs`. These tests have not yet been executed in CI. Native Android compilation, real-device testing, Play Console/Cloud setup, secret configuration and validation deployment are still pending.
-- Setup steps and required environment variables are documented in [`docs/play-integrity-setup.md`](./play-integrity-setup.md). The flow remains unavailable until those prerequisites and migrations are configured. It does not yet enforce restrictions in every individual feature API.
+The first release will not be published on Google Play. Play Age Signals and Play Integrity are therefore **deferred and must not be treated as available or required for first-release verification**. The native module and Google-backed API flow in this branch are optional future work only. Their setup guide is explicitly marked deferred in [`docs/play-integrity-setup.md`](./play-integrity-setup.md).
 
-## Free platform age signals to prioritize
+The first-release path must work with a sideloaded APK and web browser, without Play Console configuration or an app-store age signal. The current free/open-source preflight capabilities are local OCR, CIN QR/JWS inspection and liveness checks; these are not, individually or collectively without a trusted validation step, proof of identity or age. A valid document signature proves document integrity, not that the signed document belongs to the Conecta account holder.
 
-Before inventing facial age estimation, integrate the platform-provided signals where available. They reduce data collection and do not have a per-verification provider fee, but are not automatically available to every device/account and do not remove Conecta's legal responsibility.
+Until an evidence method with a documented trust basis can create a server-validated, account-bound decision, the account remains `unknown` and protective restrictions remain active. Do not weaken Play Integrity checks to make an unrecognized APK pass. Do not replace a missing trusted signal with self-declaration, OCR, QR decoding, or a face-age estimate.
 
-- **Android / Google Play:** evaluate the Play Age Signals API. It returns age bands such as 0–12, 13–15, 16–17 and 18+. Google recommends using Play Integrity to help verify that the response comes from an untampered app on a certified Android device. An Expo integration will require a native module/config plugin and server-side integrity verification; a sideloaded APK or device outside Google Play may not provide a usable signal.
-  - Official documentation: https://developer.android.com/google/play/age-signals/use-age-signals-api
-  - Response integrity guidance: https://developer.android.com/google/play/age-signals/understand-age-signals-responses
-- **iOS / Apple:** evaluate the Declared Age Range API. It can return an age range and information about the declaration method when the user or guardian consents, but requires Apple capability/entitlement, supported OS/SDK versions, and handling for declined/unavailable results. Apple explicitly says the developer remains responsible for legal compliance.
-  - Official documentation: https://developer.apple.com/documentation/declaredagerange
-  - Brazil guidance: https://developer.apple.com/news/?id=f5zj08ey
-- **Web:** do not assume a browser can access app-store/OS age signals. Keep age-restricted access locked unless a trusted signal can be securely obtained, or a documented document/credential method has been fully validated.
-- **Fallback:** do not replace a missing platform signal with self-declaration, OCR, a face-age guess, or client-side liveness. Use the protective experience and offer a review/verification path.
+## Deferred platform signals
 
-The platform signal is only accepted as a trusted decision after the method and provenance are verified, the result is bound to the authenticated Conecta account, and replay/spoofing protections are implemented. A raw age band sent by the app must not be inserted directly into `age_assurance_decisions`.
+- **Android / Google Play:** Play Age Signals plus Play Integrity may be reconsidered only if a future release is distributed through Google Play and the required app/signing configuration is available. Official documentation: https://developer.android.com/google/play/age-signals/use-age-signals-api and https://developer.android.com/google/play/integrity.
+- **iOS / Apple:** Declared Age Range API is not required for the first release and must not be assumed to cover web or Android. It may be assessed if a later iOS release and entitlement are in scope: https://developer.apple.com/documentation/declaredagerange.
+- **Web and sideloaded Android:** no app-store signal is assumed. Use only a validated method with server-side provenance, account binding and replay protection, or retain the protected/unknown state.
+
+The existing Play-specific routes, native module, migrations and tests are not evidence that the first-release path is complete. Native compilation, end-to-end tests, CI confirmation, migration application, and enforcement in every relevant feature API remain release gates.
 
 ## Non-negotiable age and identity rules
 
