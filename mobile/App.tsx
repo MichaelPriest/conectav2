@@ -34,7 +34,8 @@ import {loadCommunityPosts,communityMemberCount,publishCommunityText,createCommu
 import {PollCard,PollDraft} from './src/poll-ui';
 import {publishPollPost,validatePollDraft} from './src/polls';
 import {MentionInput} from './src/mentions';
-import {NativeVersionMonitor,checkVersionManually} from './src/update-ui';
+import {NativeVersionMonitor} from './src/update-ui';
+import {SettingsScreen} from './src/settings-ui';
 import {NativeGroupCreator,NativeGroupSettings} from './src/chat-group-ui';
 import {getPinnedMessages,setConversationMuted,toggleChatPin} from './src/chat-groups';
 import {useNativeChatTyping} from './src/chat-typing';
