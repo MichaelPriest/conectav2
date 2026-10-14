@@ -10,7 +10,7 @@ type Outcome={
  state:RegistrationCompletion;
  message:string;
  canFinishBasic:boolean;
- next:'/feed'|'/onboarding'|'/conexoes'|null;
+ next:'/onboarding'|null;
  identityVerified:false;
  ageVerified:false;
  grantsAdultPrivileges:false;
@@ -66,15 +66,10 @@ export function IdentityCompletion(){
    <p><strong>{status.message}</strong></p>
    <p className="small-note">Resultado consultado no servidor. A assinatura gov.br, a leitura da CIN
     e o teste Human nao substituem uma integracao oficial que comprove titularidade e idade.</p>
-   {status.canFinishBasic?
-    <button type="button" className="btn btn-primary btn-lg" onClick={()=>void finish()} disabled={busy}>
-     <ArrowRight size={18}/> {busy?'Verificando...':'Finalizar cadastro basico e entrar'}</button>:
-    status.next==='/onboarding'?
+   {status.next==='/onboarding'?
     <Link href="/onboarding" className="btn btn-outline">Completar dados do cadastro <ArrowRight size={18}/></Link>:
-    status.next==='/conexoes'?
-    <Link href="/conexoes" className="btn btn-primary">Associar pai, mãe ou responsável <ArrowRight size={18}/></Link>:
     <p className="small-note"><ShieldAlert size={16} style={{verticalAlign:'middle'}}/>
-     A conta de menor não pode concluir esta etapa sem associação aceita a um responsável com maioridade confirmada e sem as verificações etárias exigidas.</p>}
+     O acesso à rede continua bloqueado até a aprovação confiável de identidade e idade pelo Conecta ID. Pré-triagens locais não liberam a conta.</p>}
   </div>}
   <p className="small-note" style={{marginTop:12}}>
    <strong>Sem comprovacao oficial:</strong> nenhuma etapa desta tela concede selo,
