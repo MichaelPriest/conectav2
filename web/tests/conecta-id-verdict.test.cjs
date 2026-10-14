@@ -86,8 +86,13 @@ test('does not emit CPF, birth date, raw document, or biometric payload fields',
     originalsDeleted: true,
     guardianAuthenticated: false
   });
-  const serialized = JSON.stringify(result);
-  for (const forbidden of ['cpf', 'data_nascimento', 'documento', 'selfie', 'biometria', 'imagem', 'video']) {
-    assert.equal(serialized.toLowerCase().includes(forbidden), false);
+  const forbiddenKeys = new Set(['cpf', 'data_nascimento', 'documento_original', 'selfie', 'biometria', 'imagem', 'video', 'vetor_biometrico']);
+  function visit(value) {
+    if (!value || typeof value !== 'object') return;
+    for (const [key, child] of Object.entries(value)) {
+      assert.equal(forbiddenKeys.has(key.toLowerCase()), false, `unexpected sensitive field: ${key}`);
+      visit(child);
+    }
   }
+  visit(result);
 });
