@@ -19,7 +19,7 @@ test('paid provider cannot start until exact price disclosure is explicitly read
  assert.match(page,/ready_with_cost_disclosure/);
  assert.match(page,/priceDisplay/);
  assert.match(page,/paidProviderReady/);
- assert.match(page,/Bloqueado até haver preço real por tentativa/);
+ assert.match(page,/bloqueado até haver preço real por tentativa/i);
  assert.match(panel,/Bloqueado até o preço exato por tentativa ser confirmado e exibido/);
  assert.doesNotMatch(panel,/ready_with_cost_disclosure.*?Iniciar verificação/s);
 });
