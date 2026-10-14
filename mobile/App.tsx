@@ -1942,7 +1942,6 @@ export default function App(){
  useEffect(()=>{
   if(Platform.OS!=='android')return;
   void NavigationBarApi.setVisibilityAsync(fullscreen?'hidden':'visible').catch(()=>{});
-  return()=>{void NavigationBarApi.setVisibilityAsync('visible').catch(()=>{});};
  },[fullscreen]);
  useEffect(()=>{
   if(!user||restricted){setUnreadCount(0);return;}
