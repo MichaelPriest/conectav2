@@ -269,8 +269,8 @@ test('Full-screen Android is inset-aware and provides real app icons',()=>{
  }
  assert.match(app,/SafeAreaProvider/);
  assert.match(app,/edges=\{\['top','bottom','left','right'\]\}/);
- assert.match(app,/NavigationBar hidden/);
- assert.match(app,/StatusBar style="dark" hidden=\{Platform\.OS==='android'\}/);
+ assert.match(app,/NavigationBarApi\.setVisibilityAsync/);
+ assert.match(app,/StatusBar style="dark" hidden=\{Platform\.OS==='android'&&fullscreen\}/);
 });
 test('Native visual identity matches Conecta website and uses real icon tabs',()=>{
  const design=read('src/design.tsx'),tokens=read('src/theme.ts');
