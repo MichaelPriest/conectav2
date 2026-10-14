@@ -19,7 +19,7 @@ export async function GET(request:NextRequest){
  const url=runtimeConfig.supabaseUrl;
  const publicKey=runtimeConfig.publicKey;
  const serviceKey=runtimeConfig.serviceKey;
- const bearer=request.headers.get('authorization')?.match(/^Bearer ([\\w.-]+)$/i)?.[1];
+ const bearer=request.headers.get('authorization')?.match(/^Bearer ([\w.-]+)$/i)?.[1];
  if(!url||!publicKey||!serviceKey||!bearer)return blocked();
 
  try{
