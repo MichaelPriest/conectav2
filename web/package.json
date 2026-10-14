@@ -15,7 +15,12 @@
     "test:legacy-rg": "node --test tests/legacy-rg-ocr.test.cjs",
     "test:completion": "node --test tests/identity-completion.test.cjs",
     "test:moderation": "node --test tests/oss-moderation-safety.test.cjs",
-    "test:automod": "node --test tests/automatic-moderation.test.cjs"
+    "test:automod": "node --test tests/automatic-moderation.test.cjs",
+    "test:cin-server": "node --test tests/cin-server-inspect.test.cjs",
+    "test:identity-methods": "node --test tests/identity-methods.test.cjs",
+    "test:age-policy": "node --test tests/age-assurance-policy.test.cjs",
+    "test:age-policy-route": "node --test tests/age-policy-route.test.cjs",
+    "test:age-signal-integrity": "node --test tests/age-signal-integrity.test.cjs"
   },
   "dependencies": {
     "@huggingface/transformers": "3.8.1",
