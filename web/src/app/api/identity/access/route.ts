@@ -30,8 +30,8 @@ export async function GET(request:NextRequest){
  ]);
  if(profile.error||age.error||identity.error||decision.error)return fail(503,'Não foi possível consultar as verificações com segurança. Nenhum acesso foi liberado.');
  const steps={profile:Boolean(profile.data),ageDeclaration:Boolean(age.data),identity:false,age:false,guardian:false};
- if(!steps.profile)return NextResponse.json({networkAccess:false,reason:'profile_required',steps,message:'Complete seu perfil para iniciar o Conecta ID.'},{headers});
- if(!steps.ageDeclaration)return NextResponse.json({networkAccess:false,reason:'age_declaration_required',steps,message:'Informe sua faixa etária para iniciar a verificação.'},{headers});
+ if(!profile.data)return NextResponse.json({networkAccess:false,reason:'profile_required',steps,message:'Complete seu perfil para iniciar o Conecta ID.'},{headers});
+ if(!age.data)return NextResponse.json({networkAccess:false,reason:'age_declaration_required',steps,message:'Informe sua faixa etária para iniciar a verificação.'},{headers});
  steps.identity=identity.data?.status==='approved'&&recent(identity.data.verified_at);
  steps.age=Boolean(decision.data&&trustedMethod(decision.data.method)&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
  if(!steps.identity)return NextResponse.json({networkAccess:false,reason:identity.data?.status==='approved'?'verification_expired':'identity_required',steps,message:'A identidade ainda não foi confirmada por uma fonte confiável. As pré-triagens gratuitas não liberam o acesso à rede.'},{headers});
