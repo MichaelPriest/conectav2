@@ -21,7 +21,9 @@ export async function GET(request:NextRequest){
   const personaConfigured=Boolean(runtimeConfig.providerApiKey&&runtimeConfig.inquiryTemplate&&runtimeConfig.serviceKey);
 
   return NextResponse.json({
-    policyVersion:'identity-methods-v1',
+    policyVersion:'identity-methods-v2',
+    firstReleaseDistribution:'sideloaded-apk-and-web',
+    ageDecisionStatus:'pending',
     identityVerified:false,
     ageVerified:false,
     grantsAdultPrivileges:false,
@@ -63,6 +65,15 @@ export async function GET(request:NextRequest){
         details:'Confere integridade/assinatura e vínculo com o desafio do Conecta quando aplicável. Não equivale a autenticação gov.br nem a validação oficial de idade.'
       },
       {
+        id:'google-play-age-signals',
+        label:'Sinal etário do Google Play',
+        cost:'no_per_check_fee',
+        status:'deferred_first_release',
+        verifiesIdentity:false,
+        verifiesAge:false,
+        details:'Não utilizado nesta primeira versão: o APK será distribuído fora da Google Play. Não é requisito de cadastro nem substituto para a validação de idade no APK instalado diretamente ou na web.'
+      },
+      {
         id:'external-identity-provider',
         label:'Prestador externo de verificação',
         cost:'provider_billed',
@@ -72,6 +83,6 @@ export async function GET(request:NextRequest){
         details:'Não inicia cobrança nem aprova a conta por este endpoint. Só deve ser habilitado após contrato, preço real por tentativa, consentimento e webhook autenticado.'
       }
     ],
-    notice:'Nenhum método listado concede selo oficial ou libera recursos restritos. A decisão permanece pendente até existir verificação oficial adequada e validada.'
+    notice:'Nenhum método listado concede selo oficial ou libera recursos restritos. OCR, leitura de QR, assinatura de documento e vivacidade são apenas sinais preliminares. Sem evidência confiável validada no servidor, a decisão permanece pendente e os recursos restritos ficam bloqueados.'
   },{headers});
 }
