@@ -24,6 +24,9 @@ test('Play Age Signals bridge handles unavailable and declined states without gr
   assert.doesNotMatch(adapter, /ageRangeSource/);
   assert.doesNotMatch(adapter, /significantChangeApprovalDate/);
   assert.match(adapter, /google_cloud_project_not_configured/);
+  assert.match(adapter, /does not independently.*attest the age-result fields/s);
+  assert.doesNotMatch(adapter, /status: 'verified'/);
+  assert.doesNotMatch(adapter, /verifyBody\.status === 'verified'/);
 });
 
 test('first sideloaded release does not expose a Play-only age flow in the profile UI', () => {
