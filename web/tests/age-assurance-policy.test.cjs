@@ -29,6 +29,9 @@ test('unknown, self-declared, OCR and browser-only signals fail closed', () => {
     null,
     { ageBand: '18_plus' },
     { ...adult, source: 'self_declaration' },
+    // Historical Play Age Signals rows must not grant access because the
+    // current server endpoint cannot authenticate the age-result fields.
+    { ...adult, source: 'verified_platform_age_signal' },
     { ...adult, source: 'cin_local_preflight' },
     { ...adult, source: 'browser_liveness' },
     { ...adult, status: 'pending' },
