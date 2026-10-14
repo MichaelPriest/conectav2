@@ -143,3 +143,23 @@
 .conecta-achievement-progress{height:5px;margin:8px 0;border-radius:999px;overflow:hidden;background:#eceaf5}
 .conecta-achievement-progress span{display:block;height:100%;border-radius:inherit;background:#9479ee}
 @media(max-width:600px){.conecta-achievements-toolbar{align-items:stretch}.conecta-achievements-filter{justify-content:space-between}.conecta-achievements-filter select{flex:1}.conecta-achievements-toggle{padding:5px 0}}
+
+
+/* The verification gate must not expose social navigation or the floating chat. */
+.conecta-id-gate-layout {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+.conecta-id-gate-layout .sidebar,
+.conecta-id-gate-layout .desktop-topbar,
+.conecta-id-gate-layout .mobile-header,
+.conecta-id-gate-layout .mobile-bottom-nav,
+.conecta-id-gate-layout .mobile-overlay {
+  display: none !important;
+}
+.conecta-id-gate-layout .workspace {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
