@@ -89,12 +89,17 @@ export function useAuthProfile() {
         if(!active)return;
         if(declarationError)throw declarationError;
         if(!declaration){router.replace('/onboarding');return;}
-        // A user's own declaration may only RESTRICT access, never grant adult verification.
-        // Underage self-declarations stay on Conecta ID while independent age and
-        // parental assurance are not yet available. Server-side RLS/triggers
-        // also protect content from clients bypassing this navigation.
-        if(declaration.declared_band!=='18_plus'&&pathname!=='/verificar-identidade'){
-          router.replace('/verificar-identidade');return;
+        // Conecta ID is mandatory for every account before any social-network route.
+        // This is only the navigation gate; restrictive database RLS enforces the same
+        // decision so direct Supabase requests cannot bypass the requirement.
+        if(pathname!=='/verificar-identidade'){
+          const {data:{session}}=await client.auth.getSession();
+          const accessResponse=await fetch('/api/identity/access',{
+            headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},
+            cache:'no-store'
+          });
+          const access=await accessResponse.json().catch(()=>({networkAccess:false})) as {networkAccess?:boolean};
+          if(!accessResponse.ok||access.networkAccess!==true){router.replace('/verificar-identidade');return;}
         }
         setUser(authUser);
         setProfile(profileData as UserProfile);
