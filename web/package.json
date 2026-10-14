@@ -19,6 +19,7 @@
     "test:cin-server": "node --test tests/cin-server-inspect.test.cjs",
     "test:identity-methods": "node --test tests/identity-methods.test.cjs",
     "test:age-policy": "node --test tests/age-assurance-policy.test.cjs",
+    "test:conecta-id": "node --test tests/conecta-id-verdict.test.cjs",
     "test:age-policy-route": "node --test tests/age-policy-route.test.cjs",
     "test:age-signal-integrity": "node --test tests/age-signal-integrity.test.cjs",
     "test:identity-methods-ui": "node --test tests/identity-methods-ui.test.cjs",
