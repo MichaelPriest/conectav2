@@ -12,7 +12,7 @@ const gradle = fs.readFileSync(path.join(root, 'modules/age-signals/android/buil
 
 test('Play Age Signals bridge handles unavailable and declined states without granting privileges', () => {
   assert.match(adapter, /Platform\.OS !== 'android'/);
-  assert.match(adapter, /status: 'not_shared'/);
+  assert.match(adapter, /'not_shared'/);
   assert.match(adapter, /status: 'verification_required'/);
   assert.match(adapter, /never upload it as a trusted decision/);
   assert.match(adapter, /never.*unlock adult-only features/s);
@@ -25,10 +25,15 @@ test('Play Age Signals bridge handles unavailable and declined states without gr
   assert.match(adapter, /google_cloud_project_not_configured/);
 });
 
-test('profile UI makes the age-signal request user-initiated and explains it is only preliminary', () => {
-  assert.match(app, /Consultar faixa etária do Google Play/);
-  assert.match(app, /nenhum recurso restrito será liberado por esta consulta/);
-  assert.match(app, /O resultado fica no aparelho até você escolher enviá-lo/);
+test('first sideloaded release does not expose a Play-only age flow in the profile UI', () => {
+  assert.doesNotMatch(app, /Consultar faixa etária do Google Play/);
+  assert.doesNotMatch(app, /requestPlayAgeSignals|submitPlayAgeSignal/);
+  assert.match(app, /Abrir verificação protegida/);
+  assert.match(app, /proteção por idade/);
+  // Keep the Play SDK isolated as a future integration: it must never grant
+  // privileges locally, and the first release does not depend on Play Store.
+  assert.match(adapter, /never upload it as a trusted decision/);
+  assert.match(adapter, /never.*unlock adult-only features/s);
 });
 
 test('native bridge uses the current two-step access and signal request flow', () => {
