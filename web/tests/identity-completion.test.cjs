@@ -17,10 +17,10 @@ test('No profile or age declaration never unlocks a completed signup',()=>{
  assert.equal(completionFromRecords(false,'18_plus'),'profile_required');
  assert.equal(completionFromRecords(true,null),'age_declaration_required');
 });
-test('Adult self-declaration completes BASIC registration only',()=>{
+test('Adult self-declaration never releases network access',()=>{
  const x=completionResult(completionFromRecords(true,'18_plus'));
- assert.equal(x.canFinishBasic,true);
- assert.equal(x.next,'/feed');
+ assert.equal(x.canFinishBasic,false);
+ assert.equal(x.next,null);
  assert.equal(x.identityVerified,false);
  assert.equal(x.ageVerified,false);
  assert.equal(x.ageAssurance,'unknown');
