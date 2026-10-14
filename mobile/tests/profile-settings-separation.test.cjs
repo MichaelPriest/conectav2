@@ -20,6 +20,7 @@ test('Settings is a real app destination and owns account controls',()=>{
  assert.match(app,/type Tab=.*'settings'/);
  assert.match(app,/if\(tab==='settings'\)return <SettingsScreen/);
  assert.match(app,/text:'Configurações',onPress:\(\)=>navigate\('settings'\)/);
+ assert.match(app,/if\(tab==='settings'\)\{setTab\('profile'\);return;\}/);
  assert.match(settings,/Gerenciar permissões e privacidade/);
  assert.match(settings,/Verificar atualizações/);
  assert.match(settings,/Sair deste dispositivo/);
