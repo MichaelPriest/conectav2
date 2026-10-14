@@ -5,7 +5,7 @@ import {identityUserContext,runtimeConfig} from '@/lib/identity-server';
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const headers={'Cache-Control':'private, no-store, max-age=0','Vary':'Cookie, Authorization'};
-type Reason='profile_required'|'age_declaration_required'|'identity_required'|'age_verification_required'|'guardian_required'|'verification_expired'|'verified';
+type Reason='profile_required'|'age_declaration_required'|'identity_required'|'age_verification_required'|'guardian_required'|'verification_expired'|'verification_unavailable'|'session_required'|'verified';
 const fail=(status:number,error:string)=>NextResponse.json({networkAccess:false,reason:'verification_unavailable',error},{status,headers});
 
 function recent(value:string|null|undefined){
