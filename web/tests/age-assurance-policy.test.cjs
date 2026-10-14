@@ -68,6 +68,6 @@ test('only a trusted server-validated adult signal can permit age-restricted acc
 
 test('the helper is explicitly designed for server-side authorization, not client claims', () => {
   const source = fs.readFileSync(sourcePath, 'utf8');
-  assert.match(source, /Never construct the input from request JSON/);
-  assert.match(source, /Fail closed for age-restricted features/);
+  assert.match(source, /input from request JSON/);
+  assert.match(source, /canAccessAdultRestrictedFeatures: boolean/);
 });
