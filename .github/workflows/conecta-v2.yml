@@ -74,6 +74,8 @@ jobs:
         run: npm run test:cin
       - name: Verify server-side CIN preflight and identity method disclosures
         run: npm run test:cin-server && npm run test:identity-methods
+      - name: Verify Conecta ID method disclosure and paid provider gate
+        run: npm run test:identity-methods-ui
       - name: Age assurance policy and Play Integrity regressions
         run: npm run test:age-policy && npm run test:age-policy-route && npm run test:age-signal-integrity && node --test tests/ads-eligibility-age-policy.test.cjs
       - name: Gov.br signed PDF challenge tests
