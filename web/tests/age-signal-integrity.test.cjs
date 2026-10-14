@@ -30,14 +30,19 @@ test('canonical age payload binds the one-time challenge, bounds, SDK status and
   assert.notEqual(hashAgeSignalRequest('a'.repeat(64), payload), hashAgeSignalRequest('b'.repeat(64), payload));
 });
 
-test('verification decodes token on the server and rejects self-declared age for trusted storage', () => {
+test('Play Integrity is only a device/app preflight and never trusts client age claims', () => {
   assert.match(route, /verifyPlayIntegrityToken\(integrityToken,requestHash\)/);
   assert.match(route, /consume_age_assurance_challenge/);
-  assert.match(route, /userStatus===0&&ageBand==='18_plus'/);
-  assert.match(route, /userStatus===1&&ageBand!==null&&ageBand!=='18_plus'/);
   assert.match(route, /userStatus<0\|\|userStatus>5/);
-  assert.match(route, /record_age_assurance_decision/);
+  assert.match(route, /status:'preflight_only'/);
+  assert.match(route, /ageAssurance:'unknown'/);
+  assert.match(route, /canAccessAdultRestrictedFeatures:false/);
+  assert.match(route, /mustApplyMinorProtections:true/);
+  assert.match(route, /does NOT return or attest the Play Age Signals result itself/);
   assert.match(route, /Cache-Control/);
+  assert.doesNotMatch(route, /record_age_assurance_decision/);
+  assert.doesNotMatch(route, /from\('age_assurance_decisions'\)/);
+  assert.doesNotMatch(route, /ageBand==='18_plus'/);
   assert.doesNotMatch(route, /body\.ageBand/);
   assert.doesNotMatch(route, /body\.ageAssurance/);
 });
