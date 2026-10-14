@@ -1987,6 +1987,7 @@ export default function App(){
   if(chatId){setChatId(null);return;}
   if(communitySlugRoute){setCommunitySlugRoute(null);return;}
   if(contactsMode){setContactsMode(false);return;}
+  if(tab==='settings'){setTab('profile');return;}
   if(tab!=='feed'){setTab('feed');return;}
  },[viewPostId,chatId,communitySlugRoute,contactsMode,tab]);
  useEffect(()=>{
