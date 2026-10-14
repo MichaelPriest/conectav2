@@ -18,7 +18,11 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_CONECTA_DISTRIBUTION": "play"
+        "EXPO_PUBLIC_CONECTA_DISTRIBUTION": "sideload"
+      },
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
       }
     }
   }
