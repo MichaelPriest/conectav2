@@ -71,6 +71,7 @@ test('Permissions do not request location, contacts or microphone at launch',()=
  const permissionUi=read('src/permissions-ui.tsx');
  const notice=read('src/native-notifications.tsx');
  const app=read('App.tsx');
+ const settings=read('src/settings-ui.tsx');
  const pkg=JSON.parse(read('package.json'));
  assert.ok(pkg.dependencies['expo-notifications']);
  assert.equal(config.plugins.some(p=>Array.isArray(p)&&p[0]==='expo-notifications'),true);
@@ -102,7 +103,7 @@ test('Permissions do not request location, contacts or microphone at launch',()=
  assert.match(notice,/sound:false/);
  assert.doesNotMatch(notice,/getExpoPushTokenAsync/);
  assert.match(app,/NativeForegroundNotificationBridge userId=\{user\.id\}/);
- assert.match(app,/NativePermissionsCenter userId=\{profile\.id\}/);
+ assert.match(settings,/NativePermissionsCenter userId=\{userId\}/);
 });
 
 test('Deep links accept only official Conecta hosts and UUID post identifiers',()=>{
