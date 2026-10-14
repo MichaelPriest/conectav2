@@ -24,7 +24,8 @@
     "test:age-policy-route": "node --test tests/age-policy-route.test.cjs",
     "test:age-signal-integrity": "node --test tests/age-signal-integrity.test.cjs",
     "test:identity-methods-ui": "node --test tests/identity-methods-ui.test.cjs",
-    "test:identity-start-paid-gate": "node --test tests/identity-start-paid-gate.test.cjs"
+    "test:identity-start-paid-gate": "node --test tests/identity-start-paid-gate.test.cjs",
+    "test:network-access": "node --test tests/conecta-id-network-access.test.cjs"
   },
   "dependencies": {
     "@huggingface/transformers": "3.8.1",
