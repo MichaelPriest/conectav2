@@ -37,7 +37,7 @@ export async function GET(request:NextRequest){
  steps.age=Boolean(decision.data&&trustedMethod(decision.data.method)&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
  if(!steps.identity)return NextResponse.json({networkAccess:false,reason:identity.data?.status==='approved'?'verification_expired':'identity_required',steps,message:'A identidade ainda não foi confirmada por uma fonte confiável. As pré-triagens gratuitas não liberam o acesso à rede.'},{headers});
  if(!steps.age)return NextResponse.json({networkAccess:false,reason:decision.data?'verification_expired':'age_verification_required',steps,message:'A faixa etária ainda não foi confirmada por uma credencial confiável. A autodeclaração, OCR, QR e prova de vida experimental não são suficientes.'},{headers});
- if(decision.data?.age_band!=='18_plus'){
+ if(age.data.declared_band!=='18_plus'||decision.data?.age_band!=='18_plus'){
   const {data:links,error:linksError}=await admin.from('conecta_guardian_links')
    .select('guardian_user_id').eq('child_user_id',context.user.id).eq('status','accepted');
   if(linksError)return fail(503,'Não foi possível confirmar o responsável. A conta continua bloqueada.');
