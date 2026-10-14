@@ -19,5 +19,5 @@ test('ads fail closed on feature flag, missing credentials, auth or database err
  assert.match(route,/if\(!url\|\|!publicKey\|\|!serviceKey\|\|!bearer\)return blocked\(\)/);
  assert.match(route,/if\(authError\|\|!user\)return blocked\(\)/);
  assert.match(route,/if\(error\|\|!data\)return blocked\(\)/);
- assert.match(route,/catch\{return blocked\(\)\}/);
+ assert.match(route,/catch\{return blocked\(\);\}/);
 });
