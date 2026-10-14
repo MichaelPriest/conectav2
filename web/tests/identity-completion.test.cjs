@@ -34,7 +34,8 @@ test('Teen statements and unexpected values fail closed',()=>{
  for(const band of ['13_15','16_17','under_13','unknown','invalid']){
   const x=completionResult(completionFromRecords(true,band));
   assert.equal(x.canFinishBasic,false);
-  assert.equal(x.next,null);
+  assert.equal(x.next,'/conexoes');
+  assert.equal(x.state,'teen_guardian_pending');
   assert.equal(x.identityVerified,false);
  }
 });
@@ -43,6 +44,19 @@ test('Registration completion endpoint is read-only and server checked',()=>{
  assert.match(route,/identityUserContext/);
  assert.match(route,/isTrustedIdentityOrigin/);
  assert.match(route,/registration_age_declarations/);
+ assert.match(route,/conecta_guardian_links/);
+ assert.match(route,/age_assurance_decisions/);
+ assert.match(route,/hasVerifiedGuardianAssociation/);
  assert.match(route,/profiles/);
  assert.doesNotMatch(route,/\.update\(|\.upsert\(|identity_verifications|\.insert\(/);
+});
+
+test('A minor with an accepted age-verified guardian remains protected until age assurance',()=>{
+ const x=completionResult(completionFromRecords(true,'13_15',true));
+ assert.equal(x.state,'teen_protection_pending');
+ assert.equal(x.canFinishBasic,false);
+ assert.equal(x.next,null);
+ assert.equal(x.identityVerified,false);
+ assert.equal(x.ageVerified,false);
+ assert.equal(x.grantsAdultPrivileges,false);
 });

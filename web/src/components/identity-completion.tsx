@@ -10,7 +10,7 @@ type Outcome={
  state:RegistrationCompletion;
  message:string;
  canFinishBasic:boolean;
- next:'/feed'|'/onboarding'|null;
+ next:'/feed'|'/onboarding'|'/conexoes'|null;
  identityVerified:false;
  ageVerified:false;
  grantsAdultPrivileges:false;
@@ -71,9 +71,10 @@ export function IdentityCompletion(){
      <ArrowRight size={18}/> {busy?'Verificando...':'Finalizar cadastro basico e entrar'}</button>:
     status.next==='/onboarding'?
     <Link href="/onboarding" className="btn btn-outline">Completar dados do cadastro <ArrowRight size={18}/></Link>:
+    status.next==='/conexoes'?
+    <Link href="/conexoes" className="btn btn-primary">Associar pai, mãe ou responsável <ArrowRight size={18}/></Link>:
     <p className="small-note"><ShieldAlert size={16} style={{verticalAlign:'middle'}}/>
-     A conta adolescente nao pode finalizar a liberacao das funcoes sociais sem afericao
-     de idade suficiente e, quando exigido, autorizacao de responsavel.</p>}
+     A conta de menor não pode concluir esta etapa sem associação aceita a um responsável com maioridade confirmada e sem as verificações etárias exigidas.</p>}
   </div>}
   <p className="small-note" style={{marginTop:12}}>
    <strong>Sem comprovacao oficial:</strong> nenhuma etapa desta tela concede selo,
