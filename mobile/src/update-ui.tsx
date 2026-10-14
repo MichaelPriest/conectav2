@@ -86,7 +86,11 @@ export function NativeVersionMonitor(){
    if(!manual&&notified.current===next.version)return;
    notified.current=next.version;
    setUpdate(next);setDownloaded(null);setProgress(0);
-   setVisible(true);setPhase('available');
+   setVisible(true);
+   if(Platform.OS==='android'&&!verifiedInAppDownload(next)){
+    setError('A versão '+next.version+' foi encontrada, mas ainda não possui SHA-256 verificável. O atualizador aguardará uma publicação íntegra para baixar e instalar dentro do Conecta.');
+    setPhase('error');
+   }else setPhase('available');
   }catch(e){
    if(manual&&alive.current){
     setError(e instanceof Error?e.message:'Não foi possível verificar atualizações.');
@@ -117,11 +121,16 @@ export function NativeVersionMonitor(){
  };
  const download=async()=>{
   if(!update||phase==='downloading'||phase==='installing')return;
-  if(update.channel==='ios'||!verifiedInAppDownload(update)){
+  if(update.channel==='ios'){
    try{await Linking.openURL(update.url);}catch{
     setError('Não foi possível abrir a publicação oficial do Conecta.');
     setPhase('error');
    }
+   return;
+  }
+  if(!verifiedInAppDownload(update)){
+   setError('A nova versão foi encontrada, mas ainda não possui SHA-256 verificável. Por segurança, o Conecta não abre um download externo nem instala um pacote sem validação. Tente novamente mais tarde.');
+   setPhase('error');
    return;
   }
   setProgress(0);setError('');setPhase('downloading');
@@ -226,18 +235,12 @@ export function NativeVersionMonitor(){
         O Android verificará a assinatura e solicitará sua confirmação.
        </Text>
       </View>}
-      {phase==='available'&&!direct&&update.channel==='android'&&
-       <Text style={{fontSize:13,color:t.dark,lineHeight:20,marginBottom:12}}>
-        Esta publicação ainda não possui SHA-256 verificável.
-        Por segurança, o download será aberto no GitHub.
-       </Text>}
-      {phase==='available'&&<Pressable accessibilityRole="button"
-       accessibilityLabel={direct?'Baixar APK dentro do Conecta':'Abrir versão oficial'}
+      {phase==='available'&&(direct||update.channel==='ios')&&<Pressable accessibilityRole="button"
+       accessibilityLabel={direct?'Baixar APK dentro do Conecta':'Abrir App Store'}
        onPress={()=>void download()}
        style={{backgroundColor:t.primary,borderRadius:14,padding:16,alignItems:'center'}}>
        <Text style={{fontSize:15,fontWeight:'900',color:'#FFF'}}>
-        {direct?'Baixar atualização no aplicativo':
-         update.channel==='ios'?'Abrir App Store':'Abrir no GitHub'}
+        {direct?'Baixar atualização no aplicativo':'Abrir App Store'}
        </Text>
       </Pressable>}
       {phase==='ready'&&<Pressable accessibilityRole="button"
