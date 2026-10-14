@@ -22,7 +22,7 @@ test('family relationships require the invited account to consent', () => {
   assert.match(route, /row\.addressee_id!==me/);
   assert.match(route, /row\.requested_by===me/);
   assert.match(route, /status:'accepted'/);
-  assert.match(ui, /Convite enviado/);
+  assert.match(ui, /setNotice\(payload\.message/);
   assert.match(ui, /Aceitar/);
   assert.match(migration, /both users must consent/i);
 });
