@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {UserPlus,Users,Search,UserCheck,UserX,MessageCircle} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {ProfileAvatar} from '@/components/profile-avatar';
+import {FamilyRelationships} from '@/components/family-relationships';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 
 type Connection={id:string;requester_id:string;addressee_id:string;status:string;created_at:string};
@@ -79,6 +80,7 @@ export default function Connections(){
           </div>
         </article>;
       })}</div>}
-   <p className="small-note">As Conexões são amizades aceitas pelas duas pessoas. A proteção para contas adolescentes será aplicada no banco antes da liberação pública dessa faixa etária.</p>
+   {auth.user&&<FamilyRelationships userId={auth.user.id}/>}
+   <p className="small-note">As Conexões são amizades aceitas pelas duas pessoas. Contas de menores permanecem protegidas e precisam de associação aceita a um responsável com maioridade confirmada.</p>
  </main></GuardedPage>;
 }
