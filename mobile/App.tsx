@@ -6,7 +6,6 @@ import {
 } from 'react-native';
 import {StatusBar} from 'expo-status-bar';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
-import {NavigationBar} from 'expo-navigation-bar';
 import * as NavigationBarApi from 'expo-navigation-bar';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -584,8 +583,6 @@ function FeedScreen({userId,profile,composeRequest,onOpenPost}:{
   }}>
    <SafeAreaProvider>
     <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
-     <StatusBar hidden={Platform.OS==='android'} style="dark"/>
-     {Platform.OS==='android'&&<NavigationBar hidden style="light"/>}
      <View style={[s.header,{paddingVertical:12}]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Fechar publicação"
        disabled={busy} onPress={()=>setComposerOpen(false)}
@@ -1331,8 +1328,6 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
    onRequestClose={()=>{if(!busy)setComposerOpen(false);}}>
    <SafeAreaProvider>
     <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
-     <StatusBar hidden={Platform.OS==='android'} style="dark"/>
-     {Platform.OS==='android'&&<NavigationBar hidden style="light"/>}
      <View style={s.header}>
       <Pressable accessibilityRole="button" accessibilityLabel="Fechar"
        disabled={busy} onPress={()=>setComposerOpen(false)}>
@@ -1498,8 +1493,6 @@ function CommunityScreen({userId,initialSlug,onCloseDetail}:{
     onRequestClose={()=>{if(!busy)setCreateOpen(false);}}>
     <SafeAreaProvider>
      <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
-      <StatusBar style="dark" hidden={Platform.OS==='android'}/>
-      {Platform.OS==='android'&&<NavigationBar hidden style="light"/>}
       <View style={s.header}>
        <Pressable accessibilityRole="button" accessibilityLabel="Cancelar criação"
         onPress={()=>setCreateOpen(false)} disabled={Boolean(busy)}>
@@ -1867,7 +1860,6 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
   <Modal visible={detailsOpen} animationType="slide"
    onRequestClose={()=>setDetailsOpen(false)}>
    <SafeAreaProvider><SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
-    <StatusBar hidden={Platform.OS==='android'} style="dark"/>
     <ProfileDetailsEditor userId={profile.id}
      onClose={()=>setDetailsOpen(false)}
      onSaved={()=>Alert.alert('Personalização salva','Os novos detalhes estão disponíveis no Conecta.')}/>
@@ -1876,7 +1868,6 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
   <Modal visible={permissionsOpen} animationType="slide"
    onRequestClose={()=>setPermissionsOpen(false)}>
    <SafeAreaProvider><SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
-    <StatusBar hidden={Platform.OS==='android'} style="dark"/>
     <NativePermissionsCenter userId={profile.id} onClose={()=>setPermissionsOpen(false)}/>
    </SafeAreaView></SafeAreaProvider>
   </Modal>
@@ -2028,6 +2019,13 @@ export default function App(){
    onOpenNotifications={openNativeNotifications}
    onOpenMessages={()=>{setViewPostId(null);setChatId(null);setTab('messages');}}/>}
   <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
+  {Platform.OS==='android'&&(!user||restricted||!profile)&&<Pressable accessibilityRole="button"
+   accessibilityLabel={fullscreen?'Sair da tela cheia':'Ativar tela cheia'}
+   onPress={()=>setFullscreen(value=>!value)}
+   style={{position:'absolute',top:6,right:12,zIndex:1000,padding:10,
+    borderRadius:14,backgroundColor:'#FFFFFF',elevation:5,borderWidth:1,borderColor:t.line}}>
+   {fullscreen?<Minimize2 size={20} color={t.dark}/>:<Maximize2 size={20} color={t.dark}/>}
+  </Pressable>}
   <StatusBar style="dark" hidden={Platform.OS==='android'&&fullscreen}/>
   {booting?<View style={{flex:1,justifyContent:'center'}}><Loading text="Preparando seu Conecta..."/></View>:
    !user?<SignIn onSignedIn={()=>void verify()}/>:
