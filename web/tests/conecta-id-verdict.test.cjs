@@ -101,3 +101,19 @@ test('does not emit CPF, birth date, raw document, or biometric payload fields',
   }
   visit(result);
 });
+
+
+test('requires an accepted, age-verified guardian account for every minor, including ages 16-17', () => {
+  const result = buildConectaIdVerdict({
+    evidenceVerified: true,
+    ageBand: '16-17',
+    method: 'documento_assinado',
+    originalsDeleted: true,
+    guardianAssociationAccepted: false,
+    guardianAgeVerified: false
+  });
+  assert.equal(result.status_validacao, 'pendente_responsavel');
+  assert.equal(result.politica_dados.vinculo_responsavel_obrigatorio, true);
+  assert.equal(result.politica_dados.conta_pode_ser_ativada, false);
+  assert.equal(result.politica_dados.protecoes_menor_obrigatorias, true);
+});
