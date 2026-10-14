@@ -21,6 +21,14 @@ test('Community owners and staff can open native moderation without bypassing se
  assert.doesNotMatch(ui,/service_role|SUPABASE_SECRET_KEY|admin\.from/);
 });
 
+test('Community administration paginates member and profile reads instead of silently truncating at 200',()=>{
+ const ui=read('src/community-moderation-ui.tsx');
+ assert.match(ui,/for\(let offset=0;;offset\+=200\)/);
+ assert.match(ui,/\.range\(offset,offset\+199\)/);
+ assert.match(ui,/if\(rows\.length<200\)break/);
+ assert.match(ui,/ids\.slice\(offset,offset\+200\)/);
+});
+
 test('Community owners can edit description and rules under the existing owner RLS policy',()=>{
  const app=read('App.tsx');
  assert.match(app,/community\.owner_id===userId&&<Action secondary label="Editar comunidade"/);
