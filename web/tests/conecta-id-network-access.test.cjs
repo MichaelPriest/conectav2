@@ -28,7 +28,7 @@ test('restrictive database policies enforce the gate beyond client-side navigati
  assert.match(migration,/iv\.status = 'approved'/);
  assert.match(migration,/gd\.age_band = '18_plus'/);
  assert.match(migration,/gl\.status = 'accepted'/);
- assert.match(migration,/as restrictive for all to authenticated/i);
+ assert.match(migration,/as restrictive for all to anon, authenticated/i);
  assert.match(migration,/create policy conecta_id_verified_profile_discovery/i);
  for(const table of ['posts','messages','friendships','conversations','stories','communities','notifications']){
   assert.ok(migration.includes("'"+table+"'"),'missing RLS gate for '+table);
