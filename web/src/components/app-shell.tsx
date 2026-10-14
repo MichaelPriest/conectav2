@@ -266,6 +266,8 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
     router.replace('/auth'); router.refresh();
   }
 
+  if(pathname==='/verificar-identidade') return <div className="identity-gate-shell">{children}</div>;
+
   return <ChatPresenceProvider userId={profile.id}><ChatCallsProvider userId={profile.id}><div className={"app-layout concept-app "+(sidebarCollapsed?"conecta-sidebar-collapsed ":"")+(pathname==="/verificar-identidade"?"conecta-id-gate-layout":"")}>
     <aside className={'sidebar ' + (mobileNav ? 'sidebar-open' : '')}>
       <div className="sidebar-top"><ConceptBrand href="/feed"/><button type="button" className="icon-btn conecta-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed?"Expandir menu lateral":"Recolher menu lateral"} title={sidebarCollapsed?"Expandir menu lateral":"Recolher menu lateral"} aria-expanded={!sidebarCollapsed}>{sidebarCollapsed?<PanelLeftOpen size={20}/>:<PanelLeftClose size={20}/>}</button><button className="icon-btn close-mobile" type="button" aria-label="Fechar navegação" onClick={() => setMobileNav(false)}><X size={20}/></button></div>
