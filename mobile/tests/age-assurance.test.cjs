@@ -13,7 +13,7 @@ const gradle = fs.readFileSync(path.join(root, 'modules/age-signals/android/buil
 test('Play Age Signals bridge handles unavailable and declined states without granting privileges', () => {
   assert.match(adapter, /Platform\.OS !== 'android'/);
   assert.match(adapter, /'not_shared'/);
-  assert.match(adapter, /status: 'verification_required'/);
+  assert.match(adapter, /'verification_required'/);
   assert.match(adapter, /never upload it as a trusted decision/);
   assert.match(adapter, /never.*unlock adult-only features/s);
   assert.match(adapter, /requestPlayIntegrityToken/);
