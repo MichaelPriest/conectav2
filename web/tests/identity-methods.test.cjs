@@ -34,3 +34,12 @@ test('gov.br signature integrity is not represented as gov.br login or official 
  assert.match(route,/Não equivale a autenticação gov\.br/);
  assert.match(route,/Nenhum método listado concede selo oficial/);
 });
+
+
+test('first release does not depend on Google Play age signals',()=>{
+ assert.match(route,/firstReleaseDistribution:'sideloaded-apk-and-web'/);
+ assert.match(route,/ageDecisionStatus:'pending'/);
+ assert.match(route,/id:'google-play-age-signals'/);
+ assert.match(route,/status:'deferred_first_release'/);
+ assert.match(route,/Não é requisito de cadastro/);
+});
