@@ -41,6 +41,8 @@ Until an evidence method with a documented trust basis can create a server-valid
 - **iOS / Apple:** Declared Age Range API is not required for the first release and must not be assumed to cover web or Android. It may be assessed if a later iOS release and entitlement are in scope: https://developer.apple.com/documentation/declaredagerange.
 - **Web and sideloaded Android:** no app-store signal is assumed. Use only a validated method with server-side provenance, account binding and replay protection, or retain the protected/unknown state.
 
+Ad eligibility now reads only the service-role-only `age_assurance_decisions` table and runs the central 60-day age policy; it no longer trusts the legacy `identity_verifications` table. Ads remain off unless the feature flag is explicitly enabled and the account has a recent server-authoritative adult decision. The migration is still unapplied, so this check must fail closed in validation until the schema is installed.
+
 The existing Play-specific routes, native module, migrations and tests are not evidence that the first-release path is complete. Native compilation, end-to-end tests, CI confirmation, migration application, and enforcement in every relevant feature API remain release gates.
 
 ## Non-negotiable age and identity rules
