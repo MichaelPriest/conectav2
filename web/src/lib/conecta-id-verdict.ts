@@ -41,8 +41,10 @@ export type ConectaIdVerdictInput = {
   method: ConectaIdMethod;
   /** True only after transient source files and biometric buffers are actually disposed. */
   originalsDeleted: boolean;
-  /** True only after the guardian account is authenticated and the relationship is verified. */
-  guardianAuthenticated: boolean;
+  /** True only after an accepted guardian link exists in server-authoritative storage. */
+  guardianAssociationAccepted: boolean;
+  /** True only when the linked guardian has a current trusted 18+ age decision. */
+  guardianAgeVerified: boolean;
 };
 
 /**
@@ -53,15 +55,16 @@ export type ConectaIdVerdictInput = {
 export function buildConectaIdVerdict(input: ConectaIdVerdictInput): ConectaIdVerdict {
   const hasTrustedResult = input.evidenceVerified && input.ageBand !== null &&
     input.method !== 'nenhum';
-  const under16 = input.ageBand === '0-12' || input.ageBand === '13-15';
-  const guardianRequired = hasTrustedResult && under16;
-  const guardianSatisfied = !guardianRequired || input.guardianAuthenticated;
+  const isMinor = input.ageBand !== null && input.ageBand !== '18+';
+  // All minors require an accepted guardian account; under-16 accounts remain pending until this is satisfied.
+  const guardianRequired = hasTrustedResult && isMinor;
+  const guardianSatisfied = !guardianRequired || (input.guardianAssociationAccepted && input.guardianAgeVerified);
   const privacySatisfied = input.originalsDeleted;
 
   let status: ConectaIdVerdict['status_validacao'] = 'falha';
   if (hasTrustedResult && privacySatisfied && guardianSatisfied) {
     status = 'sucesso';
-  } else if (hasTrustedResult && privacySatisfied && guardianRequired && !input.guardianAuthenticated) {
+  } else if (hasTrustedResult && privacySatisfied && guardianRequired && !guardianSatisfied) {
     status = 'pendente_responsavel';
   }
 
@@ -80,7 +83,7 @@ export function buildConectaIdVerdict(input: ConectaIdVerdictInput): ConectaIdVe
       rastreamento_comercial_permitido: false,
       publicidade_comportamental_permitida: false,
       protecoes_menor_obrigatorias: !verified || input.ageBand !== '18+',
-      vinculo_responsavel_obrigatorio: guardianRequired && !input.guardianAuthenticated,
+      vinculo_responsavel_obrigatorio: guardianRequired && !guardianSatisfied,
       conta_pode_ser_ativada: canActivate
     }
   };
