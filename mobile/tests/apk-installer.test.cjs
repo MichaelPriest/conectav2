@@ -72,7 +72,12 @@ test('Native installer uses a content URI, user confirmation, and downloaded dat
  assert.match(ui,/Instalar com o Android/);
  assert.match(ui,/Tamanho e SHA-256 conferidos/);
  assert.match(ui,/Verificando versões/);
- assert.match(ui,/Linking\.openURL\(update\.url\)/);
+ assert.match(ui,/Linking\.openURL\(update\.url\)/,
+  'iOS store updates may open the App Store; sideloaded Android updates stay in-app');
+ assert.match(ui,/if\(!verifiedInAppDownload\(update\)\)/);
+ assert.match(ui,/não abre um download externo nem instala um pacote sem validação/i);
+ assert.doesNotMatch(ui,/Por segurança, o download será aberto no GitHub/);
+ assert.match(ui,/Baixar atualização no aplicativo/);
  assert.match(ui,/checkForNativeUpdate\(\)/);
  assert.ok(config.android.permissions.includes('android.permission.REQUEST_INSTALL_PACKAGES'));
 });
@@ -92,8 +97,12 @@ test('Google Play builds never request restricted APK install permission',()=>{
  const neutral=JSON.parse(read('app.json')).expo;
  assert.ok(!neutral.android.permissions?.includes('android.permission.REQUEST_INSTALL_PACKAGES'));
  const eas=JSON.parse(read('eas.json'));
- assert.equal(eas.build.production.env.EXPO_PUBLIC_CONECTA_DISTRIBUTION,'play');
+ assert.equal(eas.build.production.env.EXPO_PUBLIC_CONECTA_DISTRIBUTION,'sideload',
+  'The first release is sideloaded; the production-named EAS profile must not assume Play Store');
+ assert.equal(eas.build.production.distribution,'internal');
+ assert.equal(eas.build.production.android.buildType,'apk');
  assert.equal(eas.build.preview.env.EXPO_PUBLIC_CONECTA_DISTRIBUTION,'sideload');
+ assert.equal(eas.build.preview.android.buildType,'apk');
 });
 
 test('Public Alpha release notes unlock checksum-protected in-app upgrades even without API digest',()=>{
