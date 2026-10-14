@@ -34,7 +34,7 @@ test('Teen statements and unexpected values fail closed',()=>{
  for(const band of ['13_15','16_17','under_13','unknown','invalid']){
   const x=completionResult(completionFromRecords(true,band));
   assert.equal(x.canFinishBasic,false);
-  assert.equal(x.next,'/conexoes');
+  assert.equal(x.next,null);
   assert.equal(x.state,'teen_guardian_pending');
   assert.equal(x.identityVerified,false);
  }
