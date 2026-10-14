@@ -49,7 +49,7 @@ test('native bridge uses the current two-step access and signal request flow', (
   assert.match(native, /setRequestHash\(requestHash\)/);
   assert.match(gradle, /com\.google\.android\.play:integrity:1\.5\.0/);
   assert.match(gradle, /com\.google\.android\.play:age-signals:0\.0\.4/);
-  assert.match(moduleGradle, /versionName [\"']1\\.0\\.0[\"']/,
+  assert.ok(moduleGradle.includes('versionName "1.0.0"'),
     'Expo Android module must define versionName so the sideload APK can build');
   assert.doesNotMatch(native, /installId\(\)/);
 });
