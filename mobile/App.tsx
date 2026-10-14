@@ -1,12 +1,12 @@
 import React,{useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {
- Alert,AppState,FlatList,Image,KeyboardAvoidingView,Linking,Modal,Platform,Pressable,Share,
+ Alert,AppState,BackHandler,FlatList,Image,KeyboardAvoidingView,Linking,Modal,Platform,Pressable,Share,
  RefreshControl,ScrollView,StatusBar as NativeStatusBar,
  StyleSheet,Text,TextInput,useWindowDimensions,View
 } from 'react-native';
 import {StatusBar} from 'expo-status-bar';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
-import {NavigationBar} from 'expo-navigation-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {User} from '@supabase/supabase-js';
@@ -52,7 +52,7 @@ import type {PinnedChatMessage} from './src/chat-groups';
 import {
  Bell,BellOff,BarChart3,Bookmark,Camera,Clapperboard,Compass,Heart,ImagePlus,MessageCircle,
  MoreHorizontal,Plus,Search,Send,ShieldCheck,Sparkles,UsersRound,Phone,Video,
- X,Globe2,LockKeyhole,UserRound,ChevronRight,ChevronLeft,Pencil,Share2,HeartHandshake,Trash2,Pin,Settings2
+ X,Globe2,LockKeyhole,UserRound,ChevronRight,ChevronLeft,ArrowLeft,Maximize2,Minimize2,Pencil,Share2,HeartHandshake,Trash2,Pin,Settings2
 } from 'lucide-react-native';
 import {BottomNavigation,Brand,FeedTabs,GradientPanel,RoundIcon,
  SectionEyebrow,SectionHeader} from './src/design';
@@ -1873,6 +1873,7 @@ export default function App(){
  const [restricted,setRestricted]=useState<'onboarding'|'age-check'|null>(null);
  const [booting,setBooting]=useState(true),[error,setError]=useState('');
  const [tab,setTab]=useState<Tab>('feed');
+ const [fullscreen,setFullscreen]=useState(Platform.OS==='android');
  const [chatId,setChatId]=useState<string|null>(null);
  const [viewPostId,setViewPostId]=useState<string|null>(null);
  useEffect(()=>{
@@ -1926,6 +1927,13 @@ export default function App(){
   return()=>{subscription.unsubscribe();app.remove();};
  },[verify]);
  useEffect(()=>{
+  if(Platform.OS!=='android')return;
+  void NavigationBar.setBehaviorAsync('overlay-swipe').catch(()=>{});
+  void NavigationBar.setButtonStyleAsync('dark').catch(()=>{});
+  void NavigationBar.setVisibilityAsync(fullscreen?'hidden':'visible').catch(()=>{});
+  return()=>{void NavigationBar.setVisibilityAsync('visible').catch(()=>{});};
+ },[fullscreen]);
+ useEffect(()=>{
   if(!user||restricted){setUnreadCount(0);return;}
   const id=user.id;
   void refreshUnread(id);
@@ -1944,6 +1952,23 @@ export default function App(){
   setUnreadCount(0);setUser(null);setProfile(null);setRestricted(null);
  };
  const openConversation=(id:string)=>{setChatId(id);setTab('messages');};
+ const canGoBack=Boolean(viewPostId||chatId||communitySlugRoute||contactsMode||tab!=='feed');
+ const goBack=useCallback(()=>{
+  if(viewPostId){setViewPostId(null);return;}
+  if(chatId){setChatId(null);return;}
+  if(communitySlugRoute){setCommunitySlugRoute(null);return;}
+  if(contactsMode){setContactsMode(false);return;}
+  if(tab!=='feed'){setTab('feed');return;}
+ },[viewPostId,chatId,communitySlugRoute,contactsMode,tab]);
+ useEffect(()=>{
+  if(Platform.OS!=='android')return;
+  const subscription=BackHandler.addEventListener('hardwareBackPress',()=>{
+   if(canGoBack){goBack();return true;}
+   if(fullscreen){setFullscreen(false);return true;}
+   return false;
+  });
+  return()=>subscription.remove();
+ },[canGoBack,goBack,fullscreen]);
  const navigate=(key:string)=>{
   setViewPostId(null);
   if(key==='connections')setContactsMode(false);
@@ -1984,8 +2009,7 @@ export default function App(){
    onOpenNotifications={openNativeNotifications}
    onOpenMessages={()=>{setViewPostId(null);setChatId(null);setTab('messages');}}/>}
   <SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
-  <StatusBar style="dark" hidden={Platform.OS==='android'}/>
-  {Platform.OS==='android'&&<NavigationBar hidden style="light"/>}
+  <StatusBar style="dark" hidden={Platform.OS==='android'&&fullscreen}/>
   {booting?<View style={{flex:1,justifyContent:'center'}}><Loading text="Preparando seu Conecta..."/></View>:
    !user?<SignIn onSignedIn={()=>void verify()}/>:
    restricted?<Restricted status={restricted}
@@ -1997,8 +2021,10 @@ export default function App(){
    </View>:
    <>
     <View style={[s.header,{paddingVertical:10,gap:9}]}>
+     {canGoBack&&<RoundIcon compact={compactHeader} Icon={ArrowLeft} label="Voltar à tela anterior"
+      onPress={goBack}/>}
      <Pressable accessibilityRole="button" accessibilityLabel="Ir para o início"
-      onPress={()=>navigate('feed')} style={{flexShrink:1}}>
+      onPress={()=>navigate('feed')} style={{flexShrink:1,flex:1}}>
       <Brand compact/>
      </Pressable>
      <View style={[s.row,{gap:compactHeader?4:7,flexShrink:0}]}>
@@ -2011,8 +2037,12 @@ export default function App(){
       <RoundIcon compact={compactHeader} Icon={MoreHorizontal} label="Mais opções"
        onPress={()=>Alert.alert('Mais opções','Escolha uma área do Conecta.',[
         {text:'Reels',onPress:()=>navigate('reels')},
+        {text:fullscreen?'Sair da tela cheia':'Ativar tela cheia',onPress:()=>setFullscreen(value=>!value)},
         {text:'Cancelar',style:'cancel'}
        ])} active={tab==='reels'}/>
+      <RoundIcon compact={compactHeader} Icon={fullscreen?Minimize2:Maximize2}
+       label={fullscreen?'Sair da tela cheia':'Ativar tela cheia'}
+       onPress={()=>setFullscreen(value=>!value)}/>
      </View>
     </View>
     {render()}
