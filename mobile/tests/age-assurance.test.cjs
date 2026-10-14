@@ -37,18 +37,14 @@ test('first sideloaded release does not expose a Play-only age flow in the profi
   assert.match(adapter, /never.*unlock adult-only features/s);
 });
 
-test('native bridge uses the current two-step access and signal request flow', () => {
-  assert.match(native, /requestAgeSignalsAccess/);
-  assert.match(native, /AgeSignalsStatus\.SHARED/);
-  assert.match(native, /AgeSignalsStatus\.NOT_SHARED/);
-  assert.match(native, /AgeSignalsStatus\.VERIFICATION_REQUIRED/);
-  assert.match(native, /checkAgeSignals/);
-  assert.match(native, /userStatus\(\)/);
-  assert.match(native, /mostRecentApprovalDate\(\)/);
-  assert.match(native, /requestIntegrityToken/);
-  assert.match(native, /setRequestHash\(requestHash\)/);
-  assert.match(gradle, /com\.google\.android\.play:integrity:1\.5\.0/);
-  assert.match(gradle, /com\.google\.android\.play:age-signals:0\.0\.4/);
+test('native bridge explicitly defers Play-only APIs for the sideload first release', () => {
+  assert.match(native, /deferred_first_release/);
+  assert.match(native, /google_play_services_not_used_for_sideload/);
+  assert.match(native, /google_play_age_signals_not_used_for_sideload/);
+  assert.match(native, /AsyncFunction\("requestIntegrityToken"\)/);
+  assert.match(native, /AsyncFunction\("requestAgeSignals"\)/);
+  assert.doesNotMatch(native, /AgeSignalsManagerFactory|StandardIntegrityManagerFactory/);
+  assert.doesNotMatch(native, /integrityToken" to response\.token/);
   assert.ok(moduleGradle.includes('versionName "1.0.0"'),
     'Expo Android module must define versionName so the sideload APK can build');
   assert.doesNotMatch(native, /installId\(\)/);
