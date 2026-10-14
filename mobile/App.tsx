@@ -41,7 +41,6 @@ import {useNativeChatTyping} from './src/chat-typing';
 import {useNativeChatPresence} from './src/chat-presence';
 import {ExploreScreen} from './src/explore-ui';
 import {ProfileDetailsEditor} from './src/profile-details-ui';
-import {NativePermissionsCenter} from './src/permissions-ui';
 import {NativeForegroundNotificationBridge} from './src/native-notifications';
 import {unregisterRemotePush} from './src/remote-push';
 import {MediaGallery} from './src/media-gallery';
@@ -61,7 +60,7 @@ import {BottomNavigation,Brand,FeedTabs,GradientPanel,RoundIcon,
 
 import type {SelectedMedia} from './src/media';
 
-type Tab='feed'|'reels'|'connections'|'messages'|'communities'|'notifications'|'profile'|'support';
+type Tab='feed'|'reels'|'connections'|'messages'|'communities'|'notifications'|'profile'|'support'|'settings';
 const noticeNames:Record<string,string>={
  like:'curtiu sua publicação',comment:'comentou sua publicação',
  friend_request:'enviou um convite',friend_accept:'aceitou sua conexão',
@@ -1720,13 +1719,12 @@ function NotificationsScreen({userId,onRead,onPost,onConnections}:{
   ListEmptyComponent={!loading?<View style={s.empty}><Text style={s.muted}>Tudo em dia por aqui.</Text></View>:<Loading/>}/>;
 }
 
-function ProfileScreen({profile,onUpdate,onLogout}:{
- profile:Profile;onUpdate:(p:Profile)=>void;onLogout:()=>void
+function ProfileScreen({profile,onUpdate}:{
+ profile:Profile;onUpdate:(p:Profile)=>void
 }){
  const [name,setName]=useState(profile.display_name),[bio,setBio]=useState(profile.bio||'');
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  const [detailsOpen,setDetailsOpen]=useState(false);
- const [permissionsOpen,setPermissionsOpen]=useState(false);
  const [ownPosts,setOwnPosts]=useState<Post[]>([]);
  const [ownLiked,setOwnLiked]=useState<Set<string>>(new Set());
  const [ownSaved,setOwnSaved]=useState<Set<string>>(new Set());
@@ -1880,23 +1878,12 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
     onPress={()=>{void loadPosts(ownPosts.length).catch(e=>setPostError(errorMessage(e)));}}/>
   </View>}
   <View style={s.card}>
-   <Text style={[s.primaryText,{marginBottom:10}]}>Minha conta</Text>
+   <Text style={[s.primaryText,{marginBottom:8}]}>Personalização do perfil</Text>
+   <Text style={[s.muted,{marginBottom:10}]}>
+    Temas, música e detalhes visuais fazem parte do seu espaço pessoal.
+   </Text>
    <Action secondary label="Personalizar perfil, temas e música"
     leading={<Pencil size={16} color={t.primary}/>} onPress={()=>setDetailsOpen(true)}/>
-   <View style={{height:8}}/>
-   <Action secondary label="Permissões e privacidade"
-    leading={<ShieldCheck size={16} color={t.primary}/>} onPress={()=>setPermissionsOpen(true)}/>
-   <View style={{height:8}}/>
-   <Action secondary label="Abrir perfil no site ↗" onPress={()=>void openOfficial('/perfil')}/>
-   <View style={{height:8}}/>
-   <Action secondary label="Privacidade e segurança ↗" onPress={()=>void openOfficial('/perfil')}/>
-   <View style={{height:8}}/>
-   <Action secondary label="Verificar atualizações do aplicativo"
-    onPress={()=>void checkVersionManually()}/>
-   <Text style={[s.muted,{marginTop:5,marginBottom:8}]}>
-    Versões Android são publicadas pelo canal oficial do Conecta.
-   </Text>
-   <Action secondary label="Sair deste dispositivo" onPress={onLogout}/>
   </View>
   <Modal visible={detailsOpen} animationType="slide"
    onRequestClose={()=>setDetailsOpen(false)}>
@@ -1904,12 +1891,6 @@ function ProfileScreen({profile,onUpdate,onLogout}:{
     <ProfileDetailsEditor userId={profile.id}
      onClose={()=>setDetailsOpen(false)}
      onSaved={()=>Alert.alert('Personalização salva','Os novos detalhes estão disponíveis no Conecta.')}/>
-   </SafeAreaView></SafeAreaProvider>
-  </Modal>
-  <Modal visible={permissionsOpen} animationType="slide"
-   onRequestClose={()=>setPermissionsOpen(false)}>
-   <SafeAreaProvider><SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
-    <NativePermissionsCenter userId={profile.id} onClose={()=>setPermissionsOpen(false)}/>
    </SafeAreaView></SafeAreaProvider>
   </Modal>
  </ScrollView>;
@@ -2025,7 +2006,7 @@ export default function App(){
    return;
   }
   if(key==='feed'||key==='connections'||key==='communities'||
-     key==='profile'||key==='messages'||key==='reels'||key==='notifications'||key==='support'){
+     key==='profile'||key==='messages'||key==='reels'||key==='notifications'||key==='support'||key==='settings'){
    setChatId(null);setTab(key);
   }
  };
@@ -2050,7 +2031,9 @@ export default function App(){
   if(tab==='support')return <SupportScreen
    onCommunity={()=>{setCommunitySlugRoute('maes-atipicas-rede-apoio');setTab('communities');}}
    onConnections={()=>{setContactsMode(false);setTab('connections');}}/>;
-  return <ProfileScreen profile={profile} onUpdate={setProfile} onLogout={()=>void logout()}/>;
+  if(tab==='settings')return <SettingsScreen profile={profile} userId={user.id}
+   onBack={()=>setTab('profile')} onLogout={()=>void logout()}/>;
+  return <ProfileScreen profile={profile} onUpdate={setProfile}/>;
  };
  return <SafeAreaProvider>
   <NativeCallsProvider userId={user&&!restricted?user.id:null}>
@@ -2095,6 +2078,7 @@ export default function App(){
        onPress={()=>Alert.alert('Mais opções','Escolha uma área do Conecta.',[
         {text:'Reels',onPress:()=>navigate('reels')},
         {text:'Acolhimento e mães atípicas',onPress:()=>navigate('support')},
+        {text:'Configurações',onPress:()=>navigate('settings')},
         {text:fullscreen?'Sair da tela cheia':'Ativar tela cheia',onPress:()=>setFullscreen(value=>!value)},
         {text:'Cancelar',style:'cancel'}
        ])} active={tab==='reels'}/>
