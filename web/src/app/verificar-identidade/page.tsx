@@ -111,7 +111,7 @@ export default function IdentityPage(){
   const paidProviderReady=providerMethod?.status==='ready_with_cost_disclosure' && Boolean(providerMethod.priceDisplay?.trim());
   const available=result?.configured===true && paidProviderReady;
   return <GuardedPage {...auth}><main className="section-page" style={{maxWidth:850}}>
-    <Link href="/perfil" className="rail-link"><ArrowLeft size={16}/> Voltar ao perfil</Link>
+    <Link href="/" className="rail-link"><ArrowLeft size={16}/> Voltar ao site público</Link>
     <div className="page-heading" style={{marginTop:24}}><div>
       <span className="section-eyebrow">CONECTA ID · VALIDAÇÃO DOCUMENTAL</span>
       <h1>Identidade e idade <span className="wave">✳</span></h1>
