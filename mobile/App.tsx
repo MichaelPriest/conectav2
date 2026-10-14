@@ -1140,8 +1140,7 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
   let live=true;
   if(community.owner_id===userId){setCanManage(true);return()=>{live=false;};}
   void supabase.from('community_staff').select('user_id').eq('community_id',community.id)
-   .eq('user_id',userId).maybeSingle().then(({data})=>{if(live)setCanManage(Boolean(data));})
-   .catch(()=>{if(live)setCanManage(false);});
+   .eq('user_id',userId).maybeSingle().then(({data})=>{if(live)setCanManage(Boolean(data));},()=>{if(live)setCanManage(false);});
   return()=>{live=false;};
  },[community.id,community.owner_id,userId]);
  const [posts,setPosts]=useState<Post[]>([]);
