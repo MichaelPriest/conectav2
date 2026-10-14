@@ -49,6 +49,7 @@ import {MediaGallery} from './src/media-gallery';
 import {LinkedMediaPreview} from './src/link-media-ui';
 import {NativeCallsProvider,useNativeCalls} from './src/native-calls';
 import {SupportScreen} from './src/support-ui';
+import {CommunityModerationScreen} from './src/community-moderation-ui';
 import {parseConectaLink} from './src/deep-link';
 import type {PinnedChatMessage} from './src/chat-groups';
 import {
@@ -1133,6 +1134,16 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
  community:Community;userId:string;member:boolean;
  onMembership:()=>Promise<void>;onBack:()=>void;
 }){
+ const [moderationOpen,setModerationOpen]=useState(false);
+ const [canManage,setCanManage]=useState(community.owner_id===userId);
+ useEffect(()=>{
+  let live=true;
+  if(community.owner_id===userId){setCanManage(true);return()=>{live=false;};}
+  void supabase.from('community_staff').select('user_id').eq('community_id',community.id)
+   .eq('user_id',userId).maybeSingle().then(({data})=>{if(live)setCanManage(Boolean(data));})
+   .catch(()=>{if(live)setCanManage(false);});
+  return()=>{live=false;};
+ },[community.id,community.owner_id,userId]);
  const [posts,setPosts]=useState<Post[]>([]);
  const [liked,setLiked]=useState<Set<string>>(new Set());
  const [saved,setSaved]=useState<Set<string>>(new Set());
@@ -1276,6 +1287,9 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
      {member&&<Action label="Publicar"
       leading={<Plus size={17} color="#FFF"/>}
       onPress={()=>setComposerOpen(true)}/>}
+     {canManage&&<Action secondary label="Administrar"
+      leading={<ShieldCheck size={16} color={t.primary}/>}
+      onPress={()=>setModerationOpen(true)}/>}
     </View>
     {rulesOpen&&!!community.rules&&<View style={{backgroundColor:t.bg,
      padding:13,borderRadius:13,marginTop:13,borderWidth:1,borderColor:t.line}}>
@@ -1379,7 +1393,7 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
    </SafeAreaProvider>
   </Modal>
  </View>;
- return <FlatList style={s.screen} data={visible} keyExtractor={p=>p.id}
+ return <><FlatList style={s.screen} data={visible} keyExtractor={p=>p.id}
   refreshControl={<RefreshControl refreshing={loading} onRefresh={()=>void refresh()}/>}
   ListHeaderComponent={banner}
   renderItem={({item})=><PostCard post={item} userId={userId}
@@ -1398,7 +1412,10 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
    void load(posts.length).catch(e=>setError(errorMessage(e)))
     .finally(()=>setLoadingMore(false));
   }}
-  ListFooterComponent={loadingMore?<Loading/>:<View style={{height:20}}/>}/>;
+  ListFooterComponent={loadingMore?<Loading/>:<View style={{height:20}}/>}/>
+  {moderationOpen&&<CommunityModerationScreen community={community} userId={userId}
+   onClose={()=>setModerationOpen(false)}/>}
+ </>;
 }
 
 function CommunityScreen({userId,initialSlug,onCloseDetail}:{
