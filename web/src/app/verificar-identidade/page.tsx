@@ -10,9 +10,11 @@ import {LegacyRgScanner} from '@/components/legacy-rg-scanner';
 import {GovBrSignatureFlow} from '@/components/govbr-signature-flow';
 import {IdentityCompletion} from '@/components/identity-completion';
 import {IdentityMethodsPanel} from '@/components/identity-methods-panel';
+import {FamilyRelationships} from '@/components/family-relationships';
 
 type MethodItem={id:string;label:string;cost:string;status:string;verifiesIdentity:boolean;verifiesAge:boolean;details:string;priceDisplay?:string};
 type MethodsResult={methods?:MethodItem[];notice?:string};
+type AccessResult={networkAccess?:boolean;reason?:string;message?:string;steps?:{profile:boolean;ageDeclaration:boolean;identity:boolean;age:boolean;guardian:boolean}};
 
 type Result={
   configured?:boolean;
@@ -37,6 +39,7 @@ export default function IdentityPage(){
   const auth=useAuthProfile();
   const [result,setResult]=useState<Result|null>(null);
   const [methods,setMethods]=useState<MethodsResult|null>(null);
+  const [access,setAccess]=useState<AccessResult|null>(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [declaredBand,setDeclaredBand]=useState<string|null>(null);
@@ -59,8 +62,13 @@ export default function IdentityPage(){
       const data=(await response.json()) as Result;
       if(!response.ok)throw new Error(data.error||'Não foi possível consultar a verificação.');
       setResult(data);
-      const methodsResponse=await fetch('/api/identity/methods',{headers:{Authorization:'Bearer '+jwt},cache:'no-store'});
+      const [methodsResponse,accessResponse]=await Promise.all([
+        fetch('/api/identity/methods',{headers:{Authorization:'Bearer '+jwt},cache:'no-store'}),
+        fetch('/api/identity/access',{headers:{Authorization:'Bearer '+jwt},cache:'no-store'})
+      ]);
       if(methodsResponse.ok)setMethods((await methodsResponse.json()) as MethodsResult);
+      if(accessResponse.ok)setAccess((await accessResponse.json()) as AccessResult);
+      else setAccess({networkAccess:false,reason:'verification_unavailable',message:'Não foi possível confirmar a verificação. O acesso continua bloqueado.'});
     }catch(err){setError(err instanceof Error?err.message:'Erro de conexão.');}
     finally{setBusy(false);}
   },[auth.user,token]);
@@ -120,12 +128,19 @@ export default function IdentityPage(){
       <p><strong>3. Assinatura:</strong> declaração individual assinada no gov.br, com conferência técnica do PDF e consulta ao VALIDAR.</p>
       <p><strong>4. Decisão:</strong> a confirmação de identidade e idade depende de verificação confiável da titularidade e situação documental.
          Para menores, também é necessário verificar o vínculo do responsável.</p>
-      {declaredBand==='18_plus'&&<div style={{margin:'16px 0'}}>
-        <Link className="btn btn-primary" href="/feed">Continuar para o Conecta (conta não verificada)</Link>
-        <p className="small-note">O acesso básico de contas adultas autodeclaradas não significa que a identidade ou a idade tenham sido oficialmente confirmadas.</p>
-      </div>}
-      {declaredBand&&declaredBand!=='18_plus'&&
-        <p className="form-error" role="status">A conta permanece protegida e sem publicação ou mensagens até termos um processo confiável de verificação de idade e responsável.</p>}
+      <div style={{margin:'16px 0'}}>
+        <p className={access?.networkAccess?'form-success':'form-error'} role="status">
+          <LockKeyhole size={16} style={{verticalAlign:'middle'}}/> <strong>{access?.networkAccess?'Conecta ID aprovado — acesso liberado':'Acesso à rede bloqueado até concluir o Conecta ID'}</strong>
+        </p>
+        <p>{access?.message||'Consultando no servidor a aprovação de identidade, idade e, quando aplicável, responsável.'}</p>
+        <ol style={{paddingLeft:22,lineHeight:1.8}}>
+          <li>{access?.steps?.profile?'✓':'○'} Perfil cadastrado</li>
+          <li>{access?.steps?.ageDeclaration?'✓':'○'} Faixa etária declarada (não é prova de idade)</li>
+          <li>{access?.steps?.identity?'✓':'○'} Identidade aprovada por fonte confiável</li>
+          <li>{access?.steps?.age?'✓':'○'} Idade confirmada por credencial confiável</li>
+          {declaredBand!=='18_plus'&&<li>{access?.steps?.guardian?'✓':'○'} Responsável com identidade e maioridade confirmadas</li>}
+        </ol>
+      </div>
       <p className="small-note">Nenhum teste local, PDF com assinatura íntegra ou data declarada cria automaticamente um selo de conta verificada ou habilita recursos exclusivos para adultos.</p>
     </section>
     <section className="panel conecta-id-official" style={{marginBottom:20}}>
@@ -153,6 +168,7 @@ export default function IdentityPage(){
         Esta etapa, mesmo concluída no aplicativo oficial, não gera selo de identidade nem
         comprovação de maioridade dentro da nossa rede. Nunca informe sua senha gov.br ao Conecta.</p>
     </section>
+    {auth.user&&<FamilyRelationships userId={auth.user.id}/>}
     <IdentityMethodsPanel methods={methods?.methods||[]} notice={methods?.notice||"Os métodos gratuitos são pré-triagens e não aprovam identidade nem idade."}/>
     <section className="panel">
       <div className="feed-title"><h2>Status da verificação integrada ao Conecta</h2><button className="btn btn-outline" type="button" onClick={refresh} disabled={busy}><RefreshCw size={16}/> Atualizar</button></div>
