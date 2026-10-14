@@ -13,6 +13,7 @@ type Staff={user_id:string;role:string};
 type Report={id:string;post_id:string;reason:string;created_at:string};
 
 export function CommunityModerationScreen({community,userId,onClose}:{community:Community;userId:string;onClose:()=>void}){
+ const [owner,setOwner]=useState(community.owner_id===userId);
  const [admin,setAdmin]=useState(community.owner_id===userId);
  const [authorized,setAuthorized]=useState(community.owner_id===userId);
  const [mode,setMode]=useState<'automatic'|'all'>('automatic');
@@ -33,7 +34,7 @@ export function CommunityModerationScreen({community,userId,onClose}:{community:
    const roles=(team||[]) as Staff[];
    const isAdmin=own||roles.some(person=>person.user_id===userId&&person.role==='admin');
    const isMod=isAdmin||roles.some(person=>person.user_id===userId);
-   setAdmin(isAdmin);setAuthorized(isMod);setStaff(roles);
+   setOwner(own);setAdmin(isAdmin);setAuthorized(isMod);setStaff(roles);
    if(!isMod){setQueue([]);setMembers([]);setReports([]);setLoading(false);return;}
    const [settings,posts,complaints,part]=await Promise.all([
     supabase.from('community_settings').select('review_mode,blocked_terms').eq('community_id',community.id).maybeSingle(),
