@@ -29,8 +29,11 @@ export type AgeAssurancePolicy = {
   reason: 'verified_minor' | 'verified_adult' | 'missing_or_untrusted_age_signal';
 };
 
+// The current Play Age Signals integration cannot independently authenticate
+// the age-result fields on the server. Do not trust rows written under that
+// method, including historical rows, until a server-verifiable attestation
+// flow exists. Keep only independently verified credentials/provider callbacks.
 const trustedSources = new Set<TrustedAgeSource>([
-  'verified_platform_age_signal',
   'verified_age_credential',
   'authorized_provider_callback'
 ]);
