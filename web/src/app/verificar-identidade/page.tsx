@@ -9,6 +9,10 @@ import {CinQrScanner} from '@/components/cin-qr-scanner';
 import {LegacyRgScanner} from '@/components/legacy-rg-scanner';
 import {GovBrSignatureFlow} from '@/components/govbr-signature-flow';
 import {IdentityCompletion} from '@/components/identity-completion';
+import {IdentityMethodsPanel} from '@/components/identity-methods-panel';
+
+type MethodItem={id:string;label:string;cost:string;status:string;verifiesIdentity:boolean;verifiesAge:boolean;details:string;priceDisplay?:string};
+type MethodsResult={methods?:MethodItem[];notice?:string};
 
 type Result={
   configured?:boolean;
@@ -32,6 +36,7 @@ const labels:Record<string,string>={
 export default function IdentityPage(){
   const auth=useAuthProfile();
   const [result,setResult]=useState<Result|null>(null);
+  const [methods,setMethods]=useState<MethodsResult|null>(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [declaredBand,setDeclaredBand]=useState<string|null>(null);
@@ -54,6 +59,8 @@ export default function IdentityPage(){
       const data=(await response.json()) as Result;
       if(!response.ok)throw new Error(data.error||'Não foi possível consultar a verificação.');
       setResult(data);
+      const methodsResponse=await fetch('/api/identity/methods',{headers:{Authorization:'Bearer '+jwt},cache:'no-store'});
+      if(methodsResponse.ok)setMethods((await methodsResponse.json()) as MethodsResult);
     }catch(err){setError(err instanceof Error?err.message:'Erro de conexão.');}
     finally{setBusy(false);}
   },[auth.user,token]);
@@ -92,7 +99,9 @@ export default function IdentityPage(){
     }finally{setBusy(false);}
   }
 
-  const available=result?.configured===true;
+  const providerMethod=methods?.methods?.find(method=>method.id==='external-identity-provider');
+  const paidProviderReady=providerMethod?.status==='ready_with_cost_disclosure' && Boolean(providerMethod.priceDisplay?.trim());
+  const available=result?.configured===true && paidProviderReady;
   return <GuardedPage {...auth}><main className="section-page" style={{maxWidth:850}}>
     <Link href="/perfil" className="rail-link"><ArrowLeft size={16}/> Voltar ao perfil</Link>
     <div className="page-heading" style={{marginTop:24}}><div>
@@ -144,13 +153,14 @@ export default function IdentityPage(){
         Esta etapa, mesmo concluída no aplicativo oficial, não gera selo de identidade nem
         comprovação de maioridade dentro da nossa rede. Nunca informe sua senha gov.br ao Conecta.</p>
     </section>
+    <IdentityMethodsPanel methods={methods?.methods||[]} notice={methods?.notice||"Os métodos gratuitos são pré-triagens e não aprovam identidade nem idade."}/>
     <section className="panel">
       <div className="feed-title"><h2>Status da verificação integrada ao Conecta</h2><button className="btn btn-outline" type="button" onClick={refresh} disabled={busy}><RefreshCw size={16}/> Atualizar</button></div>
       <p><strong>{labels[result?.status||'']||'Consultando...'}</strong></p>
       {result?.status==='approved'&&<p className="form-success"><CheckCircle2 size={17} style={{verticalAlign:'middle'}}/> Identidade confirmada. A aferição de idade é um procedimento separado.</p>}
       {result?.age_band==='unknown'&&<p className="small-note">Faixa etária: ainda não certificada pelo provedor.</p>}
       {result?.guardian_status==='pending'&&<p className="small-note">A vinculação de responsável, se aplicável, ainda depende de verificação.</p>}
-      {!available&&result&&<p className="form-error"><LockKeyhole size={15} style={{verticalAlign:'middle'}}/> O Conecta ainda não tem integração autorizada que receba uma aprovação oficial de identidade ou idade. A consulta gratuita acima é externa e não atualiza este status.</p>}
+      {!available&&result&&<p className="form-error"><LockKeyhole size={15} style={{verticalAlign:'middle'}}/> {result.configured===true&&!paidProviderReady?'O provedor pago está bloqueado até haver preço real por tentativa, divulgação explícita e confirmação do custo. Nenhuma cobrança será iniciada sem isso.':'O Conecta ainda não tem integração autorizada que receba uma aprovação oficial de identidade ou idade. A consulta gratuita acima é externa e não atualiza este status.'}</p>}
       {error&&<p className="form-error" role="alert">{error}</p>}
       <button className="btn btn-primary btn-lg" type="button" disabled={busy||!available||result?.status==='approved'} onClick={begin}>
         <Camera size={18}/> {busy?'Verificando...':'Iniciar verificação pela câmera'} <ExternalLink size={16}/>
