@@ -72,7 +72,12 @@ test('Native installer uses a content URI, user confirmation, and downloaded dat
  assert.match(ui,/Instalar com o Android/);
  assert.match(ui,/Tamanho e SHA-256 conferidos/);
  assert.match(ui,/Verificando versões/);
- assert.match(ui,/Linking\.openURL\(update\.url\)/);
+ assert.match(ui,/Linking\.openURL\(update\.url\)/,
+  'iOS store updates may open the App Store; sideloaded Android updates stay in-app');
+ assert.match(ui,/if\(!verifiedInAppDownload\(update\)\)/);
+ assert.match(ui,/não abre um download externo nem instala um pacote sem validação/i);
+ assert.doesNotMatch(ui,/Por segurança, o download será aberto no GitHub/);
+ assert.match(ui,/Baixar atualização no aplicativo/);
  assert.match(ui,/checkForNativeUpdate\(\)/);
  assert.ok(config.android.permissions.includes('android.permission.REQUEST_INSTALL_PACKAGES'));
 });
