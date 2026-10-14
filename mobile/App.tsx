@@ -492,20 +492,6 @@ function FeedScreen({userId,profile,composeRequest,onOpenPost}:{
    if(!result.canceled)setMedia(normalizeMedia(result.assets));
   }catch(e){setError(errorMessage(e));}
  };
- const saveCommunityDetails=async()=>{
-  if(community.owner_id!==userId||communitySaving)return;
-  setCommunitySaving(true);setError('');
-  try{
-   const {error:updateError}=await supabase.from('communities').update({
-    description:editDescription.trim(),rules:editRules.trim()
-   }).eq('id',community.id).eq('owner_id',userId);
-   if(updateError)throw updateError;
-   const next={...community,description:editDescription.trim(),rules:editRules.trim()};
-   onCommunityUpdated(next);setEditOpen(false);
-   Alert.alert('Comunidade atualizada','Descrição e regras foram salvas.');
-  }catch(e){setError(errorMessage(e));}
-  finally{setCommunitySaving(false);}
- };
  const publish=async()=>{
   if(!validPost||busy)return;
   setBusy(true);setError('');
@@ -1208,6 +1194,20 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack,onCo
    });
    if(!result.canceled)setMedia(normalizeMedia(result.assets));
   }catch(e){setError(errorMessage(e));}
+ };
+ const saveCommunityDetails=async()=>{
+  if(community.owner_id!==userId||communitySaving)return;
+  setCommunitySaving(true);setError('');
+  try{
+   const {error:updateError}=await supabase.from('communities').update({
+    description:editDescription.trim(),rules:editRules.trim()
+   }).eq('id',community.id).eq('owner_id',userId);
+   if(updateError)throw updateError;
+   const next={...community,description:editDescription.trim(),rules:editRules.trim()};
+   onCommunityUpdated(next);setEditOpen(false);
+   Alert.alert('Comunidade atualizada','Descrição e regras foram salvas.');
+  }catch(e){setError(errorMessage(e));}
+  finally{setCommunitySaving(false);}
  };
  const publish=async()=>{
   if(busy||!member||(!content.trim()&&!media.length)||content.trim().length>3000)return;
