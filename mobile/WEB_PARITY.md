@@ -1,6 +1,6 @@
 # Conecta V2 — auditoria de paridade Web × Mobile
 
-Estado auditado: branch `main`, aplicativo Alpha 0.7.7, em 14/10/2026. A tabela abaixo preserva o diagnóstico-base de 09/10; consulte a seção **Reauditoria Alpha 0.7.7** para mudanças e pendências atuais.
+Estado auditado: branch `main`, aplicativo Alpha 0.7.8, em 14/10/2026. A tabela abaixo preserva o diagnóstico-base de 09/10; consulte a seção **Reauditoria Alpha 0.7.8** para mudanças e pendências atuais.
 Fonte: arquivos reais sob `web/src/app`, `web/src/components`,
 `mobile/App.tsx` e `mobile/src`. **Não** é uma lista de recursos
 homologados em dispositivos: a CI só verifica contratos e compilação.
@@ -138,7 +138,7 @@ Não interpretar testes unitários/TypeScript como prova de homologação
 nativa em dispositivos reais.
 
 
-## Reauditoria Alpha 0.7.7 — 14/10/2026
+## Reauditoria Alpha 0.7.8 — 14/10/2026
 
 Nesta rodada foram aplicadas correções e recursos nativos adicionais:
 

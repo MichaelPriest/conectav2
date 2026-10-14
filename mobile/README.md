@@ -4,6 +4,10 @@ Aplicativo **nativo React Native/Expo SDK 57**, mantido no mesmo repositório do
 site Next.js. O app utiliza o **mesmo Supabase e as mesmas contas** do Conecta.
 Não usa um WebView como interface principal.
 
+## Tela cheia e voltar no Android
+
+A tela cheia imersiva fica ativada por padrão no Android. Na tela principal, toque no ícone de **minimizar tela cheia** no cabeçalho para reexibir as barras do sistema; toque novamente para ocultá-las. Na tela de login e nas telas de acesso restrito, o mesmo controle aparece no canto superior direito. Use a seta **Voltar** no cabeçalho para retornar à área anterior. O botão/gesto Voltar do Android também retorna das telas internas e, quando não há outra tela para voltar, sai da tela cheia. O controle do sistema não é substituído pelo app.
+
 ## Escopo funcional da primeira versão
 
 - Login real por e-mail e senha do Supabase, sessão persistente no dispositivo.

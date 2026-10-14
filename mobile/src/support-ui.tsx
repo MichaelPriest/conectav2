@@ -31,10 +31,10 @@ export function SupportScreen({onCommunity,onConnections}:{onCommunity:()=>void;
  };
  return <ScrollView style={s.screen} contentContainerStyle={{paddingBottom:28}}>
   <Heading title="Acolhimento e inclusão" subtitle="Um espaço para mães atípicas, famílias, cuidadores e redes de apoio."/>
-  <View style={{backgroundColor:t.primaryDark,borderRadius:23,padding:21,gap:12}}>
+  <View style={{backgroundColor:calm?'#F0EFF6':t.primaryDark,borderRadius:23,padding:21,gap:12}}>
    <HeartHandshake color="#FFFFFF" size={30}/>
-   <Text style={{fontSize:23,lineHeight:29,fontWeight:'900',color:'#FFFFFF'}}>Você não precisa passar por tudo sozinha.</Text>
-   <Text style={{fontSize:14,lineHeight:21,color:'#F0EAFE'}}>Escuta respeitosa, troca de experiências e informação pública confiável. Não é necessário revelar diagnósticos nem informações pessoais.</Text>
+   <Text style={{fontSize:23,lineHeight:29,fontWeight:'900',color:calm?t.dark:'#FFFFFF'}}>Você não precisa passar por tudo sozinha.</Text>
+   <Text style={{fontSize:14,lineHeight:21,color:calm?t.dark:'#F0EAFE'}}>Escuta respeitosa, troca de experiências e informação pública confiável. Não é necessário revelar diagnósticos nem informações pessoais.</Text>
    <Action fullWidth label="Participar da comunidade de apoio" onPress={onCommunity}/>
    <Action fullWidth secondary label="Encontrar conexões" leading={<MessageCircle color={t.primary} size={17}/>} onPress={onConnections}/>
   </View>

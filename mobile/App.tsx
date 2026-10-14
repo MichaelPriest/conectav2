@@ -1140,6 +1140,10 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
    .eq('user_id',userId).maybeSingle().then(({data})=>{if(live)setCanManage(Boolean(data));},()=>{if(live)setCanManage(false);});
   return()=>{live=false;};
  },[community.id,community.owner_id,userId]);
+ useEffect(()=>{
+  const subscription=BackHandler.addEventListener('hardwareBackPress',()=>{onBack();return true;});
+  return()=>subscription.remove();
+ },[onBack]);
  const [posts,setPosts]=useState<Post[]>([]);
  const [liked,setLiked]=useState<Set<string>>(new Set());
  const [saved,setSaved]=useState<Set<string>>(new Set());
