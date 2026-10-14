@@ -11,6 +11,7 @@ as $function$
   select coalesce(exists (
     select 1
     from public.age_assurance_decisions d
+    join public.registration_age_declarations rd on rd.user_id = d.user_id
     join public.identity_verifications iv on iv.user_id = d.user_id
     where d.user_id = p_user_id
       and d.age_band in ('13_15', '16_17', '18_plus')
@@ -22,7 +23,7 @@ as $function$
       and iv.verified_at <= now() + interval '1 minute'
       and iv.verified_at >= now() - interval '60 days'
       and (
-        d.age_band = '18_plus'
+        (d.age_band = '18_plus' and rd.declared_band = '18_plus')
         or exists (
           select 1
           from public.conecta_guardian_links gl
