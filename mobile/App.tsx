@@ -6,7 +6,8 @@ import {
 } from 'react-native';
 import {StatusBar} from 'expo-status-bar';
 import {SafeAreaProvider,SafeAreaView} from 'react-native-safe-area-context';
-import * as NavigationBar from 'expo-navigation-bar';
+import {NavigationBar} from 'expo-navigation-bar';
+import * as NavigationBarApi from 'expo-navigation-bar';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {User} from '@supabase/supabase-js';
@@ -1929,10 +1930,8 @@ export default function App(){
  },[verify]);
  useEffect(()=>{
   if(Platform.OS!=='android')return;
-  void NavigationBar.setBehaviorAsync('overlay-swipe').catch(()=>{});
-  void NavigationBar.setButtonStyleAsync('dark').catch(()=>{});
-  void NavigationBar.setVisibilityAsync(fullscreen?'hidden':'visible').catch(()=>{});
-  return()=>{void NavigationBar.setVisibilityAsync('visible').catch(()=>{});};
+  void NavigationBarApi.setVisibilityAsync(fullscreen?'hidden':'visible').catch(()=>{});
+  return()=>{void NavigationBarApi.setVisibilityAsync('visible').catch(()=>{});};
  },[fullscreen]);
  useEffect(()=>{
   if(!user||restricted){setUnreadCount(0);return;}
