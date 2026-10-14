@@ -3,7 +3,7 @@ import {Pressable,StyleSheet,Text,View,type ViewStyle} from 'react-native';
 import Svg,{Circle,Defs,LinearGradient,Rect,Stop} from 'react-native-svg';
 import {
  Bell,Bookmark,Clapperboard,Compass,Heart,Home,MessageCircle,
- Plus,Search,Settings,Sparkles,UsersRound,
+ Plus,Search,UserRound,Sparkles,UsersRound,
  type LucideIcon
 } from 'lucide-react-native';
 import {theme as t} from './theme';
@@ -77,7 +77,7 @@ export const nativeTabs:TabItem[]=[
  {key:'connections',label:'Explorar',Icon:Compass},
  {key:'create',label:'Publicar',Icon:Plus},
  {key:'communities',label:'Grupos',Icon:UsersRound},
- {key:'profile',label:'Perfil',Icon:Settings}
+ {key:'profile',label:'Perfil',Icon:UserRound}
 ];
 export function BottomNavigation({tab,onNavigate}:{
  tab:string;onNavigate:(key:string)=>void;

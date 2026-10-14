@@ -75,9 +75,10 @@ test('iOS version checks reject unapproved app listings and phishing URLs',()=>{
 test('Version monitor is installed at root, checks foreground and requires user approval',()=>{
  const fs=require('node:fs'),path=require('node:path');
  const app=fs.readFileSync(path.join(__dirname,'../App.tsx'),'utf8');
+ const settings=fs.readFileSync(path.join(__dirname,'../src/settings-ui.tsx'),'utf8');
  const update=fs.readFileSync(path.join(__dirname,'../src/update-ui.tsx'),'utf8');
  assert.match(app,/NativeVersionMonitor\/\>/);
- assert.match(app,/checkVersionManually\(\)/);
+ assert.match(settings,/checkVersionManually\(\)/);
  assert.match(update,/Application\.nativeApplicationVersion/);
  assert.match(update,/AppState\.addEventListener\('change'/);
  assert.match(update,/checkForNativeUpdate\(\)/);
