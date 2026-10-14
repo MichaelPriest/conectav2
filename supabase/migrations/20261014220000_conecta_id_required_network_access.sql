@@ -109,6 +109,8 @@ declare
     'profile_visits',
     'user_achievements',
     'user_blocks',
+    'teen_guardian_links',
+    'teen_safety_preferences',
     'monetization_interests'
   ];
 begin
