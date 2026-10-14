@@ -20,3 +20,11 @@ test('Community owners and staff can open native moderation without bypassing se
  assert.match(ui,/if\(!isMod\)/);
  assert.doesNotMatch(ui,/service_role|SUPABASE_SECRET_KEY|admin\.from/);
 });
+
+test('Community owners can edit description and rules under the existing owner RLS policy',()=>{
+ const app=read('App.tsx');
+ assert.match(app,/community\.owner_id===userId&&<Action secondary label="Editar comunidade"/);
+ assert.match(app,/from\('communities'\)\.update\(\{/);
+ assert.match(app,/\.eq\('id',community\.id\)\.eq\('owner_id',userId\)/);
+ assert.match(app,/onCommunityUpdated\(next\)/);
+});

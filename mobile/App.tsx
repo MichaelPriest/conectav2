@@ -492,6 +492,20 @@ function FeedScreen({userId,profile,composeRequest,onOpenPost}:{
    if(!result.canceled)setMedia(normalizeMedia(result.assets));
   }catch(e){setError(errorMessage(e));}
  };
+ const saveCommunityDetails=async()=>{
+  if(community.owner_id!==userId||communitySaving)return;
+  setCommunitySaving(true);setError('');
+  try{
+   const {error:updateError}=await supabase.from('communities').update({
+    description:editDescription.trim(),rules:editRules.trim()
+   }).eq('id',community.id).eq('owner_id',userId);
+   if(updateError)throw updateError;
+   const next={...community,description:editDescription.trim(),rules:editRules.trim()};
+   onCommunityUpdated(next);setEditOpen(false);
+   Alert.alert('Comunidade atualizada','Descrição e regras foram salvas.');
+  }catch(e){setError(errorMessage(e));}
+  finally{setCommunitySaving(false);}
+ };
  const publish=async()=>{
   if(!validPost||busy)return;
   setBusy(true);setError('');
@@ -1127,11 +1141,15 @@ function ChatScreen({userId,initialId}:{userId:string;initialId:string|null}){
 }
 
 
-function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
+function CommunityDetailScreen({community,userId,member,onMembership,onBack,onCommunityUpdated}:{
  community:Community;userId:string;member:boolean;
- onMembership:()=>Promise<void>;onBack:()=>void;
+ onMembership:()=>Promise<void>;onBack:()=>void;onCommunityUpdated:(value:Community)=>void;
 }){
  const [moderationOpen,setModerationOpen]=useState(false);
+ const [editOpen,setEditOpen]=useState(false);
+ const [editDescription,setEditDescription]=useState(community.description||'');
+ const [editRules,setEditRules]=useState(community.rules||'');
+ const [communitySaving,setCommunitySaving]=useState(false);
  const [canManage,setCanManage]=useState(community.owner_id===userId);
  useEffect(()=>{
   let live=true;
@@ -1287,6 +1305,9 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
      {member&&<Action label="Publicar"
       leading={<Plus size={17} color="#FFF"/>}
       onPress={()=>setComposerOpen(true)}/>}
+     {community.owner_id===userId&&<Action secondary label="Editar comunidade"
+      leading={<Pencil size={16} color={t.primary}/>}
+      onPress={()=>{setEditDescription(community.description||'');setEditRules(community.rules||'');setEditOpen(true);}}/>}
      {canManage&&<Action secondary label="Administrar"
       leading={<ShieldCheck size={16} color={t.primary}/>}
       onPress={()=>setModerationOpen(true)}/>}
@@ -1411,6 +1432,22 @@ function CommunityDetailScreen({community,userId,member,onMembership,onBack}:{
     .finally(()=>setLoadingMore(false));
   }}
   ListFooterComponent={loadingMore?<Loading/>:<View style={{height:20}}/>}/>
+  <Modal visible={editOpen} animationType="slide" onRequestClose={()=>setEditOpen(false)}>
+   <SafeAreaProvider><SafeAreaView edges={['top','bottom','left','right']} style={s.page}>
+    <View style={s.header}>
+     <Pressable accessibilityRole="button" accessibilityLabel="Voltar da edição da comunidade" onPress={()=>setEditOpen(false)}><ChevronLeft size={23} color={t.dark}/></Pressable>
+     <Text style={{fontSize:17,fontWeight:'900',color:t.dark,flex:1}}>Editar comunidade</Text><View style={{width:22}}/>
+    </View>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{padding:18,paddingBottom:40,gap:9}}>
+     <Text style={s.primaryText}>Descrição</Text>
+     <Field value={editDescription} onChangeText={setEditDescription} multiline maxLength={3000} placeholder="Explique o propósito da comunidade"/>
+     <Text style={s.primaryText}>Regras</Text>
+     <Field value={editRules} onChangeText={setEditRules} multiline maxLength={5000} placeholder="Regras de convivência e publicação"/>
+     <ErrorNotice text={error}/>
+     <Action fullWidth disabled={communitySaving} label={communitySaving?'Salvando...':'Salvar alterações'} onPress={()=>void saveCommunityDetails()}/>
+    </ScrollView>
+   </SafeAreaView></SafeAreaProvider>
+  </Modal>
   {moderationOpen&&<CommunityModerationScreen community={community} userId={userId}
    onClose={()=>setModerationOpen(false)}/>}
  </>;
@@ -1463,7 +1500,7 @@ function CommunityScreen({userId,initialSlug,onCloseDetail}:{
   finally{setBusy(null);}
  };
  if(selected)return <CommunityDetailScreen community={selected} userId={userId}
-  member={joined.has(selected.id)} onBack={()=>{setSelected(null);onCloseDetail?.();}}
+  member={joined.has(selected.id)} onCommunityUpdated={setSelected} onBack={()=>{setSelected(null);onCloseDetail?.();}}
   onMembership={async()=>{
    const currentlyMember=joined.has(selected.id);
    await changeMembership(userId,selected.id,currentlyMember);

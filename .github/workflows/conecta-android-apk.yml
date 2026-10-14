@@ -1,4 +1,4 @@
-# Homologação Alpha 0.7.8: Atualização Alpha 0.7.8 com as alterações mais recentes do main.
+# Homologação Alpha 0.7.9: Atualização Alpha 0.7.9 com as alterações mais recentes do main.
 name: Conecta V2 · Android APK de testes
 on:
   push:
@@ -91,7 +91,7 @@ jobs:
       - name: Publicar artefato de teste
         uses: actions/upload-artifact@v4
         with:
-          name: conecta-v2-android-0.7.8-alpha
+          name: conecta-v2-android-0.7.9-alpha
           path: mobile/android/app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14

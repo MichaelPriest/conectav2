@@ -1,6 +1,6 @@
 # Conecta V2 — auditoria de paridade Web × Mobile
 
-Estado auditado: branch `main`, aplicativo Alpha 0.7.8, em 14/10/2026. A tabela abaixo preserva o diagnóstico-base de 09/10; consulte a seção **Reauditoria Alpha 0.7.8** para mudanças e pendências atuais.
+Estado auditado: branch `main`, aplicativo Alpha 0.7.9, em 14/10/2026. A tabela abaixo preserva o diagnóstico-base de 09/10; consulte a seção **Reauditoria Alpha 0.7.9** para mudanças e pendências atuais.
 Fonte: arquivos reais sob `web/src/app`, `web/src/components`,
 `mobile/App.tsx` e `mobile/src`. **Não** é uma lista de recursos
 homologados em dispositivos: a CI só verifica contratos e compilação.
@@ -17,7 +17,7 @@ homologados em dispositivos: a CI só verifica contratos e compilação.
 | Descoberta global | `explorar/page.tsx` | Busca unificada por pessoas, comunidades, publicações e vídeos | Ranking, busca remota paginada e filtros avançados |
 | Perfis | `perfil/page.tsx`, `p/[handle]` | Perfis públicos com capa, posts, interesses e ações; editor nativo de headline, cidade, site, emoji, humor, música, temas e layout | Ajustes finos de visualização MySpace e player incorporado |
 | Identidade MySpace | `myspace-panel`, `music-embed` | Campos MySpace, temas, status e música editáveis; sem player incorporado | Player seguro, estilos completos e pré-visualização |
-| Comunidades | `comunidades/[slug]/page.tsx` | Entrar/sair/criar/ver regras/posts/votar | Alterar dados/capa/avatar e controles do proprietário |
+| Comunidades | `comunidades/[slug]/page.tsx` | Entrar/sair/criar/ver regras/posts/votar | Editar descrição e regras nativamente; seleção dedicada de capa/avatar e controles completos do proprietário ainda pendentes |
 | Administração de comunidades | `comunidades/[slug]/moderar` | Ausente | Moderadores, cargos, denúncias, banimento, termos de revisão |
 | Chat privado e grupos | `mensagens/page.tsx` | Inbox, mídias/áudio, resposta, reações, busca, grupos com convites/cargos/permissões | Conversas arquivadas e sincronização avançada |
 | Conversas avançadas | `mensagens/page.tsx` | Digitação, presença opt-in, silenciar e fixar mensagens | Recibos avançados por participante e notificações push |
@@ -138,7 +138,7 @@ Não interpretar testes unitários/TypeScript como prova de homologação
 nativa em dispositivos reais.
 
 
-## Reauditoria Alpha 0.7.8 — 14/10/2026
+## Reauditoria Alpha 0.7.9 — 14/10/2026
 
 Nesta rodada foram aplicadas correções e recursos nativos adicionais:
 
@@ -154,3 +154,8 @@ Nesta rodada foram aplicadas correções e recursos nativos adicionais:
 3. Completar perfis públicos e ações que ainda encaminham ao navegador.
 4. Completar fluxos de conta/identidade somente onde o backend existente oferece um contrato seguro; manter as verificações de idade obrigatórias.
 5. Trabalhar chamadas em grupo, TURN e push remoto apenas após validar a infraestrutura real de sinalização, credenciais e entrega.
+
+
+## Alpha 0.7.9 — edição nativa de comunidades
+
+O proprietário pode editar a descrição e as regras diretamente no app. A atualização filtra a comunidade por `id` e `owner_id` e continua sujeita ao RLS do Supabase. A edição de capa/avatar e a revisão completa de denúncias permanecem pendentes. O APK só deve ser instalado depois da CI e da validação de assinatura.
