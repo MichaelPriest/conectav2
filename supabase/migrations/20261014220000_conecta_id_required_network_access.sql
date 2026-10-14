@@ -50,7 +50,7 @@ comment on function app_private.conecta_network_access_allowed(uuid) is
 
 revoke all on function app_private.conecta_network_access_allowed(uuid) from public, anon;
 grant usage on schema app_private to authenticated, service_role;
-grant execute on function app_private.conecta_network_access_allowed(uuid) to authenticated, service_role;
+grant execute on function app_private.conecta_network_access_allowed(uuid) to anon, authenticated, service_role;
 
 -- The user's own profile remains available for onboarding. An unverified user
 -- can discover only verified profiles, which permits finding an adult guardian
@@ -58,11 +58,12 @@ grant execute on function app_private.conecta_network_access_allowed(uuid) to au
 alter table public.profiles enable row level security;
 drop policy if exists conecta_id_verified_profile_discovery on public.profiles;
 create policy conecta_id_verified_profile_discovery
-  on public.profiles as restrictive for select to authenticated
+  on public.profiles as restrictive for select to anon, authenticated
   using (
-    id = auth.uid()
+    auth.uid() is not null
+    and (id = auth.uid()
     or app_private.conecta_network_access_allowed(auth.uid())
-    or app_private.conecta_network_access_allowed(id)
+    or app_private.conecta_network_access_allowed(id))
   );
 
 -- Restrictive policies combine with the existing per-table authorization rules;
@@ -115,7 +116,7 @@ begin
       execute format('alter table public.%I enable row level security', table_name);
       execute format('drop policy if exists conecta_id_network_access_required on public.%I', table_name);
       execute format(
-        'create policy conecta_id_network_access_required on public.%I as restrictive for all to authenticated using (app_private.conecta_network_access_allowed(auth.uid())) with check (app_private.conecta_network_access_allowed(auth.uid()))',
+        'create policy conecta_id_network_access_required on public.%I as restrictive for all to anon, authenticated using (app_private.conecta_network_access_allowed(auth.uid())) with check (app_private.conecta_network_access_allowed(auth.uid()))',
         table_name
       );
     end if;
