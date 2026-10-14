@@ -27,6 +27,8 @@ Official sources:
 
 ## First-release distribution: sideloaded Android APK and web
 
+- The EAS `production` build profile now targets an internal-distribution APK and sets `EXPO_PUBLIC_CONECTA_DISTRIBUTION=sideload`; despite the profile name, this is not a Google Play publishing configuration. The generated APK must still be built and tested before release.
+
 The first release will not be published on Google Play. Play Age Signals and Play Integrity are therefore **deferred and must not be treated as available or required for first-release verification**. The native module and Google-backed API flow in this branch are optional future work only. Their setup guide is explicitly marked deferred in [`docs/play-integrity-setup.md`](./play-integrity-setup.md).
 
 The first-release path must work with a sideloaded APK and web browser, without Play Console configuration or an app-store age signal. The current free/open-source preflight capabilities are local OCR, CIN QR/JWS inspection and liveness checks; these are not, individually or collectively without a trusted validation step, proof of identity or age. A valid document signature proves document integrity, not that the signed document belongs to the Conecta account holder.
