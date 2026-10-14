@@ -97,8 +97,12 @@ test('Google Play builds never request restricted APK install permission',()=>{
  const neutral=JSON.parse(read('app.json')).expo;
  assert.ok(!neutral.android.permissions?.includes('android.permission.REQUEST_INSTALL_PACKAGES'));
  const eas=JSON.parse(read('eas.json'));
- assert.equal(eas.build.production.env.EXPO_PUBLIC_CONECTA_DISTRIBUTION,'play');
+ assert.equal(eas.build.production.env.EXPO_PUBLIC_CONECTA_DISTRIBUTION,'sideload',
+  'The first release is sideloaded; the production-named EAS profile must not assume Play Store');
+ assert.equal(eas.build.production.distribution,'internal');
+ assert.equal(eas.build.production.android.buildType,'apk');
  assert.equal(eas.build.preview.env.EXPO_PUBLIC_CONECTA_DISTRIBUTION,'sideload');
+ assert.equal(eas.build.preview.android.buildType,'apk');
 });
 
 test('Public Alpha release notes unlock checksum-protected in-app upgrades even without API digest',()=>{
