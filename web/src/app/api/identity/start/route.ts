@@ -5,6 +5,14 @@ export const runtime='nodejs';
 export const dynamic='force-dynamic';
 
 export async function POST(request:NextRequest){
+  // Defense in depth: the UI gate is not authorization. No paid inquiry may be
+  // created until a real server-side consent + payment flow is implemented and
+  // independently tested. Provider credentials alone must never enable billing.
+  return NextResponse.json(
+    {error:'A verificação paga ainda não está habilitada: falta implementar e validar a divulgação do preço real, o consentimento explícito e a cobrança antes de criar uma consulta. Nenhuma cobrança ou consulta foi iniciada.'},
+    {status:503,headers:{'Cache-Control':'no-store'}}
+  );
+
   if(!identityConfigured())return NextResponse.json(
     {error:'Verificação por câmera ainda não ativada. É necessário contratar e configurar o provedor.'},
     {status:503}
