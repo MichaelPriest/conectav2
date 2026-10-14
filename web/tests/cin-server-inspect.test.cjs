@@ -9,8 +9,8 @@ const route=fs.readFileSync(path.join(__dirname,'../src/app/api/identity/cin/ins
 test('server CIN inspection authenticates user and checks trusted request origin',()=>{
  assert.match(route,/isTrustedIdentityOrigin\(request\.headers,request\.url,process\.env\)/);
  assert.match(route,/identityUserContext\(request\)/);
- assert.match(route,/status:401/);
- assert.match(route,/status:403/);
+ assert.match(route,/fail\('Entre na sua conta para continuar\.',401\)/);
+ assert.match(route,/fail\('Origem inválida\.',403\)/);
 });
 
 test('server CIN inspection bounds token size and does not echo/store personal QR data',()=>{
