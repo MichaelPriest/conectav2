@@ -20,8 +20,8 @@ const routePath = path.join(root, 'src/app/api/identity/age-signal/verify/route.
 const route = fs.readFileSync(routePath, 'utf8');
 const challengeRoute = fs.readFileSync(path.join(root, 'src/app/api/identity/age-signal/challenge/route.ts'), 'utf8');
 const verifier = fs.readFileSync(path.join(root, 'src/lib/play-integrity.ts'), 'utf8');
-const migration = fs.readFileSync(path.join(root, '../supabase/migrations/20261013230000_age_assurance_challenges.sql'), 'utf8');
-const auditMigration = fs.readFileSync(path.join(root, '../supabase/migrations/20261013240000_age_assurance_audit.sql'), 'utf8');
+const migration = fs.readFileSync(path.join(root, '../supabase/migrations/20261014145802_age_assurance_challenges.sql'), 'utf8');
+const auditMigration = fs.readFileSync(path.join(root, '../supabase/migrations/20261014145811_age_assurance_audit.sql'), 'utf8');
 
 test('canonical age payload binds the one-time challenge, bounds, SDK status and approval date', () => {
   const payload = {ageLower: 18, ageUpper: null, userStatus: 0, mostRecentApprovalDate: null};

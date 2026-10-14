@@ -8,6 +8,7 @@ android {
   namespace "expo.modules.agesignals"
   defaultConfig {
     minSdkVersion 23
+    versionName "1.0.0"
   }
 }
 

@@ -9,6 +9,7 @@ const adapter = fs.readFileSync(path.join(root, 'src/age-assurance.ts'), 'utf8')
 const app = fs.readFileSync(path.join(root, 'App.tsx'), 'utf8');
 const native = fs.readFileSync(path.join(root, 'modules/age-signals/android/src/main/java/expo/modules/agesignals/PlayAgeSignalsModule.kt'), 'utf8');
 const gradle = fs.readFileSync(path.join(root, 'modules/age-signals/android/build.gradle'), 'utf8');
+const moduleGradle = gradle;
 
 test('Play Age Signals bridge handles unavailable and declined states without granting privileges', () => {
   assert.match(adapter, /Platform\.OS !== 'android'/);
@@ -48,5 +49,7 @@ test('native bridge uses the current two-step access and signal request flow', (
   assert.match(native, /setRequestHash\(requestHash\)/);
   assert.match(gradle, /com\.google\.android\.play:integrity:1\.5\.0/);
   assert.match(gradle, /com\.google\.android\.play:age-signals:0\.0\.4/);
+  assert.ok(moduleGradle.includes('versionName "1.0.0"'),
+    'Expo Android module must define versionName so the sideload APK can build');
   assert.doesNotMatch(native, /installId\(\)/);
 });
