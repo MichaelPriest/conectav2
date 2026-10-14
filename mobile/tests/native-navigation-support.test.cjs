@@ -26,6 +26,6 @@ test('Native support area offers inclusion resources and persists calm-mode pref
  assert.match(support,/AsyncStorage\.setItem\(CALM_KEY,next\?'1':'0'\)/);
  assert.match(support,/https:\/\/www\.gov\.br\/mdh/);
  assert.match(support,/https:\/\/www\.gov\.br\/inep/);
- assert.match(support,/Não publique laudos, documentos/);
+ assert.match(support,/Evite publicar laudos, documentos/);
  assert.match(support,/onCommunity,onConnections/);
 });
