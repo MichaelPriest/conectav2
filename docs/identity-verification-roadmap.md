@@ -10,18 +10,21 @@ The repository already contains browser-side camera/liveness challenges, Tessera
 
 The `/api/identity/methods` endpoint intentionally reports capability and cost class only. It does not create verification records, upload documents, call a paid provider, change profile flags, or grant adult privileges.
 
-## Android bridge and server verification progress — 2026-10-13
+## First-release distribution constraint — sideloaded Android APK and web
 
-The mobile branch now includes a local Expo module for Play Age Signals SDK `0.0.4` and Play Integrity SDK `1.5.0`, a user-initiated age signal request, and a second explicit consent step before sending only the coarse range/source plus an Integrity token. The server now issues short-lived one-time challenges, decodes the token with Google, validates package/signing certificate/device integrity/request hash/freshness, consumes the challenge atomically and stores only an accepted coarse age band. `DECLARED status` self-declaration never becomes a trusted decision. Required environment setup is documented in [`docs/play-integrity-setup.md`](./play-integrity-setup.md).
+The first release will **not** be distributed through Google Play. Therefore, Play Age Signals and Play Integrity are **not a first-release verification path** and must not be a prerequisite for onboarding, age protection, or release. The existing native module and server verifier are retained only as an optional future integration; do not present them as working for a sideloaded APK, and do not weaken Google integrity checks to make sideloaded builds pass.
 
-This is still not production-ready: the migrations are not applied, Google Cloud/Play Console credentials and the actual Play signing digest are not configured, the current sideloaded APK may not receive `PLAY_RECOGNIZED`, native compilation and real-device tests have not been run, CI is not confirmed, and each feature API still needs server-side policy enforcement. No restricted feature should be enabled based on this work until those gates pass.
+The Play-specific challenge/verify endpoint cannot establish age for the first release unless a supported, trustworthy signal is available. A missing or unavailable Play signal must never be replaced with a client-supplied age band. The associated setup remains deferred in [`docs/play-integrity-setup.md`](./play-integrity-setup.md).
 
-## Free platform age signals (priority over face-age estimation)
+The current branch has not completed native compilation, end-to-end device tests, CI confirmation, or full server-side policy enforcement. The age-assurance migrations are not applied. Do not enable adult-restricted features based on this work.
 
-- Android: assess Google Play Age Signals API and bind the returned age band to a verified Play Integrity result before accepting it. It may not be available for sideloaded builds or every device/account. Official docs: https://developer.android.com/google/play/age-signals/use-age-signals-api
-- iOS: assess Apple's Declared Age Range API; it needs the entitlement/capability, supported SDK/OS, and consent/guardian handling. It is a useful signal, not a blanket compliance guarantee. Official docs: https://developer.apple.com/documentation/declaredagerange
-- Web: no automatic assumption of access to OS/store signals; use a trusted validated method or keep adult-only access locked.
-- Never let the mobile app write a raw age band directly to the server-authoritative table. Verify signal provenance, account binding, integrity and replay protections server-side.
+## First-release free-first age-assurance path
+
+- **Web and sideloaded APK:** implement one account-bound flow that works without an app-store API: local CIN QR/document preflight, explicit official-verification instructions where needed, and a review path that does not treat OCR, QR decoding, or face liveness alone as proof of identity or age.
+- **Privacy by design:** process images locally wherever practical, avoid uploading/storing raw documents or selfies by default, and never log CPF, exact birth date, QR/JWS payloads, or face images. If manual review requires evidence, define access controls, retention/deletion, consent and audit rules before collecting it.
+- **Server decision:** only persist a trusted age/identity decision when the selected evidence can actually be validated with a documented trust basis and is bound to the authenticated account. Otherwise the result remains `unknown` and the protected experience stays active.
+- **No store dependency:** do not require Play Console, Play Age Signals, Play Integrity, or Apple Declared Age Range for first-release onboarding. These may be reconsidered for a later native-store release, not used as a fallback for the current release.
+- Never let the mobile app write a raw age band directly to the server-authoritative table. Enforce age policy server-side and protect replay-sensitive flows.
 
 ## Free-first architecture
 
