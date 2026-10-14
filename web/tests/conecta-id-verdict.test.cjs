@@ -23,7 +23,8 @@ test('never grants adult access from self-declared/untrusted age or missing meth
     ageBand: '18+',
     method: 'nenhum',
     originalsDeleted: true,
-    guardianAuthenticated: false
+    guardianAssociationAccepted: false,
+    guardianAgeVerified: false
   });
   assert.equal(result.status_validacao, 'falha');
   assert.equal(result.resultado.maior_de_idade, false);
@@ -38,7 +39,8 @@ test('requires an authenticated guardian for verified users under 16', () => {
     ageBand: '13-15',
     method: 'documento_assinado',
     originalsDeleted: true,
-    guardianAuthenticated: false
+    guardianAssociationAccepted: false,
+    guardianAgeVerified: false
   });
   assert.equal(result.status_validacao, 'pendente_responsavel');
   assert.equal(result.politica_dados.vinculo_responsavel_obrigatorio, true);
@@ -52,7 +54,8 @@ test('adult verdict only follows trusted evidence and completed source-data dele
     ageBand: '18+',
     method: 'api_governamental',
     originalsDeleted: true,
-    guardianAuthenticated: false
+    guardianAssociationAccepted: false,
+    guardianAgeVerified: false
   };
   const result = buildConectaIdVerdict(input);
   assert.equal(result.status_validacao, 'sucesso');
@@ -70,7 +73,8 @@ test('fails closed when the verification pipeline has not deleted original data'
     ageBand: '18+',
     method: 'api_governamental',
     originalsDeleted: false,
-    guardianAuthenticated: false
+    guardianAssociationAccepted: false,
+    guardianAgeVerified: false
   });
   assert.equal(result.status_validacao, 'falha');
   assert.equal(result.politica_dados.dados_originais_deletados, false);
@@ -84,7 +88,8 @@ test('does not emit CPF, birth date, raw document, or biometric payload fields',
     ageBand: '16-17',
     method: 'cin_criptografica',
     originalsDeleted: true,
-    guardianAuthenticated: false
+    guardianAssociationAccepted: false,
+    guardianAgeVerified: false
   });
   const forbiddenKeys = new Set(['cpf', 'data_nascimento', 'documento_original', 'selfie', 'biometria', 'imagem', 'video', 'vetor_biometrico']);
   function visit(value) {
