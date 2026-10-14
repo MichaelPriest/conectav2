@@ -6,7 +6,7 @@ const test = require('node:test');
 
 const routePath = path.join(__dirname, '../src/app/api/identity/age-policy/route.ts');
 const route = fs.readFileSync(routePath, 'utf8');
-const migrationPath = path.join(__dirname, '../../supabase/migrations/20261013210000_age_assurance_decisions.sql');
+const migrationPath = path.join(__dirname, '../../supabase/migrations/20261014145753_age_assurance_decisions.sql');
 const migration = fs.readFileSync(migrationPath, 'utf8');
 
 test('age policy endpoint authenticates and reads server-side authoritative storage', () => {
