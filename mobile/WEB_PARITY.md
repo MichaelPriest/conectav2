@@ -1,6 +1,6 @@
 # Conecta V2 — auditoria de paridade Web × Mobile
 
-Estado auditado: branch `main`, aplicativo Alpha 0.7.0, em 09/10/2026 (validação automatizada).
+Estado auditado: branch `main`, aplicativo Alpha 0.7.7, em 14/10/2026. A tabela abaixo preserva o diagnóstico-base de 09/10; consulte a seção **Reauditoria Alpha 0.7.7** para mudanças e pendências atuais.
 Fonte: arquivos reais sob `web/src/app`, `web/src/components`,
 `mobile/App.tsx` e `mobile/src`. **Não** é uma lista de recursos
 homologados em dispositivos: a CI só verifica contratos e compilação.
@@ -21,13 +21,13 @@ homologados em dispositivos: a CI só verifica contratos e compilação.
 | Administração de comunidades | `comunidades/[slug]/moderar` | Ausente | Moderadores, cargos, denúncias, banimento, termos de revisão |
 | Chat privado e grupos | `mensagens/page.tsx` | Inbox, mídias/áudio, resposta, reações, busca, grupos com convites/cargos/permissões | Conversas arquivadas e sincronização avançada |
 | Conversas avançadas | `mensagens/page.tsx` | Digitação, presença opt-in, silenciar e fixar mensagens | Recibos avançados por participante e notificações push |
-| Chamadas WebRTC | `chat-calls.tsx` | Ausente | Áudio e vídeo no game app, chamada recebida, toque, perdido, TURN |
+| Chamadas WebRTC | `chat-calls.tsx` | Chamadas nativas individuais de áudio/vídeo via `react-native-webrtc`, sinalização Supabase e chamada recebida em primeiro plano | Grupos de chamada, toque audível robusto, push em segundo plano e TURN operacional; STUN sozinho não garante redes restritas |
 | Notificações | `notificacoes/page.tsx`, `chat-push-control` | Lista, badge, abertura nativa de posts e avisos do sistema opt-in enquanto app está aberto | Push FCM/APNs em segundo plano, toques e navegação completa |
 | Stories | `story-ui` e `stories` | Captura, visualização, publicação, exclusão | Alinhar visualizações e interações específicas do site |
 | Reels | `reels/page.tsx` | Visualizar, curtir e compartilhar | Tela de criação nativa contextual e navegação ao post/comentários |
 | Moderação geral | `moderacao/page.tsx` | Somente denunciar; bloqueios continuam no servidor | Central administrativa, fila de denúncias, decisão/recurso |
 | Segurança pessoal | `p/[handle]/page.tsx` | Bloqueio e desbloqueio, perfil público com proteção RLS, central de permissões | Controles avançados de privacidade e transparência da conta |
-| Espaço de apoio | `acolhimento/page.tsx` | Ausente | Área de mães atípicas / acolhimento e modo calmo |
+| Espaço de apoio | `acolhimento/page.tsx` | Tela nativa de acolhimento, inclusão, recursos públicos e preferência de modo calmo no aparelho | Refinar aplicação global do modo calmo e testar acessibilidade com pessoas usuárias |
 | Publicidade discreta | `feed/page.tsx` e outros componentes web | Sem espaços publicitários no nativo | Modelo discreto com conformidade Play/App Store |
 | Atualizações | `mobile/src/update-ui.tsx` | Verificação e download nativo Android com SHA-256, progresso e instalação confirmada; iOS via App Store | Release oficial, keystore permanente, homologação real e OTA EAS |
 | Distribuição de loja | `mobile/eas.json` | APK Alpha para testes | Google Play, App Store, assinatura definitiva, políticas e testes físicos |
@@ -136,3 +136,21 @@ push desativado, troca de conta, links malformados, moderação pendente,
 bloqueios, visualizador de fotos, atualização e restauração da sessão.
 Não interpretar testes unitários/TypeScript como prova de homologação
 nativa em dispositivos reais.
+
+
+## Reauditoria Alpha 0.7.7 — 14/10/2026
+
+Nesta rodada foram aplicadas correções e recursos nativos adicionais:
+
+- **Tela cheia Android controlável:** botão no cabeçalho para entrar/sair da imersão, alternância da barra de status e da navegação do sistema, botão de voltar nas telas internas e tratamento do botão/gesto Voltar do Android. A barra do sistema pode ser reexibida pelo próprio botão; o comportamento deve ser homologado com navegação por gestos e por três botões em aparelho real.
+- **Acolhimento nativo:** a área para mães atípicas e redes de cuidado agora tem conteúdo próprio no app, ligações para a comunidade e conexões, recursos públicos e preferência de modo calmo persistida no aparelho.
+- **Chamadas individuais:** existe código nativo WebRTC de áudio/vídeo com permissões sob ação do usuário, sinalização protegida e recebimento de chamadas quando o app está aberto. Não declarar suporte a chamadas em grupo nem cobertura de todas as redes; TURN e push remoto continuam pendentes de configuração e homologação.
+- **Limite de paridade:** o objetivo é trazer recursos para o app em etapas verificáveis. A compilação e os testes de contrato não provam que toda função web está homologada em aparelho físico. Administração completa de comunidades, fluxo nativo de identidade/cadastro, publicação contextual de Reels, chamadas em grupo e push remoto permanecem no backlog até implementação e testes específicos.
+
+### Próxima ordem de trabalho
+
+1. Validar navegação Voltar/tela cheia e compilar APK Alpha com os testes atuais.
+2. Implementar administração nativa de comunidades respeitando os RPCs, cargos e RLS existentes.
+3. Completar perfis públicos e ações que ainda encaminham ao navegador.
+4. Completar fluxos de conta/identidade somente onde o backend existente oferece um contrato seguro; manter as verificações de idade obrigatórias.
+5. Trabalhar chamadas em grupo, TURN e push remoto apenas após validar a infraestrutura real de sinalização, credenciais e entrega.
