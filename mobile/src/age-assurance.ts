@@ -37,14 +37,15 @@ export async function requestPlayAgeSignals(): Promise<PlayAgeSignalResult> {
 }
 
 export type AgeSignalSubmissionResult = {
-  status: 'verified' | 'preflight_only' | 'unavailable' | 'rejected' | 'unauthorized';
+  status: 'preflight_only' | 'unavailable' | 'rejected' | 'unauthorized';
   message: string;
-  ageBand?: string;
 };
 
 /**
- * Explicitly submits a shared Play age signal with a request-hash-bound
- * Integrity token. Only the server may persist a decision; failures fail closed.
+ * Sends a local Play Age Signals result with a request-hash-bound Integrity
+ * token for a security preflight only. Play Integrity does not independently
+ * attest the age-result fields, so this function must never report "verified"
+ * or unlock age-restricted features based on this client-supplied payload.
  */
 export async function submitPlayAgeSignal(signal: PlayAgeSignalResult): Promise<AgeSignalSubmissionResult> {
   if (signal.status !== 'shared' || typeof signal.userStatus !== 'number') {
@@ -122,9 +123,6 @@ export async function submitPlayAgeSignal(signal: PlayAgeSignalResult): Promise<
       error?: string;
       ageBand?: string;
     };
-    if (verifyResponse.ok && verifyBody.status === 'verified') {
-      return {status: 'verified', message: verifyBody.message || 'Sinal validado no servidor.', ageBand: verifyBody.ageBand};
-    }
     if (verifyBody.status === 'preflight_only') {
       return {status: 'preflight_only', message: verifyBody.message || 'O sinal não pôde ser aceito como decisão confiável.'};
     }
