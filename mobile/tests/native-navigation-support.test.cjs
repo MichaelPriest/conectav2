@@ -13,6 +13,8 @@ test('Android immersive mode can be exited without losing app navigation',()=>{
  assert.match(app,/hidden=\{Platform\.OS==='android'&&fullscreen\}/);
  assert.match(app,/Icon=\{ArrowLeft\} label="Voltar à tela anterior"/);
  assert.match(app,/label=\{fullscreen\?'Sair da tela cheia':'Ativar tela cheia'\}/);
+ assert.match(app,/\(!user\|\|restricted\|\|!profile\)&&<Pressable/);
+ assert.doesNotMatch(app,/<NavigationBar hidden style="light"\/>/);
  assert.match(app,/if\(canGoBack\)\{goBack\(\);return true;\}/);
  assert.match(app,/if\(fullscreen\)\{setFullscreen\(false\);return true;\}/);
 });
