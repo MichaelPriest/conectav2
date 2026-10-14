@@ -3,7 +3,6 @@ import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import {ArrowRight,RefreshCw,ShieldAlert,CheckCircle2} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
-import {useRouter} from 'next/navigation';
 import type {RegistrationCompletion} from '@/lib/identity-completion';
 
 type Outcome={
@@ -18,7 +17,6 @@ type Outcome={
  error?:string;
 };
 export function IdentityCompletion(){
- const router=useRouter();
  const [status,setStatus]=useState<Outcome|null>(null);
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState('');
@@ -41,22 +39,7 @@ export function IdentityCompletion(){
   finally{setBusy(false);}
  },[getToken]);
  useEffect(()=>{void load();},[load]);
- async function finish(){
-  if(busy)return;
-  setBusy(true);setError('');
-  try{
-   const token=await getToken();if(!token)throw new Error('Entre novamente no Conecta.');
-   const response=await fetch('/api/identity/complete-registration',{
-    method:'POST',headers:{Authorization:'Bearer '+token},cache:'no-store'
-   });
-   const data=await response.json() as Outcome;
-   if(!response.ok)throw new Error(data.error||'O cadastro nao pode ser concluido.');
-   setStatus(data);
-   if(data.canFinishBasic&&data.next==='/feed'){router.push(data.next);router.refresh();}
-   else setError('Ainda falta uma etapa de cadastro ou verificacao de seguranca.');
-  }catch(e){setError(e instanceof Error?e.message:'Falha ao finalizar cadastro.');}
-  finally{setBusy(false);}
- }
+
  return <section className="panel" style={{marginTop:20,marginBottom:24}}>
   <div className="feed-title"><h2><CheckCircle2 size={22} style={{verticalAlign:'middle'}}/> Finalizar cadastro</h2>
    <button type="button" className="btn btn-outline" onClick={()=>void load()} disabled={busy}>
