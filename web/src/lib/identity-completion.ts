@@ -28,6 +28,10 @@ export function completionResult(state:RegistrationCompletion){
   canFinishBasic:state==='adult_basic_ready',
   next:state==='adult_basic_ready'?'/feed':state==='profile_required'||state==='age_declaration_required'?'/onboarding':null,
   identityVerified:false, ageVerified:false,
+  ageAssurance:'unknown' as const,
+  ageDeclarationTrusted:false,
+  adultRestrictedAccess:false,
+  minorProtectionsRequired:true,
   grantsAdultPrivileges:false, adsAllowed:false
  } as const;
 }

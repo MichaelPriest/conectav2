@@ -1,0 +1,201 @@
+import {Platform} from 'react-native';
+import {requireNativeModule} from 'expo-modules-core';
+import {CryptoDigestAlgorithm,CryptoEncoding,digestStringAsync} from 'expo-crypto';
+import {API_SITE_URL,supabase} from './supabase';
+
+export type PlayAgeSignalResult = {
+  status: 'shared' | 'not_shared' | 'verification_required' | 'unavailable' | 'unknown' | 'error';
+  ageLower?: number | null;
+  ageUpper?: number | null;
+  userStatus?: number | null;
+  mostRecentApprovalDate?: number | null;
+  reason?: string;
+};
+
+type NativeAgeSignalsModule = {
+  requestAgeSignals(): Promise<PlayAgeSignalResult>;
+  requestIntegrityToken(requestHash: string, cloudProjectNumber: number): Promise<{
+    status: 'ok' | 'unavailable' | 'invalid_request' | 'error';
+    integrityToken?: string;
+    reason?: string;
+  }>;
+};
+
+/**
+ * Reads the OS/store-provided age band on Android only.
+ * This is a local preflight signal: never upload it as a trusted decision or
+ * unlock adult-only features until server-side integrity validation succeeds.
+ */
+export async function requestPlayAgeSignals(): Promise<PlayAgeSignalResult> {
+  if (Platform.OS !== 'android') return {status: 'unavailable', reason: 'android_only'};
+  try {
+    const nativeModule = requireNativeModule<NativeAgeSignalsModule>('ConectaPlayAgeSignals');
+    return await nativeModule.requestAgeSignals();
+  } catch {
+    return {status: 'unavailable', reason: 'native_module_unavailable'};
+  }
+}
+
+export type AgeSignalSubmissionResult = {
+  status: 'verified' | 'preflight_only' | 'unavailable' | 'rejected' | 'unauthorized';
+  message: string;
+  ageBand?: string;
+};
+
+/**
+ * Explicitly submits a shared Play age signal with a request-hash-bound
+ * Integrity token. Only the server may persist a decision; failures fail closed.
+ */
+export async function submitPlayAgeSignal(signal: PlayAgeSignalResult): Promise<AgeSignalSubmissionResult> {
+  if (signal.status !== 'shared' || typeof signal.userStatus !== 'number') {
+    return {status: 'preflight_only', message: 'Não há um sinal compartilhado utilizável. As proteções padrão permanecem ativas.'};
+  }
+  // In SDK 0.0.4, VERIFIED itself means 18+; age bounds may be null for that status.
+  const normalizedAgeLower = typeof signal.ageLower === 'number'
+    ? signal.ageLower
+    : signal.userStatus === 0 ? 18 : null;
+  if (normalizedAgeLower === null) {
+    return {status: 'preflight_only', message: 'O Google Play não forneceu uma faixa etária suficiente. As proteções padrão permanecem ativas.'};
+  }
+  // Current Play Age Signals SDK status values: VERIFIED=0, SUPERVISED=1.
+  // DECLARED/UNKNOWN/pending/denied states are never accepted as a verified decision.
+  if (![0, 1].includes(signal.userStatus)) {
+    return {status: 'preflight_only', message: 'O Google Play não forneceu um status de verificação suficiente. As proteções padrão permanecem ativas.'};
+  }
+
+  const {data:{session}} = await supabase.auth.getSession();
+  if (!session?.access_token) return {status: 'unauthorized', message: 'Entre novamente na sua conta para continuar.'};
+
+  const payload = {
+    ageLower: normalizedAgeLower,
+    ageUpper: typeof signal.ageUpper === 'number' ? signal.ageUpper : null,
+    userStatus: signal.userStatus,
+    mostRecentApprovalDate: typeof signal.mostRecentApprovalDate === 'number'
+      ? signal.mostRecentApprovalDate
+      : null
+  };
+  const headers = {
+    Authorization: 'Bearer ' + session.access_token,
+    'Content-Type': 'application/json'
+  };
+
+  try {
+    const challengeResponse = await fetch(API_SITE_URL + '/api/identity/age-signal/challenge', {
+      method: 'POST', headers
+    });
+    if (!challengeResponse.ok) {
+      return {status: 'unavailable', message: 'O servidor não conseguiu iniciar a validação segura. As proteções padrão permanecem ativas.'};
+    }
+    const challengeBody = await challengeResponse.json() as {challenge?: string};
+    if (!challengeBody.challenge || !/^[0-9a-f]{64}$/.test(challengeBody.challenge)) {
+      return {status: 'unavailable', message: 'O servidor retornou um desafio inválido. As proteções padrão permanecem ativas.'};
+    }
+
+    const canonical = [
+      'conecta-age-v1',
+      challengeBody.challenge,
+      String(payload.ageLower),
+      payload.ageUpper === null ? 'null' : String(payload.ageUpper),
+      String(payload.userStatus),
+      payload.mostRecentApprovalDate === null
+        ? 'null'
+        : String(payload.mostRecentApprovalDate)
+    ].join('|');
+    const requestHash = await digestStringAsync(CryptoDigestAlgorithm.SHA256, canonical, {encoding: CryptoEncoding.HEX});
+    const integrity = await requestPlayIntegrityToken(requestHash);
+    if (integrity.status !== 'ok' || !integrity.integrityToken) {
+      return {status: 'unavailable', message: 'A integridade do aplicativo não pôde ser confirmada. As proteções padrão permanecem ativas.'};
+    }
+
+    const verifyResponse = await fetch(API_SITE_URL + '/api/identity/age-signal/verify', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        challenge: challengeBody.challenge,
+        integrityToken: integrity.integrityToken,
+        ...payload
+      })
+    });
+    const verifyBody = await verifyResponse.json() as {
+      status?: string;
+      message?: string;
+      error?: string;
+      ageBand?: string;
+    };
+    if (verifyResponse.ok && verifyBody.status === 'verified') {
+      return {status: 'verified', message: verifyBody.message || 'Sinal validado no servidor.', ageBand: verifyBody.ageBand};
+    }
+    if (verifyBody.status === 'preflight_only') {
+      return {status: 'preflight_only', message: verifyBody.message || 'O sinal não pôde ser aceito como decisão confiável.'};
+    }
+    return {
+      status: verifyResponse.status === 401 ? 'unauthorized' :
+        verifyResponse.status >= 500 ? 'unavailable' : 'rejected',
+      message: verifyBody.error || 'A validação não foi concluída. As proteções padrão permanecem ativas.'
+    };
+  } catch {
+    return {status: 'unavailable', message: 'A validação segura está temporariamente indisponível. As proteções padrão permanecem ativas.'};
+  }
+}
+
+function describeSource(status: PlayAgeSignalResult['userStatus']): string {
+  switch (status) {
+    case 0: return 'Google Play informa idade verificada para adulto';
+    case 1: return 'faixa etária gerenciada por responsável no Google';
+    case 2: return 'aprovação do responsável pendente';
+    case 3: return 'aprovação do responsável negada';
+    case 4: return 'idade desconhecida ou não verificada';
+    case 5: return 'idade declarada, sem verificação independente';
+    default: return 'origem não identificada';
+  }
+}
+
+/**
+ * Requests a Play Integrity token bound to a SHA-256 request hash. The token
+ * must be decoded and checked on the server; never log or persist the token.
+ */
+export async function requestPlayIntegrityToken(requestHash: string): Promise<{
+  status: 'ok' | 'unavailable' | 'invalid_request' | 'error';
+  integrityToken?: string;
+  reason?: string;
+}> {
+  if (Platform.OS !== 'android') return {status: 'unavailable', reason: 'android_only'};
+  if (!/^[0-9a-f]{64}$/.test(requestHash)) return {status: 'invalid_request'};
+  const projectNumber = Number(process.env.EXPO_PUBLIC_GOOGLE_CLOUD_PROJECT_NUMBER);
+  if (!Number.isSafeInteger(projectNumber) || projectNumber <= 0) {
+    return {status: 'unavailable', reason: 'google_cloud_project_not_configured'};
+  }
+  try {
+    const nativeModule = requireNativeModule<NativeAgeSignalsModule>('ConectaPlayAgeSignals');
+    return await nativeModule.requestIntegrityToken(requestHash, projectNumber);
+  } catch {
+    return {status: 'unavailable', reason: 'native_module_unavailable'};
+  }
+}
+
+export function describePlayAgeSignal(result: PlayAgeSignalResult): string {
+  switch (result.status) {
+    case 'shared': {
+      if (result.userStatus === 0 && typeof result.ageLower !== 'number') {
+        return 'O Google Play informa status VERIFIED, correspondente a 18+; o servidor ainda precisa validar a integridade antes de aceitar o sinal.';
+      }
+      if (typeof result.ageLower !== 'number') {
+        return 'O Google Play não forneceu uma faixa etária utilizável. Nenhuma permissão foi alterada.';
+      }
+      const band = typeof result.ageUpper === 'number'
+        ? 'Faixa informada pelo Google Play: ' + result.ageLower + '–' + result.ageUpper + ' anos.'
+        : 'Faixa informada pelo Google Play: ' + result.ageLower + '+ anos.';
+      return band + '\nStatus: ' + describeSource(result.userStatus) + '.';
+    }
+    case 'not_shared':
+      return 'A faixa etária não foi compartilhada. As proteções padrão permanecem ativas.';
+    case 'verification_required':
+      return 'O Google Play informa que é necessário resolver a situação de idade na Play Store. As proteções padrão permanecem ativas.';
+    case 'unavailable':
+      return 'A aferição do Google Play não está disponível nesta instalação. As proteções padrão permanecem ativas.';
+    case 'error':
+      return 'Não foi possível consultar o Google Play agora. As proteções padrão permanecem ativas.';
+    default:
+      return 'Não foi possível confirmar uma faixa etária. As proteções padrão permanecem ativas.';
+  }
+}
