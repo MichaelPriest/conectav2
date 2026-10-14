@@ -55,6 +55,14 @@ The existing Play-specific routes, native module, migrations and tests are not e
 6. Collect only data necessary for age assurance. Do not reuse document images, biometrics or age-check data for ads, profiling, recommendations, analytics or unrelated purposes. Prefer retaining a coarse age band, method/version, timestamp, consent/policy version and decision/reason code only when justified.
 7. No production launch claim of legal compliance based solely on these engineering checks. Complete a legal/privacy review and document risk assessment before enabling age-gated features.
 
+## Stage A audit findings — current branch review
+
+- The central `GET /api/identity/age-policy` endpoint reads `age_assurance_decisions` with the service role and fails closed when configuration/schema/data are unavailable. This is a status endpoint, not a substitute for authorization checks at each feature boundary.
+- `GET /api/identity/status` still reports the legacy `identity_verifications` provider workflow. Its `status` / `age_band` fields must not be interpreted as the authoritative age-assurance decision and must not be used to unlock adult-only content or advertising.
+- The provisional database trigger migration `20261008_conecta_provisional_teen_content_server_gates.sql` is a narrow safeguard for inserts into posts, comments and messages when `teen_safety_preferences.mode='youth_protection'`. It does not establish comprehensive age enforcement for media, Stories/Reels, community membership, discovery, calls, reads of existing content or every direct-Supabase path.
+- Consequently, a repository audit has identified a remaining release blocker: map the actual RLS policies and every read/write path for each age-sensitive feature, then add narrowly scoped enforcement and regression tests without locking all users out of basic social features or weakening existing moderation/RLS. Do not claim Stage A is complete yet.
+- First-release web and sideloaded APK must not depend on the Play-only challenge/verification routes. Those routes remain isolated future integration work and are not a fallback for unknown age on web or sideloaded Android.
+
 ## Required product safeguards
 
 ### Privacy and account defaults for minors
