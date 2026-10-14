@@ -36,19 +36,34 @@ export function CommunityModerationScreen({community,userId,onClose}:{community:
    const isMod=isAdmin||roles.some(person=>person.user_id===userId);
    setOwner(own);setAdmin(isAdmin);setAuthorized(isMod);setStaff(roles);
    if(!isMod){setQueue([]);setMembers([]);setReports([]);setLoading(false);return;}
-   const [settings,posts,complaints,part]=await Promise.all([
+   const [settings,posts,complaints]=await Promise.all([
     supabase.from('community_settings').select('review_mode,blocked_terms').eq('community_id',community.id).maybeSingle(),
     supabase.from('posts').select('id,author_id,content,created_at,profiles!posts_author_id_fkey(handle,display_name,avatar_path)').eq('community_id',community.id).eq('moderation_status','pending').order('created_at',{ascending:true}).limit(100),
-    supabase.from('community_reports').select('id,post_id,reason,created_at').eq('community_id',community.id).order('created_at',{ascending:false}).limit(40),
-    supabase.from('community_members').select('user_id').eq('community_id',community.id).limit(200)
+    supabase.from('community_reports').select('id,post_id,reason,created_at').eq('community_id',community.id).order('created_at',{ascending:false}).limit(40)
    ]);
    if(settings.error)throw settings.error;
    if(posts.error)throw posts.error;
    if(complaints.error)throw complaints.error;
    if(settings.data){setMode(settings.data.review_mode==='all'?'all':'automatic');setTerms(Array.isArray(settings.data.blocked_terms)?settings.data.blocked_terms.join(', '):'');}
    setQueue((posts.data||[]) as unknown as PendingPost[]);setReports((complaints.data||[]) as Report[]);
-   const ids=[...new Set((part.data||[]).map(x=>x.user_id))];
-   if(ids.length){const {data:p,error:e}=await supabase.from('profiles').select('id,handle,display_name,avatar_path').in('id',ids);if(e)throw e;setMembers((p||[]) as Member[]);}else setMembers([]);
+   // Do not silently hide members after Supabase's page-size limit.
+   const memberIds:string[]=[];
+   for(let offset=0;;offset+=200){
+    const {data:page,error:e}=await supabase.from('community_members').select('user_id').eq('community_id',community.id).order('user_id').range(offset,offset+199);
+    if(e)throw e;
+    const rows=page||[];
+    memberIds.push(...rows.map(x=>x.user_id));
+    if(rows.length<200)break;
+   }
+   const ids=[...new Set(memberIds)];
+   const profiles:Member[]=[];
+   for(let offset=0;offset<ids.length;offset+=200){
+    const batch=ids.slice(offset,offset+200);
+    const {data:p,error:e}=await supabase.from('profiles').select('id,handle,display_name,avatar_path').in('id',batch);
+    if(e)throw e;
+    profiles.push(...((p||[]) as Member[]));
+   }
+   setMembers(profiles);
   }catch(e){setError(e instanceof Error?e.message:'Não foi possível carregar a moderação.');}
   finally{setLoading(false);}
  },[community.id,community.owner_id,userId]);
