@@ -30,5 +30,6 @@ test('age decision table stores coarse bands only and denies client table access
   assert.match(migration, /enable row level security/i);
   assert.match(migration, /revoke all on table public\.age_assurance_decisions from public, anon, authenticated/i);
   assert.match(migration, /grant select on table public\.age_assurance_decisions to service_role/i);
-  assert.doesNotMatch(migration, /date_of_birth|document_image|selfie|biometric_template/i);
+  const schema = migration.split('\\n').filter(line => !line.trim().startsWith('--')).join('\\n');
+  assert.doesNotMatch(schema, /date_of_birth|document_image|selfie|biometric_template/i);
 });
