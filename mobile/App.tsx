@@ -47,6 +47,7 @@ import {unregisterRemotePush} from './src/remote-push';
 import {MediaGallery} from './src/media-gallery';
 import {LinkedMediaPreview} from './src/link-media-ui';
 import {NativeCallsProvider,useNativeCalls} from './src/native-calls';
+import {SupportScreen} from './src/support-ui';
 import {parseConectaLink} from './src/deep-link';
 import type {PinnedChatMessage} from './src/chat-groups';
 import {
@@ -59,7 +60,7 @@ import {BottomNavigation,Brand,FeedTabs,GradientPanel,RoundIcon,
 
 import type {SelectedMedia} from './src/media';
 
-type Tab='feed'|'reels'|'connections'|'messages'|'communities'|'notifications'|'profile';
+type Tab='feed'|'reels'|'connections'|'messages'|'communities'|'notifications'|'profile'|'support';
 const noticeNames:Record<string,string>={
  like:'curtiu sua publicação',comment:'comentou sua publicação',
  friend_request:'enviou um convite',friend_accept:'aceitou sua conexão',
@@ -1978,7 +1979,7 @@ export default function App(){
    return;
   }
   if(key==='feed'||key==='connections'||key==='communities'||
-     key==='profile'||key==='messages'||key==='reels'||key==='notifications'){
+     key==='profile'||key==='messages'||key==='reels'||key==='notifications'||key==='support'){
    setChatId(null);setTab(key);
   }
  };
@@ -2000,6 +2001,9 @@ export default function App(){
   if(tab==='notifications')return <NotificationsScreen userId={user.id}
    onRead={()=>void refreshUnread(user.id)} onPost={setViewPostId}
    onConnections={()=>{setContactsMode(true);setTab('connections');}}/>;
+  if(tab==='support')return <SupportScreen
+   onCommunity={()=>{setCommunitySlugRoute('maes-atipicas-rede-apoio');setTab('communities');}}
+   onConnections={()=>{setContactsMode(false);setTab('connections');}}/>;
   return <ProfileScreen profile={profile} onUpdate={setProfile} onLogout={()=>void logout()}/>;
  };
  return <SafeAreaProvider>
@@ -2037,6 +2041,7 @@ export default function App(){
       <RoundIcon compact={compactHeader} Icon={MoreHorizontal} label="Mais opções"
        onPress={()=>Alert.alert('Mais opções','Escolha uma área do Conecta.',[
         {text:'Reels',onPress:()=>navigate('reels')},
+        {text:'Acolhimento e mães atípicas',onPress:()=>navigate('support')},
         {text:fullscreen?'Sair da tela cheia':'Ativar tela cheia',onPress:()=>setFullscreen(value=>!value)},
         {text:'Cancelar',style:'cancel'}
        ])} active={tab==='reels'}/>
