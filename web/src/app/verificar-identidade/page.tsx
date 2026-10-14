@@ -138,7 +138,7 @@ export default function IdentityPage(){
           <li>{access?.steps?.ageDeclaration?'✓':'○'} Faixa etária declarada (não é prova de idade)</li>
           <li>{access?.steps?.identity?'✓':'○'} Identidade aprovada por fonte confiável</li>
           <li>{access?.steps?.age?'✓':'○'} Idade confirmada por credencial confiável</li>
-          {declaredBand!=='18_plus'&&<li>{access?.steps?.guardian?'✓':'○'} Responsável com identidade e maioridade confirmadas</li>}
+          {(declaredBand!=='18_plus'||access?.reason==='guardian_required')&&<li>{access?.steps?.guardian?'✓':'○'} Responsável com identidade e maioridade confirmadas</li>}
         </ol>
       </div>
       <p className="small-note">Nenhum teste local, PDF com assinatura íntegra ou data declarada cria automaticamente um selo de conta verificada ou habilita recursos exclusivos para adultos.</p>
