@@ -63,6 +63,14 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/instance\.detect\(documentTensor\)/);
  assert.match(route,/instance\.detect\(selfieTensor\)/);
  assert.match(route,/instance\.match\.similarity/);
+ // The pinned model bundle does not contain Human's optional iris/emotion/attention/gear assets.
+ // Explicitly disable them so Human never tries to run an unloaded GraphModel.
+ assert.match(route,/attention:\{enabled:false\}/);
+ assert.match(route,/iris:\{enabled:false\}/);
+ assert.match(route,/emotion:\{enabled:false\}/);
+ assert.match(route,/gear:\{enabled:false\}/);
+ assert.match(route,/antispoof:\{enabled:true\}/);
+ assert.match(route,/liveness:\{enabled:true\}/);
  assert.match(route,/selfieFace\.real/);
  assert.match(route,/consume_identity_liveness_challenge/);
  assert.match(route,/livenessFrame/);
