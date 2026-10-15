@@ -295,6 +295,7 @@ export async function POST(request:NextRequest){
     });
     if(verdictError)
       return await failAttempt('As verificações passaram, mas não foi possível registrar o resultado com segurança. A validação não foi concluída; tente novamente.',503);
+    await completeAttempt();
     return NextResponse.json({
       ok:true,
       status:'approved',
