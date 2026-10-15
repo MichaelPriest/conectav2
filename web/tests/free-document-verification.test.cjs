@@ -17,6 +17,10 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(route,/length>=5/);
  assert.match(route,/createWorker\('por'\)/);
  assert.match(route,/dobFromText/);
+ assert.match(route,/worker\.recognize\(document\)/);
+ assert.match(route,/worker\.recognize\(back\)/);
+ assert.match(route,/frontDob&&backDob&&frontDob!==backDob/);
+ assert.match(route,/frente e no verso divergem/);
  assert.match(route,/instance\.detect\(documentTensor\)/);
  assert.match(route,/instance\.detect\(selfieTensor\)/);
  assert.match(route,/instance\.match\.similarity/);
