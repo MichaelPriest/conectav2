@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect,useRef,useState} from 'react';
+import {useCallback,useEffect,useRef,useState} from 'react';
 import {Camera,ShieldCheck,Trash2,CameraOff} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 
@@ -59,6 +59,8 @@ async function compressForUpload(file:File,maxDimension=1600):Promise<File>{
 export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [front,setFront]=useState<File|null>(null);
   const [back,setBack]=useState<File|null>(null);
+  const [rgDataSide,setRgDataSide]=useState<File|null>(null);
+  const [rgPhotoSide,setRgPhotoSide]=useState<File|null>(null);
   const [selfie,setSelfie]=useState<File|null>(null);
   const [consent,setConsent]=useState(false);
   const [busy,setBusy]=useState(false);
@@ -82,7 +84,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   useEffect(()=>()=>{streamRef.current?.getTracks().forEach(track=>track.stop());},[]);
 
   function clear(){
-    stopCamera();setFront(null);setBack(null);setSelfie(null);setConsent(false);
+    stopCamera();setFront(null);setBack(null);setRgDataSide(null);setRgPhotoSide(null);setSelfie(null);setConsent(false);
     setChallenge('');setInstructions([]);setFrameIndex(0);setFrames([]);
     setMessage('Arquivos removidos desta tela.');setError('');setCompleted(false);setStep(1);
   }
@@ -137,7 +139,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     }finally{setChallengeBusy(false);}
   }
 
-  async function captureFrame(){
+  const captureFrame=useCallback(async()=>{
     const video=videoRef.current;
     if(!video||!challenge||!video.videoWidth||!video.videoHeight||frameIndex>=4)return;
     setError('');
@@ -157,11 +159,19 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       setMessage(frameIndex===3?'Captura guiada concluída. Envie os documentos para validação no servidor.':'Quadro capturado. Continue seguindo a próxima instrução.');
       if(frameIndex===3)stopCamera();
     }catch(err){setError(err instanceof Error?err.message:'Falha na captura.');}
-  }
+  },[challenge,frameIndex]);
+
+  // Capture each guided liveness step automatically, with a manual fallback.
+  useEffect(()=>{
+    if(!challenge||frameIndex>=4||!streamRef.current)return;
+    setMessage('Siga a instrução na tela. A captura desta etapa será feita automaticamente em 5 segundos; você também pode capturar antes.');
+    const timer=window.setTimeout(()=>{void captureFrame();},5000);
+    return ()=>window.clearTimeout(timer);
+  },[challenge,frameIndex,captureFrame]);
 
   async function submit(){
-    if(!front||!back||!selfie||!consent){
-      setError('Envie frente, verso e selfie, e marque o consentimento.');return;
+    if(!front||!back||(documentType==='old-rg'&&(!rgDataSide||!rgPhotoSide))||!selfie||!consent){
+      setError(documentType==='old-rg'?'Envie as quatro partes do RG antigo, a selfie e marque o consentimento.':'Envie frente, verso e selfie, e marque o consentimento.');return;
     }
     if(!challenge||frames.length!==4){
       setError('Conclua os quatro quadros da captura guiada antes de enviar.');return;
@@ -169,11 +179,15 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     setBusy(true);setError('');setMessage('Preparando o envio seguro para validação…');
     try{
       const {data:{session}}=await supabaseBrowser().auth.getSession();
-      const [optimizedFront,optimizedBack,optimizedSelfie]=await Promise.all([
-        compressForUpload(front),compressForUpload(back),compressForUpload(selfie)
+      const [optimizedFront,optimizedBack,optimizedSelfie,optimizedRgDataSide,optimizedRgPhotoSide]=await Promise.all([
+        compressForUpload(front),compressForUpload(back),compressForUpload(selfie),
+        rgDataSide?compressForUpload(rgDataSide):Promise.resolve(null),
+        rgPhotoSide?compressForUpload(rgPhotoSide):Promise.resolve(null)
       ]);
       const form=new FormData();
       form.set('documentType',documentType);form.set('documentFront',optimizedFront);form.set('documentBack',optimizedBack);
+      if(optimizedRgDataSide)form.set('rgDataSide',optimizedRgDataSide);
+      if(optimizedRgPhotoSide)form.set('rgPhotoSide',optimizedRgPhotoSide);
       form.set('selfie',optimizedSelfie);form.set('consent','true');form.set('livenessChallenge',challenge);
       frames.forEach((frame,index)=>form.set('livenessFrame'+index,frame));
       setMessage('Validando documento, rosto e captura ao vivo no servidor…');
@@ -191,12 +205,12 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   }
 
   const steps=[
-    {number:1,label:'Documento',done:Boolean(front&&back)},
+    {number:1,label:'Documento',done:Boolean(front&&back&&(documentType!=='old-rg'||(rgDataSide&&rgPhotoSide)))},
     {number:2,label:'Rosto',done:Boolean(selfie)},
     {number:3,label:'Captura ao vivo',done:frames.length===4},
     {number:4,label:'Validar',done:completed}
   ];
-  const canContinue=step===1?Boolean(front&&back):step===2?Boolean(selfie&&consent):step===3?Boolean(challenge&&frames.length===4):true;
+  const canContinue=step===1?Boolean(front&&back&&(documentType!=='old-rg'||(rgDataSide&&rgPhotoSide))):step===2?Boolean(selfie&&consent):step===3?Boolean(challenge&&frames.length===4):true;
 
   return <div style={{marginTop:20}}>
     <div className="feed-title">
@@ -212,10 +226,10 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </div>
     {step===1&&<section className="panel" aria-labelledby="identity-step-document">
       <h3 id="identity-step-document">1. Envie seu documento</h3>
-      <p className="small-note">Selecione imagens do armazenamento ou use a câmera do dispositivo. Para CNH, também pode selecionar o PDF digital; ele será convertido em imagens temporárias no navegador. Envie frente e verso legíveis; o QR Code pode estar em qualquer lado.</p>
+      <p className="small-note">Selecione imagens do armazenamento, tire fotos com a câmera do dispositivo ou anexe arquivos compatíveis. Para CNH, também pode selecionar o PDF digital; ele será convertido em imagens temporárias no navegador. Envie frente e verso legíveis. Para RG antigo, envie também as duas partes internas com seus QR Codes e códigos de série.</p>
       <div style={{display:'grid',gap:14}}>
         <label className="form-label">Frente do documento com foto
-          <input type="file" accept={documentType==='cnh'?'image/jpeg,image/png,image/webp,application/pdf':'image/jpeg,image/png,image/webp'} disabled={busy||challengeBusy} onChange={async e=>{
+          <input type="file" capture="environment" accept={documentType==='cnh'?'image/jpeg,image/png,image/webp,application/pdf':'image/jpeg,image/png,image/webp'} disabled={busy||challengeBusy} onChange={async e=>{
             const file=e.target.files?.[0]||null;
             if(!file){setFront(null);return;}
             setError('');
@@ -231,13 +245,23 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
           <span className="small-note">{front?front.name:(documentType==='cnh'?'JPG, PNG ou WebP · até 8 MB · PDF da CNH até 12 MB':'JPG, PNG ou WebP · até 8 MB')}</span>
         </label>
         <label className="form-label">Verso do documento
-          <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy||challengeBusy} onChange={e=>setBack(e.target.files?.[0]||null)}/>
+          <input type="file" capture="environment" accept="image/jpeg,image/png,image/webp" disabled={busy||challengeBusy} onChange={e=>setBack(e.target.files?.[0]||null)}/>
           <span className="small-note">{back?back.name:'Envie o verso com todas as informações legíveis; o QR Code pode estar na frente ou no verso.'}</span>
         </label>
+        {documentType==='old-rg'&&<>
+          <label className="form-label">Parte interna atrás da frente — QR Code dos dados e código de série
+            <input type="file" capture="environment" accept="image/jpeg,image/png,image/webp" disabled={busy||challengeBusy} onChange={e=>setRgDataSide(e.target.files?.[0]||null)}/>
+            <span className="small-note">{rgDataSide?rgDataSide.name:'Fotografe esta parte inteira, incluindo o QR Code dos dados e o código de série.'}</span>
+          </label>
+          <label className="form-label">Parte interna atrás do verso — QR Code da foto online e código de série
+            <input type="file" capture="environment" accept="image/jpeg,image/png,image/webp" disabled={busy||challengeBusy} onChange={e=>setRgPhotoSide(e.target.files?.[0]||null)}/>
+            <span className="small-note">{rgPhotoSide?rgPhotoSide.name:'Fotografe esta parte inteira, incluindo o QR Code da foto online e o código de série.'}</span>
+          </label>
+        </>}
       </div>
       <label className="human-agree" style={{marginTop:16}}>
         <input type="checkbox" checked={consent} disabled={busy||challengeBusy} onChange={e=>setConsent(e.target.checked)}/>
-        Autorizo o processamento temporário das imagens para leitura do QR, OCR, comparação facial e captura guiada. Não autorizo armazenamento nem uso para publicidade. Entendo que não há consulta automática a uma base oficial.
+        Autorizo o processamento temporário das imagens enviadas, incluindo as quatro partes do RG antigo quando aplicável, para leitura de QR, OCR, comparação facial e captura guiada. Não autorizo armazenamento nem uso para publicidade. Entendo que não há consulta automática a uma base oficial.
       </label>
     </section>}
     {step===2&&<section className="panel" aria-labelledby="identity-step-face">
@@ -251,7 +275,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </section>}
     {step===3&&<section className="panel" aria-labelledby="identity-step-live">
       <h3 id="identity-step-live">3. Confirme que está presente</h3>
-      <p className="small-note">Permita o acesso à câmera. O sistema solicitará quatro quadros e instruções aleatórias de movimento, válidas por 90 segundos.</p>
+      <p className="small-note">Permita o acesso à câmera. O sistema orienta cada etapa e captura automaticamente quatro quadros após cinco segundos, com opção de capturar antes. As instruções aleatórias são válidas por 90 segundos.</p>
       <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
         style={{display:challenge?'block':'none',width:'100%',maxWidth:420,aspectRatio:'4 / 3',objectFit:'cover',transform:'scaleX(-1)',borderRadius:12,background:'#111'}}/>
       {!challenge?<button type="button" className="btn btn-outline" onClick={()=>void startGuidedCapture()} disabled={busy||challengeBusy}>
@@ -261,7 +285,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
           <progress value={frames.length} max={4} aria-label="Quadros capturados" style={{width:'100%',height:10,accentColor:'var(--accent,#6d5dfc)'}}/>
           <p className="small-note">Quadros capturados: {frames.length}/4</p>
           {frameIndex<4&&<button type="button" className="btn btn-outline" onClick={()=>void captureFrame()} disabled={busy}>
-            <Camera size={17}/> Capturar esta etapa</button>}
+            <Camera size={17}/> Capturar agora</button>}
           <button type="button" className="btn btn-outline" style={{marginLeft:8}} onClick={()=>{stopCamera();setChallenge('');setInstructions([]);setFrames([]);setFrameIndex(0);setMessage('Captura cancelada.');}} disabled={busy}>
             <CameraOff size={17}/> Reiniciar captura</button>
         </div>}
@@ -269,13 +293,13 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     {step===4&&<section className="panel" aria-labelledby="identity-step-review">
       <h3 id="identity-step-review">4. Revise e validar</h3>
       <ul style={{lineHeight:1.9,paddingLeft:22}}>
-        <li>{front&&back?'✓':'○'} Frente e verso do documento</li>
+        <li>{front&&back&&(documentType!=='old-rg'||(rgDataSide&&rgPhotoSide))?'✓':'○'} {documentType==='old-rg'?'Quatro partes do RG antigo':'Frente e verso do documento'}</li>
         <li>{selfie?'✓':'○'} Selfie para comparação facial</li>
         <li>{consent?'✓':'○'} Consentimento para processamento temporário</li>
         <li>{frames.length===4?'✓':'○'} Captura guiada concluída</li>
       </ul>
       <p>Ao selecionar “Validar minha identidade”, o servidor verifica os arquivos e registra o resultado apenas quando todas as verificações obrigatórias passam. Não há aprovação simulada nem liberação por resultado inconclusivo.</p>
-      <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||challengeBusy||!front||!back||!selfie||!consent||!challenge||frames.length!==4}>
+      <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||challengeBusy||!front||!back||(documentType==='old-rg'&&(!rgDataSide||!rgPhotoSide))||!selfie||!consent||!challenge||frames.length!==4}>
         <ShieldCheck size={17}/>{busy?'Validando no servidor…':'Validar minha identidade'}</button>
     </section>}
     {step===5&&<section className="panel" aria-live="polite">

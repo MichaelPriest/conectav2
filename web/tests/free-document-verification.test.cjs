@@ -20,10 +20,12 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(route,/length>=5/);
  assert.match(route,/createWorker\('por'\)/);
  assert.match(route,/dobFromText/);
- assert.match(route,/worker\.recognize\(document\)/);
- assert.match(route,/worker\.recognize\(back\)/);
- assert.match(route,/frontDob&&backDob&&frontDob!==backDob/);
- assert.match(route,/frente e no verso divergem/);
+ assert.match(route,/const documentImages=\[document,back/);
+ assert.match(route,/documentImages\.map\(image=>worker!\.recognize\(image\)\)/);
+ assert.match(route,/const detectedDates=ocrResults\.map/);
+ assert.match(route,/const uniqueDates=\[\.\.\.new Set\(detectedDates\)\]/);
+ assert.match(route,/uniqueDates\.length>1/);
+ assert.match(route,/datas de nascimento lidas nas partes do documento divergem/);
  assert.match(route,/instance\.detect\(documentTensor\)/);
  assert.match(route,/instance\.detect\(selfieTensor\)/);
  assert.match(route,/instance\.match\.similarity/);
@@ -32,7 +34,7 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(route,/livenessFrame/);
  assert.match(route,/Math\.sign\(firstTurn\)===Math\.sign\(secondTurn\)/);
  assert.match(ui,/Iniciar captura guiada/);
- assert.match(ui,/Capturar esta etapa/);
+ assert.match(ui,/Capturar agora/);
  assert.match(ui,/renderCnhPdf/);
  assert.match(ui,/application\/pdf/);
  assert.match(ui,/pdfjs-dist\/legacy\/build\/pdf\.mjs/);
