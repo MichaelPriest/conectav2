@@ -30,12 +30,15 @@ async function decodeQrFromImage(buffer:Buffer):Promise<string>{
   const image=await sharp(buffer,{limitInputPixels:20_000_000}).rotate()
     .resize({width:1800,height:1800,fit:'inside',withoutEnlargement:true})
     .greyscale().raw().toBuffer({resolveWithObject:true});
+  const luminance=new Uint8ClampedArray(image.data);
   try{
-    const source=new RGBLuminanceSource(new Uint8ClampedArray(image.data),image.info.width,image.info.height);
+    const source=new RGBLuminanceSource(luminance,image.info.width,image.info.height);
     const reader=new QRCodeReader();
     try{return reader.decode(new BinaryBitmap(new HybridBinarizer(source))).getText();}
     finally{reader.reset();}
-  }finally{image.data.fill(0);}
+  }catch{
+    throw new Error('Não foi possível ler o QR Code do verso. Use uma foto nítida, sem reflexo e com o código inteiro visível.');
+  }finally{luminance.fill(0);image.data.fill(0);}
 }
 async function pixels(buffer:Buffer){
   const result=await sharp(buffer,{limitInputPixels:20_000_000})
