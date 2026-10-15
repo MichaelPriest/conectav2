@@ -223,7 +223,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       <button type="button" className="btn btn-outline" onClick={clear}><Trash2 size={16}/> Iniciar novamente</button>
     </section>}
     {step<4&&<div className="row" style={{gap:10,flexWrap:'wrap',marginTop:16}}>
-      {step>1&&<button type="button" className="btn btn-outline" onClick={()=>{if(step===3)stopCamera();setStep(step-1);}} disabled={busy||challengeBusy}>Voltar</button>}
+      {step>1&&<button type="button" className="btn btn-outline" onClick={()=>{if(step===3){stopCamera();setChallenge('');setInstructions([]);setFrames([]);setFrameIndex(0);}setStep(step-1);}} disabled={busy||challengeBusy}>Voltar</button>}
       <button type="button" className="btn btn-primary" onClick={()=>{setError('');setStep(step+1);}} disabled={!canContinue||busy||challengeBusy}>
         Continuar <span aria-hidden="true">→</span>
       </button>
