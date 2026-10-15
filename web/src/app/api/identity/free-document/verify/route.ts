@@ -107,6 +107,7 @@ export async function POST(request:NextRequest){
 
   let document:Buffer=Buffer.alloc(0),back:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='',livenessChallenge='';
   const livenessFrames:Buffer[]=[];
+  let challengeTurnOrder:string[]=[];
   try{
     const form=await request.formData();
     if(form.get('consent')!=='true')return fail('É necessário consentir com o processamento temporário das imagens.',400);
@@ -118,6 +119,16 @@ export async function POST(request:NextRequest){
     livenessChallenge=String(form.get('livenessChallenge')||'');
     if(!/^[0-9a-f]{64}$/.test(livenessChallenge))throw new Error('Inicie a captura guiada de vivacidade antes de enviar os documentos.');
     for(let i=0;i<4;i++)livenessFrames.push(await imageBuffer(form.get('livenessFrame'+i),'o quadro guiado '+(i+1)));
+    // Consume on first well-formed submission, before OCR/model work, so a
+    // failed attempt cannot keep reusing the same challenge.
+    const challengeHash=createHash('sha256').update(livenessChallenge,'utf8').digest('hex');
+    const {data:challengeData,error:challengeError}=await context.admin.rpc('consume_identity_liveness_challenge',{
+      p_user_id:context.user.id,p_challenge_hash:challengeHash
+    });
+    if(challengeError)throw new Error('O serviço de vivacidade está indisponível.');
+    if(!challengeData||!Array.isArray(challengeData.turn_order)||challengeData.turn_order.length!==2)
+      throw new Error('O desafio de vivacidade expirou ou já foi utilizado. Inicie uma nova captura.');
+    challengeTurnOrder=challengeData.turn_order as string[];
     qr=await decodeQrFromImage(back);
     if(qr.length<8||qr.length>12000)return fail('O QR Code do verso não tem um conteúdo válido para esta verificação.',422);
   }catch(error){
@@ -192,16 +203,8 @@ export async function POST(request:NextRequest){
     if(typeof selfieFace.real!=='number'||selfieFace.real<0.55)
       return fail('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422);
 
-    // Consume the server-issued random challenge exactly once before analyzing
-    // frames. A client boolean or client-provided biometric score is never proof.
-    const challengeHash=createHash('sha256').update(livenessChallenge,'utf8').digest('hex');
-    const {data:challengeData,error:challengeError}=await context.admin.rpc('consume_identity_liveness_challenge',{
-      p_user_id:context.user.id,p_challenge_hash:challengeHash
-    });
-    if(challengeError)return fail('O serviço de vivacidade está indisponível. Nenhuma aprovação foi gravada.',503);
-    if(!challengeData||!Array.isArray(challengeData.turn_order)||challengeData.turn_order.length!==2)
-      return fail('O desafio de vivacidade expirou ou já foi utilizado. Inicie uma nova captura.',409);
-    const turnOrder=challengeData.turn_order as string[];
+    // Challenge was consumed before OCR/model work; client booleans and scores are ignored.
+    const turnOrder=challengeTurnOrder;
     const livenessPixels=await Promise.all(livenessFrames.map(frame=>pixels(frame)));
     const livenessTensors:any[]=[];
     const livenessResults:FaceResult[]=[];
