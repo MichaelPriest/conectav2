@@ -28,8 +28,11 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(route,/instance\.detect\(selfieTensor\)/);
  assert.match(route,/instance\.match\.similarity/);
  assert.match(route,/selfieFace\.real/);
- assert.match(route,/identity_verifications/);
- assert.match(route,/age_assurance_decisions/);
+ assert.match(route,/uma selfie estática não comprova vivacidade/);
+ assert.match(route,/Nenhum selo, faixa etária ou acesso foi liberado/);
+ assert.doesNotMatch(route,/status:'approved'/);
+ assert.doesNotMatch(route,/from\('identity_verifications'\)\.upsert/);
+ assert.doesNotMatch(route,/from\('age_assurance_decisions'\)\.upsert/);
  assert.match(route,/documentStored:false/);
  assert.match(route,/officialValidityChecked:false/);
 });
