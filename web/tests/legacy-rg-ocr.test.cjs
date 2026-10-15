@@ -52,6 +52,6 @@ test('extracts birth dates across OCR line breaks and spaced separators',()=>{
 
 test('birth-date OCR does not guess when multiple dates remain in the birth field',()=>{
  const {extractBirthDateFromOcr}=outputs;
- assert.equal(extractBirthDateFromOcr('NASCIMENTO 05/06/2000 07/08/2001'),'2000-06-05');
+ assert.equal(extractBirthDateFromOcr('NASCIMENTO 05/06/2000 07/08/2001'),null);
  assert.equal(extractBirthDateFromOcr('NASCIMENTO 05/06/2000\nNASCIMENTO 07/08/2001'),null);
 });
