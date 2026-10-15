@@ -1,50 +1,35 @@
 'use client';
+
 import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
-import {ArrowLeft,Camera,CheckCircle2,ExternalLink,ShieldCheck,RefreshCw,LockKeyhole,Smartphone,Info} from 'lucide-react';
+import {ArrowLeft,CheckCircle2,LockKeyhole,RefreshCw,ShieldCheck} from 'lucide-react';
 import {GuardedPage,useAuthProfile} from '@/components/app-shell';
 import {supabaseBrowser} from '@/lib/supabase/browser';
-import {HumanCameraCheck} from '@/components/human-camera-check';
-import {CinQrScanner} from '@/components/cin-qr-scanner';
-import {LegacyRgScanner} from '@/components/legacy-rg-scanner';
-import {GovBrSignatureFlow} from '@/components/govbr-signature-flow';
-import {IdentityCompletion} from '@/components/identity-completion';
-import {IdentityMethodsPanel} from '@/components/identity-methods-panel';
 import {FreeDocumentVerification} from '@/components/free-document-verification';
 import {FamilyRelationships} from '@/components/family-relationships';
 
-type MethodItem={id:string;label:string;cost:string;status:string;verifiesIdentity:boolean;verifiesAge:boolean;details:string;priceDisplay?:string};
-type MethodsResult={methods?:MethodItem[];notice?:string};
+type Result={configured?:boolean;status?:string;age_band?:string;guardian_status?:string;error?:string};
 type AccessResult={networkAccess?:boolean;reason?:string;message?:string;steps?:{profile:boolean;ageDeclaration:boolean;identity:boolean;age:boolean;guardian:boolean}};
-
-type Result={
-  configured?:boolean;
-  status?:string;
-  age_band?:string;
-  guardian_status?:string;
-  error?:string;
-  url?:string;
-};
+type DocumentMode='cin'|'old-rg'|'cnh';
 
 const labels:Record<string,string>={
   not_started:'Ainda não iniciada',
-  pending:'Em andamento ou aguardando análise',
-  approved:'Identidade aprovada pelo provedor',
+  pending:'Em análise',
+  approved:'Identidade aprovada',
   declined:'Não aprovada',
   failed:'Não foi possível concluir',
   expired:'Verificação expirada',
-  unavailable:'Provedor ainda não ativado'
+  unavailable:'Verificação indisponível'
 };
 
 export default function IdentityPage(){
   const auth=useAuthProfile();
   const [result,setResult]=useState<Result|null>(null);
-  const [methods,setMethods]=useState<MethodsResult|null>(null);
   const [access,setAccess]=useState<AccessResult|null>(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [declaredBand,setDeclaredBand]=useState<string|null>(null);
-  const [documentMode,setDocumentMode]=useState<'cin'|'old-rg'|'cnh'>('cin');
+  const [documentMode,setDocumentMode]=useState<DocumentMode>('cin');
 
   const token=useCallback(async()=>{
     const {data:{session}}=await supabaseBrowser().auth.getSession();
@@ -57,19 +42,16 @@ export default function IdentityPage(){
     try{
       const jwt=await token();
       if(!jwt)throw new Error('Sua sessão expirou. Faça login novamente.');
-      const response=await fetch('/api/identity/status',{
-        headers:{Authorization:'Bearer '+jwt},cache:'no-store'
-      });
-      const data=(await response.json()) as Result;
-      if(!response.ok)throw new Error(data.error||'Não foi possível consultar a verificação.');
-      setResult(data);
-      const [methodsResponse,accessResponse]=await Promise.all([
-        fetch('/api/identity/methods',{headers:{Authorization:'Bearer '+jwt},cache:'no-store'}),
-        fetch('/api/identity/access',{headers:{Authorization:'Bearer '+jwt},cache:'no-store'})
+      const headers={Authorization:'Bearer '+jwt};
+      const [statusResponse,accessResponse]=await Promise.all([
+        fetch('/api/identity/status',{headers,cache:'no-store'}),
+        fetch('/api/identity/access',{headers,cache:'no-store'})
       ]);
-      if(methodsResponse.ok)setMethods((await methodsResponse.json()) as MethodsResult);
-      if(accessResponse.ok)setAccess((await accessResponse.json()) as AccessResult);
-      else setAccess({networkAccess:false,reason:'verification_unavailable',message:'Não foi possível confirmar a verificação. O acesso continua bloqueado.'});
+      const statusData=await statusResponse.json() as Result;
+      if(!statusResponse.ok)throw new Error(statusData.error||'Não foi possível consultar a validação.');
+      setResult(statusData);
+      if(accessResponse.ok)setAccess(await accessResponse.json() as AccessResult);
+      else setAccess({networkAccess:false,reason:'verification_unavailable',message:'Não foi possível confirmar a validação. O acesso continua bloqueado.'});
     }catch(err){setError(err instanceof Error?err.message:'Erro de conexão.');}
     finally{setBusy(false);}
   },[auth.user,token]);
@@ -81,135 +63,58 @@ export default function IdentityPage(){
     let mounted=true;
     void supabaseBrowser().from('registration_age_declarations')
       .select('declared_band').eq('user_id',auth.user.id).maybeSingle()
-      .then(({data,error})=>{
-        if(mounted&&!error)setDeclaredBand(data?.declared_band||null);
-      });
+      .then(({data,error})=>{if(mounted&&!error)setDeclaredBand(data?.declared_band||null);});
     return ()=>{mounted=false;};
   },[auth.user]);
 
-  async function begin(){
-    setBusy(true);setError('');
-    try{
-      const jwt=await token();
-      if(!jwt)throw new Error('Sua sessão expirou.');
-      // Open the tab synchronously so popup blockers do not prevent camera verification.
-      const tab=window.open('about:blank','_blank','noopener');
-      const response=await fetch('/api/identity/start',{
-        method:'POST',headers:{Authorization:'Bearer '+jwt}
-      });
-      const data=(await response.json()) as Result;
-      if(!response.ok||!data.url)throw new Error(data.error||'Provedor indisponível.');
-      // Open only HTTPS links checked by the server.
-      if(tab)tab.location.href=data.url;
-      else window.location.href=data.url;
-      await refresh();
-    }catch(err){
-      setError(err instanceof Error?err.message:'Não foi possível iniciar.');
-    }finally{setBusy(false);}
-  }
-
-  const providerMethod=methods?.methods?.find(method=>method.id==='external-identity-provider');
-  const paidProviderReady=providerMethod?.status==='ready_with_cost_disclosure' && Boolean(providerMethod.priceDisplay?.trim());
-  const available=result?.configured===true && paidProviderReady;
   return <GuardedPage {...auth}><main className="section-page" style={{maxWidth:850}}>
     <Link href="/" className="rail-link"><ArrowLeft size={16}/> Voltar ao site público</Link>
-    <div className="page-heading" style={{marginTop:24}}><div>
-      <span className="section-eyebrow">CONECTA ID · VALIDAÇÃO DOCUMENTAL</span>
-      <h1>Identidade e idade <span className="wave">✳</span></h1>
-      <p>Valide gratuitamente sua CIN, RG antigo com QR Code ou CNH. Com seu consentimento, a frente do documento e a selfie são processadas temporariamente no servidor; as imagens não são armazenadas.</p>
-    </div></div>
+    <div className="page-heading" style={{marginTop:24}}>
+      <div>
+        <span className="section-eyebrow">CONECTA ID</span>
+        <h1>Validar minha identidade <span className="wave">✳</span></h1>
+        <p>Um único processo gratuito: envie seu documento e uma selfie. O Conecta combina leitura do documento, OCR, leitura do QR Code quando disponível, comparação facial e análise antifraude, sem oferecer vários métodos separados.</p>
+      </div>
+    </div>
+
     <section className="panel" style={{marginBottom:20}}>
-      <div className="feed-title"><h2>Etapas de proteção da conta</h2></div>
-      <p><strong>1. Cadastro:</strong> {declaredBand
-        ?declaredBand==='18_plus'?'faixa de 18 anos ou mais autodeclarada (não comprovada)':
-         declaredBand==='13_15'?'faixa de 13–15 anos autodeclarada, proteção juvenil ativa':
-         'faixa de 16–17 anos autodeclarada, proteção juvenil ativa'
-        :'faixa etária ainda não informada'}.</p>
-      <p><strong>2. Validação gratuita:</strong> leitura do QR Code, OCR da data de nascimento, comparação facial no servidor e análise antifraude.</p>
-      <p><strong>3. Assinatura:</strong> declaração individual assinada no gov.br, com conferência técnica do PDF e consulta ao VALIDAR.</p>
-      <p><strong>4. Decisão:</strong> o Conecta registra a decisão quando os critérios automáticos são atendidos. Isso não consulta a validade atual do documento em base oficial; para menores, continua obrigatório verificar o vínculo do responsável.</p>
-      <div style={{margin:'16px 0'}}>
-        <p className={access?.networkAccess?'form-success':'form-error'} role="status">
-          <LockKeyhole size={16} style={{verticalAlign:'middle'}}/> <strong>{access?.networkAccess?'Conecta ID aprovado — acesso liberado':'Acesso à rede bloqueado até concluir o Conecta ID'}</strong>
-        </p>
-        <p>{access?.message||'Consultando no servidor a aprovação de identidade, idade e, quando aplicável, responsável.'}</p>
-        <ol style={{paddingLeft:22,lineHeight:1.8}}>
-          <li>{access?.steps?.profile?'✓':'○'} Perfil cadastrado</li>
-          <li>{access?.steps?.ageDeclaration?'✓':'○'} Faixa etária declarada (não é prova de idade)</li>
-          <li>{access?.steps?.identity?'✓':'○'} Identidade aprovada por fonte confiável</li>
-          <li>{access?.steps?.age?'✓':'○'} Idade confirmada por credencial confiável</li>
-          {(declaredBand!=='18_plus'||access?.reason==='guardian_required')&&<li>{access?.steps?.guardian?'✓':'○'} Responsável com identidade e maioridade confirmadas</li>}
-        </ol>
+      <div className="feed-title">
+        <h2><ShieldCheck size={21} style={{verticalAlign:'middle'}}/> Status da conta</h2>
+        <button className="btn btn-outline" type="button" onClick={()=>void refresh()} disabled={busy}>
+          <RefreshCw size={16}/> Atualizar
+        </button>
       </div>
-      <p className="small-note">A validação gratuita é uma avaliação própria do Conecta, não uma certificação governamental. QR/OCR e comparação facial podem errar ou ser fraudados; mantenha proteções para menores e revisão dos casos inconclusivos.</p>
-    </section>
-    <section className="panel conecta-id-official" style={{marginBottom:20}}>
-      <div className="feed-title"><h2><ShieldCheck size={22} color="#5e7cbd" style={{verticalAlign:'middle'}}/> Validação oficial gratuita da CIN</h2>
-        <span className="small-note">Ministério da Justiça e Segurança Pública</span></div>
-      <p>O governo oferece a <strong>leitura detalhada oficial</strong> da CIN no aplicativo
-        Carteira de Identidade Nacional. Ele consulta a validade atual do documento
-        e exige internet e autenticação gov.br.</p>
-      <ol style={{paddingLeft:21,lineHeight:1.8}}>
-        <li>Instale o aplicativo oficial abaixo no celular.</li>
-        <li>Escolha <strong>Leitura Detalhada (completa)</strong> e entre com sua conta gov.br.</li>
-        <li>Escaneie o QR Code no verso da CIN física e compare os dados apresentados.</li>
+      <p className={access?.networkAccess?'form-success':'form-error'} role="status">
+        <LockKeyhole size={16} style={{verticalAlign:'middle'}}/> <strong>{access?.networkAccess?'Conecta ID aprovado — acesso liberado':'Acesso restrito até concluir as verificações necessárias'}</strong>
+      </p>
+      <p>{access?.message||'Consultando no servidor o estado da conta.'}</p>
+      <ol style={{paddingLeft:22,lineHeight:1.8}}>
+        <li>{access?.steps?.profile?'✓':'○'} Perfil cadastrado</li>
+        <li>{access?.steps?.ageDeclaration?'✓':'○'} Faixa etária declarada (não é prova de idade)</li>
+        <li>{access?.steps?.identity?'✓':'○'} Identidade aprovada</li>
+        <li>{access?.steps?.age?'✓':'○'} Idade confirmada quando exigida</li>
+        {(declaredBand!=='18_plus'||access?.reason==='guardian_required')&&<li>{access?.steps?.guardian?'✓':'○'} Responsável verificado, quando aplicável</li>}
       </ol>
-      <div className="row" style={{gap:10,flexWrap:'wrap',marginTop:15}}>
-        <a className="btn btn-primary" href="https://play.google.com/store/apps/details?id=com.identidadenacional"
-          target="_blank" rel="noopener noreferrer"><Smartphone size={17}/> Aplicativo Android <ExternalLink size={14}/></a>
-        <a className="btn btn-outline" href="https://apps.apple.com/br/app/carteira-identidade-nacional/id1642584147"
-          target="_blank" rel="noopener noreferrer"><Smartphone size={17}/> Aplicativo iPhone <ExternalLink size={14}/></a>
-        <a className="btn btn-outline"
-          href="https://www.gov.br/pt-br/servicos/verificar-validade-de-qr-code-da-carteira-de-identidade-nacional"
-          target="_blank" rel="noopener noreferrer"><ExternalLink size={16}/> Instruções oficiais</a>
-      </div>
-      <p className="small-note" style={{marginTop:14}}><Info size={15} style={{verticalAlign:'middle'}}/>
-        A consulta é gratuita para o cidadão, mas <strong>o governo não envia o resultado ao Conecta</strong>.
-        Esta etapa, mesmo concluída no aplicativo oficial, não gera selo de identidade nem
-        comprovação de maioridade dentro da nossa rede. Nunca informe sua senha gov.br ao Conecta.</p>
-    </section>
-    {auth.user&&<FamilyRelationships userId={auth.user.id}/>}
-    <IdentityMethodsPanel methods={methods?.methods||[]} notice={methods?.notice||"Os métodos gratuitos são pré-triagens e não aprovam identidade nem idade."}/>
-    <section className="panel">
-      <div className="feed-title"><h2>Status da verificação integrada ao Conecta</h2><button className="btn btn-outline" type="button" onClick={refresh} disabled={busy}><RefreshCw size={16}/> Atualizar</button></div>
-      <p><strong>{labels[result?.status||'']||'Consultando...'}</strong></p>
-      {result?.status==='approved'&&<p className="form-success"><CheckCircle2 size={17} style={{verticalAlign:'middle'}}/> Identidade confirmada. A aferição de idade é um procedimento separado.</p>}
-      {result?.age_band==='unknown'&&<p className="small-note">Faixa etária: ainda não certificada pelo provedor.</p>}
-      {result?.guardian_status==='pending'&&<p className="small-note">A vinculação de responsável, se aplicável, ainda depende de verificação.</p>}
-      {!available&&result&&<p className="form-error"><LockKeyhole size={15} style={{verticalAlign:'middle'}}/> {result.configured===true&&!paidProviderReady?'O provedor pago está bloqueado até haver preço real por tentativa, divulgação explícita e confirmação do custo. Nenhuma cobrança será iniciada sem isso.':'O Conecta ainda não tem integração autorizada que receba uma aprovação oficial de identidade ou idade. A consulta gratuita acima é externa e não atualiza este status.'}</p>}
+      <p><strong>Resultado da validação:</strong> {labels[result?.status||'']||'Consultando…'}</p>
+      {result?.status==='approved'&&<p className="form-success"><CheckCircle2 size={17} style={{verticalAlign:'middle'}}/> Identidade aprovada. A confirmação de idade e de responsável, quando exigidas, continua sendo avaliada separadamente pelas regras de proteção.</p>}
+      {result?.guardian_status==='pending'&&<p className="small-note">A vinculação do responsável ainda precisa ser verificada.</p>}
       {error&&<p className="form-error" role="alert">{error}</p>}
-      <button className="btn btn-primary btn-lg" type="button" disabled={busy||!available||result?.status==='approved'} onClick={begin}>
-        <Camera size={18}/> {busy?'Verificando...':'Iniciar verificação pela câmera'} <ExternalLink size={16}/>
-      </button>
-      <p className="fineprint" style={{textAlign:'left'}}>O leitor QR Code e o Human abaixo são apenas ferramentas experimentais. Nenhum teste local isolado libera acesso adulto ou altera o cadastro de idade; a verificação documental do servidor tem critérios próprios e limitações descritas acima.</p>
+      <p className="small-note">Esta é uma avaliação própria do Conecta, não uma certificação governamental. QR Code e OCR podem falhar ou ser fraudulentos; casos inconclusivos não devem liberar acesso automaticamente. Não há consulta automática a uma base oficial de validade do documento.</p>
     </section>
-  
-    <section className="panel" style={{marginTop:20}}>
-      <div className="feed-title"><h2>Qual documento você possui?</h2></div>
-      <div className="row" style={{gap:10,flexWrap:'wrap'}} role="group" aria-label="Tipo de documento">
-        <button type="button" className={documentMode==='cin'?'btn btn-primary':'btn btn-outline'}
-          aria-pressed={documentMode==='cin'} onClick={()=>setDocumentMode('cin')}>
-          Nova CIN com QR Code</button>
-        <button type="button" className={documentMode==='old-rg'?'btn btn-primary':'btn btn-outline'}
-          aria-pressed={documentMode==='old-rg'} onClick={()=>setDocumentMode('old-rg')}>
-          RG antigo</button>
-        <button type="button" className={documentMode==='cnh'?'btn btn-primary':'btn btn-outline'}
-          aria-pressed={documentMode==='cnh'} onClick={()=>setDocumentMode('cnh')}>
-          CNH com QR Code</button>
-      </div>
-      {documentMode==='old-rg'&&<div style={{marginTop:14}}>
-        <p><strong>O RG antigo também é aceito para iniciar a pré-triagem.</strong>
-          Como os modelos antigos não possuem QR Code nacional padronizado,
-          a conferência não pode usar o leitor de CIN.</p>
-        <p className="small-note">Alternativa gratuita: teste Human de movimentos guiados,
-          declaração assinada via gov.br e eventual conferência documental assistida.
-          Nenhuma dessas ações confirma automaticamente a autenticidade do RG, a
-          titularidade ou a data de nascimento.</p>
-        <p className="small-note">Agora é possível fazer leitura OCR local do RG antigo para identificar possível faixa etária. Não armazenamos as imagens.
-          Não envie RG, CPF ou outros dados pessoais por mensagens ou comentários.</p>
-      </div>}
+
+    <section className="panel" style={{marginBottom:20}}>
+      <h2>Faça sua validação</h2>
+      <p>Use apenas um documento seu, com foto e data de nascimento legíveis. Escolha o tipo para que o servidor aplique as verificações compatíveis; isso não muda o processo nem cria métodos diferentes.</p>
+      <label className="form-label" htmlFor="identity-document-type">Tipo de documento</label>
+      <select id="identity-document-type" className="form-input" value={documentMode} onChange={event=>setDocumentMode(event.target.value as DocumentMode)}>
+        <option value="cin">Carteira de Identidade Nacional (CIN)</option>
+        <option value="old-rg">RG antigo com QR Code no verso</option>
+        <option value="cnh">CNH com QR Code</option>
+      </select>
+      <p className="small-note">O RG antigo e a CNH só podem passar pela análise automática quando o QR Code puder ser lido e os dados forem compatíveis. A leitura do código, por si só, não comprova autenticidade oficial.</p>
+      <FreeDocumentVerification key={documentMode} documentType={documentMode} onComplete={refresh}/>
     </section>
-    <FreeDocumentVerification documentType={documentMode} onComplete={refresh}/>
-    {documentMode==='cin'?<CinQrScanner/>:documentMode==='old-rg'?<LegacyRgScanner declaredBand={declaredBand}/>:null}
-    <GovBrSignatureFlow declaredBand={declaredBand}/><HumanCameraCheck/><IdentityCompletion/></main></GuardedPage>;
+
+    {auth.user&&<FamilyRelationships userId={auth.user.id}/>}
+  </main></GuardedPage>;
 }
