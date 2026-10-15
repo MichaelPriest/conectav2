@@ -29,7 +29,7 @@ export default function IdentityPage(){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [declaredBand,setDeclaredBand]=useState<string|null>(null);
-  const [documentMode,setDocumentMode]=useState<DocumentMode>('cin');
+  const [documentMode,setDocumentMode]=useState<DocumentMode>('old-rg');
 
   const token=useCallback(async()=>{
     const {data:{session}}=await supabaseBrowser().auth.getSession();
@@ -73,7 +73,7 @@ export default function IdentityPage(){
       <div>
         <span className="section-eyebrow">CONECTA ID</span>
         <h1>Validar minha identidade <span className="wave">✳</span></h1>
-        <p>Um único processo gratuito de validação: envie seu documento e uma selfie, conclua a captura guiada e receba o resultado registrado pelo Conecta. O sistema aplica OCR, leitura do QR Code, comparação facial e verificações antifraude disponíveis.</p>
+        <p>Um único processo gratuito de validação: envie seu documento e uma selfie, conclua a captura guiada e receba o resultado registrado pelo Conecta. O sistema aplica OCR, comparação facial e verificações antifraude disponíveis. A leitura de QR Code é exigida para CIN e CNH, mas não para RG antigo.</p>
       </div>
     </div>
 
@@ -109,10 +109,10 @@ export default function IdentityPage(){
       <label className="form-label" htmlFor="identity-document-type">Tipo de documento</label>
       <select id="identity-document-type" className="form-input" value={documentMode} onChange={event=>setDocumentMode(event.target.value as DocumentMode)}>
         <option value="cin">Carteira de Identidade Nacional (CIN)</option>
-        <option value="old-rg">RG antigo com QR Code no verso</option>
+        <option value="old-rg">RG antigo (frente e verso, sem QR Code)</option>
         <option value="cnh">CNH com QR Code</option>
       </select>
-      <p className="small-note">O RG antigo e a CNH só podem passar pela análise automática quando o QR Code puder ser lido e os dados forem compatíveis. A validação aprovada é do Conecta e não equivale à confirmação oficial do emissor.</p>
+      <p className="small-note">Para RG antigo, envie frente e verso: não é necessário localizar QR Code. Para CIN e CNH, a leitura do QR Code continua obrigatória. Em todos os casos, os dados precisam ser compatíveis; a validação do Conecta não equivale à confirmação oficial do emissor.</p>
       <FreeDocumentVerification key={documentMode} documentType={documentMode} onComplete={refresh}/>
     </section>
 

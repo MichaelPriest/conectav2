@@ -11,7 +11,7 @@ test('Conecta ID exposes one unified free document and selfie validation flow',(
  assert.match(page,/Validar minha identidade/);
  assert.match(page,/Um único processo gratuito/);
  assert.match(page,/FreeDocumentVerification/);
- assert.match(page,/identity-document-type/);
+ assert.match(page,/identity-document-type/);\n assert.match(page,/useState<DocumentMode>\('old-rg'\)/);\n assert.match(page,/RG antigo \(frente e verso, sem QR Code\)/);\n assert.match(page,/Para RG antigo, envie frente e verso: não é necessário localizar QR Code/);
  assert.doesNotMatch(page,/IdentityMethodsPanel|GovBrSignatureFlow|HumanCameraCheck|CinQrScanner|LegacyRgScanner/);
  assert.doesNotMatch(page,/Métodos do Conecta ID|Validação oficial gratuita da CIN/);
 });
