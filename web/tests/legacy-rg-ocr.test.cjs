@@ -67,6 +67,11 @@ test('recognizes birth date when OCR reads the date before its label',()=>{
  assert.equal(extractBirthDateFromOcr('05/06/2000 NATURALIDADE SAO PAULO NASCIMENTO DATA DE EXPEDICAO 02/03/2020'),'2000-06-05');
 });
 
+test('prefers the date after the birth label when OCR corrupts the issue-date label',()=>{
+ const {extractBirthDateFromOcr}=outputs;
+ assert.equal(extractBirthDateFromOcr('Seenidão 03/08/2016 DATA DE NASCIMENTO 07/09/1989'),'1989-09-07');
+});
+
 test('does not relabel an issue date as birth date when OCR reverses field order',()=>{
  const {extractBirthDateFromOcr}=outputs;
  assert.equal(extractBirthDateFromOcr('DATA DE EXPEDICAO 05/06/2000 NATURALIDADE SAO PAULO NASCIMENTO'),null);
