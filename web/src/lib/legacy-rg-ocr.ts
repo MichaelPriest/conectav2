@@ -1,4 +1,4 @@
-/** Local OCR preflight for legacy Brazilian RG.
+/** Local/server-side OCR parsing for legacy Brazilian RG.
  * Never promote document text to verified identity/age.
  * Raw OCR text and full birth dates must never be persisted or returned.
  */
@@ -24,12 +24,29 @@ function ageBand(iso:string,today:Date):LegacyRgBand|null{
  if(years<0||years>120)return null;
  return years<13?'under_13':years<16?'13_15':years<18?'16_17':'18_plus';
 }
-/** Extract a DOB only when it is associated with a birth label in OCR text.
- * Tolerates line breaks, common punctuation variants, and OCR-spaced dates,
- * while refusing multiple dates in the same birth-field region.
- */
+/** Extract only dates associated with a birth label; never infer from issue date. */
 export function extractBirthDateFromOcr(raw:string):string|null{
  if(typeof raw!=='string'||!raw.trim())return null;
+ const text=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
+   .replace(/\r/g,'\n').replace(/\t/g,' ').replace(/[ ]{2,}/g,' ');
+ const birthLabels=/(?:\bDATA\s*(?:DE\s*)?NASCIMENTO\b|\bNASCIMENTO\b|\bDT\.?\s*NASC(?:IMENTO)?\b)/g;
+ const datePattern=/(?:^|[^\d])(\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{4}|\d{1,2}\s+\d{1,2}\s+\d{4})(?!\d)/g;
+ const found:string[]=[];
+ for(const match of text.matchAll(birthLabels)){
+  const start=(match.index||0)+match[0].length;
+  const region=text.slice(start,start+120).split(/(?:DATA\s*(?:DE\s*)?EXPEDICAO|EXPEDICAO|VALIDADE|EMISSAO|REGISTRO|CATEGORIA|NATURALIDADE|NACIONALIDADE|ORGAO\s*EMISSOR|CPF|FILIACAO)/)[0];
+  const dates=[...region.matchAll(datePattern)];
+  if(dates.length!==1)continue;
+  const rawDate=dates[0][1].replace(/\s*([./-])\s*/g,'$1').replace(/\s+/g,'/').replace(/[.]/g,'/').replace(/-/g,'/');
+  const iso=isoDateFromBrazilian(rawDate);
+  if(iso)found.push(iso);
+ }
+ const unique=[...new Set(found)];
+ return unique.length===1?unique[0]:null;
+}
+/** Returns only an indicative age band; no DOB or raw OCR text is returned. */
+export function inspectLegacyRgOcr(raw:string,today:Date=new Date()):LegacyRgPreflight{
+ if(typeof raw!=='string'||!raw.trim())return {status:'unreadable',message:'Nenhum texto legível foi encontrado nas imagens.'};
  const dob=extractBirthDateFromOcr(raw);
  if(!dob)return {status:'date-uncertain',message:'Não foi possível identificar uma única data de nascimento com segurança. Confira a nitidez do RG; não use este resultado para comprovar idade.'};
  const band=ageBand(dob,today);
