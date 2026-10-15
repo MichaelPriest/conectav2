@@ -96,8 +96,10 @@ export async function POST(request:NextRequest){
   let worker:Awaited<ReturnType<typeof createWorker>>|null=null;
   let human:HumanRuntime|null=null;
   let documentTensor:any=null,selfieTensor:any=null;
+  let documentPixels:Uint8Array|undefined,selfiePixels:Uint8Array|undefined;
   try{
-    const [docPixels,selfiePixels]=await Promise.all([pixels(document),pixels(selfie)]);
+    const [docPixels,selfiePix]=await Promise.all([pixels(document),pixels(selfie)]);
+    documentPixels=docPixels.data;selfiePixels=selfiePix.data;
     worker=await createWorker('por');
     const ocr=await worker.recognize(document);
     const ocrText=typeof ocr.data.text==='string'?ocr.data.text:'';
@@ -137,7 +139,7 @@ export async function POST(request:NextRequest){
     human=instance as HumanRuntime;
     await instance.load();
     documentTensor=instance.tf.tensor3d(docPixels.data,[docPixels.height,docPixels.width,3],'int32').expandDims(0);
-    selfieTensor=instance.tf.tensor3d(selfiePixels.data,[selfiePixels.height,selfiePixels.width,3],'int32').expandDims(0);
+    selfieTensor=instance.tf.tensor3d(selfiePix.data,[selfiePix.height,selfiePix.width,3],'int32').expandDims(0);
     const [docResult,selfieResult]=await Promise.all([instance.detect(documentTensor),instance.detect(selfieTensor)]);
     const docFaces=docResult.face||[],selfieFaces=selfieResult.face||[];
     if(docFaces.length!==1||selfieFaces.length!==1)
@@ -175,7 +177,7 @@ export async function POST(request:NextRequest){
     return NextResponse.json({
       ok:true,status:'approved',ageBand,documentType,faceMatch:true,
       qrChecked:true,ocrChecked:true,documentStored:false,imagesDiscarded:true,
-      officialValidityChecked:false,
+      issuerSignatureChecked:documentType==='cin',officialValidityChecked:false,
       message:ageBand==='18_plus'
         ?'Verificação gratuita concluída. O acesso será atualizado pelo servidor.'
         :'Verificação concluída com proteção para menores. Associe um responsável verificado para liberar o acesso.'
@@ -186,6 +188,6 @@ export async function POST(request:NextRequest){
     documentTensor?.dispose?.();selfieTensor?.dispose?.();
     if(worker)await worker.terminate().catch(()=>undefined);
     // Best-effort release of in-memory references; no raw image is persisted.
-    document?.fill(0);selfie?.fill(0);qr='';
+    document?.fill(0);selfie?.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);qr='';
   }
 }
