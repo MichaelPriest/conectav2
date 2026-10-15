@@ -131,8 +131,8 @@ export async function POST(request:NextRequest){
       body:{enabled:false},hand:{enabled:false},object:{enabled:false},gesture:{enabled:false}
     });
     await instance.load();
-    documentTensor=instance.tf.tensor3d(docPixels.data,[docPixels.height,docPixels.width,3],'int32').expandDims(0);
-    selfieTensor=instance.tf.tensor3d(selfiePix.data,[selfiePix.height,selfiePix.width,3],'int32').expandDims(0);
+    documentTensor=instance.tf.tensor3d(new Int32Array(docPixels.data),[docPixels.height,docPixels.width,3],'int32').expandDims(0);
+    selfieTensor=instance.tf.tensor3d(new Int32Array(selfiePix.data),[selfiePix.height,selfiePix.width,3],'int32').expandDims(0);
     const [docResult,selfieResult]=await Promise.all([instance.detect(documentTensor),instance.detect(selfieTensor)]);
     const docFaces=docResult.face||[],selfieFaces=selfieResult.face||[];
     if(docFaces.length!==1||selfieFaces.length!==1)
