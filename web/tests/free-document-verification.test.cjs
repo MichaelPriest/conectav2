@@ -12,6 +12,9 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(route,/form\.get\('documentBack'\)/);
  assert.match(route,/decodeQrFromImage\(back\)/);
  assert.match(route,/QRCodeReader/);
+ assert.match(route,/identity_free_verification_attempts/);
+ assert.match(route,/MAX_REQUEST_BYTES=25\*1024\*1024/);
+ assert.match(route,/length>=5/);
  assert.match(route,/createWorker\('por'\)/);
  assert.match(route,/dobFromText/);
  assert.match(route,/instance\.detect\(documentTensor\)/);
