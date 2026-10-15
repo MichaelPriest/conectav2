@@ -90,10 +90,13 @@ export function useAuthProfile() {
         if(!active)return;
         if(declarationError)throw declarationError;
         if(!declaration){router.replace('/onboarding');return;}
-        // Conecta ID is mandatory for every account before any social-network route.
-        // This is only the navigation gate; restrictive database RLS enforces the same
-        // decision so direct Supabase requests cannot bypass the requirement.
-        if(pathname!=='/verificar-identidade'){
+        // @edilenesilva may open/edit her own profile without document submission.
+        // This exception is route-scoped only; social interactions still require the
+        // server-side Conecta ID gate and restrictive database RLS.
+        const ownProfileOnly =
+          profileData.handle === 'edilenesilva' &&
+          (pathname === '/perfil' || pathname === '/p/edilenesilva');
+        if(pathname!=='/verificar-identidade'&&!ownProfileOnly){
           const {data:{session}}=await client.auth.getSession();
           const accessResponse=await fetch('/api/identity/access',{
             headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},
