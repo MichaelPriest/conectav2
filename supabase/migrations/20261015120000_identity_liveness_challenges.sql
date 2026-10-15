@@ -54,3 +54,9 @@ $$;
 
 revoke all on function public.consume_identity_liveness_challenge(uuid, text) from public, anon, authenticated;
 grant execute on function public.consume_identity_liveness_challenge(uuid, text) to service_role;
+
+
+-- The final Conecta ID flow stores only a minimal verdict and coarse age band.
+-- Explicitly grant the service role the write permissions required by the server route.
+grant select, insert, update on table public.age_assurance_decisions to service_role;
+grant select, insert, update on table public.identity_verifications to service_role;
