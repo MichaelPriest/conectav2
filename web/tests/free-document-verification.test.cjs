@@ -43,6 +43,8 @@ test('free document verification requires consent, QR payload, OCR and server-si
  const challenge=read('src/app/api/identity/free-document/liveness-challenge/route.ts');
  const migration=read('../supabase/migrations/20261015120000_identity_liveness_challenges.sql');
  assert.match(challenge,/randomBytes\(32\)/);
+ assert.match(challenge,/randomBytes\(1\)\[0\]%2===0\?\['left','right'\]:\['right','left'\]/);
+ assert.match(route,/challengeTurnOrder\[0\]==='right'&&challengeTurnOrder\[1\]==='left'/);
  assert.match(challenge,/90\*1000/);
  assert.match(challenge,/isTrustedIdentityOrigin/);
  assert.match(migration,/enable row level security/i);
