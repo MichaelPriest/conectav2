@@ -100,10 +100,13 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       const video=videoRef.current;
       if(!video)throw new Error('Prévia da câmera indisponível.');
       video.srcObject=stream;await video.play();
-      const {data:{session}}=await supabaseBrowser().auth.getSession();
-      if(!session?.access_token)throw new Error('Sua sessão expirou. Entre novamente.');
+      const auth=supabaseBrowser().auth;
+      const [{data:{user}},{data:{session}}]=await Promise.all([auth.getUser(),auth.getSession()]);
+      if(!user&&!session?.access_token)throw new Error('Não foi possível confirmar sua sessão. Atualize a página e tente novamente.');
       const response=await fetch('/api/identity/free-document/liveness-challenge',{
-        method:'POST',headers:{Authorization:'Bearer '+session.access_token},cache:'no-store'
+        method:'POST',
+        headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},
+        credentials:'same-origin',cache:'no-store'
       });
       const data=await response.json() as {challenge?:string;instructions?:string[];error?:string};
       if(!response.ok||!data.challenge||!Array.isArray(data.instructions)||data.instructions.length!==4)
@@ -148,8 +151,9 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     }
     setBusy(true);setError('');setMessage('Preparando o envio seguro para validação…');
     try{
-      const {data:{session}}=await supabaseBrowser().auth.getSession();
-      if(!session?.access_token)throw new Error('Sua sessão expirou. Entre novamente.');
+      const auth=supabaseBrowser().auth;
+      const [{data:{user}},{data:{session}}]=await Promise.all([auth.getUser(),auth.getSession()]);
+      if(!user&&!session?.access_token)throw new Error('Não foi possível confirmar sua sessão. Atualize a página e tente novamente.');
       const [optimizedFront,optimizedBack,optimizedSelfie]=await Promise.all([
         compressForUpload(front),compressForUpload(back),compressForUpload(selfie)
       ]);
@@ -159,7 +163,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       frames.forEach((frame,index)=>form.set('livenessFrame'+index,frame));
       setMessage('Validando documento, rosto e captura ao vivo no servidor…');
       const response=await fetch('/api/identity/free-document/verify',{
-        method:'POST',headers:{Authorization:'Bearer '+session.access_token},body:form,cache:'no-store'
+        method:'POST',headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},credentials:'same-origin',body:form,cache:'no-store'
       });
       const data=await response.json() as {ok?:boolean;approved?:boolean;message?:string;error?:string};
       if(!response.ok||data.ok!==true)throw new Error(data.message||data.error||'A validação não foi concluída.');
