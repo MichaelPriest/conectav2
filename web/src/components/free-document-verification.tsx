@@ -111,7 +111,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
 
   async function submit(){
     if(!front||!back||!selfie||!consent){
-      setError('Envie frente, verso com QR Code e selfie, e marque o consentimento.');return;
+      setError('Envie frente, verso e selfie, e marque o consentimento.');return;
     }
     if(!challenge||frames.length!==4){
       setError('Conclua os quatro quadros da captura guiada antes de enviar.');return;
@@ -163,15 +163,15 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </div>
     {step===1&&<section className="panel" aria-labelledby="identity-step-document">
       <h3 id="identity-step-document">1. Envie seu documento</h3>
-      <p className="small-note">Fotografe o documento inteiro, com boa iluminação e sem reflexos. Envie a frente e o verso com QR Code.</p>
+      <p className="small-note">Fotografe o documento inteiro, com boa iluminação e sem reflexos. Envie a frente e o verso; o sistema procura o QR Code nos dois lados, pois a posição varia conforme o modelo.</p>
       <div style={{display:'grid',gap:14}}>
         <label className="form-label">Frente do documento com foto
           <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy||challengeBusy} onChange={e=>setFront(e.target.files?.[0]||null)}/>
           <span className="small-note">{front?front.name:'JPG, PNG ou WebP · até 8 MB'}</span>
         </label>
-        <label className="form-label">Verso do documento com QR Code
+        <label className="form-label">Verso do documento
           <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy||challengeBusy} onChange={e=>setBack(e.target.files?.[0]||null)}/>
-          <span className="small-note">{back?back.name:'O verso é processado temporariamente, sem armazenamento.'}</span>
+          <span className="small-note">{back?back.name:'Envie o verso com todas as informações legíveis; o QR Code pode estar na frente ou no verso.'}</span>
         </label>
       </div>
       <label className="human-agree" style={{marginTop:16}}>
