@@ -10,7 +10,7 @@ test('free document verification requires consent, QR payload, OCR and server-si
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  const ui=read('src/components/free-document-verification.tsx');
  assert.match(ui,/análise é experimental/);
- assert.match(ui,/pode permitir escolher uma foto da galeria/);
+ assert.match(ui,/pode permitir escolher da galeria/);
  assert.match(route,/form\.get\('consent'\)!=='true'/);
  assert.match(route,/form\.get\('documentBack'\)/);
  assert.match(route,/decodeQrFromImage\(back\)/);
