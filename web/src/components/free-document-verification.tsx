@@ -13,15 +13,15 @@ async function renderCnhPdf(file:File):Promise<{front:File;back:File}>{
     throw new Error('O PDF da CNH deve ter até 12 MB.');
   const pdfjs=await import('pdfjs-dist/legacy/build/pdf.mjs');
   pdfjs.GlobalWorkerOptions.workerSrc='/vendor/pdf.worker.min.mjs';
-  const document=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+  const pdfDocument=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
   try{
-    if(document.numPages<1||document.numPages>10)throw new Error('O PDF da CNH precisa ter entre 1 e 10 páginas.');
+    if(pdfDocument.numPages<1||pdfDocument.numPages>10)throw new Error('O PDF da CNH precisa ter entre 1 e 10 páginas.');
     const renderPage=async(pageNumber:number)=> {
-      const page=await document.getPage(pageNumber);
+      const page=await pdfDocument.getPage(pageNumber);
       const base=page.getViewport({scale:1});
       const scale=Math.min(2,1800/Math.max(base.width,base.height));
       const viewport=page.getViewport({scale});
-      const canvas=document.createElement('canvas');
+      const canvas=window.document.createElement('canvas');
       canvas.width=Math.max(1,Math.floor(viewport.width));
       canvas.height=Math.max(1,Math.floor(viewport.height));
       const context=canvas.getContext('2d');
@@ -33,9 +33,9 @@ async function renderCnhPdf(file:File):Promise<{front:File;back:File}>{
       return new File([blob],file.name.replace(/\.pdf$/i,'')+'-pagina-'+pageNumber+'.jpg',{type:'image/jpeg',lastModified:Date.now()});
     };
     const front=await renderPage(1);
-    const back=document.numPages>1?await renderPage(2):new File([await front.arrayBuffer()],file.name.replace(/\.pdf$/i,'')+'-verso.jpg',{type:'image/jpeg',lastModified:Date.now()});
+    const back=pdfDocument.numPages>1?await renderPage(2):new File([await front.arrayBuffer()],file.name.replace(/\.pdf$/i,'')+'-verso.jpg',{type:'image/jpeg',lastModified:Date.now()});
     return {front,back};
-  }finally{await document.destroy();}
+  }finally{await pdfDocument.destroy();}
 }
 
 async function compressForUpload(file:File,maxDimension=1600):Promise<File>{
