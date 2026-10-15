@@ -37,5 +37,7 @@ test('The app never treats Play Age Signals, local declaration, or API errors as
  assert.match(data,/Por segurança, o acesso à rede permanece bloqueado/);
  assert.match(data,/if\(response\.ok&&result\.networkAccess===true\)/);
  assert.match(data,/catch\{/);
- assert.doesNotMatch(data,/return \{profile,status:'ok'\};\s*\}/);
+ assert.match(data,/if\(response\.ok&&result\.networkAccess===true\)return \{profile,status:'ok'\}/);
+ assert.doesNotMatch(data,/catch\{[^}]*status:'ok'/s);
+ assert.match(app,/setRestricted\('identity-check'\)/);
 });
