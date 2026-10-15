@@ -89,12 +89,17 @@ export function useAuthProfile() {
         if(!active)return;
         if(declarationError)throw declarationError;
         if(!declaration){router.replace('/onboarding');return;}
-        // A user's own declaration may only RESTRICT access, never grant adult verification.
-        // Underage self-declarations stay on Conecta ID while independent age and
-        // parental assurance are not yet available. Server-side RLS/triggers
-        // also protect content from clients bypassing this navigation.
-        if(declaration.declared_band!=='18_plus'&&pathname!=='/verificar-identidade'){
-          router.replace('/verificar-identidade');return;
+        // Conecta ID is mandatory for every account before any social-network route.
+        // This is only the navigation gate; restrictive database RLS enforces the same
+        // decision so direct Supabase requests cannot bypass the requirement.
+        if(pathname!=='/verificar-identidade'){
+          const {data:{session}}=await client.auth.getSession();
+          const accessResponse=await fetch('/api/identity/access',{
+            headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},
+            cache:'no-store'
+          });
+          const access=await accessResponse.json().catch(()=>({networkAccess:false})) as {networkAccess?:boolean};
+          if(!accessResponse.ok||access.networkAccess!==true){router.replace('/verificar-identidade');return;}
         }
         setUser(authUser);
         setProfile(profileData as UserProfile);
@@ -261,7 +266,9 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
     router.replace('/auth'); router.refresh();
   }
 
-  return <ChatPresenceProvider userId={profile.id}><ChatCallsProvider userId={profile.id}><div className={"app-layout concept-app "+(sidebarCollapsed?"conecta-sidebar-collapsed":"")}>
+  if(pathname==='/verificar-identidade') return <div className="identity-gate-shell">{children}</div>;
+
+  return <ChatPresenceProvider userId={profile.id}><ChatCallsProvider userId={profile.id}><div className={"app-layout concept-app "+(sidebarCollapsed?"conecta-sidebar-collapsed ":"")+(pathname==="/verificar-identidade"?"conecta-id-gate-layout":"")}>
     <aside className={'sidebar ' + (mobileNav ? 'sidebar-open' : '')}>
       <div className="sidebar-top"><ConceptBrand href="/feed"/><button type="button" className="icon-btn conecta-sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed?"Expandir menu lateral":"Recolher menu lateral"} title={sidebarCollapsed?"Expandir menu lateral":"Recolher menu lateral"} aria-expanded={!sidebarCollapsed}>{sidebarCollapsed?<PanelLeftOpen size={20}/>:<PanelLeftClose size={20}/>}</button><button className="icon-btn close-mobile" type="button" aria-label="Fechar navegação" onClick={() => setMobileNav(false)}><X size={20}/></button></div>
       <div className="sidebar-section-label">PRINCIPAL</div>
@@ -300,7 +307,7 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
       </header>
       <header className="mobile-header"><button className="icon-btn" type="button" onClick={() => setMobileNav(true)} aria-label="Abrir menu"><Menu size={22}/></button><ConceptBrand href="/feed"/><Link href="/perfil"><ProfileAvatar person={profile} size="small"/></Link></header>
       {children}
-      <ChatWidget userId={profile.id}/>
+      {pathname!=='/verificar-identidade'&&<ChatWidget userId={profile.id}/>}
       <nav className="mobile-bottom-nav" aria-label="Navegação rápida">{activeMobileItems.map(({label,href,icon:Icon})=><Link aria-label={label} key={href} href={href} aria-current={pathname===href?'page':undefined} className={(pathname===href?'active ':'')+(label==='Publicar'?'concept-mobile-create':'')}><Icon size={22}/><span>{label}</span></Link>)}</nav>
     </div>
   </div></ChatCallsProvider></ChatPresenceProvider>;

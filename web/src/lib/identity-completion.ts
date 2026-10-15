@@ -6,7 +6,7 @@
 export type RegistrationCompletion =
  | 'profile_required'
  | 'age_declaration_required'
- | 'adult_basic_ready'
+ | 'identity_verification_pending'
  | 'teen_guardian_pending'
  | 'teen_protection_pending';
 export function completionFromRecords(
@@ -14,7 +14,7 @@ export function completionFromRecords(
 ):RegistrationCompletion{
  if(!hasProfile)return 'profile_required';
  if(!ageBand)return 'age_declaration_required';
- if(ageBand==='18_plus')return 'adult_basic_ready';
+ if(ageBand==='18_plus')return 'identity_verification_pending';
  if(!hasVerifiedGuardianAssociation)return 'teen_guardian_pending';
  return 'teen_protection_pending';
 }
@@ -22,14 +22,14 @@ export function completionResult(state:RegistrationCompletion){
  const messages:Record<RegistrationCompletion,string>={
   profile_required:'Complete seu perfil para continuar.',
   age_declaration_required:'Informe sua faixa etaria no cadastro antes de continuar.',
-  adult_basic_ready:'Cadastro basico pronto. Identidade civil e maioridade NAO verificadas.',
+  identity_verification_pending:'Perfil e faixa etária cadastrados. Para entrar na rede, conclua a verificação confiável do Conecta ID; a autodeclaração não libera o acesso.',
   teen_guardian_pending:'Cadastro de menor pendente: associe esta conta a um pai, mãe ou responsável com conta Conecta e maioridade confirmada. A associação precisa ser aceita pela outra conta.',
   teen_protection_pending:'Responsável associado. A conta continua protegida até concluir a aferição confiável de idade e as demais verificações necessárias.'
  };
  return {
   state, message:messages[state],
-  canFinishBasic:state==='adult_basic_ready',
-  next:state==='adult_basic_ready'?'/feed':state==='profile_required'||state==='age_declaration_required'?'/onboarding':state==='teen_guardian_pending'?'/conexoes':null,
+  canFinishBasic:false,
+  next:state==='profile_required'||state==='age_declaration_required'?'/onboarding':null,
   identityVerified:false, ageVerified:false,
   ageAssurance:'unknown' as const,
   ageDeclarationTrusted:false,

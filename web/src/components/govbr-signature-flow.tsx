@@ -166,17 +166,14 @@ export function GovBrSignatureFlow({declaredBand}:{declaredBand:string|null}){
       A conferência no portal não é transmitida automaticamente ao Conecta.</p>
       <a className="btn btn-outline" href={VALIDAR} target="_blank" rel="noopener noreferrer">
        <ExternalLink size={17}/> Prosseguir para o VALIDAR</a>
-      {declaredBand==='18_plus'&&<a className="btn btn-primary" href="/feed" style={{marginLeft:8}}>
-        Continuar para o Conecta sem selo verificado</a>}
+      {declaredBand==='18_plus'&&<p className="small-note">A pré-análise foi concluída, mas o acesso à rede continua bloqueado até a identidade e a idade serem aprovadas por uma fonte confiável.</p>}
       {declaredBand!=='18_plus'&&<p>Para contas adolescentes, as funções sociais permanecem restritas
        até existir verificação independente da idade e, quando exigido, do responsável.</p>}
     </div>}
   </section>}
-  {declaredBand==='18_plus'&&<div style={{marginTop:16,display:'flex',flexWrap:'wrap',gap:12,alignItems:'center'}}>
-     <a className="btn btn-primary" href="/feed">Acessar Conecta sem identidade verificada</a>
-     <p className="small-note" style={{margin:0}}>O acesso básico não equivale à comprovação de maioridade,
-      não ativa anúncios e não gera selo de identidade.</p>
-   </div>}
+  {declaredBand==='18_plus'&&<p className="form-error" role="status" style={{marginTop:16}}>
+     O acesso à rede permanece bloqueado. A assinatura íntegra do PDF não comprova, sozinha, identidade civil ou idade e não libera a conta.
+   </p>}
   <div style={{marginTop:16}}>
    <p className="small-note"><ShieldAlert size={15} style={{verticalAlign:'middle'}}/>
     O PDF sera enviado temporariamente ao servidor para analise, mas nao sera armazenado.

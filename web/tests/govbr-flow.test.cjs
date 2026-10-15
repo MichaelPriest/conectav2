@@ -79,6 +79,7 @@ test('PDF inspection quota is visible and unsigned files do not spend attempts',
  const component=fs.readFileSync(path.join(__dirname,'../src/components/govbr-signature-flow.tsx'),'utf8');
  assert.match(component,/Limite desta declaração alcançado/);
  assert.match(component,/Próximo passo:/);
- assert.match(component,/Continuar para o Conecta sem selo verificado/);
+ assert.match(component,/O acesso à rede permanece bloqueado/);
+ assert.doesNotMatch(component,/Continuar para o Conecta sem selo verificado/);
  assert.doesNotMatch(route,/identity_verifications/);
 });
