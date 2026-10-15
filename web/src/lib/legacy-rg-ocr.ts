@@ -24,30 +24,15 @@ function ageBand(iso:string,today:Date):LegacyRgBand|null{
  if(years<0||years>120)return null;
  return years<13?'under_13':years<16?'13_15':years<18?'16_17':'18_plus';
 }
-/** Only accepts dates immediately after a birth label; never infer from an issue date. */
-export function inspectLegacyRgOcr(raw:string,today:Date=new Date()):LegacyRgPreflight{
- if(typeof raw!=='string'||!raw.trim())return {status:'unreadable',message:'Nenhum texto legível foi encontrado nas imagens.'};
- const text=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
-   .replace(/\r/g,'\n').replace(/\t/g,' ').replace(/[ ]{2,}/g,' ');
- const birthLabels=/(?:\bDATA\s*(?:DE\s*)?NASCIMENTO\b|\bNASCIMENTO\b|\bDT\.?\s*NASC(?:IMENTO)?\b)/g;
- const datePattern=/(?:^|[^\d])(\d{1,2}[.\/-]\d{1,2}[.\/-]\d{4})(?!\d)/g;
- const found:string[]=[];
- let ambiguous=false;
- for(const match of text.matchAll(birthLabels)){
-  // Only a small region following the label can contain the referenced DOB.
-  // Stop at another label or line with known issue/validity terms.
-  const nearby=text.slice((match.index||0)+match[0].length,(match.index||0)+match[0].length+74);
-  const clipped=nearby.split(/(?:DATA\s*(?:DE\s*)?EXPEDICAO|EXPEDICAO|VALIDADE|EMISSAO|ORGAO\s*EMISSOR)/)[0];
-  const local=[...clipped.matchAll(datePattern)];
-  if(local.length>1){ambiguous=true;continue;} // Conflicting dates near DOB label cannot be trusted.
-  if(local.length===1){
-   const iso=isoDateFromBrazilian(local[0][1]);
-   if(iso)found.push(iso);
-  }
- }
- const unique=[...new Set(found)];
- if(ambiguous||unique.length!==1)return {status:'date-uncertain',message:'Não foi possível identificar uma única data de nascimento com segurança. Confira a nitidez do RG; não use este resultado para comprovar idade.'};
- const band=ageBand(unique[0],today);
+/** Extract a DOB only when it is associated with a birth label in OCR text.
+ * Tolerates line breaks, common punctuation variants, and OCR-spaced dates,
+ * while refusing multiple dates in the same birth-field region.
+ */
+export function extractBirthDateFromOcr(raw:string):string|null{
+ if(typeof raw!=='string'||!raw.trim())return null;
+ const dob=extractBirthDateFromOcr(raw);
+ if(!dob)return {status:'date-uncertain',message:'Não foi possível identificar uma única data de nascimento com segurança. Confira a nitidez do RG; não use este resultado para comprovar idade.'};
+ const band=ageBand(dob,today);
  if(!band)return {status:'date-uncertain',message:'A data de nascimento lida não é plausível. A verificação permanece pendente.'};
  return {status:'age-indicative',band,message:'O OCR identificou uma possível faixa etária no RG antigo. O resultado não comprova autenticidade, titularidade nem maioridade.'};
 }
