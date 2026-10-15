@@ -73,7 +73,7 @@ export default function IdentityPage(){
       <div>
         <span className="section-eyebrow">CONECTA ID</span>
         <h1>Validar minha identidade <span className="wave">✳</span></h1>
-        <p>Um único processo gratuito: envie seu documento e uma selfie. O Conecta combina leitura do documento, OCR, leitura do QR Code quando disponível, comparação facial e análise antifraude, sem oferecer vários métodos separados.</p>
+        <p>Um único processo gratuito de validação: envie seu documento e uma selfie, conclua a captura guiada e receba o resultado registrado pelo Conecta. O sistema aplica OCR, leitura do QR Code, comparação facial e verificações antifraude disponíveis.</p>
       </div>
     </div>
 
@@ -104,7 +104,7 @@ export default function IdentityPage(){
     </section>
 
     <section className="panel" style={{marginBottom:20}}>
-      <h2>Faça sua validação</h2>
+      <h2>Validar identidade e rosto</h2>
       <p>Use apenas um documento seu, com foto e data de nascimento legíveis. Escolha o tipo para que o servidor aplique as verificações compatíveis; isso não muda o processo nem cria métodos diferentes.</p>
       <label className="form-label" htmlFor="identity-document-type">Tipo de documento</label>
       <select id="identity-document-type" className="form-input" value={documentMode} onChange={event=>setDocumentMode(event.target.value as DocumentMode)}>
@@ -112,7 +112,7 @@ export default function IdentityPage(){
         <option value="old-rg">RG antigo com QR Code no verso</option>
         <option value="cnh">CNH com QR Code</option>
       </select>
-      <p className="small-note">O RG antigo e a CNH só podem passar pela análise automática quando o QR Code puder ser lido e os dados forem compatíveis. A leitura do código, por si só, não comprova autenticidade oficial.</p>
+      <p className="small-note">O RG antigo e a CNH só podem passar pela análise automática quando o QR Code puder ser lido e os dados forem compatíveis. A validação aprovada é do Conecta e não equivale à confirmação oficial do emissor.</p>
       <FreeDocumentVerification key={documentMode} documentType={documentMode} onComplete={refresh}/>
     </section>
 
