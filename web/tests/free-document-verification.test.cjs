@@ -52,7 +52,7 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/ocrImages\.push\(await prepareOcrImage\(back\)\)/);
  assert.match(route,/ocrImages\.map\(image=>worker!\.recognize\(image\)\)/);
  assert.match(route,/const parseDates=\(results:typeof ocrResults\)/);
- assert.match(route,/const firstPassDates=parseDates\(ocrResults\)/);
+ assert.match(route,/let detectedDates=parseDates\(ocrResults\)/);
  assert.match(route,/if\(detectedDates\.length===0\)/);
  assert.match(route,/fallbackResults=await Promise\.all\(ocrImages\.map/);
  assert.match(route,/const reversedImages:Buffer\[\]=\[\]/);
