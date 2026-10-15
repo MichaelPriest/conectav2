@@ -5,7 +5,6 @@ import sharp from 'sharp';
 import {identityContext} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {inspectCinToken} from '@/lib/cin-qr';
-import {inspectLegacyRgOcr} from '@/lib/legacy-rg-ocr';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -80,7 +79,7 @@ export async function POST(request:NextRequest){
   const context=await identityContext(request);
   if(!context)return fail('Entre na sua conta para continuar.',401);
 
-  let document:Buffer,selfie:Buffer,qr:string,documentType:string;
+  let document:Buffer|undefined,selfie:Buffer|undefined,qr:string,documentType:string;
   try{
     const form=await request.formData();
     if(form.get('consent')!=='true')return fail('É necessário consentir com o processamento temporário das imagens.',400);
@@ -163,7 +162,7 @@ export async function POST(request:NextRequest){
     if(ageWrite.error)throw new Error('Não foi possível registrar a decisão de idade com segurança.');
     const identityWrite=await context.admin.from('identity_verifications').upsert({
       user_id:context.user.id,provider:'conecta_free',provider_inquiry_id:'conecta_'+transactionId,
-      status:'approved',age_band:ageBand==='18_plus'?'18_plus':ageBand==='16_17'?'17':'under_13',
+      status:'approved',age_band:ageBand==='18_plus'?'18_plus':ageBand==='16_17'?'17':'13_to_16',
       guardian_status:ageBand==='18_plus'?'not_required':'pending',updated_at:now,verified_at:now
     },{onConflict:'user_id'});
     if(identityWrite.error){
@@ -176,7 +175,7 @@ export async function POST(request:NextRequest){
     return NextResponse.json({
       ok:true,status:'approved',ageBand,documentType,faceMatch:true,
       qrChecked:true,ocrChecked:true,documentStored:false,imagesDiscarded:true,
-      officialValidityChecked:documentType==='cin',
+      officialValidityChecked:false,
       message:ageBand==='18_plus'
         ?'Verificação gratuita concluída. O acesso será atualizado pelo servidor.'
         :'Verificação concluída com proteção para menores. Associe um responsável verificado para liberar o acesso.'
@@ -187,6 +186,6 @@ export async function POST(request:NextRequest){
     documentTensor?.dispose?.();selfieTensor?.dispose?.();
     if(worker)await worker.terminate().catch(()=>undefined);
     // Best-effort release of in-memory references; no raw image is persisted.
-    document=Buffer.alloc(0);selfie=Buffer.alloc(0);qr='';
+    document?.fill(0);selfie?.fill(0);qr='';
   }
 }
