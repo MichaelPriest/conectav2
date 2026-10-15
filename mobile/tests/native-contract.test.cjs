@@ -11,7 +11,7 @@ test('External app links target production while moderation API remains separate
  assert.match(config,/PUBLIC_SITE_URL='https:\/\/conectav2\.vercel\.app'/);
  assert.match(config,/API_SITE_URL='https:\/\/conectav2-validacao\.onrender\.com'/);
  assert.match(links,/OFFICIAL_HOST='conectav2\.vercel\.app'/);
- assert.match(read('App.tsx'),/import \{PUBLIC_SITE_URL,supabase\}/);
+ assert.match(read('App.tsx'),/import \{API_SITE_URL,PUBLIC_SITE_URL,supabase\}/);
  assert.match(read('App.tsx'),/message:PUBLIC_SITE_URL\+'\/post\/'\+encodeURIComponent\(post\.id\)/);
  assert.match(read('App.tsx'),/redirectTo:PUBLIC_SITE_URL\+'\/auth\/callback/);
  assert.match(read('App.tsx'),/const url=PUBLIC_SITE_URL\+path/);
