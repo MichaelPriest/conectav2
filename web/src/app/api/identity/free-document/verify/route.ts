@@ -239,12 +239,45 @@ export async function POST(request:NextRequest){
       for(const result of livenessResults)for(const face of result.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
       for(const frame of livenessPixels)frame.data.fill(0);
     }
+    // Persist only the platform's final verdict and a coarse age band. Never
+    // persist the date of birth, source images, QR payload, face embeddings, or OCR.
+    // This is Conecta's own automated validation, not issuer/government certification.
+    const verifiedAt=new Date().toISOString();
+    const evidenceReferenceHash=createHash('sha256')
+      .update(context.user.id,'utf8').update(':','utf8')
+      .update(livenessChallenge,'utf8').update(':','utf8')
+      .update(ageBand,'utf8').update(':','utf8')
+      .update(verifiedAt,'utf8').digest('hex');
+    const identityWrite=await context.admin.from('identity_verifications').upsert({
+      user_id:context.user.id,
+      provider:'conecta_free',
+      status:'approved',
+      age_band:ageBand,
+      verified_at:verifiedAt,
+      updated_at:verifiedAt
+    },{onConflict:'user_id'});
+    if(identityWrite.error)
+      return fail('As verificações passaram, mas não foi possível registrar o resultado. A validação não foi concluída; tente novamente.',503);
+    const ageWrite=await context.admin.from('age_assurance_decisions').upsert({
+      user_id:context.user.id,
+      age_band:ageBand,
+      method:'conecta_free_document_face',
+      policy_version:'conecta-free-document-face-v1',
+      evidence_reference_hash:evidenceReferenceHash,
+      verified_at:verifiedAt,
+      updated_at:verifiedAt
+    },{onConflict:'user_id'});
+    if(ageWrite.error)
+      return fail('A identidade foi registrada, mas a faixa etária não pôde ser registrada. O acesso permanece bloqueado até a conclusão segura; tente novamente.',503);
     return NextResponse.json({
       ok:true,
-      status:'preflight_passed',
-      approved:false,
+      status:'approved',
+      approved:true,
+      ageBand,
+      verifiedAt,
       documentStored:false,
-      message:'A pré-análise reconheceu os movimentos e concluiu as verificações automáticas disponíveis. Isso não certifica oficialmente o documento e não libera selo, faixa etária ou acesso. A validação final continua pendente.'
+      officialIssuerVerified:false,
+      message:'Validação Conecta ID concluída. Documento, comparação facial e captura guiada passaram nas verificações automáticas disponíveis. O Conecta registrou a identidade e apenas a faixa etária; não armazenou as imagens nem a data de nascimento. Isto não é uma certificação oficial do emissor. As regras de responsável e proteção da faixa etária continuam valendo.'
     },{status:200,headers});
   }catch(error){
     return fail(error instanceof Error?error.message:'Não foi possível concluir a análise. Nenhum acesso foi liberado.',503);
