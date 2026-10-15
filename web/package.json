@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && next dev",
-    "build": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && next build",
+    "dev": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-pdfjs.cjs && next dev",
+    "build": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-pdfjs.cjs && next build",
     "start": "node scripts/check-chat-push-startup.cjs && next start",
     "typecheck": "tsc --noEmit",
     "test:profile": "node --test tests/profile-details.test.cjs",
@@ -48,7 +48,8 @@
     "react-dom": "19.3.0",
     "sharp": "0.34.4",
     "tesseract.js": "6.0.1",
-    "web-push": "3.6.7"
+    "web-push": "3.6.7",
+    "pdfjs-dist": "5.4.394"
   },
   "devDependencies": {
     "@types/node": "22.18.6",
