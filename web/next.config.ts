@@ -2,13 +2,20 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Native TensorFlow bindings and the OCR runtime must remain Node externals.
+  // Native TensorFlow bindings and OCR runtime must remain Node externals.
   serverExternalPackages: ['@tensorflow/tfjs-node', '@vladmandic/human', 'tesseract.js'],
-  // Keep the open-source frame extractor available in traced Node.js functions.
-  // FFmpeg runs as a separate process; it never uploads frames to an AI API.
+  // Keep runtime assets that are resolved dynamically by native/server packages.
+  // Tesseract's Node worker loads its parent worker module at runtime; without
+  // tracing the complete package, Vercel can ship node/index.js but omit "..".
   outputFileTracingIncludes: {
     '/api/moderation/review': ['./node_modules/ffmpeg-static/ffmpeg'],
-    '/api/identity/free-document/verify': ['./public/vendor/human-models/**/*'],
+    '/api/identity/free-document/verify': [
+      './public/vendor/human-models/**/*',
+      './node_modules/tesseract.js/**/*',
+      './node_modules/tesseract.js-core/**/*',
+      './node_modules/@tesseract.js-data/**/*',
+      './node_modules/@tensorflow/tfjs-node/**/*',
+    ],
   },
 };
 
