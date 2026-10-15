@@ -34,7 +34,7 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(route,/livenessFrame/);
  assert.match(route,/Math\.sign\(firstTurn\)===Math\.sign\(secondTurn\)/);
  assert.match(ui,/Iniciar captura guiada/);
- assert.match(ui,/Capturar esta etapa/);
+ assert.match(ui,/Capturar agora/);
  assert.match(ui,/renderCnhPdf/);
  assert.match(ui,/application\/pdf/);
  assert.match(ui,/pdfjs-dist\/legacy\/build\/pdf\.mjs/);
