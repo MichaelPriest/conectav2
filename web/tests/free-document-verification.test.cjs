@@ -37,6 +37,9 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(ui,/application\/pdf/);
  assert.match(ui,/pdfjs-dist\/legacy\/build\/pdf\.mjs/);
  assert.match(ui,/credentials:'same-origin'/);
+ assert.match(ui,/auth\.auth\.refreshSession\(\)/);
+ assert.match(ui,/requestChallenge\(refreshed\.data\.session\.access_token\)/);
+ assert.match(ui,/Sua sessão não foi reconhecida pelo servidor/);
  const auth=read('src/lib/identity-server.ts');
  assert.match(auth,/createServerClient/);
  assert.match(auth,/request\.cookies\.getAll\(\)/);
