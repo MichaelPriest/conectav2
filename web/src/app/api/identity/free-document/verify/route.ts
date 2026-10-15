@@ -20,7 +20,7 @@ const MAX_IMAGE_BYTES=8*1024*1024;
 const MAX_REQUEST_BYTES=25*1024*1024;
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp']);
 
-type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;real?:number}>};
+type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;real?:number;tensor?:{dispose?:()=>void}}>};
 async function imageBuffer(value:FormDataEntryValue|null,label:string):Promise<Buffer>{
   if(!(value instanceof File))throw new Error('Envie '+label+'.');
   if(!allowedTypes.has(value.type)||value.size<1||value.size>MAX_IMAGE_BYTES)
@@ -123,6 +123,7 @@ export async function POST(request:NextRequest){
 
   let worker:Awaited<ReturnType<typeof createWorker>>|null=null;
   let documentTensor:any=null,selfieTensor:any=null;
+  let documentFaceResults:FaceResult|undefined,selfieFaceResults:FaceResult|undefined;
   let documentPixels:Uint8Array|undefined,selfiePixels:Uint8Array|undefined;
   let documentTensorData:Int32Array|undefined,selfieTensorData:Int32Array|undefined;
   try{
@@ -169,6 +170,7 @@ export async function POST(request:NextRequest){
     documentTensor=instance.tf.tensor4d(documentTensorData,[1,docPixels.height,docPixels.width,3],'int32');
     selfieTensor=instance.tf.tensor4d(selfieTensorData,[1,selfiePix.height,selfiePix.width,3],'int32');
     const [docResult,selfieResult]=await Promise.all([instance.detect(documentTensor),instance.detect(selfieTensor)]);
+    documentFaceResults=docResult as FaceResult;selfieFaceResults=selfieResult as FaceResult;
     const docFaces=docResult.face||[],selfieFaces=selfieResult.face||[];
     if(docFaces.length!==1||selfieFaces.length!==1)
       return fail('Precisamos detectar exatamente um rosto na foto do documento e na selfie. Tente novamente com imagens nítidas.',422);
@@ -214,6 +216,7 @@ export async function POST(request:NextRequest){
     return fail(error instanceof Error?error.message:'Não foi possível concluir a análise. Nenhum acesso foi liberado.',503);
   }finally{
     documentTensor?.dispose?.();selfieTensor?.dispose?.();
+    for(const result of [documentFaceResults,selfieFaceResults])for(const face of result?.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
     if(worker)await worker.terminate().catch(()=>undefined);
     // Best-effort release of in-memory references; no raw image is persisted.
     document.fill(0);back.fill(0);selfie.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
