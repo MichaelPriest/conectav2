@@ -129,6 +129,8 @@ export async function POST(request:NextRequest){
     if(!challengeData||!Array.isArray(challengeData.turn_order)||challengeData.turn_order.length!==2)
       throw new Error('O desafio de vivacidade expirou ou já foi utilizado. Inicie uma nova captura.');
     challengeTurnOrder=challengeData.turn_order as string[];
+    if(challengeTurnOrder[0]!=='left'||challengeTurnOrder[1]!=='right')
+      throw new Error('A sequência do desafio não corresponde à política ativa. Inicie novamente.');
     qr=await decodeQrFromImage(back);
     if(qr.length<8||qr.length>12000)return fail('O QR Code do verso não tem um conteúdo válido para esta verificação.',422);
   }catch(error){
