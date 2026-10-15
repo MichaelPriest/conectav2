@@ -21,7 +21,7 @@ test('document upload requires explicit consent and sends all evidence to the se
  assert.match(upload,/documentBack/);
  assert.match(upload,/selfie/);
  assert.match(upload,/consent/);
- assert.match(upload,//api/identity/free-document/verify/);
+ assert.ok(upload.includes('/api/identity/free-document/verify'));
  assert.match(upload,/Não consulta uma base oficial de validade/);
 });
 
