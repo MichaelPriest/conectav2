@@ -22,13 +22,13 @@ const navItems = [
   { label: 'Comunidades', href: '/comunidades', icon: Users },
   { label: 'Mensagens', href: '/mensagens', icon: MessageCircle },
   { label: 'Notificações', href: '/notificacoes', icon: Bell },
+  { label: 'Conecta ID · Validar identidade', href: '/verificar-identidade', icon: ShieldCheck },
 ];
 const moreNavItems = [
   { label: 'Reels', href: '/reels', icon: Clapperboard },
   { label: 'Publicações salvas', href: '/salvos', icon: Bookmark },
   { label: 'Acolhimento', href: '/acolhimento', icon: HeartHandshake },
   { label: 'Conexões', href: '/conexoes', icon: Users },
-  { label: 'Conecta ID · Validar identidade', href: '/verificar-identidade', icon: ShieldCheck },
   { label: 'Configurações', href: '/configuracoes', icon: Settings },
   { label: 'Baixar aplicativo', href: '/apps', icon: Smartphone },
   { label: 'Apoiar o Conecta', href: '/apoiar', icon: HeartHandshake },
