@@ -100,9 +100,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       const video=videoRef.current;
       if(!video)throw new Error('Prévia da câmera indisponível.');
       video.srcObject=stream;await video.play();
-      const auth=supabaseBrowser().auth;
-      const [{data:{user}},{data:{session}}]=await Promise.all([auth.getUser(),auth.getSession()]);
-      if(!user&&!session?.access_token)throw new Error('Não foi possível confirmar sua sessão. Atualize a página e tente novamente.');
+      const {data:{session}}=await supabaseBrowser().auth.getSession();
       const response=await fetch('/api/identity/free-document/liveness-challenge',{
         method:'POST',
         headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},
@@ -151,9 +149,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     }
     setBusy(true);setError('');setMessage('Preparando o envio seguro para validação…');
     try{
-      const auth=supabaseBrowser().auth;
-      const [{data:{user}},{data:{session}}]=await Promise.all([auth.getUser(),auth.getSession()]);
-      if(!user&&!session?.access_token)throw new Error('Não foi possível confirmar sua sessão. Atualize a página e tente novamente.');
+      const {data:{session}}=await supabaseBrowser().auth.getSession();
       const [optimizedFront,optimizedBack,optimizedSelfie]=await Promise.all([
         compressForUpload(front),compressForUpload(back),compressForUpload(selfie)
       ]);
