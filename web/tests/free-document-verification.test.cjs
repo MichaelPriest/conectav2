@@ -24,7 +24,8 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/identity_free_verification_attempts/);
  assert.match(route,/MAX_REQUEST_BYTES=25\*1024\*1024/);
  assert.match(route,/length>=5/);
- assert.match(route,/createWorker\('por'\)/);
+ assert.match(route,/createWorker\('por',1,/);
+ assert.match(route,/workerPath:path\.join\(process\.cwd\(\),'node_modules','tesseract\.js','src','worker-script','node','index\.js'\)/);
  assert.match(route,/dobFromText/);
  assert.match(route,/const documentImages=\[document,back/);
  assert.match(route,/documentImages\.map\(image=>worker!\.recognize\(image\)\)/);
@@ -90,13 +91,16 @@ test('free method is accepted only by the server gate and restrictive database f
  assert.match(migration,/gd\.age_band = '18_plus'/);
 });
 
-test('Vercel keeps the Tesseract Node worker packaged and reports non-JSON API failures clearly',()=>{
+test('Vercel traces Tesseract runtime dependencies and pins the Node worker entrypoint',()=>{
  const config=read('next.config.ts');
+ const route=read('src/app/api/identity/free-document/verify/route.ts');
  const ui=read('src/components/free-document-verification.tsx');
- assert.match(config,/serverExternalPackages:[\\s\\S]*'tesseract\\.js'/);
- assert.match(config,/node_modules\\/tesseract\\.js\\/\\*\\*/);
- assert.match(config,/node_modules\\/tesseract\\.js-core\\/\\*\\*/);
+ assert.ok(config.includes("serverExternalPackages: ['@tensorflow/tfjs-node', '@vladmandic/human', 'tesseract.js']"));
+ for(const dependency of ['tesseract.js','tesseract.js-core','bmp-js','idb-keyval','is-url','node-fetch','regenerator-runtime','wasm-feature-detect','zlibjs','whatwg-url','tr46','webidl-conversions']){
+  assert.ok(config.includes('./node_modules/'+dependency+'/**/*'),'missing traced dependency '+dependency);
+ }
+ assert.ok(route.includes("workerPath:path.join(process.cwd(),'node_modules','tesseract.js','src','worker-script','node','index.js')"));
  assert.match(ui,/async function readJsonResponse<T>/);
- assert.doesNotMatch(ui,/response\\.json\\(\\)/);
- assert.match(ui,/O servidor de validação falhou \\(HTTP/);
+ assert.ok(!ui.includes('response.json()'),'UI should use robust non-JSON error handling');
+ assert.ok(ui.includes('O servidor de validação falhou (HTTP'));
 });
