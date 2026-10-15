@@ -1,6 +1,6 @@
 /** Local OCR preflight for legacy Brazilian RG.
  * Never promote document text to verified identity/age.
- * No raw OCR text or date of birth may be sent to a server.
+ * Raw OCR text and full birth dates must never be persisted or returned.
  */
 export type LegacyRgBand='under_13'|'13_15'|'16_17'|'18_plus';
 export type LegacyRgPreflight={
