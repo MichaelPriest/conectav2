@@ -301,7 +301,18 @@ export async function POST(request:NextRequest){
     const instance:any=new HumanClass({
       modelBasePath:pathToFileURL(path.join(process.cwd(),'public','vendor','human-models')+path.sep).href,
       debug:false,
-      face:{enabled:true,detector:{rotation:true,return:true,maxDetected:4},mesh:{enabled:true},description:{enabled:true},antispoof:{enabled:true},liveness:{enabled:true}},
+      face:{
+        enabled:true,
+        detector:{rotation:true,return:true,maxDetected:4},
+        mesh:{enabled:true},
+        attention:{enabled:false},
+        iris:{enabled:false},
+        description:{enabled:true},
+        emotion:{enabled:false},
+        antispoof:{enabled:true},
+        liveness:{enabled:true},
+        gear:{enabled:false}
+      },
       body:{enabled:false},hand:{enabled:false},object:{enabled:false},gesture:{enabled:false}
     });
     await instance.load();
