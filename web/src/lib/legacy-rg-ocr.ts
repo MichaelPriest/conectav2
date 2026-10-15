@@ -29,7 +29,10 @@ export function extractBirthDateFromOcr(raw:string):string|null{
  if(typeof raw!=='string'||!raw.trim())return null;
  const text=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
    .replace(/\r/g,'\n').replace(/\t/g,' ').replace(/[ ]{2,}/g,' ');
- const birthLabels=/(?:\bDATA\s*(?:DE\s*)?NASCIMENTO\b|\bNASCIMENTO\b|\bDT\.?\s*NASC(?:IMENTO)?\b)/g;
+ // Older São Paulo RG OCR often fragments "DATA DE NASCIMENTO" into
+ // pieces such as "DATA DE NTO NAS ASCIMENT". Accept the distinctive
+ // truncated birth-label fragments, but still require a date in that field.
+ const birthLabels=/(?:\bDATA\s*(?:DE\s*)?NASCIMENTO\b|\bNASCIMENTO\b|\bDT\.?\s*NASC(?:IMENTO)?\b|\bNAS\s+ASCIMENT[O0]?\b|\bASCIMENT[O0]?\b)/g;
  const datePattern=/(?:^|[^\d])(\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{4}|\d{1,2}\s+\d{1,2}\s+\d{4})(?!\d)/g;
  const found:string[]=[];
  let ambiguous=false;
