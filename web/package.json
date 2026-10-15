@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/prepare-human.cjs && next dev",
-    "build": "node scripts/prepare-human.cjs && next build",
+    "dev": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && next dev",
+    "build": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && next build",
     "start": "node scripts/check-chat-push-startup.cjs && next start",
     "typecheck": "tsc --noEmit",
     "test:profile": "node --test tests/profile-details.test.cjs",
@@ -32,6 +32,7 @@
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.117.1",
     "@tensorflow/tfjs": "4.22.0",
+    "@tensorflow/tfjs-node": "4.22.0",
     "@vladmandic/human": "3.3.6",
     "@zxing/browser": "0.2.1",
     "emoji-picker-react": "4.22.3",
