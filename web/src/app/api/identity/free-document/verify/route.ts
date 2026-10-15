@@ -17,6 +17,7 @@ export const maxDuration=60;
 const headers={'Cache-Control':'private, no-store, max-age=0','Pragma':'no-cache'};
 const fail=(message:string,status:number)=>NextResponse.json({ok:false,message,documentStored:false},{status,headers});
 const MAX_IMAGE_BYTES=8*1024*1024;
+const MAX_REQUEST_BYTES=25*1024*1024;
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp']);
 
 type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;real?:number}>};
@@ -90,6 +91,15 @@ export async function POST(request:NextRequest){
   if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))return fail('Origem inválida.',403);
   const context=await identityContext(request);
   if(!context)return fail('Entre na sua conta para continuar.',401);
+  const contentLength=Number(request.headers.get('content-length')||0);
+  if(Number.isFinite(contentLength)&&contentLength>MAX_REQUEST_BYTES)return fail('O envio total excede o limite de 25 MB.',413);
+  const cutoff=new Date(Date.now()-30*60*1000).toISOString();
+  const {data:recentAttempts,error:attemptsError}=await context.admin.from('identity_free_verification_attempts')
+    .select('attempted_at').eq('user_id',context.user.id).gte('attempted_at',cutoff);
+  if(attemptsError)return fail('O controle de tentativas está indisponível. Tente novamente mais tarde.',503);
+  if((recentAttempts||[]).length>=5)return fail('Limite de 5 tentativas em 30 minutos atingido. Aguarde antes de tentar novamente.',429);
+  const attemptWrite=await context.admin.from('identity_free_verification_attempts').insert({user_id:context.user.id});
+  if(attemptWrite.error)return fail('Não foi possível iniciar a análise com segurança.',503);
 
   let document:Buffer=Buffer.alloc(0),back:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='';
   try{
