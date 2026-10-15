@@ -74,6 +74,8 @@ jobs:
         run: npm run test:cin
       - name: Verify server-side CIN preflight and identity method disclosures
         run: npm run test:cin-server && npm run test:identity-methods
+      - name: Verify free document QR, OCR, face matching and privacy gates
+        run: npm run test:free-document
       - name: Verify Conecta ID method disclosure and paid provider gate
         run: npm run test:identity-methods-ui && npm run test:identity-start-paid-gate
       - name: Conecta ID privacy-minimal verdict and guardian rules

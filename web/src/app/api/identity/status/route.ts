@@ -1,11 +1,11 @@
 import {NextRequest,NextResponse} from 'next/server';
-import {identityConfigured,identityContext,personaRequest} from '@/lib/identity-server';
+import {identityContext,personaRequest,runtimeConfig} from '@/lib/identity-server';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
 
 export async function GET(request:NextRequest){
-  if(!identityConfigured())return NextResponse.json(
+  if(!runtimeConfig.supabaseUrl||!runtimeConfig.publicKey||!runtimeConfig.serviceKey)return NextResponse.json(
     {configured:false,status:'unavailable',age_band:'unknown',guardian_status:'pending'},
     {headers:{'Cache-Control':'no-store'}}
   );

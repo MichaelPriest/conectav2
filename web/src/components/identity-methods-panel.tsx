@@ -20,7 +20,8 @@ const statusLabel:Record<string,string>={
   deferred_first_release:'Adiado nesta primeira versão',
   not_configured:'Não configurado',
   configured_requires_cost_disclosure:'Bloqueado: falta divulgar o custo real',
-  ready_with_cost_disclosure:'Pronto após divulgação do custo'
+  ready_with_cost_disclosure:'Pronto após divulgação do custo',
+  free_server_verification:'Disponível — análise automática própria do Conecta'
 };
 
 const costLabel:Record<string,string>={
@@ -53,6 +54,7 @@ export function IdentityMethodsPanel({methods,notice}:{methods:MethodItem[];noti
         {method.id==='external-identity-provider'&&method.status!=='ready_with_cost_disclosure'&&
           <p className="form-error" style={{marginBottom:0}}><LockKeyhole size={15} style={{verticalAlign:'middle'}}/> Bloqueado até o preço exato por tentativa ser confirmado e exibido antes de qualquer início. Não há cobrança iniciada por esta lista.</p>}
         {method.status==='available'&&<p className="small-note" style={{marginBottom:0}}><CheckCircle2 size={15} style={{verticalAlign:'middle'}}/> Pode ajudar na pré-triagem; não concede selo nem libera recursos restritos.</p>}
+        {method.id==='free-document-face'&&<p className="small-note" style={{marginBottom:0}}>A decisão é registrada somente depois dos critérios executados no servidor; a comparação facial não é garantia absoluta contra fraude.</p>}
       </article>)}
     </div>}
     <p className="small-note" style={{marginTop:14}}><Info size={15} style={{verticalAlign:'middle'}}/> {notice}</p>

@@ -10,6 +10,7 @@ import {LegacyRgScanner} from '@/components/legacy-rg-scanner';
 import {GovBrSignatureFlow} from '@/components/govbr-signature-flow';
 import {IdentityCompletion} from '@/components/identity-completion';
 import {IdentityMethodsPanel} from '@/components/identity-methods-panel';
+import {FreeDocumentVerification} from '@/components/free-document-verification';
 import {FamilyRelationships} from '@/components/family-relationships';
 
 type MethodItem={id:string;label:string;cost:string;status:string;verifiesIdentity:boolean;verifiesAge:boolean;details:string;priceDisplay?:string};
@@ -43,7 +44,7 @@ export default function IdentityPage(){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [declaredBand,setDeclaredBand]=useState<string|null>(null);
-  const [documentMode,setDocumentMode]=useState<'cin'|'old-rg'>('cin');
+  const [documentMode,setDocumentMode]=useState<'cin'|'old-rg'|'cnh'>('cin');
 
   const token=useCallback(async()=>{
     const {data:{session}}=await supabaseBrowser().auth.getSession();
@@ -115,7 +116,7 @@ export default function IdentityPage(){
     <div className="page-heading" style={{marginTop:24}}><div>
       <span className="section-eyebrow">CONECTA ID · VALIDAÇÃO DOCUMENTAL</span>
       <h1>Identidade e idade <span className="wave">✳</span></h1>
-      <p>Confira sua CIN no aplicativo oficial gratuito e use as ferramentas experimentais do Conecta sem compartilhar documentos.</p>
+      <p>Valide gratuitamente sua CIN, RG antigo com QR Code ou CNH. Com seu consentimento, a frente do documento e a selfie são processadas temporariamente no servidor; as imagens não são armazenadas.</p>
     </div></div>
     <section className="panel" style={{marginBottom:20}}>
       <div className="feed-title"><h2>Etapas de proteção da conta</h2></div>
@@ -124,10 +125,9 @@ export default function IdentityPage(){
          declaredBand==='13_15'?'faixa de 13–15 anos autodeclarada, proteção juvenil ativa':
          'faixa de 16–17 anos autodeclarada, proteção juvenil ativa'
         :'faixa etária ainda não informada'}.</p>
-      <p><strong>2. Pré-triagem:</strong> QR Code da CIN e prova de vida com Human — ferramentas gratuitas e experimentais.</p>
+      <p><strong>2. Validação gratuita:</strong> leitura do QR Code, OCR da data de nascimento, comparação facial no servidor e análise antifraude.</p>
       <p><strong>3. Assinatura:</strong> declaração individual assinada no gov.br, com conferência técnica do PDF e consulta ao VALIDAR.</p>
-      <p><strong>4. Decisão:</strong> a confirmação de identidade e idade depende de verificação confiável da titularidade e situação documental.
-         Para menores, também é necessário verificar o vínculo do responsável.</p>
+      <p><strong>4. Decisão:</strong> o Conecta registra a decisão quando os critérios automáticos são atendidos. Isso não consulta a validade atual do documento em base oficial; para menores, continua obrigatório verificar o vínculo do responsável.</p>
       <div style={{margin:'16px 0'}}>
         <p className={access?.networkAccess?'form-success':'form-error'} role="status">
           <LockKeyhole size={16} style={{verticalAlign:'middle'}}/> <strong>{access?.networkAccess?'Conecta ID aprovado — acesso liberado':'Acesso à rede bloqueado até concluir o Conecta ID'}</strong>
@@ -141,7 +141,7 @@ export default function IdentityPage(){
           {(declaredBand!=='18_plus'||access?.reason==='guardian_required')&&<li>{access?.steps?.guardian?'✓':'○'} Responsável com identidade e maioridade confirmadas</li>}
         </ol>
       </div>
-      <p className="small-note">Nenhum teste local, PDF com assinatura íntegra ou data declarada cria automaticamente um selo de conta verificada ou habilita recursos exclusivos para adultos.</p>
+      <p className="small-note">A validação gratuita é uma avaliação própria do Conecta, não uma certificação governamental. QR/OCR e comparação facial podem errar ou ser fraudados; mantenha proteções para menores e revisão dos casos inconclusivos.</p>
     </section>
     <section className="panel conecta-id-official" style={{marginBottom:20}}>
       <div className="feed-title"><h2><ShieldCheck size={22} color="#5e7cbd" style={{verticalAlign:'middle'}}/> Validação oficial gratuita da CIN</h2>
@@ -181,7 +181,7 @@ export default function IdentityPage(){
       <button className="btn btn-primary btn-lg" type="button" disabled={busy||!available||result?.status==='approved'} onClick={begin}>
         <Camera size={18}/> {busy?'Verificando...':'Iniciar verificação pela câmera'} <ExternalLink size={16}/>
       </button>
-      <p className="fineprint" style={{textAlign:'left'}}>O leitor QR Code e o Human abaixo são apenas ferramentas experimentais. Nenhuma conclusão local libera acesso adulto ou altera o cadastro de idade.</p>
+      <p className="fineprint" style={{textAlign:'left'}}>O leitor QR Code e o Human abaixo são apenas ferramentas experimentais. Nenhum teste local isolado libera acesso adulto ou altera o cadastro de idade; a verificação documental do servidor tem critérios próprios e limitações descritas acima.</p>
     </section>
   
     <section className="panel" style={{marginTop:20}}>
@@ -193,6 +193,9 @@ export default function IdentityPage(){
         <button type="button" className={documentMode==='old-rg'?'btn btn-primary':'btn btn-outline'}
           aria-pressed={documentMode==='old-rg'} onClick={()=>setDocumentMode('old-rg')}>
           RG antigo</button>
+        <button type="button" className={documentMode==='cnh'?'btn btn-primary':'btn btn-outline'}
+          aria-pressed={documentMode==='cnh'} onClick={()=>setDocumentMode('cnh')}>
+          CNH com QR Code</button>
       </div>
       {documentMode==='old-rg'&&<div style={{marginTop:14}}>
         <p><strong>O RG antigo também é aceito para iniciar a pré-triagem.</strong>
@@ -206,6 +209,7 @@ export default function IdentityPage(){
           Não envie RG, CPF ou outros dados pessoais por mensagens ou comentários.</p>
       </div>}
     </section>
-    {documentMode==='cin'?<CinQrScanner/>:<LegacyRgScanner declaredBand={declaredBand}/>}
+    <FreeDocumentVerification documentType={documentMode} onComplete={refresh}/>
+    {documentMode==='cin'?<CinQrScanner/>:documentMode==='old-rg'?<LegacyRgScanner declaredBand={declaredBand}/>:null}
     <GovBrSignatureFlow declaredBand={declaredBand}/><HumanCameraCheck/><IdentityCompletion/></main></GuardedPage>;
 }

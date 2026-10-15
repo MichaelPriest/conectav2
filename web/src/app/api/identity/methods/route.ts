@@ -29,6 +29,15 @@ export async function GET(request:NextRequest){
     grantsAdultPrivileges:false,
     methods:[
       {
+        id:'free-document-face',
+        label:'Validação gratuita do Conecta (QR + OCR + face)',
+        cost:'free',
+        status:'free_server_verification',
+        verifiesIdentity:true,
+        verifiesAge:true,
+        details:'Processamento no servidor após consentimento: QR legível, leitura da data de nascimento, comparação facial e análise antifraude. Não consulta base oficial e não garante validade atual do documento; formatos RG/CNH variam por emissor.'
+      },
+      {
         id:'local-document-preflight',
         label:'Leitura local do documento',
         cost:'free',
@@ -83,6 +92,6 @@ export async function GET(request:NextRequest){
         details:'Não inicia cobrança nem aprova a conta por este endpoint. Só deve ser habilitado após contrato, preço real por tentativa, consentimento e webhook autenticado.'
       }
     ],
-    notice:'Nenhum método listado concede selo oficial ou libera recursos restritos. OCR, leitura de QR, assinatura de documento e vivacidade são apenas sinais preliminares. Sem evidência confiável validada no servidor, a decisão permanece pendente e os recursos restritos ficam bloqueados.'
+    notice:'Nenhum método listado concede selo oficial. A validação gratuita própria do Conecta pode aprovar a conta quando todos os critérios no servidor são atendidos, mas não consulta a validade atual do documento. Os outros métodos desta lista continuam sendo pré-triagens.'
   },{headers});
 }
