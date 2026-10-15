@@ -20,6 +20,9 @@ test('document upload requires explicit consent and sends all evidence to the se
  assert.match(upload,/documentFront/);
  assert.match(upload,/documentBack/);
  assert.match(upload,/selfie/);
+ assert.match(upload,/capture="environment"/);
+ assert.match(upload,/Capturar automaticamente quatro quadros/);
+ assert.match(upload,/setTimeout\(\(\)=>\{void captureFrame\(\);\},5000\)/);
  assert.match(upload,/consent/);
  assert.ok(upload.includes('/api/identity/free-document/verify'));
  assert.match(upload,/não há consulta automática a uma base oficial/i);
