@@ -1,7 +1,7 @@
 'use client';
 
 import {useState} from 'react';
-import {Camera,FileImage,ShieldCheck,Trash2} from 'lucide-react';
+import {Camera,ShieldCheck,Trash2} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 
 type DocumentKind='cin'|'old-rg'|'cnh';
