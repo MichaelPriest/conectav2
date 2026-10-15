@@ -130,10 +130,15 @@ export async function POST(request:NextRequest){
     const [docPixels,selfiePix]=await Promise.all([pixels(document),pixels(selfie)]);
     documentPixels=docPixels.data;selfiePixels=selfiePix.data;
     worker=await createWorker('por');
-    const ocr=await worker.recognize(document);
-    const ocrText=typeof ocr.data.text==='string'?ocr.data.text:'';
-    const dob=dobFromText(ocrText);
-    if(!dob)return fail('Não consegui ler uma única data de nascimento no documento. Melhore a iluminação e tente novamente.',422);
+    // Brazilian documents vary: the birth date may be printed on either side.
+    // OCR both images and reject contradictory dates instead of guessing.
+    const [frontOcr,backOcr]=await Promise.all([worker.recognize(document),worker.recognize(back)]);
+    const frontDob=dobFromText(typeof frontOcr.data.text==='string'?frontOcr.data.text:'');
+    const backDob=dobFromText(typeof backOcr.data.text==='string'?backOcr.data.text:'');
+    if(frontDob&&backDob&&frontDob!==backDob)
+      return fail('As datas de nascimento lidas na frente e no verso divergem. Confira as imagens e tente novamente.',422);
+    const dob=frontDob||backDob;
+    if(!dob)return fail('Não consegui ler uma única data de nascimento na frente nem no verso do documento. Melhore a iluminação e tente novamente.',422);
     const ageBand=bandForDate(dob);
     if(!ageBand)return fail('A data de nascimento lida não é válida.',422);
     if(ageBand==='0_12')return fail('Esta faixa etária precisa de um fluxo de responsável específico. A validação não foi concluída.',422);
