@@ -17,18 +17,34 @@ export function identityConfigured():boolean {
 
 /** Authenticate the user's bearer token with Supabase Auth (never via mutable user_metadata). */
 export async function identityContext(request:NextRequest){
+  if(!runtimeConfig.supabaseUrl||!runtimeConfig.publicKey||!runtimeConfig.serviceKey)return null;
   const token=request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];
-  if(!token||!runtimeConfig.supabaseUrl||!runtimeConfig.publicKey||
-     !runtimeConfig.serviceKey)return null;
-  const authClient=createClient(runtimeConfig.supabaseUrl,runtimeConfig.publicKey,{
-    auth:{persistSession:false,autoRefreshToken:false}
-  });
-  const {data,error}=await authClient.auth.getUser(token);
-  if(error||!data.user)return null;
+  let user=null;
+  if(token){
+    const authClient=createClient(runtimeConfig.supabaseUrl,runtimeConfig.publicKey,{
+      auth:{persistSession:false,autoRefreshToken:false}
+    });
+    const {data,error}=await authClient.auth.getUser(token);
+    if(!error&&data.user)user=data.user;
+  }
+  // Some authenticated web sessions are cookie-backed, while others use the
+  // browser client's persisted bearer token. Accept either only after Supabase
+  // Auth validates it; never trust decoded JWT/cookie claims by themselves.
+  if(!user){
+    const cookieClient=createServerClient(runtimeConfig.supabaseUrl,runtimeConfig.publicKey,{
+      cookies:{
+        getAll(){return request.cookies.getAll();},
+        setAll(){/* The route does not mutate browser cookies. */ }
+      }
+    });
+    const {data,error}=await cookieClient.auth.getUser();
+    if(!error&&data.user)user=data.user;
+  }
+  if(!user)return null;
   const admin=createClient(runtimeConfig.supabaseUrl,runtimeConfig.serviceKey,{
     auth:{persistSession:false,autoRefreshToken:false}
   });
-  return {user:data.user,admin};
+  return {user,admin};
 }
 
 export type PersonaInquiry = {
