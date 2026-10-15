@@ -93,6 +93,21 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     try{
       if(!window.isSecureContext||!navigator.mediaDevices?.getUserMedia)
         throw new Error('A câmera exige HTTPS e permissão do navegador.');
+      // Refresh/validate the browser session before opening the protected challenge.
+      // A stale access token otherwise makes the server report a misleading sign-in error.
+      const auth=supabaseBrowser();
+      let {data:{session}}=await auth.auth.getSession();
+      if(!session?.access_token){
+        const refreshed=await auth.auth.refreshSession();
+        session=refreshed.data.session;
+      }
+      if(!session?.access_token){
+        const checked=await auth.auth.getUser();
+        if(!checked.data.user)throw new Error('Sua sessão não está ativa. Entre novamente e tente a captura guiada.');
+        const refreshed=await auth.auth.refreshSession();
+        session=refreshed.data.session;
+      }
+      if(!session?.access_token)throw new Error('Não foi possível renovar sua sessão. Atualize a página e entre novamente.');
       const stream=await navigator.mediaDevices.getUserMedia({
         video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false
       });
@@ -100,15 +115,19 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       const video=videoRef.current;
       if(!video)throw new Error('Prévia da câmera indisponível.');
       video.srcObject=stream;await video.play();
-      const {data:{session}}=await supabaseBrowser().auth.getSession();
-      const response=await fetch('/api/identity/free-document/liveness-challenge',{
-        method:'POST',
-        headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},
+      const requestChallenge=(accessToken:string)=>fetch('/api/identity/free-document/liveness-challenge',{
+        method:'POST',headers:{Authorization:'Bearer '+accessToken},
         credentials:'same-origin',cache:'no-store'
       });
+      let response=await requestChallenge(session.access_token);
+      if(response.status===401){
+        const refreshed=await auth.auth.refreshSession();
+        if(refreshed.data.session?.access_token)
+          response=await requestChallenge(refreshed.data.session.access_token);
+      }
       const data=await response.json() as {challenge?:string;instructions?:string[];error?:string};
       if(!response.ok||!data.challenge||!Array.isArray(data.instructions)||data.instructions.length!==4)
-        throw new Error(data.error||'Não foi possível iniciar o desafio guiado.');
+        throw new Error(data.error||(response.status===401?'Sua sessão não foi reconhecida pelo servidor. Saia da conta, entre novamente e tente outra vez.':'Não foi possível iniciar o desafio guiado.'));
       setChallenge(data.challenge);setInstructions(data.instructions);setFrames([]);setFrameIndex(0);
       setMessage('Câmera ativa. Siga cada instrução e capture um quadro por etapa.');
     }catch(err){
