@@ -8,6 +8,36 @@ type DocumentKind='cin'|'old-rg'|'cnh';
 type Props={documentType:DocumentKind;onComplete:()=>Promise<void>|void};
 const labels:Record<DocumentKind,string>={cin:'CIN (Carteira de Identidade Nacional)', 'old-rg':'RG antigo com QR Code',cnh:'CNH com QR Code'};
 
+async function renderCnhPdf(file:File):Promise<{front:File;back:File}>{
+  if(file.type!=='application/pdf'||file.size<1||file.size>12*1024*1024)
+    throw new Error('O PDF da CNH deve ter até 12 MB.');
+  const pdfjs=await import('pdfjs-dist/legacy/build/pdf.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc='/vendor/pdf.worker.min.mjs';
+  const document=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+  try{
+    if(document.numPages<1||document.numPages>10)throw new Error('O PDF da CNH precisa ter entre 1 e 10 páginas.');
+    const renderPage=async(pageNumber:number)=> {
+      const page=await document.getPage(pageNumber);
+      const base=page.getViewport({scale:1});
+      const scale=Math.min(2,1800/Math.max(base.width,base.height));
+      const viewport=page.getViewport({scale});
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.floor(viewport.width));
+      canvas.height=Math.max(1,Math.floor(viewport.height));
+      const context=canvas.getContext('2d');
+      if(!context)throw new Error('Não foi possível converter o PDF da CNH.');
+      await page.render({canvasContext:context,viewport}).promise;
+      const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(value=>
+        value?resolve(value):reject(new Error('Não foi possível converter uma página da CNH.')),'image/jpeg',0.9));
+      canvas.width=0;canvas.height=0;page.cleanup();
+      return new File([blob],file.name.replace(/\.pdf$/i,'')+'-pagina-'+pageNumber+'.jpg',{type:'image/jpeg',lastModified:Date.now()});
+    };
+    const front=await renderPage(1);
+    const back=document.numPages>1?await renderPage(2):new File([await front.arrayBuffer()],file.name.replace(/\.pdf$/i,'')+'-verso.jpg',{type:'image/jpeg',lastModified:Date.now()});
+    return {front,back};
+  }finally{await document.destroy();}
+}
+
 async function compressForUpload(file:File,maxDimension=1600):Promise<File>{
   const bitmap=await createImageBitmap(file);
   try{
@@ -163,11 +193,23 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </div>
     {step===1&&<section className="panel" aria-labelledby="identity-step-document">
       <h3 id="identity-step-document">1. Envie seu documento</h3>
-      <p className="small-note">Fotografe o documento inteiro, com boa iluminação e sem reflexos. Envie a frente e o verso; o sistema procura o QR Code nos dois lados, pois a posição varia conforme o modelo.</p>
+      <p className="small-note">Selecione imagens do armazenamento ou use a câmera do dispositivo. Para CNH, também pode selecionar o PDF digital; ele será convertido em imagens temporárias no navegador. Envie frente e verso legíveis; o QR Code pode estar em qualquer lado.</p>
       <div style={{display:'grid',gap:14}}>
         <label className="form-label">Frente do documento com foto
-          <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy||challengeBusy} onChange={e=>setFront(e.target.files?.[0]||null)}/>
-          <span className="small-note">{front?front.name:'JPG, PNG ou WebP · até 8 MB'}</span>
+          <input type="file" accept={documentType==='cnh'?'image/jpeg,image/png,image/webp,application/pdf':'image/jpeg,image/png,image/webp'} disabled={busy||challengeBusy} onChange={async e=>{
+            const file=e.target.files?.[0]||null;
+            if(!file){setFront(null);return;}
+            setError('');
+            try{
+              if(file.type==='application/pdf'){
+                if(documentType!=='cnh')throw new Error('PDF é aceito somente para CNH. Para RG/CIN, envie imagens da frente e do verso.');
+                setMessage('Convertendo o PDF da CNH para imagens temporárias…');
+                const pages=await renderCnhPdf(file);setFront(pages.front);setBack(pages.back);
+                setMessage('PDF da CNH convertido. Confira se as páginas exibem todos os dados e o QR Code.');
+              }else{setFront(file);setMessage('');}
+            }catch(err){setFront(null);setError(err instanceof Error?err.message:'Não foi possível abrir o arquivo.');setMessage('');}
+          }}/>
+          <span className="small-note">{front?front.name:'JPG, PNG ou WebP · até 8 MB{documentType==='cnh'?' · PDF da CNH até 12 MB':''}'}</span>
         </label>
         <label className="form-label">Verso do documento
           <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy||challengeBusy} onChange={e=>setBack(e.target.files?.[0]||null)}/>
