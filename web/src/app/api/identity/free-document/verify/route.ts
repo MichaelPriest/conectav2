@@ -3,7 +3,7 @@ import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import '@tensorflow/tfjs-node';
 import {NextRequest,NextResponse} from 'next/server';
-import {createWorker} from 'tesseract.js';
+import {createWorker,PSM} from 'tesseract.js';
 import sharp from 'sharp';
 import {BinaryBitmap,HybridBinarizer,QRCodeReader,RGBLuminanceSource} from '@zxing/library';
 import {identityContext} from '@/lib/identity-server';
@@ -49,6 +49,20 @@ async function pixels(buffer:Buffer){
     .removeAlpha().toColourspace('srgb').raw().toBuffer({resolveWithObject:true});
   if(result.info.channels!==3)throw new Error('Não foi possível normalizar uma das imagens.');
   return {data:new Uint8Array(result.data),width:result.info.width,height:result.info.height};
+}
+async function prepareOcrImage(buffer:Buffer):Promise<Buffer>{
+  // Older laminated RG cards often have glare, faded print and very small field labels.
+  // Normalize lighting, enlarge the text and sharpen before OCR; keep the original
+  // bytes in memory as a fallback and for face matching.
+  return sharp(buffer,{limitInputPixels:20_000_000})
+    .rotate()
+    .flatten({background:'#fff'})
+    .resize({width:2400,height:2400,fit:'inside'})
+    .greyscale()
+    .normalize()
+    .sharpen()
+    .png()
+    .toBuffer();
 }
 function dobFromText(raw:string):string|null{
   return extractBirthDateFromOcr(raw);
@@ -182,6 +196,7 @@ export async function POST(request:NextRequest){
   }
 
   let worker:Awaited<ReturnType<typeof createWorker>>|null=null;
+  let ocrImages:Buffer[]=[];
   let documentTensor:any=null,selfieTensor:any=null;
   let documentFaceResults:FaceResult|undefined,selfieFaceResults:FaceResult|undefined;
   let documentPixels:Uint8Array|undefined,selfiePixels:Uint8Array|undefined;
@@ -195,11 +210,33 @@ export async function POST(request:NextRequest){
       workerPath:path.join(process.cwd(),'node_modules','tesseract.js','src','worker-script','node','index.js'),
       cacheMethod:'write'
     });
-    // Brazilian documents vary: the birth date may be printed on either side.
-    // OCR both images and reject contradictory dates instead of guessing.
+    // First pass: high-resolution contrast-normalized images with sparse-text
+    // segmentation, suitable for labels distributed across an older ID card.
     const documentImages=[document,back];
-    const ocrResults=await Promise.all(documentImages.map(image=>worker!.recognize(image)));
-    const detectedDates=ocrResults.map(result=>dobFromText(typeof result.data.text==='string'?result.data.text:'')).filter((value):value is string=>Boolean(value));
+    ocrImages=await Promise.all(documentImages.map(image=>prepareOcrImage(image)));
+    await worker.setParameters({
+      tessedit_pageseg_mode:PSM.SPARSE_TEXT,
+      preserve_interword_spaces:'1',
+      user_defined_dpi:'300'
+    });
+    const ocrResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
+    const parseDates=(results:typeof ocrResults)=>
+      results.map(result=>dobFromText(typeof result.data.text==='string'?result.data.text:''))
+        .filter((value):value is string=>Boolean(value));
+    const firstPassDates=parseDates(ocrResults);
+    let detectedDates=firstPassDates;
+    // Do a single fallback pass on the untouched images only when the enhanced
+    // pass found no labelled birth date. Never pick a convenient date from a
+    // different field; the parser still requires an explicit birth label.
+    if(detectedDates.length===0){
+      await worker.setParameters({
+        tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
+        preserve_interword_spaces:'1',
+        user_defined_dpi:'300'
+      });
+      const fallbackResults=await Promise.all(documentImages.map(image=>worker!.recognize(image)));
+      detectedDates=parseDates(fallbackResults);
+    }
     const uniqueDates=[...new Set(detectedDates)];
     if(uniqueDates.length>1)
       return await failAttempt('As datas de nascimento lidas nas partes do documento divergem. Confira a frente e o verso do documento e tente novamente.',422);
@@ -319,6 +356,7 @@ export async function POST(request:NextRequest){
   }finally{
     documentTensor?.dispose?.();selfieTensor?.dispose?.();
     for(const result of [documentFaceResults,selfieFaceResults])for(const face of result?.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
+    for(const image of ocrImages)image.fill(0);
     if(worker)await worker.terminate().catch(()=>undefined);
     // Best-effort release of in-memory references; no raw image is persisted.
     document.fill(0);back.fill(0);rgDataSide.fill(0);rgPhotoSide.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
