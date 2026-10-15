@@ -16,12 +16,6 @@ const MAX_IMAGE_BYTES=8*1024*1024;
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp']);
 
 type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;real?:number}>};
-type HumanRuntime={
-  tf:{tensor3d:(data:Uint8Array,shape:number[],dtype:string)=>{expandDims:(axis:number)=>any;dispose:()=>void}};
-  detect:(input:any)=>Promise<FaceResult>;
-  match:{similarity:(a:number[],b:number[])=>number};
-};
-
 async function imageBuffer(value:FormDataEntryValue|null,label:string):Promise<Buffer>{
   if(!(value instanceof File))throw new Error('Envie '+label+'.');
   if(!allowedTypes.has(value.type)||value.size<1||value.size>MAX_IMAGE_BYTES)
@@ -94,7 +88,6 @@ export async function POST(request:NextRequest){
   }
 
   let worker:Awaited<ReturnType<typeof createWorker>>|null=null;
-  let human:HumanRuntime|null=null;
   let documentTensor:any=null,selfieTensor:any=null;
   let documentPixels:Uint8Array|undefined,selfiePixels:Uint8Array|undefined;
   try{
@@ -136,7 +129,6 @@ export async function POST(request:NextRequest){
       face:{enabled:true,detector:{rotation:true,return:true,maxDetected:4},mesh:{enabled:true},description:{enabled:true},antispoof:{enabled:true},liveness:{enabled:true}},
       body:{enabled:false},hand:{enabled:false},object:{enabled:false},gesture:{enabled:false}
     });
-    human=instance as HumanRuntime;
     await instance.load();
     documentTensor=instance.tf.tensor3d(docPixels.data,[docPixels.height,docPixels.width,3],'int32').expandDims(0);
     selfieTensor=instance.tf.tensor3d(selfiePix.data,[selfiePix.height,selfiePix.width,3],'int32').expandDims(0);
