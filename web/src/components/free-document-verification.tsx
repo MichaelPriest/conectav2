@@ -184,7 +184,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       <p>Agora envie uma selfie atual do titular do documento. Mantenha o rosto inteiro visível, em ambiente iluminado, sem filtros, óculos escuros ou outras pessoas na imagem.</p>
       <label className="form-label">Selfie atual
         <input type="file" accept="image/jpeg,image/png,image/webp" capture="user" disabled={busy||challengeBusy} onChange={e=>setSelfie(e.target.files?.[0]||null)}/>
-        <span className="small-note">{selfie?selfie.name:'Você pode tirar uma foto agora ou escolher uma imagem da galeria.'}</span>
+        <span className="small-note">{selfie?selfie.name:'A seleção pode permitir escolher da galeria, ou tirar uma foto agora.'}</span>
       </label>
       <p className="small-note">A comparação facial será feita no servidor após concluir as etapas. Enviar uma selfie, por si só, não aprova a identidade.</p>
     </section>}
