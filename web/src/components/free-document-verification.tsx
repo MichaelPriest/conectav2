@@ -38,6 +38,17 @@ async function renderCnhPdf(file:File):Promise<{front:File;back:File}>{
   }finally{await pdfDocument.destroy();}
 }
 
+async function readJsonResponse<T>(response:Response):Promise<T>{
+  const body=await response.text();
+  try{
+    return JSON.parse(body) as T;
+  }catch{
+    // Platform failures may return plain text/HTML instead of JSON.
+    if(!response.ok)throw new Error(`O servidor de validação falhou (HTTP ${response.status}). Tente novamente em alguns minutos.`);
+    throw new Error('O servidor de validação retornou uma resposta inválida. Tente novamente.');
+  }
+}
+
 async function compressForUpload(file:File,maxDimension=1600):Promise<File>{
   const bitmap=await createImageBitmap(file);
   try{
@@ -125,7 +136,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         if(refreshed.data.session?.access_token)
           response=await requestChallenge(refreshed.data.session.access_token);
       }
-      const data=await response.json() as {challenge?:string;instructions?:string[];error?:string};
+      const data=await readJsonResponse<{challenge?:string;instructions?:string[];error?:string}>(response);
       if(!response.ok||!data.challenge||!Array.isArray(data.instructions)||data.instructions.length!==4)
         throw new Error(data.error||(response.status===401?'Sua sessão não foi reconhecida pelo servidor. Saia da conta, entre novamente e tente outra vez.':'Não foi possível iniciar o desafio guiado.'));
       setChallenge(data.challenge);setInstructions(data.instructions);setFrames([]);setFrameIndex(0);
@@ -188,7 +199,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       const response=await fetch('/api/identity/free-document/verify',{
         method:'POST',headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},credentials:'same-origin',body:form,cache:'no-store'
       });
-      const data=await response.json() as {ok?:boolean;approved?:boolean;message?:string;error?:string};
+      const data=await readJsonResponse<{ok?:boolean;approved?:boolean;message?:string;error?:string}>(response);
       if(!response.ok||data.ok!==true)throw new Error(data.message||data.error||'A validação não foi concluída.');
       setCompleted(data.approved===true);setStep(5);setMessage(data.message||'Validação concluída.');
       setFront(null);setBack(null);setSelfie(null);setFrames([]);setChallenge('');setInstructions([]);

@@ -89,3 +89,14 @@ test('free method is accepted only by the server gate and restrictive database f
  assert.match(migration,/iv\.status = 'approved'/);
  assert.match(migration,/gd\.age_band = '18_plus'/);
 });
+
+test('Vercel keeps the Tesseract Node worker packaged and reports non-JSON API failures clearly',()=>{
+ const config=read('next.config.ts');
+ const ui=read('src/components/free-document-verification.tsx');
+ assert.match(config,/serverExternalPackages:[\\s\\S]*'tesseract\\.js'/);
+ assert.match(config,/node_modules\\/tesseract\\.js\\/\\*\\*/);
+ assert.match(config,/node_modules\\/tesseract\\.js-core\\/\\*\\*/);
+ assert.match(ui,/async function readJsonResponse<T>/);
+ assert.doesNotMatch(ui,/response\\.json\\(\\)/);
+ assert.match(ui,/O servidor de validação falhou \\(HTTP/);
+});
