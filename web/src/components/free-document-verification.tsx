@@ -53,7 +53,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     }finally{setBusy(false);}
   }
 
-  return <section className="panel" style={{marginTop:20}}>
+  return <div style={{marginTop:20}}>
     <div className="feed-title">
       <h2><ShieldCheck size={21} style={{verticalAlign:'middle'}}/> Validação gratuita do documento + selfie</h2>
       <span className="small-note">Sem fornecedor pago</span>
@@ -91,5 +91,5 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     {message&&<p className="small-note" role="status">{message}</p>}
     {error&&<p className="form-error" role="alert">{error}</p>}
     <p className="small-note">Limitação importante: o RG antigo e a CNH podem ter formatos de QR diferentes. Quando o formato não permitir conferir assinatura ou comparar dados do QR, o Conecta não afirma que o documento foi validado oficialmente. Não envie imagens de terceiros.</p>
-  </section>;
+  </div>;
 }
