@@ -1,4 +1,7 @@
 import {createHash,randomUUID} from 'node:crypto';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+import '@tensorflow/tfjs-node';
 import {NextRequest,NextResponse} from 'next/server';
 import {createWorker} from 'tesseract.js';
 import sharp from 'sharp';
@@ -125,7 +128,7 @@ export async function POST(request:NextRequest){
     const HumanClass=module.Human||module.default?.Human||module.default;
     if(typeof HumanClass!=='function')throw new Error('O mecanismo de comparação facial não está disponível no servidor.');
     const instance:any=new HumanClass({
-      modelBasePath:'https://vladmandic.github.io/human-models/models/',
+      modelBasePath:pathToFileURL(path.join(process.cwd(),'public','vendor','human-models')+path.sep).href,
       debug:false,
       face:{enabled:true,detector:{rotation:true,return:true,maxDetected:4},mesh:{enabled:true},description:{enabled:true},antispoof:{enabled:true},liveness:{enabled:true}},
       body:{enabled:false},hand:{enabled:false},object:{enabled:false},gesture:{enabled:false}
