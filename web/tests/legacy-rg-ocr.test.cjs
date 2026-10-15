@@ -61,3 +61,25 @@ test('recognizes truncated and split São Paulo legacy RG birth label',()=>{
  const text='REGISTRO GERAL\nDATA DE\nNTO NAS ASCIMENT\nNATURALIDADE\n07/09/1989\nS.PAULO - SP\nDATA DE EXPEDICAO\n03/08/2016';
  assert.equal(extractBirthDateFromOcr(text),'1989-09-07');
 });
+
+test('recognizes birth date when OCR reads the date before its label',()=>{
+ const {extractBirthDateFromOcr}=outputs;
+ assert.equal(extractBirthDateFromOcr('05/06/2000 NATURALIDADE SAO PAULO NASCIMENTO DATA DE EXPEDICAO 02/03/2020'),'2000-06-05');
+});
+
+test('does not relabel an issue date as birth date when OCR reverses field order',()=>{
+ const {extractBirthDateFromOcr}=outputs;
+ assert.equal(extractBirthDateFromOcr('DATA DE EXPEDICAO 05/06/2000 NATURALIDADE SAO PAULO NASCIMENTO'),null);
+ assert.equal(extractBirthDateFromOcr('DATA DE EXPEDICAO 02/03/2020 NASCIMENTO 05/06/2000'),'2000-06-05');
+});
+
+test('repairs common O/0 and I/1 character confusion only within a labelled birth date',()=>{
+ const {extractBirthDateFromOcr}=outputs;
+ assert.equal(extractBirthDateFromOcr('NASCIMENTO O5/O6/2OOO DATA DE EXPEDICAO 02/03/2020'),'2000-06-05');
+ assert.equal(extractBirthDateFromOcr('DATA DE EXPEDICAO O5/O6/2OOO'),null);
+});
+
+test('recognizes split birth labels and spaced date tokens without borrowing issue dates',()=>{
+ const {extractBirthDateFromOcr}=outputs;
+ assert.equal(extractBirthDateFromOcr('NASCIM ENTO\n05 / 06 / 2000\nDATA DE EXPEDICAO\n02 / 03 / 2020'),'2000-06-05');
+});
