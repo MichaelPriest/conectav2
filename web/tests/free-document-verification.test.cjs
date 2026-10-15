@@ -33,11 +33,21 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(route,/Math\.sign\(firstTurn\)===Math\.sign\(secondTurn\)/);
  assert.match(ui,/Iniciar captura guiada/);
  assert.match(ui,/Capturar esta etapa/);
- assert.match(route,/Nenhum selo, faixa etária ou acesso foi liberado/);
+ assert.match(route,/status:'preflight_passed'/);
+ assert.match(route,/approved:false/);
+ assert.match(route,/validação final continua pendente/);
  assert.doesNotMatch(route,/status:'approved'/);
  assert.doesNotMatch(route,/from\('identity_verifications'\)\.upsert/);
  assert.doesNotMatch(route,/from\('age_assurance_decisions'\)\.upsert/);
  assert.match(route,/documentStored:false/);
+ const challenge=read('src/app/api/identity/free-document/liveness-challenge/route.ts');
+ const migration=read('../supabase/migrations/20261015120000_identity_liveness_challenges.sql');
+ assert.match(challenge,/randomBytes\(32\)/);
+ assert.match(challenge,/90\*1000/);
+ assert.match(challenge,/isTrustedIdentityOrigin/);
+ assert.match(migration,/enable row level security/i);
+ assert.match(migration,/consume_identity_liveness_challenge/);
+ assert.match(migration,/consumed_at is null/);
 });
 
 test('the free path never accepts browser-supplied descriptors or writes raw document evidence',()=>{
