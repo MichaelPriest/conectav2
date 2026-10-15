@@ -194,7 +194,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
         style={{display:challenge?'block':'none',width:'100%',maxWidth:420,aspectRatio:'4 / 3',objectFit:'cover',transform:'scaleX(-1)',borderRadius:12,background:'#111'}}/>
       {!challenge?<button type="button" className="btn btn-outline" onClick={()=>void startGuidedCapture()} disabled={busy||challengeBusy}>
-        <Camera size={17}/>{challengeBusy?'Preparando câmera…':'Ativar câmera e iniciar'}</button>:
+        <Camera size={17}/>{challengeBusy?'Preparando câmera…':'Iniciar captura guiada'}</button>:
         <div>
           <p><strong>Etapa {Math.min(frameIndex+1,4)} de 4:</strong> {instructions[frameIndex]||'Captura concluída.'}</p>
           <progress value={frames.length} max={4} aria-label="Quadros capturados" style={{width:'100%',height:10,accentColor:'var(--accent,#6d5dfc)'}}/>
