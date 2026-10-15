@@ -94,6 +94,7 @@ export async function POST(request:NextRequest){
   let worker:Awaited<ReturnType<typeof createWorker>>|null=null;
   let documentTensor:any=null,selfieTensor:any=null;
   let documentPixels:Uint8Array|undefined,selfiePixels:Uint8Array|undefined;
+  let documentTensorData:Int32Array|undefined,selfieTensorData:Int32Array|undefined;
   try{
     const [docPixels,selfiePix]=await Promise.all([pixels(document),pixels(selfie)]);
     documentPixels=docPixels.data;selfiePixels=selfiePix.data;
@@ -134,8 +135,9 @@ export async function POST(request:NextRequest){
       body:{enabled:false},hand:{enabled:false},object:{enabled:false},gesture:{enabled:false}
     });
     await instance.load();
-    documentTensor=instance.tf.tensor3d(new Int32Array(docPixels.data),[docPixels.height,docPixels.width,3],'int32').expandDims(0);
-    selfieTensor=instance.tf.tensor3d(new Int32Array(selfiePix.data),[selfiePix.height,selfiePix.width,3],'int32').expandDims(0);
+    documentTensorData=new Int32Array(docPixels.data);selfieTensorData=new Int32Array(selfiePix.data);
+    documentTensor=instance.tf.tensor3d(documentTensorData,[docPixels.height,docPixels.width,3],'int32').expandDims(0);
+    selfieTensor=instance.tf.tensor3d(selfieTensorData,[selfiePix.height,selfiePix.width,3],'int32').expandDims(0);
     const [docResult,selfieResult]=await Promise.all([instance.detect(documentTensor),instance.detect(selfieTensor)]);
     const docFaces=docResult.face||[],selfieFaces=selfieResult.face||[];
     if(docFaces.length!==1||selfieFaces.length!==1)
@@ -184,6 +186,6 @@ export async function POST(request:NextRequest){
     documentTensor?.dispose?.();selfieTensor?.dispose?.();
     if(worker)await worker.terminate().catch(()=>undefined);
     // Best-effort release of in-memory references; no raw image is persisted.
-    document.fill(0);selfie.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);qr='';
+    document.fill(0);selfie.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
   }
 }
