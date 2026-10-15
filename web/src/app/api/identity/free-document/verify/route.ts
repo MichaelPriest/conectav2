@@ -213,7 +213,8 @@ export async function POST(request:NextRequest){
     // First pass: high-resolution contrast-normalized images with sparse-text
     // segmentation, suitable for labels distributed across an older ID card.
     const documentImages=[document,back];
-    ocrImages=await Promise.all(documentImages.map(image=>prepareOcrImage(image)));
+    ocrImages.push(await prepareOcrImage(document));
+    ocrImages.push(await prepareOcrImage(back));
     await worker.setParameters({
       tessedit_pageseg_mode:PSM.SPARSE_TEXT,
       preserve_interword_spaces:'1',
