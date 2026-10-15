@@ -85,7 +85,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </div>
     <label className="human-agree" style={{marginTop:16}}>
       <input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/>
-      Autorizo o envio temporário da frente do documento e da selfie ao servidor do Conecta para OCR, comparação facial e análise antifraude. Não autorizo armazenamento das imagens ou uso para publicidade. Entendo que a análise automática pode errar e não consulta uma base oficial de validade.
+      Autorizo o envio temporário da frente do documento, do conteúdo lido do QR Code e da selfie ao servidor do Conecta para OCR, comparação facial e análise antifraude. Não autorizo armazenamento das imagens ou uso para publicidade. Entendo que a análise automática pode errar e não consulta uma base oficial de validade.
     </label>
     <div className="row" style={{gap:10,flexWrap:'wrap',marginTop:16}}>
       <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||!front||!back||!selfie||!consent}>
