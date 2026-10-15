@@ -145,7 +145,12 @@ export async function POST(request:NextRequest){
   try{
     const [docPixels,selfiePix]=await Promise.all([pixels(document),pixels(selfie)]);
     documentPixels=docPixels.data;selfiePixels=selfiePix.data;
-    worker=await createWorker('por');
+    worker=await createWorker('por',1,{
+      // Pin the worker entrypoint to the external package path. Vercel's bundler
+      // cannot always infer Tesseract's relative worker lookup from __dirname.
+      workerPath:path.join(process.cwd(),'node_modules','tesseract.js','src','worker-script','node','index.js'),
+      cacheMethod:'write'
+    });
     // Brazilian documents vary: the birth date may be printed on either side.
     // OCR both images and reject contradictory dates instead of guessing.
     const documentImages=[document,back];
