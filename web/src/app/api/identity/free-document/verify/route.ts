@@ -237,10 +237,13 @@ export async function POST(request:NextRequest){
       for(const result of livenessResults)for(const face of result.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
       for(const frame of livenessPixels)frame.data.fill(0);
     }
-    return fail(
-      'Os movimentos foram reconhecidos na captura guiada, mas esta análise gratuita ainda é uma pré-análise e não certifica oficialmente o documento. Nenhum selo, faixa etária ou acesso foi liberado automaticamente.',
-      422
-    );
+    return NextResponse.json({
+      ok:true,
+      status:'preflight_passed',
+      approved:false,
+      documentStored:false,
+      message:'A pré-análise reconheceu os movimentos e concluiu as verificações automáticas disponíveis. Isso não certifica oficialmente o documento e não libera selo, faixa etária ou acesso. A validação final continua pendente.'
+    },{status:200,headers});
   }catch(error){
     return fail(error instanceof Error?error.message:'Não foi possível concluir a análise. Nenhum acesso foi liberado.',503);
   }finally{
