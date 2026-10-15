@@ -23,7 +23,16 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/QRCodeReader/);
  assert.match(route,/identity_free_verification_attempts/);
  assert.match(route,/MAX_REQUEST_BYTES=25\*1024\*1024/);
- assert.match(route,/length>=5/);
+ assert.match(route,/start_conecta_identity_verification_attempt/);
+ assert.match(route,/const failAttempt=async/);
+ assert.match(route,/update\(\{status:'completed'\}\)/);
+ assert.match(route,/status>=500\)await releaseAttempt\(\)/);
+ assert.ok(route.indexOf("livenessFrames.push(await imageBuffer(form.get('livenessFrame'+i)") < route.indexOf('start_conecta_identity_verification_attempt'),'attempt must be reserved only after payload validation');
+ const attemptMigration=read('../supabase/migrations/20261015130000_identity_attempt_outcome_tracking.sql');
+ assert.match(attemptMigration,/pg_advisory_xact_lock/);
+ assert.match(attemptMigration,/a\.status = 'completed'/);
+ assert.match(attemptMigration,/interval '2 minutes'/);
+ assert.match(attemptMigration,/grant execute on function public\.start_conecta_identity_verification_attempt\(uuid\)\s+to service_role/i);
  assert.match(route,/createWorker\('por',1,/);
  assert.match(route,/workerPath:path\.join\(process\.cwd\(\),'node_modules','tesseract\.js','src','worker-script','node','index\.js'\)/);
  assert.match(route,/dobFromText/);
