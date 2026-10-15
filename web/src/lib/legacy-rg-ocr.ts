@@ -60,7 +60,7 @@ export function extractBirthDateFromOcr(raw:string):string|null{
  // A date following an issue/expiry label belongs to that field, even if OCR
  // reorders the page and prints NASCIMENTO after it. Do not relabel that date
  // as birth date unless a birth label occurs between the two.
- const issueFieldPattern=/(?:\\bDATA\\s*(?:DE\\s*)?EXPEDICAO\\b|\\bEXPEDICAO\\b|\\bVALIDADE\\b|\\bEMISSAO\\b)/g;
+ const issueFieldPattern=/(?:\bDATA\s*(?:DE\s*)?EXPEDICAO\b|\bEXPEDICAO\b|\bVALIDADE\b|\bEMISSAO\b)/g;
  const issueFields:LabelCandidate[]=[...text.matchAll(issueFieldPattern)].map(match=>({
    start:match.index||0,
    end:(match.index||0)+match[0].length
