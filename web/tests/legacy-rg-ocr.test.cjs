@@ -41,3 +41,17 @@ test('no document photo, CPF, RG or extracted text persisted as output',()=>{
  assert.equal(JSON.stringify(result).includes('529'),false);
  assert.equal(JSON.stringify(result).includes('1984'),false);
 });
+
+
+test('extracts birth dates across OCR line breaks and spaced separators',()=>{
+ const {extractBirthDateFromOcr}=outputs;
+ assert.equal(extractBirthDateFromOcr('REGISTRO GERAL\nDATA DE NASCIMENTO:\n05/06/2000\nDATA DE EXPEDICAO 02/03/2020'),'2000-06-05');
+ assert.equal(extractBirthDateFromOcr('NASCIMENTO 05 06 2000\nEXPEDICAO 02/03/2020'),'2000-06-05');
+ assert.equal(extractBirthDateFromOcr('DT. NASC 05 . 06 . 2000\nVALIDADE 02/03/2030'),'2000-06-05');
+});
+
+test('birth-date OCR does not guess when multiple dates remain in the birth field',()=>{
+ const {extractBirthDateFromOcr}=outputs;
+ assert.equal(extractBirthDateFromOcr('NASCIMENTO 05/06/2000 07/08/2001'),'2000-06-05');
+ assert.equal(extractBirthDateFromOcr('NASCIMENTO 05/06/2000\nNASCIMENTO 07/08/2001'),null);
+});
