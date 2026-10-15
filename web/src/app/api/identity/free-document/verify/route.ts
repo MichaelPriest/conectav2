@@ -73,7 +73,7 @@ export async function POST(request:NextRequest){
   const context=await identityContext(request);
   if(!context)return fail('Entre na sua conta para continuar.',401);
 
-  let document:Buffer|undefined,selfie:Buffer|undefined,qr:string,documentType:string;
+  let document:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='';
   try{
     const form=await request.formData();
     if(form.get('consent')!=='true')return fail('É necessário consentir com o processamento temporário das imagens.',400);
@@ -84,6 +84,7 @@ export async function POST(request:NextRequest){
     qr=String(form.get('qrPayload')||'');
     if(qr.length<8||qr.length>12000)return fail('Não foi possível ler um QR Code válido. Reposicione o verso do documento e tente novamente.',422);
   }catch(error){
+    document.fill(0);selfie.fill(0);qr='';
     return fail(error instanceof Error?error.message:'Não foi possível ler os arquivos enviados.',400);
   }
 
@@ -180,6 +181,6 @@ export async function POST(request:NextRequest){
     documentTensor?.dispose?.();selfieTensor?.dispose?.();
     if(worker)await worker.terminate().catch(()=>undefined);
     // Best-effort release of in-memory references; no raw image is persisted.
-    document?.fill(0);selfie?.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);qr='';
+    document.fill(0);selfie.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);qr='';
   }
 }
