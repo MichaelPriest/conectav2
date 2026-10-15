@@ -95,12 +95,12 @@ test('Vercel traces Tesseract runtime dependencies and pins the Node worker entr
  const config=read('next.config.ts');
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  const ui=read('src/components/free-document-verification.tsx');
- assert.match(config,/serverExternalPackages:[\\s\\S]*'tesseract\\.js'/);
+ assert.ok(config.includes("serverExternalPackages: ['@tensorflow/tfjs-node', '@vladmandic/human', 'tesseract.js']"));
  for(const dependency of ['tesseract.js','tesseract.js-core','bmp-js','idb-keyval','is-url','node-fetch','regenerator-runtime','wasm-feature-detect','zlibjs','whatwg-url','tr46','webidl-conversions']){
   assert.ok(config.includes('./node_modules/'+dependency+'/**/*'),'missing traced dependency '+dependency);
  }
- assert.match(route,/workerPath:path\\.join\\(process\\.cwd\\(\\),'node_modules','tesseract\\.js','src','worker-script','node','index\\.js'\\)/);
+ assert.ok(route.includes("workerPath:path.join(process.cwd(),'node_modules','tesseract.js','src','worker-script','node','index.js')"));
  assert.match(ui,/async function readJsonResponse<T>/);
  assert.doesNotMatch(ui,/response\\.json\\(\\)/);
- assert.match(ui,/O servidor de validação falhou \\(HTTP/);
+ assert.ok(ui.includes('O servidor de validação falhou (HTTP'));
 });
