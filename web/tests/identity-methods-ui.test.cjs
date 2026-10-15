@@ -22,7 +22,7 @@ test('document upload requires explicit consent and sends all evidence to the se
  assert.match(upload,/selfie/);
  assert.match(upload,/consent/);
  assert.ok(upload.includes('/api/identity/free-document/verify'));
- assert.match(upload,/não consulta uma base oficial de validade/i);
+ assert.match(upload,/não há consulta automática a uma base oficial/i);
 });
 
 test('no local preflight can be represented as official identity or age approval',()=>{
