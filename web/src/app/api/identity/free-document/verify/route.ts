@@ -83,16 +83,24 @@ export async function POST(request:NextRequest){
   const completeAttempt=async()=>{
     if(attemptId===null)return;
     const id=attemptId;
-    const {error}=await context.admin.from('identity_free_verification_attempts')
-      .update({status:'completed'}).eq('id',id).eq('user_id',context.user.id);
-    if(!error)attemptId=null;
+    try{
+      const {error}=await context.admin.from('identity_free_verification_attempts')
+        .update({status:'completed'}).eq('id',id).eq('user_id',context.user.id);
+      if(!error)attemptId=null;
+    }catch{
+      // An abandoned pending reservation expires from rate-limit counting after two minutes.
+    }
   };
   const releaseAttempt=async()=>{
     if(attemptId===null)return;
     const id=attemptId;
-    const {error}=await context.admin.from('identity_free_verification_attempts')
-      .delete().eq('id',id).eq('user_id',context.user.id);
-    if(!error)attemptId=null;
+    try{
+      const {error}=await context.admin.from('identity_free_verification_attempts')
+        .delete().eq('id',id).eq('user_id',context.user.id);
+      if(!error)attemptId=null;
+    }catch{
+      // A failed release remains pending and is ignored by the rate limiter after two minutes.
+    }
   };
   const failAttempt=async(message:string,status:number)=>{
     // Validation failures count; service/infrastructure failures do not.
