@@ -36,7 +36,8 @@ export type AgeAssurancePolicy = {
 // flow exists. Keep only independently verified credentials/provider callbacks.
 const trustedSources = new Set<TrustedAgeSource>([
   'verified_age_credential',
-  'authorized_provider_callback'
+  'authorized_provider_callback',
+  'conecta_free_document_face'
 ]);
 
 function isTrustedDecision(value: unknown): value is TrustedAgeDecision {
