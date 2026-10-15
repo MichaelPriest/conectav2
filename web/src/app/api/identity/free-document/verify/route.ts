@@ -248,27 +248,14 @@ export async function POST(request:NextRequest){
       .update(livenessChallenge,'utf8').update(':','utf8')
       .update(ageBand,'utf8').update(':','utf8')
       .update(verifiedAt,'utf8').digest('hex');
-    const identityWrite=await context.admin.from('identity_verifications').upsert({
-      user_id:context.user.id,
-      provider:'conecta_free',
-      status:'approved',
-      age_band:ageBand,
-      verified_at:verifiedAt,
-      updated_at:verifiedAt
-    },{onConflict:'user_id'});
-    if(identityWrite.error)
-      return fail('As verificações passaram, mas não foi possível registrar o resultado. A validação não foi concluída; tente novamente.',503);
-    const ageWrite=await context.admin.from('age_assurance_decisions').upsert({
-      user_id:context.user.id,
-      age_band:ageBand,
-      method:'conecta_free_document_face',
-      policy_version:'conecta-free-document-face-v1',
-      evidence_reference_hash:evidenceReferenceHash,
-      verified_at:verifiedAt,
-      updated_at:verifiedAt
-    },{onConflict:'user_id'});
-    if(ageWrite.error)
-      return fail('A identidade foi registrada, mas a faixa etária não pôde ser registrada. O acesso permanece bloqueado até a conclusão segura; tente novamente.',503);
+    const {error:verdictError}=await context.admin.rpc('complete_conecta_free_identity_verification',{
+      p_user_id:context.user.id,
+      p_age_band:ageBand,
+      p_evidence_reference_hash:evidenceReferenceHash,
+      p_verified_at:verifiedAt
+    });
+    if(verdictError)
+      return fail('As verificações passaram, mas não foi possível registrar o resultado com segurança. A validação não foi concluída; tente novamente.',503);
     return NextResponse.json({
       ok:true,
       status:'approved',
