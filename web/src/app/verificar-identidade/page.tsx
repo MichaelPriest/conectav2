@@ -181,7 +181,7 @@ export default function IdentityPage(){
       <button className="btn btn-primary btn-lg" type="button" disabled={busy||!available||result?.status==='approved'} onClick={begin}>
         <Camera size={18}/> {busy?'Verificando...':'Iniciar verificação pela câmera'} <ExternalLink size={16}/>
       </button>
-      <p className="fineprint" style={{textAlign:'left'}}>O leitor QR Code e o Human abaixo são apenas ferramentas experimentais. Nenhuma conclusão local libera acesso adulto ou altera o cadastro de idade.</p>
+      <p className="fineprint" style={{textAlign:'left'}}>O leitor QR Code e o Human abaixo são apenas ferramentas experimentais. Nenhum teste local isolado libera acesso adulto ou altera o cadastro de idade; a verificação documental do servidor tem critérios próprios e limitações descritas acima.</p>
     </section>
   
     <section className="panel" style={{marginTop:20}}>
