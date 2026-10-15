@@ -230,7 +230,7 @@ export async function POST(request:NextRequest){
       const firstTurn=angles[1],secondTurn=angles[2],returned=Math.abs(angles[3]);
       if(baseline>0.28||returned>0.28||Math.abs(firstTurn)<0.18||Math.abs(secondTurn)<0.18||Math.sign(firstTurn)===Math.sign(secondTurn))
         return fail('Os movimentos não foram confirmados em sequência pelo servidor. Repita a captura guiada com boa iluminação e vire a cabeça para os dois lados.',422);
-      // The requested order is randomly selected and single-use. This preflight
+      // The requested order is randomly selected and single-use. This validation
       // checks opposite head turns, front-facing start/end, and the same account;
       // it is not proof of presentation attack resistance or issuer authenticity.
       // This is a liveness signal, not issuer-level document authenticity.
