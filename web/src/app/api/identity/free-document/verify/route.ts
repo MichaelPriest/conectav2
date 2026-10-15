@@ -129,7 +129,8 @@ export async function POST(request:NextRequest){
     if(!challengeData||!Array.isArray(challengeData.turn_order)||challengeData.turn_order.length!==2)
       throw new Error('O desafio de vivacidade expirou ou já foi utilizado. Inicie uma nova captura.');
     challengeTurnOrder=challengeData.turn_order as string[];
-    if(challengeTurnOrder[0]!=='left'||challengeTurnOrder[1]!=='right')
+    if(!((challengeTurnOrder[0]==='left'&&challengeTurnOrder[1]==='right')||
+         (challengeTurnOrder[0]==='right'&&challengeTurnOrder[1]==='left')))
       throw new Error('A sequência do desafio não corresponde à política ativa. Inicie novamente.');
     qr=await decodeQrFromImage(back);
     if(qr.length<8||qr.length>12000)throw new Error('O QR Code do verso não tem um conteúdo válido para esta verificação.');
@@ -229,8 +230,9 @@ export async function POST(request:NextRequest){
       const firstTurn=angles[1],secondTurn=angles[2],returned=Math.abs(angles[3]);
       if(baseline>0.28||returned>0.28||Math.abs(firstTurn)<0.18||Math.abs(secondTurn)<0.18||Math.sign(firstTurn)===Math.sign(secondTurn))
         return fail('Os movimentos não foram confirmados em sequência pelo servidor. Repita a captura guiada com boa iluminação e vire a cabeça para os dois lados.',422);
-      // The order is random and single-use. The server checks distinct opposite
-      // head turns, front-facing start/end, and the same authenticated account.
+      // The requested order is randomly selected and single-use. This preflight
+      // checks opposite head turns, front-facing start/end, and the same account;
+      // it is not proof of presentation attack resistance or issuer authenticity.
       // This is a liveness signal, not issuer-level document authenticity.
     }finally{
       for(const item of livenessTensors){item.tensor?.dispose?.();item.data?.fill(0);item.pixels?.fill(0);}
