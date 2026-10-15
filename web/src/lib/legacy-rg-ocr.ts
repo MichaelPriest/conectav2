@@ -70,12 +70,11 @@ export function extractBirthDateFromOcr(raw:string):string|null{
      .filter(field=>field.end<=date.start&&date.start-field.end<=140)
      .sort((a,b)=>b.end-a.end)[0];
    if(!prior)return false;
-   // If a birth label appears shortly after this date, the OCR likely read
-   // the page in column order; that later label must not claim this earlier
-   // issue/expiry date.
+   // A birth label must occur after the issue-field label and before the
+   // candidate date. A birth label later on the page cannot claim the issue
+   // date just because OCR returned the fields in column order.
    return !labels.some(label=>
-     label.start>=prior.end &&
-     ((label.end<=date.start)||(label.start>=date.end&&label.start-date.end<=100))
+     label.start>=prior.end && label.end<=date.start
    );
  };
 
