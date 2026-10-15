@@ -93,6 +93,10 @@ export async function POST(request:NextRequest){
   if(!context)return fail('Entre na sua conta para continuar.',401);
   const contentLength=Number(request.headers.get('content-length')||0);
   if(Number.isFinite(contentLength)&&contentLength>MAX_REQUEST_BYTES)return fail('O envio total excede o limite de 25 MB.',413);
+  const retentionCutoff=new Date(Date.now()-90*24*60*60*1000).toISOString();
+  const {error:cleanupError}=await context.admin.from('identity_free_verification_attempts').delete()
+    .eq('user_id',context.user.id).lt('attempted_at',retentionCutoff);
+  if(cleanupError)return fail('Não foi possível atualizar o controle de tentativas com segurança.',503);
   const cutoff=new Date(Date.now()-30*60*1000).toISOString();
   const {data:recentAttempts,error:attemptsError}=await context.admin.from('identity_free_verification_attempts')
     .select('attempted_at').eq('user_id',context.user.id).gte('attempted_at',cutoff);
