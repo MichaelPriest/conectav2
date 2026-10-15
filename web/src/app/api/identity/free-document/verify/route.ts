@@ -229,7 +229,6 @@ export async function POST(request:NextRequest){
     });
     // First pass: high-resolution contrast-normalized images with sparse-text
     // segmentation, suitable for labels distributed across an older ID card.
-    const documentImages=[document,back];
     ocrImages.push(await prepareOcrImage(document));
     ocrImages.push(await prepareOcrImage(back));
     await worker.setParameters({
