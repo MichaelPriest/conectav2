@@ -10,6 +10,7 @@ import {LegacyRgScanner} from '@/components/legacy-rg-scanner';
 import {GovBrSignatureFlow} from '@/components/govbr-signature-flow';
 import {IdentityCompletion} from '@/components/identity-completion';
 import {IdentityMethodsPanel} from '@/components/identity-methods-panel';
+import {FreeDocumentVerification} from '@/components/free-document-verification';
 import {FamilyRelationships} from '@/components/family-relationships';
 
 type MethodItem={id:string;label:string;cost:string;status:string;verifiesIdentity:boolean;verifiesAge:boolean;details:string;priceDisplay?:string};
@@ -43,7 +44,7 @@ export default function IdentityPage(){
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
   const [declaredBand,setDeclaredBand]=useState<string|null>(null);
-  const [documentMode,setDocumentMode]=useState<'cin'|'old-rg'>('cin');
+  const [documentMode,setDocumentMode]=useState<'cin'|'old-rg'|'cnh'>('cin');
 
   const token=useCallback(async()=>{
     const {data:{session}}=await supabaseBrowser().auth.getSession();
@@ -193,6 +194,9 @@ export default function IdentityPage(){
         <button type="button" className={documentMode==='old-rg'?'btn btn-primary':'btn btn-outline'}
           aria-pressed={documentMode==='old-rg'} onClick={()=>setDocumentMode('old-rg')}>
           RG antigo</button>
+        <button type="button" className={documentMode==='cnh'?'btn btn-primary':'btn btn-outline'}
+          aria-pressed={documentMode==='cnh'} onClick={()=>setDocumentMode('cnh')}>
+          CNH com QR Code</button>
       </div>
       {documentMode==='old-rg'&&<div style={{marginTop:14}}>
         <p><strong>O RG antigo também é aceito para iniciar a pré-triagem.</strong>
@@ -206,6 +210,7 @@ export default function IdentityPage(){
           Não envie RG, CPF ou outros dados pessoais por mensagens ou comentários.</p>
       </div>}
     </section>
-    {documentMode==='cin'?<CinQrScanner/>:<LegacyRgScanner declaredBand={declaredBand}/>}
+    <FreeDocumentVerification documentType={documentMode} onComplete={refresh}/>
+    {documentMode==='cin'?<CinQrScanner/>:documentMode==='old-rg'?<LegacyRgScanner declaredBand={declaredBand}/>:null}
     <GovBrSignatureFlow declaredBand={declaredBand}/><HumanCameraCheck/><IdentityCompletion/></main></GuardedPage>;
 }
