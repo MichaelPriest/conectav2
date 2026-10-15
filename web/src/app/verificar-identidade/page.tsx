@@ -88,6 +88,7 @@ export default function IdentityPage(){
         <LockKeyhole size={16} style={{verticalAlign:'middle'}}/> <strong>{access?.networkAccess?'Conecta ID aprovado — acesso liberado':'Acesso restrito até concluir as verificações necessárias'}</strong>
       </p>
       <p>{access?.message||'Consultando no servidor o estado da conta.'}</p>
+      {!access?.networkAccess&&<p className="small-note">Acesso à rede bloqueado até concluir o Conecta ID e as demais verificações obrigatórias. A tela não oferece atalhos para contornar essa proteção.</p>}
       <ol style={{paddingLeft:22,lineHeight:1.8}}>
         <li>{access?.steps?.profile?'✓':'○'} Perfil cadastrado</li>
         <li>{access?.steps?.ageDeclaration?'✓':'○'} Faixa etária declarada (não é prova de idade)</li>
