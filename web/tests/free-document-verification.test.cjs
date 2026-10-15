@@ -100,3 +100,21 @@ test('Vercel keeps the Tesseract Node worker packaged and reports non-JSON API f
  assert.doesNotMatch(ui,/response\\.json\\(\\)/);
  assert.match(ui,/O servidor de validação falhou \\(HTTP/);
 });
+
+test('the explicit @edilenesilva exemption bypasses document submission without fabricating verification',()=>{
+ const gate=read('src/app/api/identity/access/route.ts');
+ const migration=read('../supabase/migrations/20261015170000_identity_access_exemption_edilenesilva.sql');
+ assert.match(gate,/identity_access_exemptions/);
+ assert.match(gate,/reason:'account_exemption'/);
+ assert.match(gate,/age\.data\.declared_band==='18_plus'/);
+ assert.match(gate,/Identidade e idade não foram verificadas documentalmente/);
+ assert.match(migration,/lower\(p\.handle\) = 'edilenesilva'/);
+ assert.match(migration,/rd\.declared_band = '18_plus'/);
+ assert.match(migration,/enable row level security/i);
+ assert.match(migration,/revoke all on table public\.identity_access_exemptions from public, anon, authenticated/i);
+ assert.match(migration,/is_active/);
+ assert.match(migration,/does not create a verified identity/i);
+ assert.match(migration,/iv\.status = 'approved'/);
+ assert.doesNotMatch(migration,/insert into public\.identity_verifications/i);
+ assert.doesNotMatch(migration,/insert into public\.age_assurance_decisions/i);
+});
