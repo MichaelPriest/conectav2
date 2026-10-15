@@ -32,8 +32,8 @@ test('the free path never accepts browser-supplied descriptors or writes raw doc
  assert.doesNotMatch(route,/form\.get\(['"](?:embedding|descriptor|similarity|faceScore)['"]\)/);
  assert.doesNotMatch(route,/storage\.from\(/);
  assert.doesNotMatch(route,/console\.(?:log|error|warn)/);
- assert.match(route,/document\?\.fill\(0\)/);
- assert.match(route,/selfie\?\.fill\(0\)/);
+ assert.match(route,/document\.fill\(0\)/);
+ assert.match(route,/selfie\.fill\(0\)/);
 });
 
 test('free method is accepted only by the server gate and restrictive database function',()=>{
