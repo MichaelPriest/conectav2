@@ -1,4 +1,3 @@
-import {createHash,randomUUID} from 'node:crypto';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import '@tensorflow/tfjs-node';
@@ -188,35 +187,13 @@ export async function POST(request:NextRequest){
     if(typeof selfieFace.real!=='number'||selfieFace.real<0.55)
       return fail('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422);
 
-    const transactionId=randomUUID();
-    const evidenceHash=createHash('sha256').update(context.user.id+':'+transactionId).digest('hex');
-    const now=new Date().toISOString();
-    const ageWrite=await context.admin.from('age_assurance_decisions').upsert({
-      user_id:context.user.id,age_band:ageBand,method:'conecta_free_document_face',
-      policy_version:'conecta-id-free-v1',evidence_reference_hash:evidenceHash,
-      verified_at:now,updated_at:now
-    },{onConflict:'user_id'});
-    if(ageWrite.error)throw new Error('Não foi possível registrar a decisão de idade com segurança.');
-    const identityWrite=await context.admin.from('identity_verifications').upsert({
-      user_id:context.user.id,provider:'conecta_free',provider_inquiry_id:'conecta_'+transactionId,
-      status:'approved',age_band:ageBand==='18_plus'?'18_plus':ageBand==='16_17'?'17':'13_to_16',
-      guardian_status:ageBand==='18_plus'?'not_required':'pending',updated_at:now,verified_at:now
-    },{onConflict:'user_id'});
-    if(identityWrite.error){
-      await context.admin.from('age_assurance_decisions').delete().eq('user_id',context.user.id).eq('evidence_reference_hash',evidenceHash);
-      throw new Error('Não foi possível registrar a aprovação de identidade com segurança.');
-    }
-    // Explicitly release references to source bytes before responding. Nothing is
-    // written to storage; only a coarse age band and opaque evidence hash persist.
-    document.fill(0);selfie.fill(0);
-    return NextResponse.json({
-      ok:true,status:'approved',ageBand,documentType,faceMatch:true,
-      qrChecked:true,ocrChecked:true,documentStored:false,imagesDiscarded:true,
-      issuerSignatureChecked:documentType==='cin',officialValidityChecked:false,
-      message:ageBand==='18_plus'
-        ?'Verificação gratuita concluída. O acesso será atualizado pelo servidor.'
-        :'Verificação concluída com proteção para menores. Associe um responsável verificado para liberar o acesso.'
-    },{headers});
+    // A static selfie cannot prove live presence. Keep OCR, QR and face
+    // matching as preflight only until a server-verifiable, one-time liveness
+    // challenge is implemented. Never persist an identity/age approval here.
+    return fail(
+      'Os documentos e a comparação facial passaram pela pré-análise, mas uma selfie estática não comprova vivacidade. Nenhum selo, faixa etária ou acesso foi liberado. A validação final ficará disponível quando a captura guiada for verificada pelo servidor.',
+      422
+    );
   }catch(error){
     return fail(error instanceof Error?error.message:'Não foi possível concluir a análise. Nenhum acesso foi liberado.',503);
   }finally{
