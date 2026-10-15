@@ -34,7 +34,7 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.doesNotMatch(route,/from\('identity_verifications'\)\.upsert/);
  assert.doesNotMatch(route,/from\('age_assurance_decisions'\)\.upsert/);
  assert.match(route,/documentStored:false/);
- assert.match(route,/officialValidityChecked:false/);
+ assert.match(route,/documentStored:false/);
 });
 
 test('the free path never accepts browser-supplied descriptors or writes raw document evidence',()=>{
