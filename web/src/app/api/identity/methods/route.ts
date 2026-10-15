@@ -92,6 +92,6 @@ export async function GET(request:NextRequest){
         details:'Não inicia cobrança nem aprova a conta por este endpoint. Só deve ser habilitado após contrato, preço real por tentativa, consentimento e webhook autenticado.'
       }
     ],
-    notice:'A validação gratuita própria do Conecta pode aprovar a conta quando todos os critérios no servidor são atendidos. Ela não é uma certificação governamental e não consulta a validade atual do documento. Os outros métodos desta lista continuam sendo pré-triagens.'
+    notice:'Nenhum método listado concede selo oficial. A validação gratuita própria do Conecta pode aprovar a conta quando todos os critérios no servidor são atendidos, mas não consulta a validade atual do documento. Os outros métodos desta lista continuam sendo pré-triagens.'
   },{headers});
 }
