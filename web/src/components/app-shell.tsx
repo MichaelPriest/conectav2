@@ -22,6 +22,7 @@ const navItems = [
   { label: 'Comunidades', href: '/comunidades', icon: Users },
   { label: 'Mensagens', href: '/mensagens', icon: MessageCircle },
   { label: 'Notificações', href: '/notificacoes', icon: Bell },
+  { label: 'Conecta ID · Validar identidade', href: '/verificar-identidade', icon: ShieldCheck },
 ];
 const moreNavItems = [
   { label: 'Reels', href: '/reels', icon: Clapperboard },

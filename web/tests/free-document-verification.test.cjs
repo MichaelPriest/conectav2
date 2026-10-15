@@ -8,6 +8,9 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 
 test('free document verification requires consent, QR payload, OCR and server-side face matching',()=>{
  const route=read('src/app/api/identity/free-document/verify/route.ts');
+ const ui=read('src/components/free-document-verification.tsx');
+ assert.match(ui,/Validação gratuita de identidade e rosto/);
+ assert.match(ui,/pode permitir escolher da galeria/);
  assert.match(route,/form\.get\('consent'\)!=='true'/);
  assert.match(route,/form\.get\('documentBack'\)/);
  assert.match(route,/decodeQrFromImage\(back\)/);
@@ -17,14 +20,37 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(route,/length>=5/);
  assert.match(route,/createWorker\('por'\)/);
  assert.match(route,/dobFromText/);
+ assert.match(route,/worker\.recognize\(document\)/);
+ assert.match(route,/worker\.recognize\(back\)/);
+ assert.match(route,/frontDob&&backDob&&frontDob!==backDob/);
+ assert.match(route,/frente e no verso divergem/);
  assert.match(route,/instance\.detect\(documentTensor\)/);
  assert.match(route,/instance\.detect\(selfieTensor\)/);
  assert.match(route,/instance\.match\.similarity/);
  assert.match(route,/selfieFace\.real/);
- assert.match(route,/identity_verifications/);
- assert.match(route,/age_assurance_decisions/);
- assert.match(route,/documentStored:false/);
- assert.match(route,/officialValidityChecked:false/);
+ assert.match(route,/consume_identity_liveness_challenge/);
+ assert.match(route,/livenessFrame/);
+ assert.match(route,/Math\.sign\(firstTurn\)===Math\.sign\(secondTurn\)/);
+ assert.match(ui,/Iniciar captura guiada/);
+ assert.match(ui,/Capturar esta etapa/);
+ assert.match(route,/status:'approved'/);
+ assert.match(route,/approved:true/);
+ assert.match(route,/complete_conecta_free_identity_verification/);
+ assert.match(route,/complete_conecta_free_identity_verification/);
+ assert.match(route,/officialIssuerVerified:false/);
+ assert.match(route,/Validação Conecta ID concluída/);
+ assert.match(route,/status:'approved'/);
+  assert.match(route,/documentStored:false/);
+ const challenge=read('src/app/api/identity/free-document/liveness-challenge/route.ts');
+ const migration=read('../supabase/migrations/20261015120000_identity_liveness_challenges.sql');
+ assert.match(challenge,/randomBytes\(32\)/);
+ assert.match(challenge,/randomBytes\(1\)\[0\]%2===0\?\['left','right'\]:\['right','left'\]/);
+ assert.match(route,/challengeTurnOrder\[0\]==='right'&&challengeTurnOrder\[1\]==='left'/);
+ assert.match(challenge,/90\*1000/);
+ assert.match(challenge,/isTrustedIdentityOrigin/);
+ assert.match(migration,/enable row level security/i);
+ assert.match(migration,/consume_identity_liveness_challenge/);
+ assert.match(migration,/consumed_at is null/);
 });
 
 test('the free path never accepts browser-supplied descriptors or writes raw document evidence',()=>{

@@ -1,5 +1,5 @@
-import {createHash,randomUUID} from 'node:crypto';
 import path from 'node:path';
+import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
 import '@tensorflow/tfjs-node';
 import {NextRequest,NextResponse} from 'next/server';
@@ -20,7 +20,7 @@ const MAX_IMAGE_BYTES=8*1024*1024;
 const MAX_REQUEST_BYTES=25*1024*1024;
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp']);
 
-type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;real?:number;tensor?:{dispose?:()=>void}}>};
+type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;real?:number;rotation?:{angle?:{yaw?:number}};tensor?:{dispose?:()=>void}}>};
 async function imageBuffer(value:FormDataEntryValue|null,label:string):Promise<Buffer>{
   if(!(value instanceof File))throw new Error('Envie '+label+'.');
   if(!allowedTypes.has(value.type)||value.size<1||value.size>MAX_IMAGE_BYTES)
@@ -105,7 +105,9 @@ export async function POST(request:NextRequest){
   const attemptWrite=await context.admin.from('identity_free_verification_attempts').insert({user_id:context.user.id});
   if(attemptWrite.error)return fail('Não foi possível iniciar a análise com segurança.',503);
 
-  let document:Buffer=Buffer.alloc(0),back:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='';
+  let document:Buffer=Buffer.alloc(0),back:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='',livenessChallenge='';
+  const livenessFrames:Buffer[]=[];
+  let challengeTurnOrder:string[]=[];
   try{
     const form=await request.formData();
     if(form.get('consent')!=='true')return fail('É necessário consentir com o processamento temporário das imagens.',400);
@@ -114,10 +116,26 @@ export async function POST(request:NextRequest){
     document=await imageBuffer(form.get('documentFront'),'a frente do documento');
     back=await imageBuffer(form.get('documentBack'),'o verso do documento com QR Code');
     selfie=await imageBuffer(form.get('selfie'),'a selfie');
+    livenessChallenge=String(form.get('livenessChallenge')||'');
+    if(!/^[0-9a-f]{64}$/.test(livenessChallenge))throw new Error('Inicie a captura guiada de vivacidade antes de enviar os documentos.');
+    for(let i=0;i<4;i++)livenessFrames.push(await imageBuffer(form.get('livenessFrame'+i),'o quadro guiado '+(i+1)));
+    // Consume on first well-formed submission, before OCR/model work, so a
+    // failed attempt cannot keep reusing the same challenge.
+    const challengeHash=createHash('sha256').update(livenessChallenge,'utf8').digest('hex');
+    const {data:challengeData,error:challengeError}=await context.admin.rpc('consume_identity_liveness_challenge',{
+      p_user_id:context.user.id,p_challenge_hash:challengeHash
+    });
+    if(challengeError)throw new Error('O serviço de vivacidade está indisponível.');
+    if(!challengeData||!Array.isArray(challengeData.turn_order)||challengeData.turn_order.length!==2)
+      throw new Error('O desafio de vivacidade expirou ou já foi utilizado. Inicie uma nova captura.');
+    challengeTurnOrder=challengeData.turn_order as string[];
+    if(!((challengeTurnOrder[0]==='left'&&challengeTurnOrder[1]==='right')||
+         (challengeTurnOrder[0]==='right'&&challengeTurnOrder[1]==='left')))
+      throw new Error('A sequência do desafio não corresponde à política ativa. Inicie novamente.');
     qr=await decodeQrFromImage(back);
-    if(qr.length<8||qr.length>12000)return fail('O QR Code do verso não tem um conteúdo válido para esta verificação.',422);
+    if(qr.length<8||qr.length>12000)throw new Error('O QR Code do verso não tem um conteúdo válido para esta verificação.');
   }catch(error){
-    document.fill(0);back.fill(0);selfie.fill(0);qr='';
+    document.fill(0);back.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);qr='';
     return fail(error instanceof Error?error.message:'Não foi possível ler os arquivos enviados.',400);
   }
 
@@ -130,10 +148,15 @@ export async function POST(request:NextRequest){
     const [docPixels,selfiePix]=await Promise.all([pixels(document),pixels(selfie)]);
     documentPixels=docPixels.data;selfiePixels=selfiePix.data;
     worker=await createWorker('por');
-    const ocr=await worker.recognize(document);
-    const ocrText=typeof ocr.data.text==='string'?ocr.data.text:'';
-    const dob=dobFromText(ocrText);
-    if(!dob)return fail('Não consegui ler uma única data de nascimento no documento. Melhore a iluminação e tente novamente.',422);
+    // Brazilian documents vary: the birth date may be printed on either side.
+    // OCR both images and reject contradictory dates instead of guessing.
+    const [frontOcr,backOcr]=await Promise.all([worker.recognize(document),worker.recognize(back)]);
+    const frontDob=dobFromText(typeof frontOcr.data.text==='string'?frontOcr.data.text:'');
+    const backDob=dobFromText(typeof backOcr.data.text==='string'?backOcr.data.text:'');
+    if(frontDob&&backDob&&frontDob!==backDob)
+      return fail('As datas de nascimento lidas na frente e no verso divergem. Confira as imagens e tente novamente.',422);
+    const dob=frontDob||backDob;
+    if(!dob)return fail('Não consegui ler uma única data de nascimento na frente nem no verso do documento. Melhore a iluminação e tente novamente.',422);
     const ageBand=bandForDate(dob);
     if(!ageBand)return fail('A data de nascimento lida não é válida.',422);
     if(ageBand==='0_12')return fail('Esta faixa etária precisa de um fluxo de responsável específico. A validação não foi concluída.',422);
@@ -183,35 +206,66 @@ export async function POST(request:NextRequest){
     if(typeof selfieFace.real!=='number'||selfieFace.real<0.55)
       return fail('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422);
 
-    const transactionId=randomUUID();
-    const evidenceHash=createHash('sha256').update(context.user.id+':'+transactionId).digest('hex');
-    const now=new Date().toISOString();
-    const ageWrite=await context.admin.from('age_assurance_decisions').upsert({
-      user_id:context.user.id,age_band:ageBand,method:'conecta_free_document_face',
-      policy_version:'conecta-id-free-v1',evidence_reference_hash:evidenceHash,
-      verified_at:now,updated_at:now
-    },{onConflict:'user_id'});
-    if(ageWrite.error)throw new Error('Não foi possível registrar a decisão de idade com segurança.');
-    const identityWrite=await context.admin.from('identity_verifications').upsert({
-      user_id:context.user.id,provider:'conecta_free',provider_inquiry_id:'conecta_'+transactionId,
-      status:'approved',age_band:ageBand==='18_plus'?'18_plus':ageBand==='16_17'?'17':'13_to_16',
-      guardian_status:ageBand==='18_plus'?'not_required':'pending',updated_at:now,verified_at:now
-    },{onConflict:'user_id'});
-    if(identityWrite.error){
-      await context.admin.from('age_assurance_decisions').delete().eq('user_id',context.user.id).eq('evidence_reference_hash',evidenceHash);
-      throw new Error('Não foi possível registrar a aprovação de identidade com segurança.');
+    // Challenge was consumed before OCR/model work; client booleans and scores are ignored.
+    const livenessPixels=await Promise.all(livenessFrames.map(frame=>pixels(frame)));
+    const livenessTensors:any[]=[];
+    const livenessResults:FaceResult[]=[];
+    try{
+      for(const frame of livenessPixels){
+        const tensorData=new Int32Array(frame.data);
+        const tensor=instance.tf.tensor4d(tensorData,[1,frame.height,frame.width,3],'int32');
+        livenessTensors.push({tensor,data:tensorData,pixels:frame.data});
+        const detected=await instance.detect(tensor);
+        livenessResults.push(detected as FaceResult);
+      }
+      const yaw=livenessResults.map(result=>{
+        const faces=result.face||[];
+        return faces.length===1&&typeof faces[0].rotation?.angle?.yaw==='number'
+          ?faces[0].rotation!.angle!.yaw!:null;
+      });
+      if(yaw.some(value=>value===null))
+        return fail('A captura guiada precisa mostrar exatamente um rosto em todos os quadros. Nenhum acesso foi liberado.',422);
+      const angles=yaw as number[];
+      const baseline=Math.abs(angles[0]);
+      const firstTurn=angles[1],secondTurn=angles[2],returned=Math.abs(angles[3]);
+      if(baseline>0.28||returned>0.28||Math.abs(firstTurn)<0.18||Math.abs(secondTurn)<0.18||Math.sign(firstTurn)===Math.sign(secondTurn))
+        return fail('Os movimentos não foram confirmados em sequência pelo servidor. Repita a captura guiada com boa iluminação e vire a cabeça para os dois lados.',422);
+      // The requested order is randomly selected and single-use. This validation
+      // checks opposite head turns, front-facing start/end, and the same account;
+      // it is not proof of presentation attack resistance or issuer authenticity.
+      // This is a liveness signal, not issuer-level document authenticity.
+    }finally{
+      for(const item of livenessTensors){item.tensor?.dispose?.();item.data?.fill(0);item.pixels?.fill(0);}
+      for(const result of livenessResults)for(const face of result.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
+      for(const frame of livenessPixels)frame.data.fill(0);
     }
-    // Explicitly release references to source bytes before responding. Nothing is
-    // written to storage; only a coarse age band and opaque evidence hash persist.
-    document.fill(0);selfie.fill(0);
+    // Persist only the platform's final verdict and a coarse age band. Never
+    // persist the date of birth, source images, QR payload, face embeddings, or OCR.
+    // This is Conecta's own automated validation, not issuer/government certification.
+    const verifiedAt=new Date().toISOString();
+    const evidenceReferenceHash=createHash('sha256')
+      .update(context.user.id,'utf8').update(':','utf8')
+      .update(livenessChallenge,'utf8').update(':','utf8')
+      .update(ageBand,'utf8').update(':','utf8')
+      .update(verifiedAt,'utf8').digest('hex');
+    const {error:verdictError}=await context.admin.rpc('complete_conecta_free_identity_verification',{
+      p_user_id:context.user.id,
+      p_age_band:ageBand,
+      p_evidence_reference_hash:evidenceReferenceHash,
+      p_verified_at:verifiedAt
+    });
+    if(verdictError)
+      return fail('As verificações passaram, mas não foi possível registrar o resultado com segurança. A validação não foi concluída; tente novamente.',503);
     return NextResponse.json({
-      ok:true,status:'approved',ageBand,documentType,faceMatch:true,
-      qrChecked:true,ocrChecked:true,documentStored:false,imagesDiscarded:true,
-      issuerSignatureChecked:documentType==='cin',officialValidityChecked:false,
-      message:ageBand==='18_plus'
-        ?'Verificação gratuita concluída. O acesso será atualizado pelo servidor.'
-        :'Verificação concluída com proteção para menores. Associe um responsável verificado para liberar o acesso.'
-    },{headers});
+      ok:true,
+      status:'approved',
+      approved:true,
+      ageBand,
+      verifiedAt,
+      documentStored:false,
+      officialIssuerVerified:false,
+      message:'Validação Conecta ID concluída. Documento, comparação facial e captura guiada passaram nas verificações automáticas disponíveis. O Conecta registrou a identidade e apenas a faixa etária; não armazenou as imagens nem a data de nascimento. Isto não é uma certificação oficial do emissor. As regras de responsável e proteção da faixa etária continuam valendo.'
+    },{status:200,headers});
   }catch(error){
     return fail(error instanceof Error?error.message:'Não foi possível concluir a análise. Nenhum acesso foi liberado.',503);
   }finally{
@@ -219,6 +273,6 @@ export async function POST(request:NextRequest){
     for(const result of [documentFaceResults,selfieFaceResults])for(const face of result?.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
     if(worker)await worker.terminate().catch(()=>undefined);
     // Best-effort release of in-memory references; no raw image is persisted.
-    document.fill(0);back.fill(0);selfie.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
+    document.fill(0);back.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
   }
 }
