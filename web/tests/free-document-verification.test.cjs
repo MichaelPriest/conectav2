@@ -38,7 +38,7 @@ test('the free path never accepts browser-supplied descriptors or writes raw doc
 
 test('free method is accepted only by the server gate and restrictive database function',()=>{
  const gate=read('src/app/api/identity/access/route.ts');
- const migration=read('../supabase/migrations/20261015015000_conecta_free_document_face_verification.sql');
+ const migration=read('../supabase/migrations/20261015015235_conecta_free_document_face_verification.sql');
  assert.match(gate,/conecta_free_document_face/);
  assert.match(migration,/conecta_free_document_face/);
  assert.match(migration,/create or replace function app_private\.conecta_network_access_allowed/);
