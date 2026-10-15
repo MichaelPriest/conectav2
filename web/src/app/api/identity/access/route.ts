@@ -13,7 +13,7 @@ function recent(value:string|null|undefined){
  return Number.isFinite(time)&&time<=now+60_000&&now-time<=60*24*60*60*1000;
 }
 function trustedMethod(value:string|null|undefined){
- return value==='verified_age_credential'||value==='authorized_provider_callback';
+ return value==='verified_age_credential'||value==='authorized_provider_callback'||value==='conecta_free_document_face';
 }
 
 /** Server-authoritative gate used by app navigation; the database migration enforces the same rule on social tables. */
@@ -34,8 +34,8 @@ export async function GET(request:NextRequest){
  if(!age.data)return NextResponse.json({networkAccess:false,reason:'age_declaration_required',steps,message:'Informe sua faixa etária para iniciar a verificação.'},{headers});
  steps.identity=identity.data?.status==='approved'&&recent(identity.data.verified_at);
  steps.age=Boolean(decision.data&&trustedMethod(decision.data.method)&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
- if(!steps.identity)return NextResponse.json({networkAccess:false,reason:identity.data?.status==='approved'?'verification_expired':'identity_required',steps,message:'A identidade ainda não foi confirmada por uma fonte confiável. As pré-triagens gratuitas não liberam o acesso à rede.'},{headers});
- if(!steps.age)return NextResponse.json({networkAccess:false,reason:decision.data?'verification_expired':'age_verification_required',steps,message:'A faixa etária ainda não foi confirmada por uma credencial confiável. A autodeclaração, OCR, QR e prova de vida experimental não são suficientes.'},{headers});
+ if(!steps.identity)return NextResponse.json({networkAccess:false,reason:identity.data?.status==='approved'?'verification_expired':'identity_required',steps,message:'A identidade ainda não foi confirmada por uma fonte confiável. A validação gratuita integrada exige QR legível, OCR, comparação facial e análise antifraude no servidor.'},{headers});
+ if(!steps.age)return NextResponse.json({networkAccess:false,reason:decision.data?'verification_expired':'age_verification_required',steps,message:'A faixa etária ainda não foi confirmada por uma credencial confiável. A autodeclaração e as pré-triagens locais não são suficientes.'},{headers});
  if(age.data.declared_band!=='18_plus'||decision.data?.age_band!=='18_plus'){
   const {data:links,error:linksError}=await admin.from('conecta_guardian_links')
    .select('guardian_user_id').eq('child_user_id',context.user.id).eq('status','accepted');
