@@ -1,5 +1,5 @@
 export type Profile={id:string;handle:string;display_name:string;bio:string|null;avatar_path:string|null};
-export type AgeAccess='ok'|'onboarding'|'age-check';
+export type AgeAccess='ok'|'onboarding'|'age-check'|'identity-check';
 export type Post={
  id:string;author_id:string;community_id:string|null;content:string;visibility:string;
  moderation_status:'approved'|'pending'|'rejected';created_at:string;
