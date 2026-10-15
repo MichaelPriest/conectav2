@@ -1945,10 +1945,17 @@ export default function App(){
    if(authError||!data.user){
     setUser(null);setProfile(null);setRestricted(null);setIdentityMessage('');setBooting(false);return;
    }
+   setUser(data.user);setRestricted('identity-check');
+   setIdentityMessage('Conferindo os requisitos do Conecta ID...');
    const next=await verifyAccess(data.user.id);
-   setUser(data.user);setProfile(next.profile);
+   setProfile(next.profile);
    setRestricted(next.status==='ok'?null:next.status);setIdentityMessage(next.message||'');setError('');
-  }catch(e){setError(errorMessage(e));}
+  }catch(e){
+   const message=errorMessage(e);
+   setRestricted('identity-check');
+   setIdentityMessage('Não foi possível confirmar o Conecta ID agora. Por segurança, o acesso à rede permanece bloqueado. '+message);
+   setError(message);
+  }
   finally{setBooting(false);}
  },[]);
  useEffect(()=>{
