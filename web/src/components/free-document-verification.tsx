@@ -8,6 +8,24 @@ type DocumentKind='cin'|'old-rg'|'cnh';
 type Props={documentType:DocumentKind;onComplete:()=>Promise<void>|void};
 const labels:Record<DocumentKind,string>={cin:'CIN (Carteira de Identidade Nacional)', 'old-rg':'RG antigo com QR Code',cnh:'CNH com QR Code'};
 
+async function compressForUpload(file:File,maxDimension=1600):Promise<File>{
+  const bitmap=await createImageBitmap(file);
+  try{
+    const scale=Math.min(1,maxDimension/Math.max(bitmap.width,bitmap.height));
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+    canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    const context=canvas.getContext('2d');
+    if(!context)throw new Error('Não foi possível otimizar uma imagem.');
+    context.drawImage(bitmap,0,0,canvas.width,canvas.height);
+    const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(
+      value=>value?resolve(value):reject(new Error('Não foi possível comprimir uma imagem.')),
+      'image/jpeg',0.86
+    ));
+    return new File([blob],file.name.replace(/\.[^.]+$/,'')+'-otimizada.jpg',{type:'image/jpeg',lastModified:Date.now()});
+  }finally{bitmap.close();}
+}
+
 export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [front,setFront]=useState<File|null>(null);
   const [back,setBack]=useState<File|null>(null);
@@ -85,7 +103,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       const file=new File([blob],'liveness-'+frameIndex+'.jpg',{type:'image/jpeg'});
       setFrames(previous=>[...previous,file]);
       setFrameIndex(previous=>previous+1);
-      setMessage(frameIndex===3?'Captura guiada concluída. Envie os documentos para análise no servidor.':'Quadro capturado. Continue seguindo a próxima instrução.');
+      setMessage(frameIndex===3?'Captura guiada concluída. Envie os documentos para validação no servidor.':'Quadro capturado. Continue seguindo a próxima instrução.');
       if(frameIndex===3)stopCamera();
     }catch(err){setError(err instanceof Error?err.message:'Falha na captura.');}
   }
@@ -101,16 +119,19 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     try{
       const {data:{session}}=await supabaseBrowser().auth.getSession();
       if(!session?.access_token)throw new Error('Sua sessão expirou. Entre novamente.');
+      const [optimizedFront,optimizedBack,optimizedSelfie]=await Promise.all([
+        compressForUpload(front),compressForUpload(back),compressForUpload(selfie)
+      ]);
       const form=new FormData();
-      form.set('documentType',documentType);form.set('documentFront',front);form.set('documentBack',back);
-      form.set('selfie',selfie);form.set('consent','true');form.set('livenessChallenge',challenge);
+      form.set('documentType',documentType);form.set('documentFront',optimizedFront);form.set('documentBack',optimizedBack);
+      form.set('selfie',optimizedSelfie);form.set('consent','true');form.set('livenessChallenge',challenge);
       frames.forEach((frame,index)=>form.set('livenessFrame'+index,frame));
       setMessage('Validando documento, rosto e captura ao vivo no servidor…');
       const response=await fetch('/api/identity/free-document/verify',{
         method:'POST',headers:{Authorization:'Bearer '+session.access_token},body:form,cache:'no-store'
       });
       const data=await response.json() as {ok?:boolean;approved?:boolean;message?:string;error?:string};
-      if(!response.ok||data.ok!==true)throw new Error(data.message||data.error||'A pré-análise não foi concluída.');
+      if(!response.ok||data.ok!==true)throw new Error(data.message||data.error||'A validação não foi concluída.');
       setCompleted(data.approved===true);setMessage(data.message||'Validação concluída.');
       setFront(null);setBack(null);setSelfie(null);setFrames([]);setChallenge('');setInstructions([]);
       await onComplete();
@@ -141,18 +162,18 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </div>
     <label className="human-agree" style={{marginTop:16}}>
       <input type="checkbox" checked={consent} disabled={busy||challengeBusy} onChange={e=>setConsent(e.target.checked)}/>
-      Autorizo o envio temporário das imagens para OCR, leitura do QR, comparação facial e análise experimental dos movimentos. Não autorizo armazenamento das imagens nem uso para publicidade. Entendo que isso não consulta uma base oficial de validade.
+      Autorizo o envio temporário das imagens para OCR, leitura do QR, comparação facial e análise guiada de movimentos. Não autorizo armazenamento das imagens nem uso para publicidade. Entendo que isso não consulta uma base oficial de validade.
     </label>
     <section className="panel" style={{marginTop:16}}>
       <h3>Captura guiada de vivacidade</h3>
       <p className="small-note">O servidor emite um desafio aleatório válido por 90 segundos e aceita seu uso uma única vez. Permita a câmera e siga as etapas na ordem apresentada.</p>
       <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
-        style={{display:challenge?'block':'none',width:'100%',maxWidth:420,borderRadius:12,background:'#111'}}/>
+        style={{display:challenge?'block':'none',width:'100%',maxWidth:420,aspectRatio:'4 / 3',objectFit:'cover',transform:'scaleX(-1)',borderRadius:12,background:'#111'}}/>
       {!challenge?<button type="button" className="btn btn-outline" onClick={()=>void startGuidedCapture()} disabled={busy||challengeBusy}>
         <Camera size={17}/>{challengeBusy?'Preparando câmera…':'Iniciar captura guiada'}</button>:
         <div>
           <p><strong>Etapa {Math.min(frameIndex+1,4)} de 4:</strong> {instructions[frameIndex]||'Captura concluída.'}</p>
-          <progress value={frames.length} max={4} aria-label="Quadros capturados"/>
+          <progress value={frames.length} max={4} aria-label="Quadros capturados" style={{width:'100%',height:10,accentColor:'var(--accent,#6d5dfc)'}}/>
           <p className="small-note">Quadros capturados: {frames.length}/4</p>
           {frameIndex<4&&<button type="button" className="btn btn-outline" onClick={()=>void captureFrame()} disabled={busy}>
             <Camera size={17}/> Capturar esta etapa</button>}
