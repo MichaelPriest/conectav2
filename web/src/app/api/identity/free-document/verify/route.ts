@@ -19,7 +19,7 @@ const MAX_IMAGE_BYTES=8*1024*1024;
 const MAX_REQUEST_BYTES=25*1024*1024;
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp']);
 
-type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;real?:number;tensor?:{dispose?:()=>void}}>};
+type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;real?:number;rotation?:{angle?:{yaw?:number}};tensor?:{dispose?:()=>void}}>};
 async function imageBuffer(value:FormDataEntryValue|null,label:string):Promise<Buffer>{
   if(!(value instanceof File))throw new Error('Envie '+label+'.');
   if(!allowedTypes.has(value.type)||value.size<1||value.size>MAX_IMAGE_BYTES)
@@ -104,7 +104,8 @@ export async function POST(request:NextRequest){
   const attemptWrite=await context.admin.from('identity_free_verification_attempts').insert({user_id:context.user.id});
   if(attemptWrite.error)return fail('Não foi possível iniciar a análise com segurança.',503);
 
-  let document:Buffer=Buffer.alloc(0),back:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='';
+  let document:Buffer=Buffer.alloc(0),back:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='',livenessChallenge='';
+  const livenessFrames:Buffer[]=[];
   try{
     const form=await request.formData();
     if(form.get('consent')!=='true')return fail('É necessário consentir com o processamento temporário das imagens.',400);
@@ -113,10 +114,13 @@ export async function POST(request:NextRequest){
     document=await imageBuffer(form.get('documentFront'),'a frente do documento');
     back=await imageBuffer(form.get('documentBack'),'o verso do documento com QR Code');
     selfie=await imageBuffer(form.get('selfie'),'a selfie');
+    livenessChallenge=String(form.get('livenessChallenge')||'');
+    if(!/^[0-9a-f]{64}$/.test(livenessChallenge))throw new Error('Inicie a captura guiada de vivacidade antes de enviar os documentos.');
+    for(let i=0;i<4;i++)livenessFrames.push(await imageBuffer(form.get('livenessFrame'+i),'o quadro guiado '+(i+1)));
     qr=await decodeQrFromImage(back);
     if(qr.length<8||qr.length>12000)return fail('O QR Code do verso não tem um conteúdo válido para esta verificação.',422);
   }catch(error){
-    document.fill(0);back.fill(0);selfie.fill(0);qr='';
+    document.fill(0);back.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);qr='';
     return fail(error instanceof Error?error.message:'Não foi possível ler os arquivos enviados.',400);
   }
 
@@ -187,11 +191,49 @@ export async function POST(request:NextRequest){
     if(typeof selfieFace.real!=='number'||selfieFace.real<0.55)
       return fail('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422);
 
-    // A static selfie cannot prove live presence. Keep OCR, QR and face
-    // matching as preflight only until a server-verifiable, one-time liveness
-    // challenge is implemented. Never persist an identity/age approval here.
+    // Consume the server-issued random challenge exactly once before analyzing
+    // frames. A client boolean or client-provided biometric score is never proof.
+    const challengeHash=createHash('sha256').update(livenessChallenge,'utf8').digest('hex');
+    const {data:challengeData,error:challengeError}=await context.admin.rpc('consume_identity_liveness_challenge',{
+      p_user_id:context.user.id,p_challenge_hash:challengeHash
+    });
+    if(challengeError)return fail('O serviço de vivacidade está indisponível. Nenhuma aprovação foi gravada.',503);
+    if(!challengeData||!Array.isArray(challengeData.turn_order)||challengeData.turn_order.length!==2)
+      return fail('O desafio de vivacidade expirou ou já foi utilizado. Inicie uma nova captura.',409);
+    const turnOrder=challengeData.turn_order as string[];
+    const livenessPixels=await Promise.all(livenessFrames.map(frame=>pixels(frame)));
+    const livenessTensors:any[]=[];
+    const livenessResults:FaceResult[]=[];
+    try{
+      for(const frame of livenessPixels){
+        const tensorData=new Int32Array(frame.data);
+        const tensor=instance.tf.tensor4d(tensorData,[1,frame.height,frame.width,3],'int32');
+        livenessTensors.push({tensor,data:tensorData,pixels:frame.data});
+        const detected=await instance.detect(tensor);
+        livenessResults.push(detected as FaceResult);
+      }
+      const yaw=livenessResults.map(result=>{
+        const faces=result.face||[];
+        return faces.length===1&&typeof faces[0].rotation?.angle?.yaw==='number'
+          ?faces[0].rotation!.angle!.yaw!:null;
+      });
+      if(yaw.some(value=>value===null))
+        return fail('A captura guiada precisa mostrar exatamente um rosto em todos os quadros. Nenhum acesso foi liberado.',422);
+      const angles=yaw as number[];
+      const baseline=Math.abs(angles[0]);
+      const firstTurn=angles[1],secondTurn=angles[2],returned=Math.abs(angles[3]);
+      if(baseline>0.28||returned>0.28||Math.abs(firstTurn)<0.18||Math.abs(secondTurn)<0.18||Math.sign(firstTurn)===Math.sign(secondTurn))
+        return fail('Os movimentos não foram confirmados em sequência pelo servidor. Repita a captura guiada com boa iluminação e vire a cabeça para os dois lados.',422);
+      // The order is random and single-use. The server checks distinct opposite
+      // head turns, front-facing start/end, and the same authenticated account.
+      // This is a liveness signal, not issuer-level document authenticity.
+    }finally{
+      for(const item of livenessTensors){item.tensor?.dispose?.();item.data?.fill(0);item.pixels?.fill(0);}
+      for(const result of livenessResults)for(const face of result.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
+      for(const frame of livenessPixels)frame.data.fill(0);
+    }
     return fail(
-      'Os documentos e a comparação facial passaram pela pré-análise, mas uma selfie estática não comprova vivacidade. Nenhum selo, faixa etária ou acesso foi liberado. A validação final ficará disponível quando a captura guiada for verificada pelo servidor.',
+      'Os movimentos foram reconhecidos na captura guiada, mas esta análise gratuita ainda é uma pré-análise e não certifica oficialmente o documento. Nenhum selo, faixa etária ou acesso foi liberado automaticamente.',
       422
     );
   }catch(error){
@@ -201,6 +243,6 @@ export async function POST(request:NextRequest){
     for(const result of [documentFaceResults,selfieFaceResults])for(const face of result?.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
     if(worker)await worker.terminate().catch(()=>undefined);
     // Best-effort release of in-memory references; no raw image is persisted.
-    document.fill(0);back.fill(0);selfie.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
+    document.fill(0);back.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
   }
 }
