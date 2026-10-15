@@ -21,7 +21,7 @@ export async function POST(request:NextRequest){
 
  const challenge=randomBytes(32).toString('hex');
  const challengeHash=createHash('sha256').update(challenge,'utf8').digest('hex');
- const turnOrder=['left','right'];
+ const turnOrder=randomBytes(1)[0]%2===0?['left','right']:['right','left'];
  const createdAt=Date.now();
  const expiresAt=new Date(createdAt+90*1000).toISOString();
  const {error}=await context.admin.from('identity_liveness_challenges').insert({
