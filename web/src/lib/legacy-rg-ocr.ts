@@ -38,7 +38,7 @@ export function extractBirthDateFromOcr(raw:string):string|null{
  let ambiguous=false;
  for(const match of text.matchAll(birthLabels)){
   const start=(match.index||0)+match[0].length;
-  const region=text.slice(start,start+120).split(/(?:DATA\s*(?:DE\s*)?EXPEDICAO|EXPEDICAO|VALIDADE|EMISSAO|REGISTRO|CATEGORIA|NATURALIDADE|NACIONALIDADE|ORGAO\s*EMISSOR|CPF|FILIACAO)/)[0];
+  const region=text.slice(start,start+180).split(/(?:DATA\s*(?:DE\s*)?EXPEDICAO|EXPEDICAO|VALIDADE|EMISSAO|REGISTRO|CATEGORIA|NACIONALIDADE|ORGAO\s*EMISSOR|CPF|FILIACAO)/)[0];
   const dates=[...region.matchAll(datePattern)];
   if(dates.length>1){ambiguous=true;continue;}
   if(dates.length!==1)continue;
