@@ -287,6 +287,6 @@ export async function POST(request:NextRequest){
     for(const result of [documentFaceResults,selfieFaceResults])for(const face of result?.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
     if(worker)await worker.terminate().catch(()=>undefined);
     // Best-effort release of in-memory references; no raw image is persisted.
-    document.fill(0);back.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
+    document.fill(0);back.fill(0);rgDataSide.fill(0);rgPhotoSide.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
   }
 }
