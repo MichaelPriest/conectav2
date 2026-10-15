@@ -70,7 +70,13 @@ export function extractBirthDateFromOcr(raw:string):string|null{
      .filter(field=>field.end<=date.start&&date.start-field.end<=140)
      .sort((a,b)=>b.end-a.end)[0];
    if(!prior)return false;
-   return !labels.some(label=>label.start>=prior.end&&label.end<=date.start);
+   // If a birth label appears shortly after this date, the OCR likely read
+   // the page in column order; that later label must not claim this earlier
+   // issue/expiry date.
+   return !labels.some(label=>
+     label.start>=prior.end &&
+     ((label.end<=date.start)||(label.start>=date.end&&label.start-date.end<=100))
+   );
  };
 
  // These marks reliably begin other printed fields. NATURALIDADE is purposely
