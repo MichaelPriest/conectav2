@@ -26,7 +26,7 @@ async function renderCnhPdf(file:File):Promise<{front:File;back:File}>{
       canvas.height=Math.max(1,Math.floor(viewport.height));
       const context=canvas.getContext('2d');
       if(!context)throw new Error('Não foi possível converter o PDF da CNH.');
-      await page.render({canvasContext:context,viewport}).promise;
+      await page.render({canvas,canvasContext:context,viewport}).promise;
       const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(value=>
         value?resolve(value):reject(new Error('Não foi possível converter uma página da CNH.')),'image/jpeg',0.9));
       canvas.width=0;canvas.height=0;page.cleanup();
@@ -206,7 +206,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
                 setMessage('Convertendo o PDF da CNH para imagens temporárias…');
                 const pages=await renderCnhPdf(file);setFront(pages.front);setBack(pages.back);
                 setMessage('PDF da CNH convertido. Confira se as páginas exibem todos os dados e o QR Code.');
-              }else{setFront(file);setMessage('');}
+              }else{setFront(file);setBack(null);setMessage('');}
             }catch(err){setFront(null);setError(err instanceof Error?err.message:'Não foi possível abrir o arquivo.');setMessage('');}
           }}/>
           <span className="small-note">{front?front.name:(documentType==='cnh'?'JPG, PNG ou WebP · até 8 MB · PDF da CNH até 12 MB':'JPG, PNG ou WebP · até 8 MB')}</span>
