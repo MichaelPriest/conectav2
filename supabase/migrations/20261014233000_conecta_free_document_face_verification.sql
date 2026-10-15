@@ -64,3 +64,18 @@ $function$;
 
 comment on function app_private.conecta_network_access_allowed(uuid) is
   'Server-side gate: recent trusted identity + age decision. Conecta free document/face checks are platform checks, not official issuer validation. Minors require an accepted link to a verified adult guardian.';
+
+
+-- Minimal rate-limit ledger: no source images, QR contents, DOB, OCR text, or biometrics.
+create table if not exists public.identity_free_verification_attempts (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  attempted_at timestamptz not null default now()
+);
+create index if not exists identity_free_verification_attempts_user_time_idx
+  on public.identity_free_verification_attempts(user_id, attempted_at desc);
+alter table public.identity_free_verification_attempts enable row level security;
+revoke all on table public.identity_free_verification_attempts from public, anon, authenticated;
+grant select, insert, delete on table public.identity_free_verification_attempts to service_role;
+comment on table public.identity_free_verification_attempts is
+  'Rate limiting for free Conecta ID attempts. Stores only user id and timestamp, never source documents or biometric data.';
