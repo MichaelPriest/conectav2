@@ -115,7 +115,7 @@ export async function POST(request:NextRequest){
     documentType=String(form.get('documentType')||'');
     if(!['cin','old-rg','cnh'].includes(documentType))return fail('Selecione CIN, RG antigo ou CNH.',400);
     document=await imageBuffer(form.get('documentFront'),'a frente do documento');
-    back=await imageBuffer(form.get('documentBack'),'o verso do documento com QR Code');
+    back=await imageBuffer(form.get('documentBack'),'o verso do documento');
     selfie=await imageBuffer(form.get('selfie'),'a selfie');
     livenessChallenge=String(form.get('livenessChallenge')||'');
     if(!/^[0-9a-f]{64}$/.test(livenessChallenge))throw new Error('Inicie a captura guiada de vivacidade antes de enviar os documentos.');
