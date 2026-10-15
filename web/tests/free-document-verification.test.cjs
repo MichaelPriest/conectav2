@@ -38,7 +38,7 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/prepareOcrImage/);
  assert.match(route,/\.trim\(\{threshold:25\}\)/);
  assert.match(route,/metadata\.height>metadata\.width\*1\.12/);
- assert.match(route,/prepared=prepared\.rotate\(90\)/);
+ assert.match(route,/prepared=prepared\.rotate\(270\)/);
  assert.match(route,/rotateOcrImage180/);
  assert.match(route,/reversedImages\.push\(await rotateOcrImage180\(image\)\)/);
  assert.match(route,/reversedResults=await Promise\.all\(reversedImages\.map/);
