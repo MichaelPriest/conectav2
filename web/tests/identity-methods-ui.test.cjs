@@ -28,5 +28,5 @@ test('document upload requires explicit consent and sends all evidence to the se
 test('no local preflight can be represented as official identity or age approval',()=>{
  assert.match(page,/não é prova de idade/);
  assert.match(page,/não uma certificação governamental/);
- assert.match(page,/não comprova autenticidade oficial/);
+ assert.match(page,/não equivale à confirmação oficial do emissor/);
 });
