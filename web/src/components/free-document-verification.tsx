@@ -209,7 +209,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
               }else{setFront(file);setMessage('');}
             }catch(err){setFront(null);setError(err instanceof Error?err.message:'Não foi possível abrir o arquivo.');setMessage('');}
           }}/>
-          <span className="small-note">{front?front.name:'JPG, PNG ou WebP · até 8 MB{documentType==='cnh'?' · PDF da CNH até 12 MB':''}'}</span>
+          <span className="small-note">{front?front.name:(documentType==='cnh'?'JPG, PNG ou WebP · até 8 MB · PDF da CNH até 12 MB':'JPG, PNG ou WebP · até 8 MB')}</span>
         </label>
         <label className="form-label">Verso do documento
           <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy||challengeBusy} onChange={e=>setBack(e.target.files?.[0]||null)}/>
