@@ -132,7 +132,7 @@ export async function POST(request:NextRequest){
     if(challengeTurnOrder[0]!=='left'||challengeTurnOrder[1]!=='right')
       throw new Error('A sequência do desafio não corresponde à política ativa. Inicie novamente.');
     qr=await decodeQrFromImage(back);
-    if(qr.length<8||qr.length>12000)return fail('O QR Code do verso não tem um conteúdo válido para esta verificação.',422);
+    if(qr.length<8||qr.length>12000)throw new Error('O QR Code do verso não tem um conteúdo válido para esta verificação.');
   }catch(error){
     document.fill(0);back.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);qr='';
     return fail(error instanceof Error?error.message:'Não foi possível ler os arquivos enviados.',400);
