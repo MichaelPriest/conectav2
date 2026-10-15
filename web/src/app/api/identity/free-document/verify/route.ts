@@ -5,6 +5,7 @@ import '@tensorflow/tfjs-node';
 import {NextRequest,NextResponse} from 'next/server';
 import {createWorker} from 'tesseract.js';
 import sharp from 'sharp';
+import {BinaryBitmap,HybridBinarizer,QRCodeReader,RGBLuminanceSource} from '@zxing/library';
 import {identityContext} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {inspectCinToken} from '@/lib/cin-qr';
@@ -24,6 +25,17 @@ async function imageBuffer(value:FormDataEntryValue|null,label:string):Promise<B
   if(!allowedTypes.has(value.type)||value.size<1||value.size>MAX_IMAGE_BYTES)
     throw new Error(label+' deve ser JPG, PNG ou WebP de até 8 MB.');
   return Buffer.from(await value.arrayBuffer());
+}
+async function decodeQrFromImage(buffer:Buffer):Promise<string>{
+  const image=await sharp(buffer,{limitInputPixels:20_000_000}).rotate()
+    .resize({width:1800,height:1800,fit:'inside',withoutEnlargement:true})
+    .greyscale().raw().toBuffer({resolveWithObject:true});
+  try{
+    const source=new RGBLuminanceSource(new Uint8ClampedArray(image.data),image.info.width,image.info.height);
+    const reader=new QRCodeReader();
+    try{return reader.decode(new BinaryBitmap(new HybridBinarizer(source))).getText();}
+    finally{reader.reset();}
+  }finally{image.data.fill(0);}
 }
 async function pixels(buffer:Buffer){
   const result=await sharp(buffer,{limitInputPixels:20_000_000})
@@ -76,18 +88,19 @@ export async function POST(request:NextRequest){
   const context=await identityContext(request);
   if(!context)return fail('Entre na sua conta para continuar.',401);
 
-  let document:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='';
+  let document:Buffer=Buffer.alloc(0),back:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='';
   try{
     const form=await request.formData();
     if(form.get('consent')!=='true')return fail('É necessário consentir com o processamento temporário das imagens.',400);
     documentType=String(form.get('documentType')||'');
     if(!['cin','old-rg','cnh'].includes(documentType))return fail('Selecione CIN, RG antigo ou CNH.',400);
     document=await imageBuffer(form.get('documentFront'),'a frente do documento');
+    back=await imageBuffer(form.get('documentBack'),'o verso do documento com QR Code');
     selfie=await imageBuffer(form.get('selfie'),'a selfie');
-    qr=String(form.get('qrPayload')||'');
-    if(qr.length<8||qr.length>12000)return fail('Não foi possível ler um QR Code válido. Reposicione o verso do documento e tente novamente.',422);
+    qr=await decodeQrFromImage(back);
+    if(qr.length<8||qr.length>12000)return fail('O QR Code do verso não tem um conteúdo válido para esta verificação.',422);
   }catch(error){
-    document.fill(0);selfie.fill(0);qr='';
+    document.fill(0);back.fill(0);selfie.fill(0);qr='';
     return fail(error instanceof Error?error.message:'Não foi possível ler os arquivos enviados.',400);
   }
 
@@ -186,6 +199,6 @@ export async function POST(request:NextRequest){
     documentTensor?.dispose?.();selfieTensor?.dispose?.();
     if(worker)await worker.terminate().catch(()=>undefined);
     // Best-effort release of in-memory references; no raw image is persisted.
-    document.fill(0);selfie.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
+    document.fill(0);back.fill(0);selfie.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
   }
 }
