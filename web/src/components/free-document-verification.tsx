@@ -55,7 +55,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
 
   return <div style={{marginTop:20}}>
     <div className="feed-title">
-      <h2><ShieldCheck size={21} style={{verticalAlign:'middle'}}/> Validação gratuita do documento + selfie</h2>
+      <h2><ShieldCheck size={21} style={{verticalAlign:'middle'}}/> Pré-análise gratuita do documento + selfie</h2>
       <span className="small-note">Sem fornecedor pago</span>
     </div>
     <p>Documento selecionado: <strong>{labels[documentType]}</strong>. O Conecta envia temporariamente frente, verso e selfie para o servidor, que lê o QR Code do verso, confere o texto do documento e compara os rostos. A pontuação antifraude de uma imagem é apenas estimativa e não comprova, sozinha, vivacidade ou autenticidade oficial. As imagens originais não são salvas no banco nem no armazenamento de arquivos.</p>
@@ -82,7 +82,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </label>
     <div className="row" style={{gap:10,flexWrap:'wrap',marginTop:16}}>
       <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||!front||!back||!selfie||!consent}>
-        <Camera size={17}/>{busy?'Analisando…':'Validar gratuitamente'}
+        <Camera size={17}/>{busy?'Analisando…':'Executar pré-análise'}
       </button>
       <button type="button" className="btn btn-outline" onClick={clear} disabled={busy}>
         <Trash2 size={16}/> Limpar arquivos
@@ -90,6 +90,6 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </div>
     {message&&<p className="small-note" role="status">{message}</p>}
     {error&&<p className="form-error" role="alert">{error}</p>}
-    <p className="small-note">Limitação importante: o RG antigo e a CNH podem ter formatos de QR diferentes. Quando o formato não permitir conferir assinatura ou comparar dados do QR, o Conecta não afirma que o documento foi validado oficialmente. Não envie imagens de terceiros.</p>
+    <p className="small-note">Limitação importante: esta etapa é uma pré-análise e não libera selo nem acesso. A validação final permanece bloqueada até existir captura guiada de vivacidade verificada pelo servidor. O RG antigo e a CNH podem ter formatos de QR diferentes. Quando o formato não permitir conferir assinatura ou comparar dados do QR, o Conecta não afirma que o documento foi validado oficialmente. Não envie imagens de terceiros.</p>
   </div>;
 }
