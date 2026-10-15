@@ -212,7 +212,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
           <span className="small-note">{front?front.name:(documentType==='cnh'?'JPG, PNG ou WebP · até 8 MB · PDF da CNH até 12 MB':'JPG, PNG ou WebP · até 8 MB')}</span>
         </label>
         <label className="form-label">Verso do documento
-          <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy||challengeBusy} onChange={e=>setBack(e.target.files?.[0]||null)}/>
+          <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy||challengeBusy} onChange={e=>setBack(e.target.files?.[0]||null)}/>
           <span className="small-note">{back?back.name:'Envie o verso com todas as informações legíveis; o QR Code pode estar na frente ou no verso.'}</span>
         </label>
       </div>
