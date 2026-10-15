@@ -32,17 +32,19 @@ export function extractBirthDateFromOcr(raw:string):string|null{
  const birthLabels=/(?:\bDATA\s*(?:DE\s*)?NASCIMENTO\b|\bNASCIMENTO\b|\bDT\.?\s*NASC(?:IMENTO)?\b)/g;
  const datePattern=/(?:^|[^\d])(\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{4}|\d{1,2}\s+\d{1,2}\s+\d{4})(?!\d)/g;
  const found:string[]=[];
+ let ambiguous=false;
  for(const match of text.matchAll(birthLabels)){
   const start=(match.index||0)+match[0].length;
   const region=text.slice(start,start+120).split(/(?:DATA\s*(?:DE\s*)?EXPEDICAO|EXPEDICAO|VALIDADE|EMISSAO|REGISTRO|CATEGORIA|NATURALIDADE|NACIONALIDADE|ORGAO\s*EMISSOR|CPF|FILIACAO)/)[0];
   const dates=[...region.matchAll(datePattern)];
+  if(dates.length>1){ambiguous=true;continue;}
   if(dates.length!==1)continue;
   const rawDate=dates[0][1].replace(/\s*([./-])\s*/g,'$1').replace(/\s+/g,'/').replace(/[.]/g,'/').replace(/-/g,'/');
   const iso=isoDateFromBrazilian(rawDate);
   if(iso)found.push(iso);
  }
  const unique=[...new Set(found)];
- return unique.length===1?unique[0]:null;
+ return !ambiguous&&unique.length===1?unique[0]:null;
 }
 /** Returns only an indicative age band; no DOB or raw OCR text is returned. */
 export function inspectLegacyRgOcr(raw:string,today:Date=new Date()):LegacyRgPreflight{
