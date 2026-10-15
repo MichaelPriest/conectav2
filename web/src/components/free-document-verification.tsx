@@ -8,6 +8,36 @@ type DocumentKind='cin'|'old-rg'|'cnh';
 type Props={documentType:DocumentKind;onComplete:()=>Promise<void>|void};
 const labels:Record<DocumentKind,string>={cin:'CIN (Carteira de Identidade Nacional)', 'old-rg':'RG antigo com QR Code',cnh:'CNH com QR Code'};
 
+async function renderCnhPdf(file:File):Promise<{front:File;back:File}>{
+  if(file.type!=='application/pdf'||file.size<1||file.size>12*1024*1024)
+    throw new Error('O PDF da CNH deve ter até 12 MB.');
+  const pdfjs=await import('pdfjs-dist/legacy/build/pdf.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc='/vendor/pdf.worker.min.mjs';
+  const pdfDocument=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),isEvalSupported:false}).promise;
+  try{
+    if(pdfDocument.numPages<1||pdfDocument.numPages>10)throw new Error('O PDF da CNH precisa ter entre 1 e 10 páginas.');
+    const renderPage=async(pageNumber:number)=> {
+      const page=await pdfDocument.getPage(pageNumber);
+      const base=page.getViewport({scale:1});
+      const scale=Math.min(2,1800/Math.max(base.width,base.height));
+      const viewport=page.getViewport({scale});
+      const canvas=window.document.createElement('canvas');
+      canvas.width=Math.max(1,Math.floor(viewport.width));
+      canvas.height=Math.max(1,Math.floor(viewport.height));
+      const context=canvas.getContext('2d');
+      if(!context)throw new Error('Não foi possível converter o PDF da CNH.');
+      await page.render({canvas,canvasContext:context,viewport}).promise;
+      const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(value=>
+        value?resolve(value):reject(new Error('Não foi possível converter uma página da CNH.')),'image/jpeg',0.9));
+      canvas.width=0;canvas.height=0;page.cleanup();
+      return new File([blob],file.name.replace(/\.pdf$/i,'')+'-pagina-'+pageNumber+'.jpg',{type:'image/jpeg',lastModified:Date.now()});
+    };
+    const front=await renderPage(1);
+    const back=pdfDocument.numPages>1?await renderPage(2):new File([await front.arrayBuffer()],file.name.replace(/\.pdf$/i,'')+'-verso.jpg',{type:'image/jpeg',lastModified:Date.now()});
+    return {front,back};
+  }finally{await pdfDocument.destroy();}
+}
+
 async function compressForUpload(file:File,maxDimension=1600):Promise<File>{
   const bitmap=await createImageBitmap(file);
   try{
@@ -71,9 +101,10 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       if(!video)throw new Error('Prévia da câmera indisponível.');
       video.srcObject=stream;await video.play();
       const {data:{session}}=await supabaseBrowser().auth.getSession();
-      if(!session?.access_token)throw new Error('Sua sessão expirou. Entre novamente.');
       const response=await fetch('/api/identity/free-document/liveness-challenge',{
-        method:'POST',headers:{Authorization:'Bearer '+session.access_token},cache:'no-store'
+        method:'POST',
+        headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},
+        credentials:'same-origin',cache:'no-store'
       });
       const data=await response.json() as {challenge?:string;instructions?:string[];error?:string};
       if(!response.ok||!data.challenge||!Array.isArray(data.instructions)||data.instructions.length!==4)
@@ -111,7 +142,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
 
   async function submit(){
     if(!front||!back||!selfie||!consent){
-      setError('Envie frente, verso com QR Code e selfie, e marque o consentimento.');return;
+      setError('Envie frente, verso e selfie, e marque o consentimento.');return;
     }
     if(!challenge||frames.length!==4){
       setError('Conclua os quatro quadros da captura guiada antes de enviar.');return;
@@ -119,7 +150,6 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     setBusy(true);setError('');setMessage('Preparando o envio seguro para validação…');
     try{
       const {data:{session}}=await supabaseBrowser().auth.getSession();
-      if(!session?.access_token)throw new Error('Sua sessão expirou. Entre novamente.');
       const [optimizedFront,optimizedBack,optimizedSelfie]=await Promise.all([
         compressForUpload(front),compressForUpload(back),compressForUpload(selfie)
       ]);
@@ -129,7 +159,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       frames.forEach((frame,index)=>form.set('livenessFrame'+index,frame));
       setMessage('Validando documento, rosto e captura ao vivo no servidor…');
       const response=await fetch('/api/identity/free-document/verify',{
-        method:'POST',headers:{Authorization:'Bearer '+session.access_token},body:form,cache:'no-store'
+        method:'POST',headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},credentials:'same-origin',body:form,cache:'no-store'
       });
       const data=await response.json() as {ok?:boolean;approved?:boolean;message?:string;error?:string};
       if(!response.ok||data.ok!==true)throw new Error(data.message||data.error||'A validação não foi concluída.');
@@ -163,15 +193,27 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </div>
     {step===1&&<section className="panel" aria-labelledby="identity-step-document">
       <h3 id="identity-step-document">1. Envie seu documento</h3>
-      <p className="small-note">Fotografe o documento inteiro, com boa iluminação e sem reflexos. Envie a frente e o verso com QR Code.</p>
+      <p className="small-note">Selecione imagens do armazenamento ou use a câmera do dispositivo. Para CNH, também pode selecionar o PDF digital; ele será convertido em imagens temporárias no navegador. Envie frente e verso legíveis; o QR Code pode estar em qualquer lado.</p>
       <div style={{display:'grid',gap:14}}>
         <label className="form-label">Frente do documento com foto
-          <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy||challengeBusy} onChange={e=>setFront(e.target.files?.[0]||null)}/>
-          <span className="small-note">{front?front.name:'JPG, PNG ou WebP · até 8 MB'}</span>
+          <input type="file" accept={documentType==='cnh'?'image/jpeg,image/png,image/webp,application/pdf':'image/jpeg,image/png,image/webp'} disabled={busy||challengeBusy} onChange={async e=>{
+            const file=e.target.files?.[0]||null;
+            if(!file){setFront(null);return;}
+            setError('');
+            try{
+              if(file.type==='application/pdf'){
+                if(documentType!=='cnh')throw new Error('PDF é aceito somente para CNH. Para RG/CIN, envie imagens da frente e do verso.');
+                setMessage('Convertendo o PDF da CNH para imagens temporárias…');
+                const pages=await renderCnhPdf(file);setFront(pages.front);setBack(pages.back);
+                setMessage('PDF da CNH convertido. Confira se as páginas exibem todos os dados e o QR Code.');
+              }else{setFront(file);setBack(null);setMessage('');}
+            }catch(err){setFront(null);setError(err instanceof Error?err.message:'Não foi possível abrir o arquivo.');setMessage('');}
+          }}/>
+          <span className="small-note">{front?front.name:(documentType==='cnh'?'JPG, PNG ou WebP · até 8 MB · PDF da CNH até 12 MB':'JPG, PNG ou WebP · até 8 MB')}</span>
         </label>
-        <label className="form-label">Verso do documento com QR Code
-          <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy||challengeBusy} onChange={e=>setBack(e.target.files?.[0]||null)}/>
-          <span className="small-note">{back?back.name:'O verso é processado temporariamente, sem armazenamento.'}</span>
+        <label className="form-label">Verso do documento
+          <input type="file" accept="image/jpeg,image/png,image/webp" disabled={busy||challengeBusy} onChange={e=>setBack(e.target.files?.[0]||null)}/>
+          <span className="small-note">{back?back.name:'Envie o verso com todas as informações legíveis; o QR Code pode estar na frente ou no verso.'}</span>
         </label>
       </div>
       <label className="human-agree" style={{marginTop:16}}>

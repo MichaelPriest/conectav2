@@ -33,6 +33,13 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(route,/Math\.sign\(firstTurn\)===Math\.sign\(secondTurn\)/);
  assert.match(ui,/Iniciar captura guiada/);
  assert.match(ui,/Capturar esta etapa/);
+ assert.match(ui,/renderCnhPdf/);
+ assert.match(ui,/application\/pdf/);
+ assert.match(ui,/pdfjs-dist\/legacy\/build\/pdf\.mjs/);
+ assert.match(ui,/credentials:'same-origin'/);
+ const auth=read('src/lib/identity-server.ts');
+ assert.match(auth,/createServerClient/);
+ assert.match(auth,/request\.cookies\.getAll\(\)/);
  assert.match(route,/status:'approved'/);
  assert.match(route,/approved:true/);
  assert.match(route,/complete_conecta_free_identity_verification/);
