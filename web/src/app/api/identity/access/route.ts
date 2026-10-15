@@ -22,16 +22,26 @@ export async function GET(request:NextRequest){
  if(!context)return NextResponse.json({networkAccess:false,reason:'session_required'},{status:401,headers});
  if(!runtimeConfig.supabaseUrl||!runtimeConfig.serviceKey)return fail(503,'O Conecta ID não está configurado no servidor. O acesso à rede continua bloqueado.');
  const admin=createClient(runtimeConfig.supabaseUrl,runtimeConfig.serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
- const [profile,age,identity,decision]=await Promise.all([
+ const [profile,age,identity,decision,exemption]=await Promise.all([
   context.db.from('profiles').select('id').eq('id',context.user.id).maybeSingle(),
   context.db.from('registration_age_declarations').select('declared_band').eq('user_id',context.user.id).maybeSingle(),
   admin.from('identity_verifications').select('status,verified_at').eq('user_id',context.user.id).maybeSingle(),
-  admin.from('age_assurance_decisions').select('age_band,method,verified_at').eq('user_id',context.user.id).maybeSingle()
+  admin.from('age_assurance_decisions').select('age_band,method,verified_at').eq('user_id',context.user.id).maybeSingle(),
+  admin.from('identity_access_exemptions').select('user_id,is_active').eq('user_id',context.user.id).eq('is_active',true).maybeSingle()
  ]);
- if(profile.error||age.error||identity.error||decision.error)return fail(503,'Não foi possível consultar as verificações com segurança. Nenhum acesso foi liberado.');
+ if(profile.error||age.error||identity.error||decision.error||exemption.error)return fail(503,'Não foi possível consultar as verificações com segurança. Nenhum acesso foi liberado.');
  const steps={profile:Boolean(profile.data),ageDeclaration:Boolean(age.data),identity:false,age:false,guardian:false};
  if(!profile.data)return NextResponse.json({networkAccess:false,reason:'profile_required',steps,message:'Complete seu perfil para iniciar o Conecta ID.'},{headers});
  if(!age.data)return NextResponse.json({networkAccess:false,reason:'age_declaration_required',steps,message:'Informe sua faixa etária para iniciar a verificação.'},{headers});
+ // This is a narrowly scoped account exception, not a fabricated verification result.
+ // It only applies while the account has an 18+ self-declaration; identity/age remain
+ // explicitly unverified in the returned steps and in the database.
+ if(exemption.data?.is_active===true&&age.data.declared_band==='18_plus'){
+  return NextResponse.json({
+   networkAccess:true,reason:'account_exemption',steps,
+   message:'Acesso liberado para esta conta por exceção administrativa. Identidade e idade não foram verificadas documentalmente.'
+  },{headers});
+ }
  steps.identity=identity.data?.status==='approved'&&recent(identity.data.verified_at);
  steps.age=Boolean(decision.data&&trustedMethod(decision.data.method)&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
  if(!steps.identity)return NextResponse.json({networkAccess:false,reason:identity.data?.status==='approved'?'verification_expired':'identity_required',steps,message:'A identidade ainda não foi confirmada por uma fonte confiável. A validação gratuita integrada exige QR legível, OCR, comparação facial e análise antifraude no servidor.'},{headers});
