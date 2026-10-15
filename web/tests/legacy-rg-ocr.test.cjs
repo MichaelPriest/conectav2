@@ -55,3 +55,9 @@ test('birth-date OCR does not guess when multiple dates remain in the birth fiel
  assert.equal(extractBirthDateFromOcr('NASCIMENTO 05/06/2000 07/08/2001'),null);
  assert.equal(extractBirthDateFromOcr('NASCIMENTO 05/06/2000\nNASCIMENTO 07/08/2001'),null);
 });
+
+test('recognizes truncated and split São Paulo legacy RG birth label',()=>{
+ const {extractBirthDateFromOcr}=outputs;
+ const text='REGISTRO GERAL\nDATA DE\nNTO NAS ASCIMENT\n05/06/2000\nNATURALIDADE\nS.PAULO - SP\nDATA DE EXPEDICAO\n02/03/2020';
+ assert.equal(extractBirthDateFromOcr(text),'2000-06-05');
+});
