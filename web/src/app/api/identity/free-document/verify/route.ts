@@ -206,7 +206,6 @@ export async function POST(request:NextRequest){
       return fail('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422);
 
     // Challenge was consumed before OCR/model work; client booleans and scores are ignored.
-    const turnOrder=challengeTurnOrder;
     const livenessPixels=await Promise.all(livenessFrames.map(frame=>pixels(frame)));
     const livenessTensors:any[]=[];
     const livenessResults:FaceResult[]=[];
