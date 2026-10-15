@@ -9,7 +9,7 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('free document verification requires consent, QR payload, OCR and server-side face matching',()=>{
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  const ui=read('src/components/free-document-verification.tsx');
- assert.match(ui,/não comprova, sozinha, vivacidade/);
+ assert.match(ui,/análise é experimental/);
  assert.match(ui,/pode permitir escolher uma foto da galeria/);
  assert.match(route,/form\.get\('consent'\)!=='true'/);
  assert.match(route,/form\.get\('documentBack'\)/);
@@ -37,7 +37,6 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.doesNotMatch(route,/status:'approved'/);
  assert.doesNotMatch(route,/from\('identity_verifications'\)\.upsert/);
  assert.doesNotMatch(route,/from\('age_assurance_decisions'\)\.upsert/);
- assert.match(route,/documentStored:false/);
  assert.match(route,/documentStored:false/);
 });
 
