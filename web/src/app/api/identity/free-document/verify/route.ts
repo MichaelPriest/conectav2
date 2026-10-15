@@ -51,18 +51,35 @@ async function pixels(buffer:Buffer){
   return {data:new Uint8Array(result.data),width:result.info.width,height:result.info.height};
 }
 async function prepareOcrImage(buffer:Buffer):Promise<Buffer>{
-  // Older laminated RG cards often have glare, faded print and very small field labels.
-  // Normalize lighting, enlarge the text and sharpen before OCR; keep the original
-  // bytes in memory as a fallback and for face matching.
-  return sharp(buffer,{limitInputPixels:20_000_000})
+  // Phone photos of older RG cards are often framed vertically while the card
+  // itself is sideways. Crop away the tabletop first, then orient the cropped
+  // card by its aspect ratio instead of trusting EXIF orientation alone.
+  const cropped=await sharp(buffer,{limitInputPixels:20_000_000})
     .rotate()
-    .flatten({background:'#fff'})
-    .resize({width:2400,height:2400,fit:'inside'})
-    .greyscale()
-    .normalize()
-    .sharpen()
+    .trim({threshold:25})
     .png()
     .toBuffer();
+  try{
+    const metadata=await sharp(cropped).metadata();
+    const needsQuarterTurn=Boolean(metadata.width&&metadata.height&&metadata.height>metadata.width*1.12);
+    let prepared=sharp(cropped,{limitInputPixels:20_000_000});
+    if(needsQuarterTurn)prepared=prepared.rotate(270);
+    return await prepared
+      .flatten({background:'#fff'})
+      .resize({width:2000,height:2000,fit:'inside'})
+      .greyscale()
+      .normalize()
+      .sharpen()
+      .png()
+      .toBuffer();
+  }finally{
+    cropped.fill(0);
+  }
+}
+async function rotateOcrImage180(buffer:Buffer):Promise<Buffer>{
+  // When a sideways phone capture could be turned clockwise or counterclockwise,
+  // the alternate landscape direction differs by 180 degrees.
+  return sharp(buffer,{limitInputPixels:20_000_000}).rotate(180).png().toBuffer();
 }
 function dobFromText(raw:string):string|null{
   return extractBirthDateFromOcr(raw);
@@ -212,7 +229,6 @@ export async function POST(request:NextRequest){
     });
     // First pass: high-resolution contrast-normalized images with sparse-text
     // segmentation, suitable for labels distributed across an older ID card.
-    const documentImages=[document,back];
     ocrImages.push(await prepareOcrImage(document));
     ocrImages.push(await prepareOcrImage(back));
     await worker.setParameters({
@@ -224,19 +240,34 @@ export async function POST(request:NextRequest){
     const parseDates=(results:typeof ocrResults)=>
       results.map(result=>dobFromText(typeof result.data.text==='string'?result.data.text:''))
         .filter((value):value is string=>Boolean(value));
-    const firstPassDates=parseDates(ocrResults);
-    let detectedDates=firstPassDates;
-    // Do a single fallback pass on the untouched images only when the enhanced
-    // pass found no labelled birth date. Never pick a convenient date from a
-    // different field; the parser still requires an explicit birth label.
+    let detectedDates=parseDates(ocrResults);
+    // Run a second segmentation pass on the cropped, deskewed/enlarged document
+    // rather than on the full tabletop photo.
     if(detectedDates.length===0){
       await worker.setParameters({
         tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
         preserve_interword_spaces:'1',
         user_defined_dpi:'300'
       });
-      const fallbackResults=await Promise.all(documentImages.map(image=>worker!.recognize(image)));
+      const fallbackResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
       detectedDates=parseDates(fallbackResults);
+    }
+    // If still unreadable, test the opposite landscape orientation. This covers
+    // cards physically rotated 90 degrees in phone photos.
+    if(detectedDates.length===0){
+      const reversedImages:Buffer[]=[];
+      try{
+        for(const image of ocrImages)reversedImages.push(await rotateOcrImage180(image));
+        await worker.setParameters({
+          tessedit_pageseg_mode:PSM.SPARSE_TEXT,
+          preserve_interword_spaces:'1',
+          user_defined_dpi:'300'
+        });
+        const reversedResults=await Promise.all(reversedImages.map(image=>worker!.recognize(image)));
+        detectedDates=parseDates(reversedResults);
+      }finally{
+        for(const image of reversedImages)image.fill(0);
+      }
     }
     const uniqueDates=[...new Set(detectedDates)];
     if(uniqueDates.length>1)

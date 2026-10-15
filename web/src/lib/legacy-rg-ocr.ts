@@ -85,15 +85,21 @@ export function extractBirthDateFromOcr(raw:string):string|null{
  const found:string[]=[];
  let ambiguous=false;
  for(const label of labels){
-  const associated=dates.filter(date=>{
-   if(belongsToIssueField(date))return false;
-   const distance=date.end<=label.start?label.start-date.end:
-      date.start>=label.end?date.start-label.end:0;
-   if(distance>220)return false;
-   const between=date.end<=label.start?text.slice(date.end,label.start):
-      date.start>=label.end?text.slice(label.end,date.start):'';
-   return !otherField.test(between);
+  // Prefer a single date after the birth label. OCR may misread the issue-date
+  // label (for example, "EXPEDICAO" can become unrelated text); in that case,
+  // preferring the date after "NASCIMENTO" prevents the earlier issue date
+  // from making a correct birth date look ambiguous.
+  const after=dates.filter(date=>{
+   if(date.start<label.end||belongsToIssueField(date))return false;
+   if(date.start-label.end>220)return false;
+   return !otherField.test(text.slice(label.end,date.start));
   });
+  const before=dates.filter(date=>{
+   if(date.end>label.start||belongsToIssueField(date))return false;
+   if(label.start-date.end>220)return false;
+   return !otherField.test(text.slice(date.end,label.start));
+  });
+  const associated=after.length?after:before;
   if(associated.length>1){ambiguous=true;continue;}
   if(associated.length===1)found.push(associated[0].iso);
  }
