@@ -101,6 +101,6 @@ test('Vercel traces Tesseract runtime dependencies and pins the Node worker entr
  }
  assert.ok(route.includes("workerPath:path.join(process.cwd(),'node_modules','tesseract.js','src','worker-script','node','index.js')"));
  assert.match(ui,/async function readJsonResponse<T>/);
- assert.doesNotMatch(ui,/response\\.json\\(\\)/);
+ assert.ok(!ui.includes('response.json()'),'UI should use robust non-JSON error handling');
  assert.ok(ui.includes('O servidor de validação falhou (HTTP'));
 });
