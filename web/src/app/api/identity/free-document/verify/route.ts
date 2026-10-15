@@ -106,7 +106,7 @@ export async function POST(request:NextRequest){
   const attemptWrite=await context.admin.from('identity_free_verification_attempts').insert({user_id:context.user.id});
   if(attemptWrite.error)return fail('Não foi possível iniciar a análise com segurança.',503);
 
-  let document:Buffer=Buffer.alloc(0),back:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='',livenessChallenge='';
+  let document:Buffer=Buffer.alloc(0),back:Buffer=Buffer.alloc(0),rgDataSide:Buffer=Buffer.alloc(0),rgPhotoSide:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='',livenessChallenge='';
   const livenessFrames:Buffer[]=[];
   let challengeTurnOrder:string[]=[];
   try{
@@ -116,6 +116,10 @@ export async function POST(request:NextRequest){
     if(!['cin','old-rg','cnh'].includes(documentType))return fail('Selecione CIN, RG antigo ou CNH.',400);
     document=await imageBuffer(form.get('documentFront'),'a frente do documento');
     back=await imageBuffer(form.get('documentBack'),'o verso do documento');
+    if(documentType==='old-rg'){
+      rgDataSide=await imageBuffer(form.get('rgDataSide'),'a parte interna do RG com QR Code dos dados e código de série');
+      rgPhotoSide=await imageBuffer(form.get('rgPhotoSide'),'a parte interna do RG com QR Code da foto online e código de série');
+    }
     selfie=await imageBuffer(form.get('selfie'),'a selfie');
     livenessChallenge=String(form.get('livenessChallenge')||'');
     if(!/^[0-9a-f]{64}$/.test(livenessChallenge))throw new Error('Inicie a captura guiada de vivacidade antes de enviar os documentos.');
@@ -137,11 +141,14 @@ export async function POST(request:NextRequest){
     // the QR on the front or back. The front remains the reference photo for face match.
     const frontQr=await decodeQrFromImage(document);
     const backQr=await decodeQrFromImage(back);
-    qr=frontQr||backQr||'';
+    const rgDataQr=rgDataSide.length?await decodeQrFromImage(rgDataSide):null;
+    const rgPhotoQr=rgPhotoSide.length?await decodeQrFromImage(rgPhotoSide):null;
+    // For legacy RG, prefer the inner data-panel QR. Serial barcodes are not treated as QR codes.
+    qr=(documentType==='old-rg'?(rgDataQr||frontQr||backQr||rgPhotoQr):(frontQr||backQr))||'';
     if(!qr)throw new Error('Não foi possível localizar o QR Code nem na frente nem no verso. Confira as duas imagens, o foco e os reflexos e tente novamente.');
     if(qr.length<8||qr.length>12000)throw new Error('O QR Code encontrado no documento não tem um conteúdo válido para esta verificação.');
   }catch(error){
-    document.fill(0);back.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);qr='';
+    document.fill(0);back.fill(0);rgDataSide.fill(0);rgPhotoSide.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);qr='';
     return fail(error instanceof Error?error.message:'Não foi possível ler os arquivos enviados.',400);
   }
 
@@ -156,12 +163,13 @@ export async function POST(request:NextRequest){
     worker=await createWorker('por');
     // Brazilian documents vary: the birth date may be printed on either side.
     // OCR both images and reject contradictory dates instead of guessing.
-    const [frontOcr,backOcr]=await Promise.all([worker.recognize(document),worker.recognize(back)]);
-    const frontDob=dobFromText(typeof frontOcr.data.text==='string'?frontOcr.data.text:'');
-    const backDob=dobFromText(typeof backOcr.data.text==='string'?backOcr.data.text:'');
-    if(frontDob&&backDob&&frontDob!==backDob)
-      return fail('As datas de nascimento lidas na frente e no verso divergem. Confira as imagens e tente novamente.',422);
-    const dob=frontDob||backDob;
+    const documentImages=[document,back,...(rgDataSide.length?[rgDataSide]:[]),...(rgPhotoSide.length?[rgPhotoSide]:[])];
+    const ocrResults=await Promise.all(documentImages.map(image=>worker!.recognize(image)));
+    const detectedDates=ocrResults.map(result=>dobFromText(typeof result.data.text==='string'?result.data.text:'')).filter((value):value is string=>Boolean(value));
+    const uniqueDates=[...new Set(detectedDates)];
+    if(uniqueDates.length>1)
+      return fail('As datas de nascimento lidas nas partes do documento divergem. Confira as quatro partes do RG e tente novamente.',422);
+    const dob=uniqueDates[0]||null;
     if(!dob)return fail('Não consegui ler uma única data de nascimento na frente nem no verso do documento. Melhore a iluminação e tente novamente.',422);
     const ageBand=bandForDate(dob);
     if(!ageBand)return fail('A data de nascimento lida não é válida.',422);
