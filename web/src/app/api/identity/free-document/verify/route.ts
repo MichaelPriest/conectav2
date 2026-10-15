@@ -63,7 +63,7 @@ async function prepareOcrImage(buffer:Buffer):Promise<Buffer>{
     const metadata=await sharp(cropped).metadata();
     const needsQuarterTurn=Boolean(metadata.width&&metadata.height&&metadata.height>metadata.width*1.12);
     let prepared=sharp(cropped,{limitInputPixels:20_000_000});
-    if(needsQuarterTurn)prepared=prepared.rotate(90);
+    if(needsQuarterTurn)prepared=prepared.rotate(270);
     return await prepared
       .flatten({background:'#fff'})
       .resize({width:2000,height:2000,fit:'inside'})
