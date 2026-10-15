@@ -9,9 +9,11 @@ export type LegacyRgPreflight={
  message:string;
 };
 function isoDateFromBrazilian(value:string):string|null{
- const match=value.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
- if(!match)return null;
- const day=Number(match[1]),month=Number(match[2]),year=Number(match[3]);
+ const normalized=value.toUpperCase().replace(/[OQ]/g,'0').replace(/[IL|]/g,'1');
+ const parts=normalized.split(/[.\/-\s]+/);
+ if(parts.length!==3||parts[0].length>2||parts[1].length>2||parts[2].length!==4||
+    parts.some(part=>!/^\d+$/.test(part)))return null;
+ const day=Number(parts[0]),month=Number(parts[1]),year=Number(parts[2]);
  if(year<1900||year>2100)return null;
  const d=new Date(Date.UTC(year,month-1,day,12));
  if(d.getUTCFullYear()!==year||d.getUTCMonth()+1!==month||d.getUTCDate()!==day)return null;
@@ -24,27 +26,54 @@ function ageBand(iso:string,today:Date):LegacyRgBand|null{
  if(years<0||years>120)return null;
  return years<13?'under_13':years<16?'13_15':years<18?'16_17':'18_plus';
 }
-/** Extract only dates associated with a birth label; never infer from issue date. */
+type DateCandidate={iso:string;start:number;end:number};
+type LabelCandidate={start:number;end:number};
+/**
+ * Extract only dates associated with an explicit birth label.
+ * OCR often returns columns out of visual order, places the date before its
+ * label, or confuses O/0 and I/1. Handle these cases without falling back to
+ * an unrelated issue/expiry date.
+ */
 export function extractBirthDateFromOcr(raw:string):string|null{
  if(typeof raw!=='string'||!raw.trim())return null;
  const text=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()
+   .replace(/[\u200B-\u200D\uFEFF]/g,' ')
    .replace(/\r/g,'\n').replace(/\t/g,' ').replace(/[ ]{2,}/g,' ');
- // Older São Paulo RG OCR often fragments "DATA DE NASCIMENTO" into
- // pieces such as "DATA DE NTO NAS ASCIMENT". Accept the distinctive
- // truncated birth-label fragments, but still require a date in that field.
- const birthLabels=/(?:\bDATA\s*(?:DE\s*)?NASCIMENTO\b|\bNASCIMENTO\b|\bDT\.?\s*NASC(?:IMENTO)?\b|\bNAS\s+ASCIMENT[O0]?\b|\bASCIMENT[O0]?\b)/g;
- const datePattern=/(?:^|[^\d])(\d{1,2}\s*[./-]\s*\d{1,2}\s*[./-]\s*\d{4}|\d{1,2}\s+\d{1,2}\s+\d{4})(?!\d)/g;
+ // Include abbreviations and common OCR splits such as "NASCIM ENTO",
+ // "NASCIMEN TO", "NAS ASCIMENT" and "DT. NASC".
+ const birthLabels=/(?:\bDATA\s*(?:DE\s*)?(?:NASCIMENTO|NASCIM\s*ENTO|NASCIMEN\s*TO)\b|\bDT\.?\s*NASC(?:IMENTO|IM\s*ENTO|IMEN\s*TO)?\b|\bNASC(?:IMENTO|IM\s*ENTO|IMEN\s*TO|\.)\b|\bNAS\s+ASCIMENT[O0]?\b|\bASCIMENT[O0]?\b)/g;
+ const glyph='[0-9OQIL|]';
+ const datePattern=new RegExp('(?:^|[^0-9A-Z])('+glyph+'{1,2}\\s*[./-]\\s*'+glyph+'{1,2}\\s*[./-]\\s*'+glyph+'{4}|'+glyph+'{1,2}\\s+'+glyph+'{1,2}\\s+'+glyph+'{4})(?![0-9A-Z])','g');
+ const dates:DateCandidate[]=[];
+ for(const match of text.matchAll(datePattern)){
+  const value=match[1];
+  const start=(match.index||0)+match[0].indexOf(value);
+  const iso=isoDateFromBrazilian(value);
+  if(iso)dates.push({iso,start,end:start+value.length});
+ }
+ const labels:LabelCandidate[]=[...text.matchAll(birthLabels)].map(match=>({
+   start:match.index||0,
+   end:(match.index||0)+match[0].length
+ }));
+ if(!labels.length||!dates.length)return null;
+
+ // These marks reliably begin other printed fields. NATURALIDADE is purposely
+ // not a boundary: on some legacy RG layouts OCR emits it between the DOB
+ // label and its date because it reads the columns out of order.
+ const otherField=/\b(?:DATA\s*(?:DE\s*)?EXPEDICAO|EXPEDICAO|VALIDADE|EMISSAO|REGISTRO|CATEGORIA|NACIONALIDADE|ORGAO\s*EMISSOR|CPF|FILIACAO)\b/;
  const found:string[]=[];
  let ambiguous=false;
- for(const match of text.matchAll(birthLabels)){
-  const start=(match.index||0)+match[0].length;
-  const region=text.slice(start,start+180).split(/(?:DATA\s*(?:DE\s*)?EXPEDICAO|EXPEDICAO|VALIDADE|EMISSAO|REGISTRO|CATEGORIA|NACIONALIDADE|ORGAO\s*EMISSOR|CPF|FILIACAO)/)[0];
-  const dates=[...region.matchAll(datePattern)];
-  if(dates.length>1){ambiguous=true;continue;}
-  if(dates.length!==1)continue;
-  const rawDate=dates[0][1].replace(/\s*([./-])\s*/g,'$1').replace(/\s+/g,'/').replace(/[.]/g,'/').replace(/-/g,'/');
-  const iso=isoDateFromBrazilian(rawDate);
-  if(iso)found.push(iso);
+ for(const label of labels){
+  const associated=dates.filter(date=>{
+   const distance=date.end<=label.start?label.start-date.end:
+      date.start>=label.end?date.start-label.end:0;
+   if(distance>220)return false;
+   const between=date.end<=label.start?text.slice(date.end,label.start):
+      date.start>=label.end?text.slice(label.end,date.start):'';
+   return !otherField.test(between);
+  });
+  if(associated.length>1){ambiguous=true;continue;}
+  if(associated.length===1)found.push(associated[0].iso);
  }
  const unique=[...new Set(found)];
  return !ambiguous&&unique.length===1?unique[0]:null;
