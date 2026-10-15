@@ -9,6 +9,7 @@ import {BinaryBitmap,HybridBinarizer,QRCodeReader,RGBLuminanceSource} from '@zxi
 import {identityContext} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {inspectCinToken} from '@/lib/cin-qr';
+import {extractBirthDateFromOcr} from '@/lib/legacy-rg-ocr';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -50,21 +51,7 @@ async function pixels(buffer:Buffer){
   return {data:new Uint8Array(result.data),width:result.info.width,height:result.info.height};
 }
 function dobFromText(raw:string):string|null{
-  const normalized=raw.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
-  const label=/(?:NASCIMENTO|DATA\s+NASC|DT\.?\s*NASC)/g;
-  const matches:string[]=[];
-  for(const match of normalized.matchAll(label)){
-    const index=(match.index||0)+match[0].length;
-    const region=normalized.slice(index,index+90).split(/(?:EXPEDICAO|EMISSAO|VALIDADE|REGISTRO|CATEGORIA)/)[0];
-    const dates=[...region.matchAll(/(?:^|[^\d])(\d{2}[./-]\d{2}[./-]\d{4})(?!\d)/g)];
-    if(dates.length===1)matches.push(dates[0][1].replace(/[./]/g,'-'));
-  }
-  const unique=[...new Set(matches)];
-  if(unique.length!==1)return null;
-  const [day,month,year]=unique[0].split('-').map(Number);
-  const date=new Date(Date.UTC(year,month-1,day));
-  if(date.getUTCFullYear()!==year||date.getUTCMonth()+1!==month||date.getUTCDate()!==day||year<1900)return null;
-  return [String(year),String(month).padStart(2,'0'),String(day).padStart(2,'0')].join('-');
+  return extractBirthDateFromOcr(raw);
 }
 function bandForDate(iso:string):'13_15'|'16_17'|'18_plus'|'0_12'|null{
   const [year,month,day]=iso.split('-').map(Number);
