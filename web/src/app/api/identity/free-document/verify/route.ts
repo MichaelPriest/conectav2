@@ -79,19 +79,45 @@ export async function POST(request:NextRequest){
   if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))return fail('Origem inválida.',403);
   const context=await identityContext(request);
   if(!context)return fail('Entre na sua conta para continuar.',401);
+  let attemptId:number|null=null;
+  const completeAttempt=async()=>{
+    if(attemptId===null)return;
+    const id=attemptId;
+    try{
+      const {error}=await context.admin.from('identity_free_verification_attempts')
+        .update({status:'completed'}).eq('id',id).eq('user_id',context.user.id);
+      if(!error)attemptId=null;
+    }catch{
+      // An abandoned pending reservation expires from rate-limit counting after two minutes.
+    }
+  };
+  const releaseAttempt=async()=>{
+    if(attemptId===null)return;
+    const id=attemptId;
+    try{
+      const {error}=await context.admin.from('identity_free_verification_attempts')
+        .delete().eq('id',id).eq('user_id',context.user.id);
+      if(!error)attemptId=null;
+    }catch{
+      // A failed release remains pending and is ignored by the rate limiter after two minutes.
+    }
+  };
+  const failAttempt=async(message:string,status:number)=>{
+    // Validation failures count; service/infrastructure failures do not.
+    if(attemptId!==null){
+      if(status>=500)await releaseAttempt();
+      else await completeAttempt();
+    }
+    return fail(message,status);
+  };
   const contentLength=Number(request.headers.get('content-length')||0);
   if(Number.isFinite(contentLength)&&contentLength>MAX_REQUEST_BYTES)return fail('O envio total excede o limite de 25 MB.',413);
   const retentionCutoff=new Date(Date.now()-90*24*60*60*1000).toISOString();
   const {error:cleanupError}=await context.admin.from('identity_free_verification_attempts').delete()
     .eq('user_id',context.user.id).lt('attempted_at',retentionCutoff);
   if(cleanupError)return fail('Não foi possível atualizar o controle de tentativas com segurança.',503);
-  const cutoff=new Date(Date.now()-30*60*1000).toISOString();
-  const {data:recentAttempts,error:attemptsError}=await context.admin.from('identity_free_verification_attempts')
-    .select('attempted_at').eq('user_id',context.user.id).gte('attempted_at',cutoff);
-  if(attemptsError)return fail('O controle de tentativas está indisponível. Tente novamente mais tarde.',503);
-  if((recentAttempts||[]).length>=5)return fail('Limite de 5 tentativas em 30 minutos atingido. Aguarde antes de tentar novamente.',429);
-  const attemptWrite=await context.admin.from('identity_free_verification_attempts').insert({user_id:context.user.id});
-  if(attemptWrite.error)return fail('Não foi possível iniciar a análise com segurança.',503);
+  // Attempts are reserved only after a well-formed multipart payload and all
+  // required images have been validated. The database RPC makes reservation atomic.
 
   let document:Buffer=Buffer.alloc(0),back:Buffer=Buffer.alloc(0),rgDataSide:Buffer=Buffer.alloc(0),rgPhotoSide:Buffer=Buffer.alloc(0),selfie:Buffer=Buffer.alloc(0),qr='',documentType='',livenessChallenge='';
   const livenessFrames:Buffer[]=[];
@@ -107,6 +133,21 @@ export async function POST(request:NextRequest){
     livenessChallenge=String(form.get('livenessChallenge')||'');
     if(!/^[0-9a-f]{64}$/.test(livenessChallenge))throw new Error('Inicie a captura guiada de vivacidade antes de enviar os documentos.');
     for(let i=0;i<4;i++)livenessFrames.push(await imageBuffer(form.get('livenessFrame'+i),'o quadro guiado '+(i+1)));
+    const {data:reservationData,error:reservationError}=await context.admin.rpc(
+      'start_conecta_identity_verification_attempt',{p_user_id:context.user.id}
+    );
+    if(reservationError||!reservationData||typeof reservationData!=='object')
+      throw new Error('O controle de tentativas está indisponível. Tente novamente mais tarde.');
+    const reservation=reservationData as {allowed?:boolean;attempt_id?:number|null};
+    if(reservation.allowed!==true){
+      document.fill(0);back.fill(0);selfie.fill(0);
+      for(const frame of livenessFrames)frame.fill(0);
+      return fail('Limite de 5 tentativas em 30 minutos atingido. Aguarde antes de tentar novamente.',429);
+    }
+    const reservedId=Number(reservation.attempt_id);
+    if(!Number.isSafeInteger(reservedId)||reservedId<1)
+      throw new Error('O controle de tentativas está indisponível. Tente novamente mais tarde.');
+    attemptId=reservedId;
     // Consume on first well-formed submission, before OCR/model work, so a
     // failed attempt cannot keep reusing the same challenge.
     const challengeHash=createHash('sha256').update(livenessChallenge,'utf8').digest('hex');
@@ -134,7 +175,10 @@ export async function POST(request:NextRequest){
     }
   }catch(error){
     document.fill(0);back.fill(0);rgDataSide.fill(0);rgPhotoSide.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);qr='';
-    return fail(error instanceof Error?error.message:'Não foi possível ler os arquivos enviados.',400);
+    const message=error instanceof Error?error.message:'Não foi possível ler os arquivos enviados.';
+    const status=message==='O serviço de vivacidade está indisponível.'||
+      message==='O controle de tentativas está indisponível. Tente novamente mais tarde.'?503:400;
+    return await failAttempt(message,status);
   }
 
   let worker:Awaited<ReturnType<typeof createWorker>>|null=null;
@@ -158,26 +202,26 @@ export async function POST(request:NextRequest){
     const detectedDates=ocrResults.map(result=>dobFromText(typeof result.data.text==='string'?result.data.text:'')).filter((value):value is string=>Boolean(value));
     const uniqueDates=[...new Set(detectedDates)];
     if(uniqueDates.length>1)
-      return fail('As datas de nascimento lidas nas partes do documento divergem. Confira a frente e o verso do documento e tente novamente.',422);
+      return await failAttempt('As datas de nascimento lidas nas partes do documento divergem. Confira a frente e o verso do documento e tente novamente.',422);
     const dob=uniqueDates[0]||null;
-    if(!dob)return fail('Não consegui ler uma única data de nascimento na frente nem no verso do documento. Melhore a iluminação e tente novamente.',422);
+    if(!dob)return await failAttempt('Não consegui ler uma única data de nascimento na frente nem no verso do documento. Melhore a iluminação e tente novamente.',422);
     const ageBand=bandForDate(dob);
-    if(!ageBand)return fail('A data de nascimento lida não é válida.',422);
-    if(ageBand==='0_12')return fail('Esta faixa etária precisa de um fluxo de responsável específico. A validação não foi concluída.',422);
+    if(!ageBand)return await failAttempt('A data de nascimento lida não é válida.',422);
+    if(ageBand==='0_12')return await failAttempt('Esta faixa etária precisa de um fluxo de responsável específico. A validação não foi concluída.',422);
 
     let qrAgeBand:string|null=null;
     if(documentType==='cin'){
       const cin=await inspectCinToken(qr);
       if(cin.status!=='signature-valid-local')
-        return fail('A assinatura do QR Code da CIN não passou na verificação criptográfica disponível. Nenhum acesso foi liberado.',422);
+        return await failAttempt('A assinatura do QR Code da CIN não passou na verificação criptográfica disponível. Nenhum acesso foi liberado.',422);
       qrAgeBand=cin.indicativeAgeBand||ageBandFromCin(qr);
       if(qrAgeBand&&qrAgeBand!==ageBand)
-        return fail('A faixa etária lida no QR Code diverge da data no documento.',422);
+        return await failAttempt('A faixa etária lida no QR Code diverge da data no documento.',422);
     }else if(documentType==='cnh'){
       // CNH QR payload is required, but issuer formats vary and no official
       // authenticity claim is made by this local automated check.
       const qrDob=qrDate(qr);
-      if(qrDob&&qrDob!==dob)return fail('A data de nascimento do QR Code diverge da data impressa.',422);
+      if(qrDob&&qrDob!==dob)return await failAttempt('A data de nascimento do QR Code diverge da data impressa.',422);
     }
 
     // Human is executed on the server; browser-supplied face scores/descriptors
@@ -199,15 +243,15 @@ export async function POST(request:NextRequest){
     documentFaceResults=docResult as FaceResult;selfieFaceResults=selfieResult as FaceResult;
     const docFaces=docResult.face||[],selfieFaces=selfieResult.face||[];
     if(docFaces.length!==1||selfieFaces.length!==1)
-      return fail('Precisamos detectar exatamente um rosto na foto do documento e na selfie. Tente novamente com imagens nítidas.',422);
+      return await failAttempt('Precisamos detectar exatamente um rosto na foto do documento e na selfie. Tente novamente com imagens nítidas.',422);
     const docFace=docFaces[0],selfieFace=selfieFaces[0];
     if(!docFace.embedding?.length||!selfieFace.embedding?.length)
-      return fail('Não foi possível calcular a comparação facial. Tente com uma foto mais nítida.',422);
+      return await failAttempt('Não foi possível calcular a comparação facial. Tente com uma foto mais nítida.',422);
     const similarity=instance.match.similarity(docFace.embedding,selfieFace.embedding);
     if(!Number.isFinite(similarity)||similarity<0.62)
-      return fail('A comparação facial não atingiu o nível mínimo. Confira se a selfie corresponde à foto do documento.',422);
+      return await failAttempt('A comparação facial não atingiu o nível mínimo. Confira se a selfie corresponde à foto do documento.',422);
     if(typeof selfieFace.real!=='number'||selfieFace.real<0.55)
-      return fail('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422);
+      return await failAttempt('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422);
 
     // Challenge was consumed before OCR/model work; client booleans and scores are ignored.
     const livenessPixels=await Promise.all(livenessFrames.map(frame=>pixels(frame)));
@@ -227,12 +271,12 @@ export async function POST(request:NextRequest){
           ?faces[0].rotation!.angle!.yaw!:null;
       });
       if(yaw.some(value=>value===null))
-        return fail('A captura guiada precisa mostrar exatamente um rosto em todos os quadros. Nenhum acesso foi liberado.',422);
+        return await failAttempt('A captura guiada precisa mostrar exatamente um rosto em todos os quadros. Nenhum acesso foi liberado.',422);
       const angles=yaw as number[];
       const baseline=Math.abs(angles[0]);
       const firstTurn=angles[1],secondTurn=angles[2],returned=Math.abs(angles[3]);
       if(baseline>0.28||returned>0.28||Math.abs(firstTurn)<0.18||Math.abs(secondTurn)<0.18||Math.sign(firstTurn)===Math.sign(secondTurn))
-        return fail('Os movimentos não foram confirmados em sequência pelo servidor. Repita a captura guiada com boa iluminação e vire a cabeça para os dois lados.',422);
+        return await failAttempt('Os movimentos não foram confirmados em sequência pelo servidor. Repita a captura guiada com boa iluminação e vire a cabeça para os dois lados.',422);
       // The requested order is randomly selected and single-use. This validation
       // checks opposite head turns, front-facing start/end, and the same account;
       // it is not proof of presentation attack resistance or issuer authenticity.
@@ -258,7 +302,8 @@ export async function POST(request:NextRequest){
       p_verified_at:verifiedAt
     });
     if(verdictError)
-      return fail('As verificações passaram, mas não foi possível registrar o resultado com segurança. A validação não foi concluída; tente novamente.',503);
+      return await failAttempt('As verificações passaram, mas não foi possível registrar o resultado com segurança. A validação não foi concluída; tente novamente.',503);
+    await completeAttempt();
     return NextResponse.json({
       ok:true,
       status:'approved',
@@ -270,7 +315,7 @@ export async function POST(request:NextRequest){
       message:'Validação Conecta ID concluída. Documento, comparação facial e captura guiada passaram nas verificações automáticas disponíveis. O Conecta registrou a identidade e apenas a faixa etária; não armazenou as imagens nem a data de nascimento. Isto não é uma certificação oficial do emissor. As regras de responsável e proteção da faixa etária continuam valendo.'
     },{status:200,headers});
   }catch(error){
-    return fail(error instanceof Error?error.message:'Não foi possível concluir a análise. Nenhum acesso foi liberado.',503);
+    return await failAttempt(error instanceof Error?error.message:'Não foi possível concluir a análise. Nenhum acesso foi liberado.',503);
   }finally{
     documentTensor?.dispose?.();selfieTensor?.dispose?.();
     for(const result of [documentFaceResults,selfieFaceResults])for(const face of result?.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
