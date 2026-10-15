@@ -10,7 +10,7 @@ import * as NavigationBarApi from 'expo-navigation-bar';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {User} from '@supabase/supabase-js';
-import {PUBLIC_SITE_URL,supabase} from './src/supabase';
+import {API_SITE_URL,PUBLIC_SITE_URL,supabase} from './src/supabase';
 import type {ChatMessage,ChatReaction,Community,Friendship,Notice,Post,PostComment,Profile,Thread} from './src/models';
 import {
  blockedUserIds,changeConnection,changeMembership,clearMediaCache,deleteOwnPost,loadChatMessages,loadOlderChatMessages,loadCommunities,
@@ -69,6 +69,10 @@ const noticeNames:Record<string,string>={
 };
 const openOfficial=async(path:string)=>{
  const url=PUBLIC_SITE_URL+path;
+ if(await Linking.canOpenURL(url))await Linking.openURL(url);
+};
+const openIdentityVerification=async()=>{
+ const url=API_SITE_URL+'/verificar-identidade';
  if(await Linking.canOpenURL(url))await Linking.openURL(url);
 };
 const errorMessage=(error:unknown)=>error instanceof Error?error.message:
@@ -179,21 +183,22 @@ function SignIn({onSignedIn}:{onSignedIn:()=>void}){
   </View>
  </ScrollView>;
 }
-function Restricted({status,onRetry,onLogout}:{
- status:'onboarding'|'age-check';onRetry:()=>void;onLogout:()=>void
+function Restricted({status,onRetry,onLogout,message}:{
+ status:'onboarding'|'age-check'|'identity-check';onRetry:()=>void;onLogout:()=>void;message?:string
 }){
+ const isIdentity=status==='identity-check';
  const isAge=status==='age-check';
+ const title=isIdentity?'Conclua o Conecta ID':isAge?'Verificação de idade necessária':'Conclua seu cadastro';
+ const description=isIdentity
+  ?message||'A identidade e a faixa etária precisam ser confirmadas por uma fonte confiável antes de acessar a rede.'
+  :isAge?'Informe sua faixa etária para iniciar a verificação protegida.'
+  :'Finalize o perfil antes de utilizar o aplicativo.';
  return <View style={[s.screen,{justifyContent:'center'}]}>
   <Text style={{fontSize:42,textAlign:'center'}}>✳</Text>
-  <Text style={[s.title,{textAlign:'center',marginTop:14}]}>
-   {isAge?'Verificação de idade necessária':'Conclua seu cadastro'}
-  </Text>
-  <Text style={[s.sub,{textAlign:'center',marginVertical:16}]}>
-   {isAge?'Sua conta precisa concluir a verificação de idade para usar os recursos da rede.'
-    :'Finalize o perfil e a declaração de idade antes de utilizar o aplicativo.'}
-  </Text>
-  <Action label={isAge?'Abrir verificação protegida':'Completar cadastro'}
-   onPress={()=>void openOfficial(isAge?'/verificar-identidade':'/onboarding')}/>
+  <Text style={[s.title,{textAlign:'center',marginTop:14}]}>{title}</Text>
+  <Text style={[s.sub,{textAlign:'center',marginVertical:16}]}>{description}</Text>
+  <Action label={isIdentity?'Abrir validação do Conecta ID':isAge?'Abrir verificação protegida':'Completar cadastro'}
+   onPress={()=>void (isIdentity?openIdentityVerification():openOfficial(isAge?'/verificar-identidade':'/onboarding'))}/>
   <View style={{height:10}}/>
   <Action secondary label="Já concluí — verificar novamente" onPress={onRetry}/>
   <View style={{height:10}}/>
@@ -1902,7 +1907,8 @@ export default function App(){
  const compactHeader=width<400;
  const [user,setUser]=useState<User|null>(null);
  const [profile,setProfile]=useState<Profile|null>(null);
- const [restricted,setRestricted]=useState<'onboarding'|'age-check'|null>(null);
+ const [restricted,setRestricted]=useState<'onboarding'|'age-check'|'identity-check'|null>(null);
+ const [identityMessage,setIdentityMessage]=useState('');
  const [booting,setBooting]=useState(true),[error,setError]=useState('');
  const [tab,setTab]=useState<Tab>('feed');
  const [fullscreen,setFullscreen]=useState(Platform.OS==='android');
@@ -1937,12 +1943,19 @@ export default function App(){
   try{
    const {data,error:authError}=await supabase.auth.getUser();
    if(authError||!data.user){
-    setUser(null);setProfile(null);setRestricted(null);setBooting(false);return;
+    setUser(null);setProfile(null);setRestricted(null);setIdentityMessage('');setBooting(false);return;
    }
+   setUser(data.user);setRestricted('identity-check');
+   setIdentityMessage('Conferindo os requisitos do Conecta ID...');
    const next=await verifyAccess(data.user.id);
-   setUser(data.user);setProfile(next.profile);
-   setRestricted(next.status==='ok'?null:next.status);setError('');
-  }catch(e){setError(errorMessage(e));}
+   setProfile(next.profile);
+   setRestricted(next.status==='ok'?null:next.status);setIdentityMessage(next.message||'');setError('');
+  }catch(e){
+   const message=errorMessage(e);
+   setRestricted('identity-check');
+   setIdentityMessage('Não foi possível confirmar o Conecta ID agora. Por segurança, o acesso à rede permanece bloqueado. '+message);
+   setError(message);
+  }
   finally{setBooting(false);}
  },[]);
  useEffect(()=>{
@@ -1978,7 +1991,7 @@ export default function App(){
   if(user)try{await unregisterRemotePush(user.id);}
   catch{Alert.alert('Avisos remotos','Não foi possível retirar o dispositivo da lista de avisos. A sessão será encerrada; revise as notificações deste aparelho.');}
   await supabase.auth.signOut();clearMediaCache();setTab('feed');setChatId(null);
-  setUnreadCount(0);setUser(null);setProfile(null);setRestricted(null);
+  setUnreadCount(0);setUser(null);setProfile(null);setRestricted(null);setIdentityMessage('');
  };
  const openConversation=(id:string)=>{setChatId(id);setTab('messages');};
  const canGoBack=Boolean(viewPostId||chatId||communitySlugRoute||contactsMode||tab!=='feed');
@@ -2054,7 +2067,7 @@ export default function App(){
   <StatusBar style="dark" hidden={Platform.OS==='android'&&fullscreen}/>
   {booting?<View style={{flex:1,justifyContent:'center'}}><Loading text="Preparando seu Conecta..."/></View>:
    !user?<SignIn onSignedIn={()=>void verify()}/>:
-   restricted?<Restricted status={restricted}
+   restricted?<Restricted status={restricted} message={identityMessage}
     onRetry={()=>void verify()} onLogout={()=>void logout()}/>:
    !profile?<View style={{flex:1,justifyContent:'center'}}>
     <ErrorNotice text={error||'Não foi possível carregar seu perfil.'}/>

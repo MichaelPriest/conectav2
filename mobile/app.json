@@ -3,7 +3,7 @@
     "name": "Conecta",
     "slug": "conecta-v2",
     "scheme": "conecta",
-    "version": "0.7.9",
+    "version": "0.8.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
@@ -15,7 +15,7 @@
         "NSMicrophoneUsageDescription": "O Conecta usa o microfone somente quando você grava áudio ou participa de chamadas de voz e vídeo.",
         "NSPhotoLibraryUsageDescription": "O Conecta acessa apenas fotos e vídeos que você selecionar para compartilhar."
       },
-      "buildNumber": "19"
+      "buildNumber": "20"
     },
     "android": {
       "package": "br.com.conectav2.app",
@@ -24,7 +24,7 @@
         "backgroundColor": "#8055F5"
       },
       "edgeToEdgeEnabled": true,
-      "versionCode": 19,
+      "versionCode": 20,
       "allowBackup": false,
       "usesCleartextTraffic": false,
       "blockedPermissions": [

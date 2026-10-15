@@ -4,7 +4,7 @@ import type {AgeAccess,ChatMessage,Community,Friendship,Notice,Post,PostComment,
 // All reads and writes are executed as the signed-in user under the existing
 // server RLS, anti-flood triggers, moderation gates and age protection.
 export async function verifyAccess(userId:string):Promise<{
- profile:Profile|null;status:AgeAccess
+ profile:Profile|null;status:AgeAccess;message?:string;reason?:string
 }>{
  const [profileResult,ageResult]=await Promise.all([
   supabase.from('profiles').select('id,handle,display_name,bio,avatar_path')
@@ -15,9 +15,35 @@ export async function verifyAccess(userId:string):Promise<{
  if(profileResult.error)throw profileResult.error;
  if(ageResult.error)throw ageResult.error;
  const profile=(profileResult.data||null) as Profile|null;
- if(!profile||!ageResult.data)return {profile,status:'onboarding'};
- if(ageResult.data.declared_band!=='18_plus')return {profile,status:'age-check'};
- return {profile,status:'ok'};
+ if(!profile)return {profile,status:'onboarding'};
+ if(!ageResult.data)return {profile,status:'age-check'};
+ // The server is authoritative for trusted identity, age, and guardian checks.
+ // Do not infer approval from the local declaration or a device/store signal.
+ const {data:{session},error:sessionError}=await supabase.auth.getSession();
+ if(sessionError||!session?.access_token){
+  return {profile,status:'identity-check',
+   reason:'session_required',message:'Sua sessão precisa ser confirmada antes de consultar o Conecta ID.'};
+ }
+ try{
+  const response=await fetch(API_SITE_URL+'/api/identity/access',{
+   method:'GET',
+   headers:{Authorization:'Bearer '+session.access_token,Accept:'application/json'},
+   cache:'no-store'
+  });
+  const result=await response.json() as {
+   networkAccess?:boolean;reason?:string;message?:string
+  };
+  if(response.ok&&result.networkAccess===true)return {profile,status:'ok'};
+  if(result.reason==='profile_required')return {profile,status:'onboarding',
+   reason:result.reason,message:result.message};
+  if(result.reason==='age_declaration_required')return {profile,status:'age-check',
+   reason:result.reason,message:result.message};
+  return {profile,status:'identity-check',reason:result.reason,
+   message:result.message||'O Conecta ID ainda não confirmou sua identidade e faixa etária. O acesso à rede permanece bloqueado.'};
+ }catch{
+  return {profile,status:'identity-check',reason:'verification_unavailable',
+   message:'Não foi possível consultar o Conecta ID agora. Por segurança, o acesso à rede permanece bloqueado. Tente novamente.'};
+ }
 }
 
 const signedCache=new Map<string,{url:string;expires:number}>();
