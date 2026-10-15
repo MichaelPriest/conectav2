@@ -9,7 +9,8 @@ export type TrustedAgeBand = '0_12' | '13_15' | '16_17' | '18_plus';
 export type TrustedAgeSource =
   | 'verified_platform_age_signal'
   | 'verified_age_credential'
-  | 'authorized_provider_callback';
+  | 'authorized_provider_callback'
+  | 'conecta_free_document_face';
 
 export type TrustedAgeDecision = {
   status: 'verified';
