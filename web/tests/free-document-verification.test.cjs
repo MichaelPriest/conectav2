@@ -6,7 +6,7 @@ const test=require('node:test');
 const root=path.join(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 
-test('free document verification requires consent, QR payload, OCR and server-side face matching',()=>{
+test('free document verification skips QR and internal panels for legacy RG but keeps OCR and server-side face matching',()=>{
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  const ui=read('src/components/free-document-verification.tsx');
  assert.match(ui,/Validação gratuita de identidade e rosto/);
@@ -14,6 +14,12 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(route,/form\.get\('consent'\)!=='true'/);
  assert.match(route,/form\.get\('documentBack'\)/);
  assert.match(route,/decodeQrFromImage\(back\)/);
+ assert.match(route,/if\(documentType!=='old-rg'\)/);
+ assert.doesNotMatch(route,/form\.get\(['"]rgDataSide['"]\)/);
+ assert.doesNotMatch(route,/form\.get\(['"]rgPhotoSide['"]\)/);
+ assert.match(ui,/sem exigir leitura de QR Code/);
+ assert.doesNotMatch(ui,/rgDataSide|rgPhotoSide|Parte interna atrás/);
+ assert.match(ui,/Frente e verso do documento/);
  assert.match(route,/QRCodeReader/);
  assert.match(route,/identity_free_verification_attempts/);
  assert.match(route,/MAX_REQUEST_BYTES=25\*1024\*1024/);

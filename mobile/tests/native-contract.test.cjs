@@ -9,7 +9,7 @@ const app=read('App.tsx'),data=read('src/data.ts'),config=read('src/supabase.ts'
 test('External app links target production while moderation API remains separate',()=>{
  const config=read('src/supabase.ts'),links=read('src/deep-link.ts'),data=read('src/data.ts');
  assert.match(config,/PUBLIC_SITE_URL='https:\/\/conectav2\.vercel\.app'/);
- assert.match(config,/API_SITE_URL='https:\/\/conectav2-validacao\.onrender\.com'/);
+ assert.match(config,/API_SITE_URL=PUBLIC_SITE_URL/);
  assert.match(links,/OFFICIAL_HOST='conectav2\.vercel\.app'/);
  assert.match(read('App.tsx'),/import \{API_SITE_URL,PUBLIC_SITE_URL,supabase\}/);
  assert.match(read('App.tsx'),/message:PUBLIC_SITE_URL\+'\/post\/'\+encodeURIComponent\(post\.id\)/);

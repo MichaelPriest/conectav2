@@ -6,7 +6,7 @@ import {supabaseBrowser} from '@/lib/supabase/browser';
 
 type DocumentKind='cin'|'old-rg'|'cnh';
 type Props={documentType:DocumentKind;onComplete:()=>Promise<void>|void};
-const labels:Record<DocumentKind,string>={cin:'CIN (Carteira de Identidade Nacional)', 'old-rg':'RG antigo com QR Code',cnh:'CNH com QR Code'};
+const labels:Record<DocumentKind,string>={cin:'CIN (Carteira de Identidade Nacional)', 'old-rg':'RG antigo (frente e verso)',cnh:'CNH com QR Code'};
 
 async function renderCnhPdf(file:File):Promise<{front:File;back:File}>{
   if(file.type!=='application/pdf'||file.size<1||file.size>12*1024*1024)
@@ -59,8 +59,6 @@ async function compressForUpload(file:File,maxDimension=1600):Promise<File>{
 export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [front,setFront]=useState<File|null>(null);
   const [back,setBack]=useState<File|null>(null);
-  const [rgDataSide,setRgDataSide]=useState<File|null>(null);
-  const [rgPhotoSide,setRgPhotoSide]=useState<File|null>(null);
   const [selfie,setSelfie]=useState<File|null>(null);
   const [consent,setConsent]=useState(false);
   const [busy,setBusy]=useState(false);
@@ -84,7 +82,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   useEffect(()=>()=>{streamRef.current?.getTracks().forEach(track=>track.stop());},[]);
 
   function clear(){
-    stopCamera();setFront(null);setBack(null);setRgDataSide(null);setRgPhotoSide(null);setSelfie(null);setConsent(false);
+    stopCamera();setFront(null);setBack(null);setSelfie(null);setConsent(false);
     setChallenge('');setInstructions([]);setFrameIndex(0);setFrames([]);
     setMessage('Arquivos removidos desta tela.');setError('');setCompleted(false);setStep(1);
   }
@@ -170,8 +168,8 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   },[challenge,frameIndex,captureFrame]);
 
   async function submit(){
-    if(!front||!back||(documentType==='old-rg'&&(!rgDataSide||!rgPhotoSide))||!selfie||!consent){
-      setError(documentType==='old-rg'?'Envie as quatro partes do RG antigo, a selfie e marque o consentimento.':'Envie frente, verso e selfie, e marque o consentimento.');return;
+    if(!front||!back||!selfie||!consent){
+      setError('Envie frente, verso e selfie, e marque o consentimento.');return;
     }
     if(!challenge||frames.length!==4){
       setError('Conclua os quatro quadros da captura guiada antes de enviar.');return;
@@ -179,15 +177,11 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     setBusy(true);setError('');setMessage('Preparando o envio seguro para validação…');
     try{
       const {data:{session}}=await supabaseBrowser().auth.getSession();
-      const [optimizedFront,optimizedBack,optimizedSelfie,optimizedRgDataSide,optimizedRgPhotoSide]=await Promise.all([
-        compressForUpload(front),compressForUpload(back),compressForUpload(selfie),
-        rgDataSide?compressForUpload(rgDataSide):Promise.resolve(null),
-        rgPhotoSide?compressForUpload(rgPhotoSide):Promise.resolve(null)
+      const [optimizedFront,optimizedBack,optimizedSelfie]=await Promise.all([
+        compressForUpload(front),compressForUpload(back),compressForUpload(selfie)
       ]);
       const form=new FormData();
       form.set('documentType',documentType);form.set('documentFront',optimizedFront);form.set('documentBack',optimizedBack);
-      if(optimizedRgDataSide)form.set('rgDataSide',optimizedRgDataSide);
-      if(optimizedRgPhotoSide)form.set('rgPhotoSide',optimizedRgPhotoSide);
       form.set('selfie',optimizedSelfie);form.set('consent','true');form.set('livenessChallenge',challenge);
       frames.forEach((frame,index)=>form.set('livenessFrame'+index,frame));
       setMessage('Validando documento, rosto e captura ao vivo no servidor…');
@@ -205,19 +199,19 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   }
 
   const steps=[
-    {number:1,label:'Documento',done:Boolean(front&&back&&(documentType!=='old-rg'||(rgDataSide&&rgPhotoSide)))},
+    {number:1,label:'Documento',done:Boolean(front&&back)},
     {number:2,label:'Rosto',done:Boolean(selfie)},
     {number:3,label:'Captura ao vivo',done:frames.length===4},
     {number:4,label:'Validar',done:completed}
   ];
-  const canContinue=step===1?Boolean(front&&back&&(documentType!=='old-rg'||(rgDataSide&&rgPhotoSide))):step===2?Boolean(selfie&&consent):step===3?Boolean(challenge&&frames.length===4):true;
+  const canContinue=step===1?Boolean(front&&back):step===2?Boolean(selfie&&consent):step===3?Boolean(challenge&&frames.length===4):true;
 
   return <div style={{marginTop:20}}>
     <div className="feed-title">
       <h2><ShieldCheck size={21} style={{verticalAlign:'middle'}}/> Validação gratuita de identidade e rosto</h2>
       <span className="small-note">Sem fornecedor pago</span>
     </div>
-    <p>Documento selecionado: <strong>{labels[documentType]}</strong>. O Conecta lê o QR Code, confere dados legíveis, compara o rosto do documento com a selfie e analisa a captura guiada. As imagens são processadas temporariamente e não são armazenadas. Esta validação própria não equivale à confirmação oficial do emissor.</p>
+    <p>Documento selecionado: <strong>{labels[documentType]}</strong>. Para RG antigo, o Conecta usa OCR da frente e do verso, comparação facial com a selfie e captura guiada, sem exigir leitura de QR Code. CIN e CNH continuam exigindo QR Code. As imagens são processadas temporariamente e não são armazenadas. Esta validação própria não equivale à confirmação oficial do emissor.</p>
     <div aria-label="Etapas da validação" style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:6,margin:'16px 0 20px'}}>
       {steps.map(item=><div key={item.number} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,textAlign:'center',padding:'9px 4px',borderRadius:12,border:'1px solid var(--border,#dedee7)',background:step===item.number?'var(--surface,#fff)':item.done?'var(--surface-success,rgba(34,197,94,.08))':'transparent',boxShadow:step===item.number?'0 0 0 2px var(--accent,#6d5dfc)':'none',minWidth:0}}>
         <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:28,height:28,borderRadius:99,fontWeight:700,background:item.done?'var(--success,#16a34a)':'var(--muted-surface,#f1f1f5)',color:item.done?'white':'inherit'}}>{item.done?'✓':item.number}</span>
@@ -226,7 +220,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </div>
     {step===1&&<section className="panel" aria-labelledby="identity-step-document">
       <h3 id="identity-step-document">1. Envie seu documento</h3>
-      <p className="small-note">Selecione imagens do armazenamento, tire fotos com a câmera do dispositivo ou anexe arquivos compatíveis. Para CNH, também pode selecionar o PDF digital; ele será convertido em imagens temporárias no navegador. Envie frente e verso legíveis. Para RG antigo, envie também as duas partes internas com seus QR Codes e códigos de série.</p>
+      <p className="small-note">Selecione imagens do armazenamento, tire fotos com a câmera do dispositivo ou anexe arquivos compatíveis. Para CNH, também pode selecionar o PDF digital; ele será convertido em imagens temporárias no navegador. Envie frente e verso legíveis. No RG antigo, não é necessário enviar as partes internas nem localizar QR Codes.</p>
       <div style={{display:'grid',gap:14}}>
         <label className="form-label">Frente do documento com foto
           <input type="file" capture="environment" accept={documentType==='cnh'?'image/jpeg,image/png,image/webp,application/pdf':'image/jpeg,image/png,image/webp'} disabled={busy||challengeBusy} onChange={async e=>{
@@ -238,7 +232,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
                 if(documentType!=='cnh')throw new Error('PDF é aceito somente para CNH. Para RG/CIN, envie imagens da frente e do verso.');
                 setMessage('Convertendo o PDF da CNH para imagens temporárias…');
                 const pages=await renderCnhPdf(file);setFront(pages.front);setBack(pages.back);
-                setMessage('PDF da CNH convertido. Confira se as páginas exibem todos os dados e o QR Code.');
+                setMessage('PDF da CNH convertido. Confira se as páginas exibem todos os dados e, para CNH, o QR Code.');
               }else{setFront(file);setBack(null);setMessage('');}
             }catch(err){setFront(null);setError(err instanceof Error?err.message:'Não foi possível abrir o arquivo.');setMessage('');}
           }}/>
@@ -246,22 +240,12 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         </label>
         <label className="form-label">Verso do documento
           <input type="file" capture="environment" accept="image/jpeg,image/png,image/webp" disabled={busy||challengeBusy} onChange={e=>setBack(e.target.files?.[0]||null)}/>
-          <span className="small-note">{back?back.name:'Envie o verso com todas as informações legíveis; o QR Code pode estar na frente ou no verso.'}</span>
+          <span className="small-note">{back?back.name:'Envie o verso com todas as informações legíveis. Para CIN e CNH, o QR Code deve estar na frente ou no verso; para RG antigo, não é exigido.'}</span>
         </label>
-        {documentType==='old-rg'&&<>
-          <label className="form-label">Parte interna atrás da frente — QR Code dos dados e código de série
-            <input type="file" capture="environment" accept="image/jpeg,image/png,image/webp" disabled={busy||challengeBusy} onChange={e=>setRgDataSide(e.target.files?.[0]||null)}/>
-            <span className="small-note">{rgDataSide?rgDataSide.name:'Fotografe esta parte inteira, incluindo o QR Code dos dados e o código de série.'}</span>
-          </label>
-          <label className="form-label">Parte interna atrás do verso — QR Code da foto online e código de série
-            <input type="file" capture="environment" accept="image/jpeg,image/png,image/webp" disabled={busy||challengeBusy} onChange={e=>setRgPhotoSide(e.target.files?.[0]||null)}/>
-            <span className="small-note">{rgPhotoSide?rgPhotoSide.name:'Fotografe esta parte inteira, incluindo o QR Code da foto online e o código de série.'}</span>
-          </label>
-        </>}
-      </div>
+        </div>
       <label className="human-agree" style={{marginTop:16}}>
         <input type="checkbox" checked={consent} disabled={busy||challengeBusy} onChange={e=>setConsent(e.target.checked)}/>
-        Autorizo o processamento temporário das imagens enviadas, incluindo as quatro partes do RG antigo quando aplicável, para leitura de QR, OCR, comparação facial e captura guiada. Não autorizo armazenamento nem uso para publicidade. Entendo que não há consulta automática a uma base oficial.
+        Autorizo o processamento temporário das imagens enviadas, para OCR, comparação facial e captura guiada; a leitura de QR é exigida somente para CIN e CNH. Não autorizo armazenamento nem uso para publicidade. Entendo que não há consulta automática a uma base oficial.
       </label>
     </section>}
     {step===2&&<section className="panel" aria-labelledby="identity-step-face">
@@ -293,13 +277,13 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     {step===4&&<section className="panel" aria-labelledby="identity-step-review">
       <h3 id="identity-step-review">4. Revise e validar</h3>
       <ul style={{lineHeight:1.9,paddingLeft:22}}>
-        <li>{front&&back&&(documentType!=='old-rg'||(rgDataSide&&rgPhotoSide))?'✓':'○'} {documentType==='old-rg'?'Quatro partes do RG antigo':'Frente e verso do documento'}</li>
+        <li>{front&&back?'✓':'○'} Frente e verso do documento</li>
         <li>{selfie?'✓':'○'} Selfie para comparação facial</li>
         <li>{consent?'✓':'○'} Consentimento para processamento temporário</li>
         <li>{frames.length===4?'✓':'○'} Captura guiada concluída</li>
       </ul>
       <p>Ao selecionar “Validar minha identidade”, o servidor verifica os arquivos e registra o resultado apenas quando todas as verificações obrigatórias passam. Não há aprovação simulada nem liberação por resultado inconclusivo.</p>
-      <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||challengeBusy||!front||!back||(documentType==='old-rg'&&(!rgDataSide||!rgPhotoSide))||!selfie||!consent||!challenge||frames.length!==4}>
+      <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||challengeBusy||!front||!back||!selfie||!consent||!challenge||frames.length!==4}>
         <ShieldCheck size={17}/>{busy?'Validando no servidor…':'Validar minha identidade'}</button>
     </section>}
     {step===5&&<section className="panel" aria-live="polite">
