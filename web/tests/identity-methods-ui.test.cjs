@@ -5,27 +5,28 @@ const path=require('node:path');
 const test=require('node:test');
 
 const page=fs.readFileSync(path.join(__dirname,'../src/app/verificar-identidade/page.tsx'),'utf8');
-const panel=fs.readFileSync(path.join(__dirname,'../src/components/identity-methods-panel.tsx'),'utf8');
+const upload=fs.readFileSync(path.join(__dirname,'../src/components/free-document-verification.tsx'),'utf8');
 
-test('Conecta ID shows methods and keeps the free-first distinction visible',()=>{
- assert.match(page,/IdentityMethodsPanel/);
- assert.match(panel,/Prioridade para recursos gratuitos/);
- assert.match(panel,/Gratuito/);
- assert.match(panel,/não comprova/);
- assert.match(panel,/não concede selo nem libera recursos restritos/);
+test('Conecta ID exposes one unified free document and selfie validation flow',()=>{
+ assert.match(page,/Validar minha identidade/);
+ assert.match(page,/Um único processo gratuito/);
+ assert.match(page,/FreeDocumentVerification/);
+ assert.match(page,/identity-document-type/);
+ assert.doesNotMatch(page,/IdentityMethodsPanel|GovBrSignatureFlow|HumanCameraCheck|CinQrScanner|LegacyRgScanner/);
+ assert.doesNotMatch(page,/Métodos do Conecta ID|Validação oficial gratuita da CIN/);
 });
 
-test('paid provider cannot start until exact price disclosure is explicitly ready',()=>{
- assert.match(page,/ready_with_cost_disclosure/);
- assert.match(page,/priceDisplay/);
- assert.match(page,/paidProviderReady/);
- assert.match(page,/bloqueado até haver preço real por tentativa/i);
- assert.match(panel,/Bloqueado até o preço exato por tentativa ser confirmado e exibido/);
- assert.doesNotMatch(panel,/ready_with_cost_disclosure.*?Iniciar verificação/s);
+test('document upload requires explicit consent and sends all evidence to the server',()=>{
+ assert.match(upload,/documentFront/);
+ assert.match(upload,/documentBack/);
+ assert.match(upload,/selfie/);
+ assert.match(upload,/consent/);
+ assert.match(upload,//api/identity/free-document/verify/);
+ assert.match(upload,/Não consulta uma base oficial de validade/);
 });
 
-test('no client-side preflight result can be represented as trusted identity or age approval',()=>{
- assert.match(panel,/method\.verifiesIdentity\?'verifica':'não comprova'/);
- assert.match(panel,/method\.verifiesAge\?'verifica':'não comprova'/);
- assert.match(page,/Nenhum teste local/);
+test('no local preflight can be represented as official identity or age approval',()=>{
+ assert.match(page,/não é prova de idade/);
+ assert.match(page,/não uma certificação governamental/);
+ assert.match(page,/não comprova autenticidade oficial/);
 });
