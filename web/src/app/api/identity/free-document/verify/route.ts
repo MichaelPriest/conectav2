@@ -103,10 +103,6 @@ export async function POST(request:NextRequest){
     if(!['cin','old-rg','cnh'].includes(documentType))return fail('Selecione CIN, RG antigo ou CNH.',400);
     document=await imageBuffer(form.get('documentFront'),'a frente do documento');
     back=await imageBuffer(form.get('documentBack'),'o verso do documento');
-    if(documentType==='old-rg'){
-      rgDataSide=await imageBuffer(form.get('rgDataSide'),'a parte interna do RG com QR Code dos dados e código de série');
-      rgPhotoSide=await imageBuffer(form.get('rgPhotoSide'),'a parte interna do RG com QR Code da foto online e código de série');
-    }
     selfie=await imageBuffer(form.get('selfie'),'a selfie');
     livenessChallenge=String(form.get('livenessChallenge')||'');
     if(!/^[0-9a-f]{64}$/.test(livenessChallenge))throw new Error('Inicie a captura guiada de vivacidade antes de enviar os documentos.');
@@ -124,16 +120,18 @@ export async function POST(request:NextRequest){
     if(!((challengeTurnOrder[0]==='left'&&challengeTurnOrder[1]==='right')||
          (challengeTurnOrder[0]==='right'&&challengeTurnOrder[1]==='left')))
       throw new Error('A sequência do desafio não corresponde à política ativa. Inicie novamente.');
-    // Search both sides: older RG layouts and issuer-specific documents may place
-    // the QR on the front or back. The front remains the reference photo for face match.
-    const frontQr=await decodeQrFromImage(document);
-    const backQr=await decodeQrFromImage(back);
-    const rgDataQr=rgDataSide.length?await decodeQrFromImage(rgDataSide):null;
-    const rgPhotoQr=rgPhotoSide.length?await decodeQrFromImage(rgPhotoSide):null;
-    // For legacy RG, prefer the inner data-panel QR. Serial barcodes are not treated as QR codes.
-    qr=(documentType==='old-rg'?(rgDataQr||frontQr||backQr||rgPhotoQr):(frontQr||backQr))||'';
-    if(!qr)throw new Error('Não foi possível localizar o QR Code nem na frente nem no verso. Confira as duas imagens, o foco e os reflexos e tente novamente.');
-    if(qr.length<8||qr.length>12000)throw new Error('O QR Code encontrado no documento não tem um conteúdo válido para esta verificação.');
+    // RG antigo passa por OCR da frente/verso e comparação facial; não depende dos
+    // QR Codes internos, que variam por emissão e frequentemente não são legíveis.
+    // CIN e CNH continuam exigindo QR Code na frente ou no verso.
+    if(documentType!=='old-rg'){
+      const frontQr=await decodeQrFromImage(document);
+      const backQr=await decodeQrFromImage(back);
+      qr=frontQr||backQr||'';
+      if(!qr)throw new Error('Não foi possível localizar o QR Code na frente nem no verso. Confira foco, iluminação e reflexos e tente novamente.');
+      if(qr.length<8||qr.length>12000)throw new Error('O QR Code encontrado no documento não tem um conteúdo válido para esta verificação.');
+    }else{
+      qr='';
+    }
   }catch(error){
     document.fill(0);back.fill(0);rgDataSide.fill(0);rgPhotoSide.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);qr='';
     return fail(error instanceof Error?error.message:'Não foi possível ler os arquivos enviados.',400);
@@ -150,12 +148,12 @@ export async function POST(request:NextRequest){
     worker=await createWorker('por');
     // Brazilian documents vary: the birth date may be printed on either side.
     // OCR both images and reject contradictory dates instead of guessing.
-    const documentImages=[document,back,...(rgDataSide.length?[rgDataSide]:[]),...(rgPhotoSide.length?[rgPhotoSide]:[])];
+    const documentImages=[document,back];
     const ocrResults=await Promise.all(documentImages.map(image=>worker!.recognize(image)));
     const detectedDates=ocrResults.map(result=>dobFromText(typeof result.data.text==='string'?result.data.text:'')).filter((value):value is string=>Boolean(value));
     const uniqueDates=[...new Set(detectedDates)];
     if(uniqueDates.length>1)
-      return fail('As datas de nascimento lidas nas partes do documento divergem. Confira as quatro partes do RG e tente novamente.',422);
+      return fail('As datas de nascimento lidas nas partes do documento divergem. Confira a frente e o verso do documento e tente novamente.',422);
     const dob=uniqueDates[0]||null;
     if(!dob)return fail('Não consegui ler uma única data de nascimento na frente nem no verso do documento. Melhore a iluminação e tente novamente.',422);
     const ageBand=bandForDate(dob);
@@ -170,10 +168,9 @@ export async function POST(request:NextRequest){
       qrAgeBand=cin.indicativeAgeBand||ageBandFromCin(qr);
       if(qrAgeBand&&qrAgeBand!==ageBand)
         return fail('A faixa etária lida no QR Code diverge da data no documento.',422);
-    }else{
-      // RG/CNH formats vary by issuer. The server requires a decoded QR payload,
-      // OCR-readable birth date, and matching holder face; it does not claim an
-      // official or cryptographic issuer validation for these formats.
+    }else if(documentType==='cnh'){
+      // CNH QR payload is required, but issuer formats vary and no official
+      // authenticity claim is made by this local automated check.
       const qrDob=qrDate(qr);
       if(qrDob&&qrDob!==dob)return fail('A data de nascimento do QR Code diverge da data impressa.',422);
     }
