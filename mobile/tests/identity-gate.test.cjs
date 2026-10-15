@@ -19,7 +19,7 @@ test('Mobile access is decided by the same server-side Conecta ID endpoint as we
  assert.match(data,/from\('registration_age_declarations'\)/);
  assert.doesNotMatch(data,/declared_band!=='18_plus'/);
  assert.match(models,/identity-check/);
- assert.match(config,/API_SITE_URL='https:\/\/conectav2-validacao\.onrender\.com'/);
+ assert.match(config,/API_SITE_URL=PUBLIC_SITE_URL/);
 });
 
 test('Unverified users stay in a restricted native screen and can open the validation web flow',()=>{
