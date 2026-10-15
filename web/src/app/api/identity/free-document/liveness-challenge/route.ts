@@ -7,6 +7,14 @@ export const runtime='nodejs';
 export const dynamic='force-dynamic';
 const headers={'Cache-Control':'private, no-store, max-age=0','Vary':'Cookie, Authorization'};
 
+function logDatabaseFailure(stage:'rate_limit_lookup'|'challenge_insert',error:{code?:string;message?:string;details?:string;hint?:string}){
+ // Do not log tokens, document data, challenge values, or user identifiers.
+ console.error('[identity-liveness] database operation failed',{
+  stage,code:error.code||'unknown',message:error.message||'unknown',
+  details:error.details||null,hint:error.hint||null
+ });
+}
+
 export async function POST(request:NextRequest){
  if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))
   return NextResponse.json({error:'Origem não autorizada.'},{status:403,headers});
@@ -16,7 +24,10 @@ export async function POST(request:NextRequest){
  const since=new Date(Date.now()-10*60*1000).toISOString();
  const {count,error:rateError}=await context.admin.from('identity_liveness_challenges')
   .select('id',{count:'exact',head:true}).eq('user_id',context.user.id).gte('created_at',since);
- if(rateError)return NextResponse.json({error:'O serviço de vivacidade está indisponível.'},{status:503,headers});
+ if(rateError){
+  logDatabaseFailure('rate_limit_lookup',rateError);
+  return NextResponse.json({error:'O serviço de vivacidade está indisponível. Tente novamente em alguns minutos.'},{status:503,headers});
+ }
  if((count||0)>=5)return NextResponse.json({error:'Limite de 5 desafios em 10 minutos. Aguarde antes de tentar novamente.'},{status:429,headers});
 
  const challenge=randomBytes(32).toString('hex');
@@ -27,7 +38,10 @@ export async function POST(request:NextRequest){
  const {error}=await context.admin.from('identity_liveness_challenges').insert({
   user_id:context.user.id,challenge_hash:challengeHash,turn_order:turnOrder,expires_at:expiresAt
  });
- if(error)return NextResponse.json({error:'Não foi possível iniciar o desafio de vivacidade.'},{status:503,headers});
+ if(error){
+  logDatabaseFailure('challenge_insert',error);
+  return NextResponse.json({error:'Não foi possível iniciar o desafio de vivacidade. Tente novamente em alguns minutos.'},{status:503,headers});
+ }
  return NextResponse.json({
   status:'challenge_created',challenge,turnOrder,createdAt,expiresAt,
   instructions:['Olhe para a câmera de frente.',...turnOrder.map((side:string)=>side==='left'?'Vire a cabeça para a esquerda.':'Vire a cabeça para a direita.'),'Volte a olhar para a câmera.'],
