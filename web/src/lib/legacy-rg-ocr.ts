@@ -57,6 +57,22 @@ export function extractBirthDateFromOcr(raw:string):string|null{
  }));
  if(!labels.length||!dates.length)return null;
 
+ // A date following an issue/expiry label belongs to that field, even if OCR
+ // reorders the page and prints NASCIMENTO after it. Do not relabel that date
+ // as birth date unless a birth label occurs between the two.
+ const issueFieldPattern=/(?:\\bDATA\\s*(?:DE\\s*)?EXPEDICAO\\b|\\bEXPEDICAO\\b|\\bVALIDADE\\b|\\bEMISSAO\\b)/g;
+ const issueFields:LabelCandidate[]=[...text.matchAll(issueFieldPattern)].map(match=>({
+   start:match.index||0,
+   end:(match.index||0)+match[0].length
+ }));
+ const belongsToIssueField=(date:DateCandidate)=>{
+   const prior=issueFields
+     .filter(field=>field.end<=date.start&&date.start-field.end<=140)
+     .sort((a,b)=>b.end-a.end)[0];
+   if(!prior)return false;
+   return !labels.some(label=>label.start>=prior.end&&label.end<=date.start);
+ };
+
  // These marks reliably begin other printed fields. NATURALIDADE is purposely
  // not a boundary: on some legacy RG layouts OCR emits it between the DOB
  // label and its date because it reads the columns out of order.
@@ -65,6 +81,7 @@ export function extractBirthDateFromOcr(raw:string):string|null{
  let ambiguous=false;
  for(const label of labels){
   const associated=dates.filter(date=>{
+   if(belongsToIssueField(date))return false;
    const distance=date.end<=label.start?label.start-date.end:
       date.start>=label.end?date.start-label.end:0;
    if(distance>220)return false;
