@@ -9,7 +9,7 @@ const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 test('free document verification requires consent, QR payload, OCR and server-side face matching',()=>{
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  const ui=read('src/components/free-document-verification.tsx');
- assert.match(ui,/análise é experimental/);
+ assert.match(ui,/Validação gratuita de identidade e rosto/);
  assert.match(ui,/pode permitir escolher da galeria/);
  assert.match(route,/form\.get\('consent'\)!=='true'/);
  assert.match(route,/form\.get\('documentBack'\)/);
@@ -35,14 +35,12 @@ test('free document verification requires consent, QR payload, OCR and server-si
  assert.match(ui,/Capturar esta etapa/);
  assert.match(route,/status:'approved'/);
  assert.match(route,/approved:true/);
- assert.match(route,/from\('identity_verifications'\)\.upsert/);
- assert.match(route,/from\('age_assurance_decisions'\)\.upsert/);
+ assert.match(route,/complete_conecta_free_identity_verification/);
+ assert.match(route,/complete_conecta_free_identity_verification/);
  assert.match(route,/officialIssuerVerified:false/);
- assert.match(route,/validação final continua pendente/);
+ assert.match(route,/Validação Conecta ID concluída/);
  assert.match(route,/status:'approved'/);
- assert.match(route,/from\('identity_verifications'\)\.upsert/);
- assert.match(route,/from\('age_assurance_decisions'\)\.upsert/);
- assert.match(route,/documentStored:false/);
+  assert.match(route,/documentStored:false/);
  const challenge=read('src/app/api/identity/free-document/liveness-challenge/route.ts');
  const migration=read('../supabase/migrations/20261015120000_identity_liveness_challenges.sql');
  assert.match(challenge,/randomBytes\(32\)/);
