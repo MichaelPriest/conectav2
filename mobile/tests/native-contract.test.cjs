@@ -48,7 +48,6 @@ test('Same Supabase backend and real signed-in data',()=>{
 });
 test('Age declaration and onboarding restrictions cannot be skipped by mobile views',()=>{
  assert.ok(data.includes("from('registration_age_declarations')"));
- assert.ok(data.includes("from('registration_age_declarations')"));
  assert.ok(data.includes("/api/identity/access"));
  assert.ok(data.includes("response.ok&&result.networkAccess===true"));
  assert.ok(data.includes("status:'identity-check'"));
