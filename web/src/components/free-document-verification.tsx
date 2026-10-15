@@ -146,6 +146,17 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       <span className="small-note">Sem fornecedor pago</span>
     </div>
     <p>Documento selecionado: <strong>{labels[documentType]}</strong>. O servidor verifica o QR Code, compara dados legíveis, compara o rosto do documento com a selfie e analisa quatro quadros da captura guiada. Quando todas as verificações passam, o Conecta registra a validação e somente a faixa etária. Isso não equivale à confirmação oficial do emissor. As imagens não são armazenadas.</p>
+    <div aria-label="Etapas da validação" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(125px,1fr))',gap:8,margin:'16px 0 20px'}}>
+      {[
+        {number:1,label:'Documento',done:Boolean(front&&back)},
+        {number:2,label:'Selfie',done:Boolean(selfie)},
+        {number:3,label:'Captura ao vivo',done:frames.length===4},
+        {number:4,label:'Validação',done:completed}
+      ].map(step=><div key={step.number} style={{display:'flex',alignItems:'center',gap:9,padding:'10px 12px',borderRadius:12,border:'1px solid var(--border,#dedee7)',background:step.done?'var(--surface-success,rgba(34,197,94,.08))':'var(--surface,#fff)',minHeight:48}}>
+        <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:27,height:27,borderRadius:99,fontWeight:700,flexShrink:0,background:step.done?'var(--success,#16a34a)':'var(--muted-surface,#f1f1f5)',color:step.done?'white':'inherit'}}>{step.done?'✓':step.number}</span>
+        <span style={{fontSize:13,fontWeight:600}}>{step.label}</span>
+      </div>)}
+    </div>
     <div className="form-grid" style={{display:'grid',gap:14}}>
       <label className="form-label">Frente do documento com foto
         <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy||challengeBusy} onChange={e=>setFront(e.target.files?.[0]||null)}/>
