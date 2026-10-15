@@ -20,6 +20,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [frameIndex,setFrameIndex]=useState(0);
   const [frames,setFrames]=useState<File[]>([]);
   const [message,setMessage]=useState('');
+  const [completed,setCompleted]=useState(false);
   const [error,setError]=useState('');
   const videoRef=useRef<HTMLVideoElement>(null);
   const streamRef=useRef<MediaStream|null>(null);
@@ -34,7 +35,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   function clear(){
     stopCamera();setFront(null);setBack(null);setSelfie(null);setConsent(false);
     setChallenge('');setInstructions([]);setFrameIndex(0);setFrames([]);
-    setMessage('Arquivos removidos desta tela.');setError('');
+    setMessage('Arquivos removidos desta tela.');setError('');setCompleted(false);
   }
 
   async function startGuidedCapture(){
@@ -96,7 +97,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     if(!challenge||frames.length!==4){
       setError('Conclua os quatro quadros da captura guiada antes de enviar.');return;
     }
-    setBusy(true);setError('');setMessage('Preparando o envio temporário para análise…');
+    setBusy(true);setError('');setMessage('Preparando o envio seguro para validação…');
     try{
       const {data:{session}}=await supabaseBrowser().auth.getSession();
       if(!session?.access_token)throw new Error('Sua sessão expirou. Entre novamente.');
@@ -104,26 +105,26 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       form.set('documentType',documentType);form.set('documentFront',front);form.set('documentBack',back);
       form.set('selfie',selfie);form.set('consent','true');form.set('livenessChallenge',challenge);
       frames.forEach((frame,index)=>form.set('livenessFrame'+index,frame));
-      setMessage('Analisando documento, comparação facial e sequência de movimentos no servidor…');
+      setMessage('Validando documento, rosto e captura ao vivo no servidor…');
       const response=await fetch('/api/identity/free-document/verify',{
         method:'POST',headers:{Authorization:'Bearer '+session.access_token},body:form,cache:'no-store'
       });
-      const data=await response.json() as {ok?:boolean;message?:string;error?:string};
+      const data=await response.json() as {ok?:boolean;approved?:boolean;message?:string;error?:string};
       if(!response.ok||data.ok!==true)throw new Error(data.message||data.error||'A pré-análise não foi concluída.');
-      setMessage(data.message||'Pré-análise concluída.');
+      setCompleted(data.approved===true);setMessage(data.message||'Validação concluída.');
       setFront(null);setBack(null);setSelfie(null);setFrames([]);setChallenge('');setInstructions([]);
       await onComplete();
     }catch(err){
-      setError(err instanceof Error?err.message:'Não foi possível concluir a pré-análise.');setMessage('');
+      setError(err instanceof Error?err.message:'Não foi possível concluir a validação.');setMessage('');
     }finally{stopCamera();setBusy(false);}
   }
 
   return <div style={{marginTop:20}}>
     <div className="feed-title">
-      <h2><ShieldCheck size={21} style={{verticalAlign:'middle'}}/> Pré-análise gratuita do documento + selfie</h2>
+      <h2><ShieldCheck size={21} style={{verticalAlign:'middle'}}/> Validação gratuita de identidade e rosto</h2>
       <span className="small-note">Sem fornecedor pago</span>
     </div>
-    <p>Documento selecionado: <strong>{labels[documentType]}</strong>. O servidor lê o QR Code, compara o texto do documento e os rostos, e verifica quatro quadros de um desafio aleatório de movimentos. A análise é experimental: não certifica oficialmente o documento nem garante resistência a ataques sofisticados. As imagens não são salvas no banco ou no armazenamento de arquivos.</p>
+    <p>Documento selecionado: <strong>{labels[documentType]}</strong>. O servidor verifica o QR Code, compara dados legíveis, compara o rosto do documento com a selfie e analisa quatro quadros da captura guiada. Quando todas as verificações passam, o Conecta registra a validação e somente a faixa etária. Isso não equivale à confirmação oficial do emissor. As imagens não são armazenadas.</p>
     <div className="form-grid" style={{display:'grid',gap:14}}>
       <label className="form-label">Frente do documento com foto
         <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" disabled={busy||challengeBusy} onChange={e=>setFront(e.target.files?.[0]||null)}/>
@@ -161,11 +162,11 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </section>
     <div className="row" style={{gap:10,flexWrap:'wrap',marginTop:16}}>
       <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||challengeBusy||!front||!back||!selfie||!consent||!challenge||frames.length!==4}>
-        <ShieldCheck size={17}/>{busy?'Analisando…':'Executar pré-análise'}</button>
+        <ShieldCheck size={17}/>{busy?'Analisando…':'Validar minha identidade'}</button>
       <button type="button" className="btn btn-outline" onClick={clear} disabled={busy||challengeBusy}>
         <Trash2 size={16}/> Limpar arquivos</button>
     </div>
-    {message&&<p className="small-note" role="status">{message}</p>}
+    {message&&<p className={completed?'form-success':'small-note'} role="status">{message}</p>}
     {error&&<p className="form-error" role="alert">{error}</p>}
     <p className="small-note">Mesmo se os movimentos forem reconhecidos, esta etapa não libera selo, faixa etária ou acesso automaticamente. A análise gratuita é experimental e não substitui a confirmação oficial de autenticidade do emissor. Não envie documentos de terceiros.</p>
   </div>;
