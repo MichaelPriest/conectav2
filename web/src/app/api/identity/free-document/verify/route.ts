@@ -240,7 +240,8 @@ export async function POST(request:NextRequest){
     const message=error instanceof Error?error.message:'Não foi possível ler os arquivos enviados.';
     const status=message==='O serviço de vivacidade está indisponível.'||
       message==='O controle de tentativas está indisponível. Tente novamente mais tarde.'?503:400;
-    return await failAttempt(message,status);
+    const code:VerificationFailureCode=message.includes('QR Code')?'document_qr_unreadable':'payload_invalid';
+    return await failAttempt(message,status,code);
   }
 
   let worker:Awaited<ReturnType<typeof createWorker>>|null=null;
