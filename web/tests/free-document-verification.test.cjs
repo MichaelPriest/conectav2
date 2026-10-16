@@ -25,7 +25,7 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/MAX_REQUEST_BYTES=25\*1024\*1024/);
  assert.match(route,/start_conecta_identity_verification_attempt/);
  assert.match(route,/const failAttempt=async/);
- assert.match(route,/update\(\{status:'completed'\}\)/);
+ assert.match(route,/update\(\{status:'completed',failure_code:failureCode\}\)/);
  assert.match(route,/status>=500\)await releaseAttempt\(\)/);
  assert.ok(route.indexOf("livenessFrames.push(await imageBuffer(form.get('livenessFrame'+i)") < route.indexOf('start_conecta_identity_verification_attempt'),'attempt must be reserved only after payload validation');
  const attemptMigration=read('../supabase/migrations/20261015130000_identity_attempt_outcome_tracking.sql');
@@ -63,6 +63,14 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/instance\.detect\(documentTensor\)/);
  assert.match(route,/instance\.detect\(selfieTensor\)/);
  assert.match(route,/instance\.match\.similarity/);
+ assert.match(route,/faceFocusVariance/);
+ assert.match(route,/documentFocus<4\|\|selfieFocus<4/);
+ assert.match(route,/originalSimilarity/);
+ assert.match(route,/portraitSimilarity<0\.55/);
+ assert.match(route,/firstDirection!==challengeTurnOrder\[0\]/);
+ assert.match(route,/secondDirection!==challengeTurnOrder\[1\]/);
+ assert.match(route,/liveness_sequence_invalid/);
+ assert.match(route,/failure_code:failureCode/);
  // The pinned model bundle does not contain Human's optional iris/emotion/attention/gear assets.
  // Explicitly disable them so Human never tries to run an unloaded GraphModel.
  assert.match(route,/attention:\{enabled:false\}/);
@@ -74,7 +82,8 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/selfieFace\.real/);
  assert.match(route,/consume_identity_liveness_challenge/);
  assert.match(route,/livenessFrame/);
- assert.match(route,/Math\.sign\(firstTurn\)===Math\.sign\(secondTurn\)/);
+ assert.match(route,/firstDirection!==challengeTurnOrder\[0\]/);
+ assert.match(route,/secondDirection!==challengeTurnOrder\[1\]/);
  assert.match(ui,/Iniciar captura guiada/);
  assert.match(ui,/Capturar agora/);
  assert.match(ui,/renderCnhPdf/);
