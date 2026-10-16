@@ -16,7 +16,13 @@ export const dynamic='force-dynamic';
 export const maxDuration=60;
 
 const headers={'Cache-Control':'private, no-store, max-age=0','Pragma':'no-cache'};
-const fail=(message:string,status:number)=>NextResponse.json({ok:false,message,documentStored:false},{status,headers});
+type VerificationFailureCode =
+  | 'payload_invalid' | 'document_qr_unreadable' | 'birth_date_unreadable'
+  | 'face_count_invalid' | 'face_quality_low' | 'face_match_failed'
+  | 'selfie_liveness_uncertain' | 'liveness_sequence_invalid'
+  | 'document_data_mismatch' | 'verification_failed';
+const fail=(message:string,status:number,code:VerificationFailureCode='verification_failed')=>
+  NextResponse.json({ok:false,message,code,documentStored:false},{status,headers});
 const MAX_IMAGE_BYTES=8*1024*1024;
 const MAX_REQUEST_BYTES=25*1024*1024;
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp']);
@@ -49,6 +55,31 @@ async function pixels(buffer:Buffer){
     .removeAlpha().toColourspace('srgb').raw().toBuffer({resolveWithObject:true});
   if(result.info.channels!==3)throw new Error('Não foi possível normalizar uma das imagens.');
   return {data:new Uint8Array(result.data),width:result.info.width,height:result.info.height};
+}
+async function faceFocusVariance(data:Uint8Array,width:number,height:number,box:number[]):Promise<number>{
+  const [x,y,w,h]=box;
+  const left=Math.max(0,Math.floor(x-w*0.18));
+  const top=Math.max(0,Math.floor(y-h*0.18));
+  const right=Math.min(width,Math.ceil(x+w*1.18));
+  const bottom=Math.min(height,Math.ceil(y+h*1.18));
+  if(right-left<16||bottom-top<16)return 0;
+  const gray=await sharp(Buffer.from(data),{raw:{width,height,channels:3}})
+    .extract({left,top,width:right-left,height:bottom-top})
+    .resize(128,128,{fit:'fill'}).greyscale().raw().toBuffer();
+  try{
+    // Variance of the Laplacian is a coarse focus check, not a biometric score.
+    // Keep the threshold deliberately low to avoid rejecting ordinary phone photos.
+    let sum=0,sumSquares=0,count=0;
+    for(let row=1;row<127;row++){
+      for(let col=1;col<127;col++){
+        const i=row*128+col;
+        const laplacian=gray[i-1]+gray[i+1]+gray[i-128]+gray[i+128]-4*gray[i];
+        sum+=laplacian;sumSquares+=laplacian*laplacian;count++;
+      }
+    }
+    const mean=sum/count;
+    return Math.max(0,sumSquares/count-mean*mean);
+  }finally{gray.fill(0);}
 }
 async function prepareOcrImage(buffer:Buffer):Promise<Buffer>{
   // Phone photos of older RG cards are often framed vertically while the card
@@ -111,12 +142,12 @@ export async function POST(request:NextRequest){
   const context=await identityContext(request);
   if(!context)return fail('Entre na sua conta para continuar.',401);
   let attemptId:number|null=null;
-  const completeAttempt=async()=>{
+  const completeAttempt=async(failureCode:VerificationFailureCode|null=null)=>{
     if(attemptId===null)return;
     const id=attemptId;
     try{
       const {error}=await context.admin.from('identity_free_verification_attempts')
-        .update({status:'completed'}).eq('id',id).eq('user_id',context.user.id);
+        .update({status:'completed',failure_code:failureCode}).eq('id',id).eq('user_id',context.user.id);
       if(!error)attemptId=null;
     }catch{
       // An abandoned pending reservation expires from rate-limit counting after two minutes.
@@ -133,13 +164,13 @@ export async function POST(request:NextRequest){
       // A failed release remains pending and is ignored by the rate limiter after two minutes.
     }
   };
-  const failAttempt=async(message:string,status:number)=>{
-    // Validation failures count; service/infrastructure failures do not.
+  const failAttempt=async(message:string,status:number,code:VerificationFailureCode='verification_failed')=>{
+    // Validation failures count and retain only a coarse reason code; service failures do not.
     if(attemptId!==null){
       if(status>=500)await releaseAttempt();
-      else await completeAttempt();
+      else await completeAttempt(code);
     }
-    return fail(message,status);
+    return fail(message,status,code);
   };
   const contentLength=Number(request.headers.get('content-length')||0);
   if(Number.isFinite(contentLength)&&contentLength>MAX_REQUEST_BYTES)return fail('O envio total excede o limite de 25 MB.',413);
@@ -209,7 +240,8 @@ export async function POST(request:NextRequest){
     const message=error instanceof Error?error.message:'Não foi possível ler os arquivos enviados.';
     const status=message==='O serviço de vivacidade está indisponível.'||
       message==='O controle de tentativas está indisponível. Tente novamente mais tarde.'?503:400;
-    return await failAttempt(message,status);
+    const code:VerificationFailureCode=message.includes('QR Code')?'document_qr_unreadable':'payload_invalid';
+    return await failAttempt(message,status,code);
   }
 
   let worker:Awaited<ReturnType<typeof createWorker>>|null=null;
@@ -271,9 +303,9 @@ export async function POST(request:NextRequest){
     }
     const uniqueDates=[...new Set(detectedDates)];
     if(uniqueDates.length>1)
-      return await failAttempt('As datas de nascimento lidas nas partes do documento divergem. Confira a frente e o verso do documento e tente novamente.',422);
+      return await failAttempt('As datas de nascimento lidas nas partes do documento divergem. Confira a frente e o verso do documento e tente novamente.',422,'document_data_mismatch');
     const dob=uniqueDates[0]||null;
-    if(!dob)return await failAttempt('Não consegui ler uma única data de nascimento na frente nem no verso do documento. Melhore a iluminação e tente novamente.',422);
+    if(!dob)return await failAttempt('Não consegui ler uma única data de nascimento na frente nem no verso do documento. Melhore a iluminação, aproxime o documento e evite reflexos.',422,'birth_date_unreadable');
     const ageBand=bandForDate(dob);
     if(!ageBand)return await failAttempt('A data de nascimento lida não é válida.',422);
     if(ageBand==='0_12')return await failAttempt('Esta faixa etária precisa de um fluxo de responsável específico. A validação não foi concluída.',422);
@@ -323,10 +355,21 @@ export async function POST(request:NextRequest){
     documentFaceResults=docResult as FaceResult;selfieFaceResults=selfieResult as FaceResult;
     const docFaces=docResult.face||[],selfieFaces=selfieResult.face||[];
     if(docFaces.length!==1||selfieFaces.length!==1)
-      return await failAttempt('Precisamos detectar exatamente um rosto na foto do documento e na selfie. Tente novamente com imagens nítidas.',422);
+      return await failAttempt('Precisamos detectar exatamente um rosto na foto do documento e na selfie. Tente novamente com imagens nítidas.',422,'face_count_invalid');
     const detectedDocumentFace=docFaces[0],selfieFace=selfieFaces[0];
     if(!detectedDocumentFace.embedding?.length||!selfieFace.embedding?.length)
-      return await failAttempt('Não foi possível calcular a comparação facial. Tente com uma foto mais nítida.',422);
+      return await failAttempt('Não foi possível calcular a comparação facial. Tente com uma foto mais nítida.',422,'face_quality_low');
+    const documentBox=detectedDocumentFace.box;
+    const selfieBox=selfieFace.box;
+    if(!Array.isArray(documentBox)||documentBox.length<4||!Array.isArray(selfieBox)||selfieBox.length<4||
+       documentBox[2]<28||documentBox[3]<28||selfieBox[2]<64||selfieBox[3]<64)
+      return await failAttempt('O rosto está pequeno na imagem. Aproxime o documento e enquadre a selfie de frente, com boa iluminação.',422,'face_quality_low');
+    const [documentFocus,selfieFocus]=await Promise.all([
+      faceFocusVariance(docPixels.data,docPixels.width,docPixels.height,documentBox),
+      faceFocusVariance(selfiePix.data,selfiePix.width,selfiePix.height,selfieBox)
+    ]);
+    if(documentFocus<4||selfieFocus<4)
+      return await failAttempt('A foto do documento ou a selfie está desfocada. Limpe a câmera, evite reflexos e tente novamente com mais luz.',422,'face_quality_low');
 
     // The portrait on an ID card may occupy only a small fraction of the full
     // document image. Re-detect it from a padded, enlarged crop so its embedding
@@ -363,15 +406,20 @@ export async function POST(request:NextRequest){
       const portraitFaces=portraitDetection.face||[];
       if(portraitFaces.length!==1||!portraitFaces[0].embedding?.length)
         return await failAttempt('Não foi possível extrair a foto do documento com qualidade suficiente. Enquadre o documento inteiro, com a foto nítida, e tente novamente.',422);
-      const similarity=instance.match.similarity(
-        portraitFaces[0].embedding,
-        selfieFace.embedding,
-        {order:2,multiplier:25,min:0.2,max:0.8}
+      const matchOptions={order:2,multiplier:25,min:0.2,max:0.8};
+      // Compare both the portrait embedding from the full-card detection and the
+      // enlarged portrait crop. The crop is the primary signal; the original
+      // embedding is retained as a corroborating measurement, never as a reason
+      // to lower the threshold or accept a crop that fails it.
+      const originalSimilarity=instance.match.similarity(
+        detectedDocumentFace.embedding,selfieFace.embedding,matchOptions
       );
-      // Human's documented face-recognition guidance treats scores above 0.50 as a match.
-      // Keep a margin above that baseline while avoiding the previous overly strict 0.62 cutoff.
-      if(!Number.isFinite(similarity)||similarity<0.55)
-        return await failAttempt('A comparação facial não atingiu o nível mínimo. Confira se a selfie corresponde à foto do documento.',422);
+      const portraitSimilarity=instance.match.similarity(
+        portraitFaces[0].embedding,selfieFace.embedding,matchOptions
+      );
+      // Do not lower the decision threshold without representative validation data.
+      if(!Number.isFinite(originalSimilarity)||!Number.isFinite(portraitSimilarity)||portraitSimilarity<0.55)
+        return await failAttempt('A comparação facial não atingiu o nível mínimo. Confira se a selfie corresponde à foto do documento e use imagens nítidas.',422,'face_match_failed');
     }finally{
       portraitTensor?.dispose?.();
       portraitTensorData?.fill(0);
@@ -379,7 +427,7 @@ export async function POST(request:NextRequest){
       for(const face of portraitResult?.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
     }
     if(typeof selfieFace.real!=='number'||selfieFace.real<0.55)
-      return await failAttempt('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422);
+      return await failAttempt('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422,'selfie_liveness_uncertain');
 
     // Challenge was consumed before OCR/model work; client booleans and scores are ignored.
     const livenessPixels=await Promise.all(livenessFrames.map(frame=>pixels(frame)));
@@ -403,12 +451,15 @@ export async function POST(request:NextRequest){
       const angles=yaw as number[];
       const baseline=Math.abs(angles[0]);
       const firstTurn=angles[1],secondTurn=angles[2],returned=Math.abs(angles[3]);
-      if(baseline>0.28||returned>0.28||Math.abs(firstTurn)<0.18||Math.abs(secondTurn)<0.18||Math.sign(firstTurn)===Math.sign(secondTurn))
-        return await failAttempt('Os movimentos não foram confirmados em sequência pelo servidor. Repita a captura guiada com boa iluminação e vire a cabeça para os dois lados.',422);
-      // The requested order is randomly selected and single-use. This validation
-      // checks opposite head turns, front-facing start/end, and the same account;
-      // it is not proof of presentation attack resistance or issuer authenticity.
-      // This is a liveness signal, not issuer-level document authenticity.
+      const firstDirection=firstTurn>0?'left':'right';
+      const secondDirection=secondTurn>0?'left':'right';
+      if(baseline>0.28||returned>0.28||Math.abs(firstTurn)<0.18||Math.abs(secondTurn)<0.18||
+         firstDirection!==challengeTurnOrder[0]||secondDirection!==challengeTurnOrder[1])
+        return await failAttempt('Os movimentos não seguiram a sequência solicitada. Repita a captura guiada e vire a cabeça para cada lado indicado na tela.',422,'liveness_sequence_invalid');
+      // Human reports yaw in radians. In this model's camera coordinate system,
+      // positive yaw corresponds to turning left; the randomized order is checked
+      // against the server-stored, single-use challenge. This is a liveness signal,
+      // not proof of presentation-attack resistance or issuer authenticity.
     }finally{
       for(const item of livenessTensors){item.tensor?.dispose?.();item.data?.fill(0);item.pixels?.fill(0);}
       for(const result of livenessResults)for(const face of result.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
