@@ -66,7 +66,8 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/faceFocusVariance/);
  assert.match(route,/documentFocus<4\|\|selfieFocus<4/);
  assert.match(route,/originalSimilarity/);
- assert.match(route,/portraitSimilarity<0\.55/);
+ assert.match(route,/cropSimilarity<0\\.55/);
+ assert.match(route,/selfiePortraitDetection/);
  assert.match(route,/firstDirection!==challengeTurnOrder\[0\]/);
  assert.match(route,/secondDirection!==challengeTurnOrder\[1\]/);
  assert.match(route,/liveness_sequence_invalid/);

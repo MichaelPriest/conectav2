@@ -391,40 +391,76 @@ export async function POST(request:NextRequest){
     let portraitTensor:any=null;
     let portraitTensorData:Int32Array|undefined;
     let portraitResult:FaceResult|undefined;
+    let selfiePortraitPixels:Buffer|undefined;
+    let selfiePortraitTensor:any=null;
+    let selfiePortraitTensorData:Int32Array|undefined;
+    let selfiePortraitResult:FaceResult|undefined;
     try{
+      const faceBox=detectedDocumentFace.box;
+      const selfieFaceBox=selfieBox;
+      if(!Array.isArray(faceBox)||faceBox.length<4||faceBox.some(value=>!Number.isFinite(value))||
+         !Array.isArray(selfieFaceBox)||selfieFaceBox.length<4||selfieFaceBox.some(value=>!Number.isFinite(value)))
+        return await failAttempt('Não foi possível localizar com segurança os rostos para comparar. Reposicione o documento e enquadre a selfie novamente.',422,'face_quality_low');
+      const makeCropBounds=(box:number[],width:number,height:number)=>{
+        const [x,y,w,h]=box;
+        const padX=Math.round(w*0.35),padY=Math.round(h*0.35);
+        const left=Math.max(0,Math.floor(x-padX));
+        const top=Math.max(0,Math.floor(y-padY));
+        const right=Math.min(width,Math.ceil(x+w+padX));
+        const bottom=Math.min(height,Math.ceil(y+h+padY));
+        return {left,top,width:right-left,height:bottom-top};
+      };
+      const docBounds=makeCropBounds(faceBox,docPixels.width,docPixels.height);
+      const selfieBounds=makeCropBounds(selfieFaceBox,selfiePix.width,selfiePix.height);
+      if(docBounds.width<24||docBounds.height<24||selfieBounds.width<24||selfieBounds.height<24)
+        return await failAttempt('A foto do documento ou a selfie está pequena demais para comparar. Tente imagens mais nítidas e enquadre o rosto de frente.',422,'face_quality_low');
+      // Normalize both sides the same way. A face embedding taken from a whole
+      // document/selfie can be dominated by surrounding pixels or lose detail;
+      // compare the portrait crop against a matching crop of the live selfie.
+      const cropOptions={width:512,height:512,fit:'contain' as const,background:{r:255,g:255,b:255}};
       portraitPixels=await sharp(Buffer.from(docPixels.data),{
         raw:{width:docPixels.width,height:docPixels.height,channels:3}
-      }).extract({
-        left:cropLeft,top:cropTop,width:cropRight-cropLeft,height:cropBottom-cropTop
-      }).resize({width:512,height:512,fit:'contain',background:{r:255,g:255,b:255}})
-        .raw().toBuffer();
+      }).extract(docBounds).resize(cropOptions).normalize().sharpen().raw().toBuffer();
+      selfiePortraitPixels=await sharp(Buffer.from(selfiePix.data),{
+        raw:{width:selfiePix.width,height:selfiePix.height,channels:3}
+      }).extract(selfieBounds).resize(cropOptions).normalize().sharpen().raw().toBuffer();
       const portraitData=new Uint8Array(portraitPixels);
+      const selfiePortraitData=new Uint8Array(selfiePortraitPixels);
       portraitTensorData=new Int32Array(portraitData);
+      selfiePortraitTensorData=new Int32Array(selfiePortraitData);
       portraitTensor=instance.tf.tensor4d(portraitTensorData,[1,512,512,3],'int32');
-      const portraitDetection=await instance.detect(portraitTensor) as FaceResult;
-      portraitResult=portraitDetection;
+      selfiePortraitTensor=instance.tf.tensor4d(selfiePortraitTensorData,[1,512,512,3],'int32');
+      const [portraitDetection,selfiePortraitDetection]=await Promise.all([
+        instance.detect(portraitTensor),
+        instance.detect(selfiePortraitTensor)
+      ]);
+      portraitResult=portraitDetection as FaceResult;
+      selfiePortraitResult=selfiePortraitDetection as FaceResult;
       const portraitFaces=portraitDetection.face||[];
-      if(portraitFaces.length!==1||!portraitFaces[0].embedding?.length)
-        return await failAttempt('Não foi possível extrair a foto do documento com qualidade suficiente. Enquadre o documento inteiro, com a foto nítida, e tente novamente.',422);
+      const selfiePortraitFaces=selfiePortraitDetection.face||[];
+      if(portraitFaces.length!==1||selfiePortraitFaces.length!==1||
+         !portraitFaces[0].embedding?.length||!selfiePortraitFaces[0].embedding?.length)
+        return await failAttempt('Não foi possível extrair os rostos com qualidade suficiente nas duas imagens. Enquadre o documento inteiro e tire uma selfie nítida, de frente e sem filtros.',422,'face_quality_low');
       const matchOptions={order:2,multiplier:25,min:0.2,max:0.8};
-      // Compare both the portrait embedding from the full-card detection and the
-      // enlarged portrait crop. The crop is the primary signal; the original
-      // embedding is retained as a corroborating measurement, never as a reason
-      // to lower the threshold or accept a crop that fails it.
       const originalSimilarity=instance.match.similarity(
         detectedDocumentFace.embedding,selfieFace.embedding,matchOptions
       );
-      const portraitSimilarity=instance.match.similarity(
-        portraitFaces[0].embedding,selfieFace.embedding,matchOptions
+      const cropSimilarity=instance.match.similarity(
+        portraitFaces[0].embedding,selfiePortraitFaces[0].embedding,matchOptions
       );
-      // Do not lower the decision threshold without representative validation data.
-      if(!Number.isFinite(originalSimilarity)||!Number.isFinite(portraitSimilarity)||portraitSimilarity<0.55)
+      // Keep the same decision threshold; crop-to-crop matching is more
+      // comparable because both descriptors were generated from equivalent crops.
+      if(!Number.isFinite(originalSimilarity)||!Number.isFinite(cropSimilarity)||cropSimilarity<0.55)
         return await failAttempt('A comparação facial não atingiu o nível mínimo. Confira se a selfie corresponde à foto do documento e use imagens nítidas.',422,'face_match_failed');
     }finally{
       portraitTensor?.dispose?.();
+      selfiePortraitTensor?.dispose?.();
       portraitTensorData?.fill(0);
+      selfiePortraitTensorData?.fill(0);
       portraitPixels?.fill(0);
-      for(const face of portraitResult?.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
+      selfiePortraitPixels?.fill(0);
+      for(const result of [portraitResult,selfiePortraitResult])
+        for(const face of result?.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
     }
     if(typeof selfieFace.real!=='number'||selfieFace.real<0.55)
       return await failAttempt('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422,'selfie_liveness_uncertain');
