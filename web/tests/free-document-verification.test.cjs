@@ -71,6 +71,10 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/secondDirection!==challengeTurnOrder\[1\]/);
  assert.match(route,/liveness_sequence_invalid/);
  assert.match(route,/failure_code:failureCode/);
+ const failureCodes=read('../supabase/migrations/20261015180000_identity_verification_failure_codes.sql');
+ assert.match(failureCodes,/add column if not exists failure_code text/i);
+ assert.match(failureCodes,/failure_code is null or failure_code in/i);
+ assert.match(route,/document_qr_unreadable/);
  // The pinned model bundle does not contain Human's optional iris/emotion/attention/gear assets.
  // Explicitly disable them so Human never tries to run an unloaded GraphModel.
  assert.match(route,/attention:\{enabled:false\}/);
