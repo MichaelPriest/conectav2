@@ -21,7 +21,7 @@ const MAX_IMAGE_BYTES=8*1024*1024;
 const MAX_REQUEST_BYTES=25*1024*1024;
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp']);
 
-type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;real?:number;rotation?:{angle?:{yaw?:number}};tensor?:{dispose?:()=>void}}>};
+type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;box?:number[];real?:number;rotation?:{angle?:{yaw?:number}};tensor?:{dispose?:()=>void}}>};
 async function imageBuffer(value:FormDataEntryValue|null,label:string):Promise<Buffer>{
   if(!(value instanceof File))throw new Error('Envie '+label+'.');
   if(!allowedTypes.has(value.type)||value.size<1||value.size>MAX_IMAGE_BYTES)
@@ -324,12 +324,54 @@ export async function POST(request:NextRequest){
     const docFaces=docResult.face||[],selfieFaces=selfieResult.face||[];
     if(docFaces.length!==1||selfieFaces.length!==1)
       return await failAttempt('Precisamos detectar exatamente um rosto na foto do documento e na selfie. Tente novamente com imagens nítidas.',422);
-    const docFace=docFaces[0],selfieFace=selfieFaces[0];
-    if(!docFace.embedding?.length||!selfieFace.embedding?.length)
+    const detectedDocumentFace=docFaces[0],selfieFace=selfieFaces[0];
+    if(!detectedDocumentFace.embedding?.length||!selfieFace.embedding?.length)
       return await failAttempt('Não foi possível calcular a comparação facial. Tente com uma foto mais nítida.',422);
-    const similarity=instance.match.similarity(docFace.embedding,selfieFace.embedding);
-    if(!Number.isFinite(similarity)||similarity<0.62)
-      return await failAttempt('A comparação facial não atingiu o nível mínimo. Confira se a selfie corresponde à foto do documento.',422);
+
+    // The portrait on an ID card may occupy only a small fraction of the full
+    // document image. Re-detect it from a padded, enlarged crop so its embedding
+    // is computed from portrait pixels rather than the whole card at low scale.
+    // This is a preprocessing improvement only: the same single-face and match
+    // thresholds remain in force, and no client-provided scores are trusted.
+    const faceBox=detectedDocumentFace.box;
+    if(!Array.isArray(faceBox)||faceBox.length<4||faceBox.some(value=>!Number.isFinite(value)))
+      return await failAttempt('Não foi possível localizar com segurança a foto do documento. Reposicione o documento e tente novamente.',422);
+    const [faceX,faceY,faceW,faceH]=faceBox;
+    const padX=Math.round(faceW*0.35),padY=Math.round(faceH*0.35);
+    const cropLeft=Math.max(0,Math.floor(faceX-padX));
+    const cropTop=Math.max(0,Math.floor(faceY-padY));
+    const cropRight=Math.min(docPixels.width,Math.ceil(faceX+faceW+padX));
+    const cropBottom=Math.min(docPixels.height,Math.ceil(faceY+faceH+padY));
+    if(cropRight-cropLeft<24||cropBottom-cropTop<24)
+      return await failAttempt('A foto do documento está pequena ou desfocada demais para comparar. Tente uma imagem mais nítida.',422);
+    let portraitPixels:Buffer|undefined;
+    let portraitTensor:any=null;
+    let portraitTensorData:Int32Array|undefined;
+    let portraitResult:FaceResult|undefined;
+    try{
+      portraitPixels=await sharp(Buffer.from(docPixels.data),{
+        raw:{width:docPixels.width,height:docPixels.height,channels:3}
+      }).extract({
+        left:cropLeft,top:cropTop,width:cropRight-cropLeft,height:cropBottom-cropTop
+      }).resize({width:512,height:512,fit:'contain',background:{r:255,g:255,b:255}})
+        .raw().toBuffer();
+      const portraitData=new Uint8Array(portraitPixels);
+      portraitTensorData=new Int32Array(portraitData);
+      portraitTensor=instance.tf.tensor4d(portraitTensorData,[1,512,512,3],'int32');
+      const portraitDetection=await instance.detect(portraitTensor) as FaceResult;
+      portraitResult=portraitDetection;
+      const portraitFaces=portraitDetection.face||[];
+      if(portraitFaces.length!==1||!portraitFaces[0].embedding?.length)
+        return await failAttempt('Não foi possível extrair a foto do documento com qualidade suficiente. Enquadre o documento inteiro, com a foto nítida, e tente novamente.',422);
+      const similarity=instance.match.similarity(portraitFaces[0].embedding,selfieFace.embedding);
+      if(!Number.isFinite(similarity)||similarity<0.62)
+        return await failAttempt('A comparação facial não atingiu o nível mínimo. Confira se a selfie corresponde à foto do documento.',422);
+    }finally{
+      portraitTensor?.dispose?.();
+      portraitTensorData?.fill(0);
+      portraitPixels?.fill(0);
+      for(const face of portraitResult?.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
+    }
     if(typeof selfieFace.real!=='number'||selfieFace.real<0.55)
       return await failAttempt('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422);
 
