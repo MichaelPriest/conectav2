@@ -363,8 +363,14 @@ export async function POST(request:NextRequest){
       const portraitFaces=portraitDetection.face||[];
       if(portraitFaces.length!==1||!portraitFaces[0].embedding?.length)
         return await failAttempt('Não foi possível extrair a foto do documento com qualidade suficiente. Enquadre o documento inteiro, com a foto nítida, e tente novamente.',422);
-      const similarity=instance.match.similarity(portraitFaces[0].embedding,selfieFace.embedding);
-      if(!Number.isFinite(similarity)||similarity<0.62)
+      const similarity=instance.match.similarity(
+        portraitFaces[0].embedding,
+        selfieFace.embedding,
+        {order:2,multiplier:25,min:0.2,max:0.8}
+      );
+      // Human's documented face-recognition guidance treats scores above 0.50 as a match.
+      // Keep a margin above that baseline while avoiding the previous overly strict 0.62 cutoff.
+      if(!Number.isFinite(similarity)||similarity<0.55)
         return await failAttempt('A comparação facial não atingiu o nível mínimo. Confira se a selfie corresponde à foto do documento.',422);
     }finally{
       portraitTensor?.dispose?.();
