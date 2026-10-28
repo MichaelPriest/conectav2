@@ -1,6 +1,6 @@
 import {createHash,randomBytes} from 'node:crypto';
 import {NextRequest,NextResponse} from 'next/server';
-import {identityContext} from '@/lib/identity-server';
+import {identityContext,runtimeConfig} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 
 export const runtime='nodejs';
@@ -10,6 +10,8 @@ const headers={'Cache-Control':'private, no-store, max-age=0','Vary':'Cookie, Au
 export async function POST(request:NextRequest){
  if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))
   return NextResponse.json({error:'Origem não autorizada.'},{status:403,headers});
+ if(!runtimeConfig.supabaseUrl||!runtimeConfig.publicKey||!runtimeConfig.serviceKey)
+  return NextResponse.json({error:'O serviço Conecta ID não está configurado no servidor.'},{status:503,headers});
  const context=await identityContext(request);
  if(!context)return NextResponse.json({error:'Entre na sua conta para continuar.'},{status:401,headers});
 

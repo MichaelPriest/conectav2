@@ -6,6 +6,39 @@ import {supabaseBrowser} from '@/lib/supabase/browser';
 
 type DocumentKind='cin'|'old-rg'|'cnh';
 type Props={documentType:DocumentKind;onComplete:()=>Promise<void>|void};
+type FacePoint={x:number;y:number;z:number};
+type LocalFaceLandmarker={
+ detect:(video:HTMLVideoElement)=>{faceLandmarks?:FacePoint[][]};
+ close:()=>void;
+};
+type LocalMediaPipe={
+ FaceLandmarker:{createFromOptions:(vision:unknown,options:Record<string,unknown>)=>Promise<LocalFaceLandmarker>};
+ FilesetResolver:{forVisionTasks:(path:string)=>Promise<unknown>};
+};
+declare global{interface Window{ConectaMediaPipe?:LocalMediaPipe;}}
+let mediaPipeLoader:Promise<LocalMediaPipe>|null=null;
+function loadLocalMediaPipe():Promise<LocalMediaPipe>{
+ if(window.ConectaMediaPipe)return Promise.resolve(window.ConectaMediaPipe);
+ if(!mediaPipeLoader){
+  mediaPipeLoader=new Promise<LocalMediaPipe>((resolve,reject)=>{
+   const script=document.createElement('script');
+   script.type='module';script.src='/vendor/mediapipe/identity-guide.mjs';
+   script.referrerPolicy='no-referrer';script.dataset.conectaMediaPipe='true';
+   script.onload=()=>{
+    if(window.ConectaMediaPipe)resolve(window.ConectaMediaPipe);
+    else reject(new Error('O MediaPipe não foi inicializado.'));
+   };
+   script.onerror=()=>reject(new Error('O MediaPipe local está indisponível.'));
+   document.head.appendChild(script);
+  }).catch(error=>{
+   mediaPipeLoader=null;
+   document.querySelector('script[data-conecta-media-pipe]')?.remove();
+   throw error;
+  });
+ }
+ return mediaPipeLoader;
+}
+
 const labels:Record<DocumentKind,string>={cin:'CIN (Carteira de Identidade Nacional)', 'old-rg':'RG antigo (frente e verso)',cnh:'CNH com QR Code'};
 
 async function renderCnhPdf(file:File):Promise<{front:File;back:File}>{
@@ -49,7 +82,9 @@ async function readJsonResponse<T>(response:Response):Promise<T>{
   }
 }
 
-async function compressForUpload(file:File,maxDimension=1600):Promise<File>{
+const MAX_IDENTITY_REQUEST_BYTES=4_000_000; // Vercel Function request-body limit is 4.5 MB including multipart overhead.
+
+async function compressForUpload(file:File,maxDimension=1600,quality=0.86):Promise<File>{
   const bitmap=await createImageBitmap(file);
   try{
     const scale=Math.min(1,maxDimension/Math.max(bitmap.width,bitmap.height));
@@ -61,7 +96,7 @@ async function compressForUpload(file:File,maxDimension=1600):Promise<File>{
     context.drawImage(bitmap,0,0,canvas.width,canvas.height);
     const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(
       value=>value?resolve(value):reject(new Error('Não foi possível comprimir uma imagem.')),
-      'image/jpeg',0.86
+      'image/jpeg',quality
     ));
     return new File([blob],file.name.replace(/\.[^.]+$/,'')+'-otimizada.jpg',{type:'image/jpeg',lastModified:Date.now()});
   }finally{bitmap.close();}
@@ -75,6 +110,10 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [busy,setBusy]=useState(false);
   const [challengeBusy,setChallengeBusy]=useState(false);
   const [challenge,setChallenge]=useState('');
+  const [challengeExpiresAt,setChallengeExpiresAt]=useState(0);
+  const [secondsRemaining,setSecondsRemaining]=useState(0);
+  const [captureBusy,setCaptureBusy]=useState(false);
+  const [mediaPipeStatus,setMediaPipeStatus]=useState<'loading'|'active'|'fallback'>('loading');
   const [instructions,setInstructions]=useState<string[]>([]);
   const [frameIndex,setFrameIndex]=useState(0);
   const [frames,setFrames]=useState<File[]>([]);
@@ -84,19 +123,47 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [error,setError]=useState('');
   const videoRef=useRef<HTMLVideoElement>(null);
   const streamRef=useRef<MediaStream|null>(null);
+  const mediaPipeRef=useRef<LocalFaceLandmarker|null>(null);
+  const captureBusyRef=useRef(false);
+  const cameraSessionRef=useRef(0);
 
   function stopCamera(){
+    cameraSessionRef.current++;
+    mediaPipeRef.current?.close();mediaPipeRef.current=null;
     streamRef.current?.getTracks().forEach(track=>track.stop());
     streamRef.current=null;
     if(videoRef.current){videoRef.current.pause();videoRef.current.srcObject=null;}
   }
-  useEffect(()=>()=>{streamRef.current?.getTracks().forEach(track=>track.stop());},[]);
+  useEffect(()=>()=>{mediaPipeRef.current?.close();streamRef.current?.getTracks().forEach(track=>track.stop());},[]);
 
   function clear(){
     stopCamera();setFront(null);setBack(null);setSelfie(null);setConsent(false);
-    setChallenge('');setInstructions([]);setFrameIndex(0);setFrames([]);
+    setChallenge('');setChallengeExpiresAt(0);setSecondsRemaining(0);
+    setInstructions([]);setFrameIndex(0);setFrames([]);
     setMessage('Arquivos removidos desta tela.');setError('');setCompleted(false);setStep(1);
   }
+
+  // Server challenges are single-use and expire after 90s. Track the remaining
+  // capture window locally; expiration never changes the server's verdict.
+  useEffect(()=>{
+    if(!challenge||!challengeExpiresAt)return;
+    const tick=()=>{
+      // The server may still be processing an already-submitted valid request.
+      if(busy)return;
+      const seconds=Math.max(0,Math.ceil((challengeExpiresAt-Date.now())/1000));
+      setSecondsRemaining(seconds);
+      if(seconds===0){
+        stopCamera();
+        setChallenge('');setChallengeExpiresAt(0);
+        setInstructions([]);setFrameIndex(0);setFrames([]);
+        setError('O desafio de 90 segundos expirou. Inicie uma nova captura ao vivo.');
+        setMessage('');
+      }
+    };
+    tick();
+    const timer=window.setInterval(tick,1000);
+    return ()=>window.clearInterval(timer);
+  },[challenge,challengeExpiresAt,busy]);
 
   async function startGuidedCapture(){
     if(challengeBusy||busy)return;
@@ -126,6 +193,23 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       const video=videoRef.current;
       if(!video)throw new Error('Prévia da câmera indisponível.');
       video.srcObject=stream;await video.play();
+      setMediaPipeStatus('loading');
+      try{
+        const mp=await loadLocalMediaPipe();
+        const vision=await mp.FilesetResolver.forVisionTasks('/vendor/mediapipe/wasm');
+        mediaPipeRef.current=await mp.FaceLandmarker.createFromOptions(vision,{
+          baseOptions:{modelAssetPath:'/vendor/mediapipe/face_landmarker.task',delegate:'CPU'},
+          runningMode:'IMAGE',
+          numFaces:2,
+          minFaceDetectionConfidence:0.5,
+          minFacePresenceConfidence:0.5
+        });
+        setMediaPipeStatus('active');
+      }catch{
+        // Client-side MediaPipe guides image quality; it never grants identity.
+        // If this optional check fails, server-side Human still gates approval.
+        setMediaPipeStatus('fallback');
+      }
       const requestChallenge=(accessToken:string)=>fetch('/api/identity/free-document/liveness-challenge',{
         method:'POST',headers:{Authorization:'Bearer '+accessToken},
         credentials:'same-origin',cache:'no-store'
@@ -136,13 +220,19 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         if(refreshed.data.session?.access_token)
           response=await requestChallenge(refreshed.data.session.access_token);
       }
-      const data=await readJsonResponse<{challenge?:string;instructions?:string[];error?:string}>(response);
+      const data=await readJsonResponse<{challenge?:string;instructions?:string[];error?:string;createdAt?:number;expiresAt?:string}>(response);
       if(!response.ok||!data.challenge||!Array.isArray(data.instructions)||data.instructions.length!==4)
         throw new Error(data.error||(response.status===401?'Sua sessão não foi reconhecida pelo servidor. Saia da conta, entre novamente e tente outra vez.':'Não foi possível iniciar o desafio guiado.'));
+      const validFor=Date.parse(data.expiresAt||'')-Number(data.createdAt);
+      if(!Number.isFinite(validFor)||validFor<15000||validFor>90000)
+        throw new Error('O desafio de câmera chegou com validade inválida. Reinicie a captura.');
+      // Use server-provided TTL rather than comparing clocks from different devices.
+      const expiresAt=Date.now()+validFor-3000;
+      setChallengeExpiresAt(expiresAt);setSecondsRemaining(Math.ceil((expiresAt-Date.now())/1000));
       setChallenge(data.challenge);setInstructions(data.instructions);setFrames([]);setFrameIndex(0);
       setMessage('Câmera ativa. Siga cada instrução e capture um quadro por etapa.');
     }catch(err){
-      stopCamera();setChallenge('');setInstructions([]);
+      stopCamera();setChallenge('');setChallengeExpiresAt(0);setSecondsRemaining(0);setInstructions([]);
       setError(err instanceof Error?err.message:'Não foi possível iniciar a captura guiada.');
       setMessage('');
     }finally{setChallengeBusy(false);}
@@ -150,9 +240,39 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
 
   const captureFrame=useCallback(async()=>{
     const video=videoRef.current;
-    if(!video||!challenge||!video.videoWidth||!video.videoHeight||frameIndex>=4)return;
-    setError('');
+    if(!video||!challenge||!video.videoWidth||!video.videoHeight||frameIndex>=4||
+       challengeExpiresAt<=Date.now()||captureBusyRef.current)return;
+    captureBusyRef.current=true;
+    setCaptureBusy(true);setError('');
+    const sessionId=cameraSessionRef.current;
     try{
+      if(mediaPipeRef.current){
+        const result=mediaPipeRef.current.detect(video);
+        const faces=result.faceLandmarks||[];
+        if(faces.length!==1)throw new Error(
+          faces.length>1?'Mantenha apenas uma pessoa na câmera.':'Posicione o rosto inteiro no centro da câmera.'
+        );
+        const landmarks=faces[0];
+        const bounds=landmarks.reduce((v,p)=>({
+          minX:Math.min(v.minX,p.x),maxX:Math.max(v.maxX,p.x),
+          minY:Math.min(v.minY,p.y),maxY:Math.max(v.maxY,p.y)
+        }),{minX:1,maxX:0,minY:1,maxY:0});
+        if(bounds.maxX-bounds.minX<0.21||bounds.maxY-bounds.minY<0.23||
+           bounds.minX<0.01||bounds.maxX>0.99||bounds.minY<0.01||bounds.maxY>0.99)
+          throw new Error('Aproxime o rosto, mantenha-o inteiro na imagem e evite cortes nas bordas.');
+        // Device-only head-position guidance; definitive challenge validation
+        // runs on the server using Human's independent yaw/anti-spoof signals.
+        const eyeA=landmarks[33],eyeB=landmarks[263],nose=landmarks[1];
+        if(eyeA&&eyeB&&nose){
+          const eyeDistance=Math.abs(eyeA.x-eyeB.x);
+          if(eyeDistance<0.05)throw new Error('Olhe para a câmera com o rosto mais visível.');
+          const turn=Math.abs((nose.x-(eyeA.x+eyeB.x)/2)/eyeDistance);
+          if((frameIndex===0||frameIndex===3)&&turn>0.31)
+            throw new Error('Olhe diretamente para a câmera nesta etapa.');
+          if((frameIndex===1||frameIndex===2)&&turn<0.07)
+            throw new Error('Vire um pouco mais a cabeça para o lado indicado, sem mover o celular.');
+        }
+      }
       const canvas=document.createElement('canvas');
       canvas.width=video.videoWidth;canvas.height=video.videoHeight;
       const context=canvas.getContext('2d');
@@ -162,20 +282,22 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         value=>value?resolve(value):reject(new Error('Falha ao capturar imagem da câmera.')),
         'image/jpeg',0.88
       ));
+      if(sessionId!==cameraSessionRef.current||challengeExpiresAt<=Date.now())return;
       const file=new File([blob],'liveness-'+frameIndex+'.jpg',{type:'image/jpeg'});
       setFrames(previous=>[...previous,file]);
       setFrameIndex(previous=>previous+1);
       setMessage(frameIndex===3?'Captura guiada concluída. Envie os documentos para validação no servidor.':'Quadro capturado. Continue seguindo a próxima instrução.');
       if(frameIndex===3)stopCamera();
     }catch(err){setError(err instanceof Error?err.message:'Falha na captura.');}
-  },[challenge,frameIndex]);
+    finally{captureBusyRef.current=false;setCaptureBusy(false);}
+  },[challenge,challengeExpiresAt,frameIndex]);
 
   // Capture each guided liveness step automatically, with a manual fallback.
   useEffect(()=>{
     if(!challenge||frameIndex>=4||!streamRef.current)return;
     setMessage('Siga a instrução na tela. A captura desta etapa será feita automaticamente em 5 segundos; você também pode capturar antes.');
-    const timer=window.setTimeout(()=>{void captureFrame();},5000);
-    return ()=>window.clearTimeout(timer);
+    const timer=window.setInterval(()=>{void captureFrame();},5000);
+    return ()=>window.clearInterval(timer);
   },[challenge,frameIndex,captureFrame]);
 
   async function submit(){
@@ -185,27 +307,63 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     if(!challenge||frames.length!==4){
       setError('Conclua os quatro quadros da captura guiada antes de enviar.');return;
     }
+    if(challengeExpiresAt<=Date.now()+5000){
+      stopCamera();setChallenge('');setChallengeExpiresAt(0);
+      setInstructions([]);setFrameIndex(0);setFrames([]);setStep(3);
+      setError('O desafio expirou ou está próximo de expirar. Refaça a captura ao vivo antes de validar.');return;
+    }
     setBusy(true);setError('');setMessage('Preparando o envio seguro para validação…');
     try{
-      const {data:{session}}=await supabaseBrowser().auth.getSession();
-      const [optimizedFront,optimizedBack,optimizedSelfie]=await Promise.all([
-        compressForUpload(front),compressForUpload(back),compressForUpload(selfie)
-      ]);
+      const auth=supabaseBrowser();
+      let {data:{session}}=await auth.auth.getSession();
+      if(!session?.access_token){
+        const refreshed=await auth.auth.refreshSession();
+        session=refreshed.data.session;
+      }
+      if(!session?.access_token)throw new Error('Sua sessão expirou. Entre novamente antes de validar a identidade.');
+      // Keep uploads below Vercel's 4.5 MB body limit without storing images.
+      // Retain full document detail when possible for OCR, and reduce JPEG
+      // quality before reducing resolution.
+      const originals=[front,back,selfie];
+      const frameBytes=frames.reduce((total,frame)=>total+frame.size,0);
+      let images:File[]=[];
+      for(const [size,quality] of [[1600,0.86],[1600,0.76],[1400,0.78],[1200,0.74]]){
+        images=await Promise.all(originals.map(file=>compressForUpload(file,size,quality)));
+        const estimatedBytes=images.reduce((total,file)=>total+file.size,frameBytes)+32_768;
+        if(estimatedBytes<=MAX_IDENTITY_REQUEST_BYTES)break;
+      }
+      if(images.reduce((total,file)=>total+file.size,frameBytes)+32_768>MAX_IDENTITY_REQUEST_BYTES)
+        throw new Error('As fotos ultrapassam o limite de envio seguro (4 MB). Use imagens mais leves, bem enquadradas e nítidas, e tente novamente.');
+      const [optimizedFront,optimizedBack,optimizedSelfie]=images;
       const form=new FormData();
       form.set('documentType',documentType);form.set('documentFront',optimizedFront);form.set('documentBack',optimizedBack);
       form.set('selfie',optimizedSelfie);form.set('consent','true');form.set('livenessChallenge',challenge);
       frames.forEach((frame,index)=>form.set('livenessFrame'+index,frame));
       setMessage('Validando documento, rosto e captura ao vivo no servidor…');
-      const response=await fetch('/api/identity/free-document/verify',{
-        method:'POST',headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},credentials:'same-origin',body:form,cache:'no-store'
+      const requestVerification=(accessToken:string)=>fetch('/api/identity/free-document/verify',{
+        method:'POST',headers:{Authorization:'Bearer '+accessToken},credentials:'same-origin',body:form,cache:'no-store'
       });
-      const data=await readJsonResponse<{ok?:boolean;approved?:boolean;message?:string;error?:string}>(response);
-      if(!response.ok||data.ok!==true)throw new Error(data.message||data.error||'A validação não foi concluída.');
+      let response=await requestVerification(session.access_token);
+      if(response.status===401){
+        const refreshed=await auth.auth.refreshSession();
+        if(refreshed.data.session?.access_token)
+          response=await requestVerification(refreshed.data.session.access_token);
+      }
+      const data=await readJsonResponse<{ok?:boolean;approved?:boolean;message?:string;error?:string;code?:string}>(response);
+      if(!response.ok||data.ok!==true){
+        const message=data.message||data.error||'A validação não foi concluída.';
+        throw new Error(data.code?message+' (código: '+data.code+')':message);
+      }
       setCompleted(data.approved===true);setStep(5);setMessage(data.message||'Validação concluída.');
-      setFront(null);setBack(null);setSelfie(null);setFrames([]);setChallenge('');setInstructions([]);
+      setFront(null);setBack(null);setSelfie(null);setFrames([]);setChallenge('');setChallengeExpiresAt(0);setInstructions([]);
       await onComplete();
     }catch(err){
-      setError(err instanceof Error?err.message:'Não foi possível concluir a validação.');setMessage('');
+      // The server consumes a challenge on the first well-formed submission.
+      // Never silently re-send the same liveness frames after a failed attempt.
+      setChallenge('');setInstructions([]);setFrameIndex(0);setFrames([]);setStep(3);
+      setChallengeExpiresAt(0);setSecondsRemaining(0);
+      setError((err instanceof Error?err.message:'Não foi possível concluir a validação.')+
+        ' Para uma nova tentativa, inicie outra captura guiada.');setMessage('');
     }finally{stopCamera();setBusy(false);}
   }
 
@@ -215,7 +373,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     {number:3,label:'Captura ao vivo',done:frames.length===4},
     {number:4,label:'Validar',done:completed}
   ];
-  const canContinue=step===1?Boolean(front&&back):step===2?Boolean(selfie&&consent):step===3?Boolean(challenge&&frames.length===4):true;
+  const canContinue=step===1?Boolean(front&&back):step===2?Boolean(selfie&&consent):step===3?Boolean(challenge&&frames.length===4&&secondsRemaining>5):true;
 
   return <div style={{marginTop:20}}>
     <div className="feed-title">
@@ -270,7 +428,12 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </section>}
     {step===3&&<section className="panel" aria-labelledby="identity-step-live">
       <h3 id="identity-step-live">3. Confirme que está presente</h3>
-      <p className="small-note">Permita o acesso à câmera. O sistema orienta cada etapa e captura automaticamente quatro quadros após cinco segundos, com opção de capturar antes. As instruções aleatórias são válidas por 90 segundos.</p>
+      <p className="small-note">Permita o acesso à câmera. Siga as quatro etapas com boa iluminação, sem filtros e com apenas uma pessoa na imagem. A captura é automática após cinco segundos em cada etapa, mas você pode antecipá-la. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
+      {challenge&&<p className="small-note" role="status">{mediaPipeStatus==='active'?
+        'MediaPipe ativo: enquadramento e posição do rosto são conferidos no aparelho. O Human valida no servidor.':
+        mediaPipeStatus==='fallback'?'Orientação MediaPipe indisponível neste dispositivo. A validação obrigatória pelo Human permanece ativa.':
+        'Inicializando análise de posição facial…'}</p>}
+      {challenge&&<p role="timer" aria-live="off" className="small-note"><strong>Tempo restante: {secondsRemaining}s</strong>. Envie a validação antes de terminar o prazo de 90 segundos.</p>}
       <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
         style={{display:challenge?'block':'none',width:'100%',maxWidth:420,aspectRatio:'4 / 3',objectFit:'cover',transform:'scaleX(-1)',borderRadius:12,background:'#111'}}/>
       {!challenge?<button type="button" className="btn btn-outline" onClick={()=>void startGuidedCapture()} disabled={busy||challengeBusy}>
@@ -279,9 +442,9 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
           <p><strong>Etapa {Math.min(frameIndex+1,4)} de 4:</strong> {instructions[frameIndex]||'Captura concluída.'}</p>
           <progress value={frames.length} max={4} aria-label="Quadros capturados" style={{width:'100%',height:10,accentColor:'var(--accent,#6d5dfc)'}}/>
           <p className="small-note">Quadros capturados: {frames.length}/4</p>
-          {frameIndex<4&&<button type="button" className="btn btn-outline" onClick={()=>void captureFrame()} disabled={busy}>
+          {frameIndex<4&&<button type="button" className="btn btn-outline" onClick={()=>void captureFrame()} disabled={busy||captureBusy||secondsRemaining===0}>
             <Camera size={17}/> Capturar agora</button>}
-          <button type="button" className="btn btn-outline" style={{marginLeft:8}} onClick={()=>{stopCamera();setChallenge('');setInstructions([]);setFrames([]);setFrameIndex(0);setMessage('Captura cancelada.');}} disabled={busy}>
+          <button type="button" className="btn btn-outline" style={{marginLeft:8}} onClick={()=>{stopCamera();setChallenge('');setChallengeExpiresAt(0);setInstructions([]);setFrames([]);setFrameIndex(0);setMessage('Captura cancelada.');}} disabled={busy}>
             <CameraOff size={17}/> Reiniciar captura</button>
         </div>}
     </section>}
@@ -294,7 +457,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         <li>{frames.length===4?'✓':'○'} Captura guiada concluída</li>
       </ul>
       <p>Ao selecionar “Validar minha identidade”, o servidor verifica os arquivos e registra o resultado apenas quando todas as verificações obrigatórias passam. Não há aprovação simulada nem liberação por resultado inconclusivo.</p>
-      <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||challengeBusy||!front||!back||!selfie||!consent||!challenge||frames.length!==4}>
+      <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||challengeBusy||!front||!back||!selfie||!consent||!challenge||frames.length!==4||secondsRemaining<=5}>
         <ShieldCheck size={17}/>{busy?'Validando no servidor…':'Validar minha identidade'}</button>
     </section>}
     {step===5&&<section className="panel" aria-live="polite">
@@ -303,7 +466,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       <button type="button" className="btn btn-outline" onClick={clear}><Trash2 size={16}/> Iniciar novamente</button>
     </section>}
     {step<4&&<div className="row" style={{gap:10,flexWrap:'wrap',marginTop:16}}>
-      {step>1&&<button type="button" className="btn btn-outline" onClick={()=>{if(step===3){stopCamera();setChallenge('');setInstructions([]);setFrames([]);setFrameIndex(0);}setStep(step-1);}} disabled={busy||challengeBusy}>Voltar</button>}
+      {step>1&&<button type="button" className="btn btn-outline" onClick={()=>{if(step===3){stopCamera();setChallenge('');setChallengeExpiresAt(0);setInstructions([]);setFrames([]);setFrameIndex(0);}setStep(step-1);}} disabled={busy||challengeBusy}>Voltar</button>}
       <button type="button" className="btn btn-primary" onClick={()=>{setError('');setStep(step+1);}} disabled={!canContinue||busy||challengeBusy}>
         Continuar <span aria-hidden="true">→</span>
       </button>

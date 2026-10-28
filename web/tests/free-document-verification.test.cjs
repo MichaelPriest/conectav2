@@ -47,12 +47,13 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/user_defined_dpi:'300'/);
  assert.match(route,/for\(const image of ocrImages\)image\.fill\(0\)/);
  assert.match(route,/workerPath:path\.join\(process\.cwd\(\),'node_modules','tesseract\.js','src','worker-script','node','index\.js'\)/);
+ assert.doesNotMatch(route,/PaddleOCR|recognizeWithPaddleOcr/i);
  assert.match(route,/dobFromText/);
  assert.match(route,/ocrImages\.push\(await prepareOcrImage\(document\)\)/);
  assert.match(route,/ocrImages\.push\(await prepareOcrImage\(back\)\)/);
  assert.match(route,/ocrImages\.map\(image=>worker!\.recognize\(image\)\)/);
  assert.match(route,/const parseDates=\(results:typeof ocrResults\)/);
- assert.match(route,/let detectedDates=parseDates\(ocrResults\)/);
+ assert.match(route,/detectedDates=parseDates\(ocrResults\)/);
  assert.match(route,/if\(detectedDates\.length===0\)/);
  assert.match(route,/fallbackResults=await Promise\.all\(ocrImages\.map/);
  assert.match(route,/const reversedImages:Buffer\[\]=\[\]/);
@@ -66,7 +67,7 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/faceFocusVariance/);
  assert.match(route,/documentFocus<4\|\|selfieFocus<4/);
  assert.match(route,/originalSimilarity/);
- assert.match(route,/cropSimilarity<0\\.55/);
+ assert.match(route,/cropSimilarity<0\.55/);
  assert.match(route,/selfiePortraitDetection/);
  assert.match(route,/firstDirection!==challengeTurnOrder\[0\]/);
  assert.match(route,/secondDirection!==challengeTurnOrder\[1\]/);
@@ -82,8 +83,8 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/iris:\{enabled:false\}/);
  assert.match(route,/emotion:\{enabled:false\}/);
  assert.match(route,/gear:\{enabled:false\}/);
- assert.match(route,/antispoof:\{enabled:true\}/);
- assert.match(route,/liveness:\{enabled:true\}/);
+ assert.match(route,/antispoof:\{enabled:true,skipFrames:0,skipTime:0\}/);
+ assert.match(route,/liveness:\{enabled:true,skipFrames:0,skipTime:0\}/);
  assert.match(route,/selfieFace\.real/);
  assert.match(route,/consume_identity_liveness_challenge/);
  assert.match(route,/livenessFrame/);
@@ -119,6 +120,67 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(migration,/enable row level security/i);
  assert.match(migration,/consume_identity_liveness_challenge/);
  assert.match(migration,/consumed_at is null/);
+});
+
+test('failed identity submissions require a fresh one-use liveness challenge and report a cause',()=>{
+ const route=read('src/app/api/identity/free-document/verify/route.ts');
+ const challenge=read('src/app/api/identity/free-document/liveness-challenge/route.ts');
+ const ui=read('src/components/free-document-verification.tsx');
+ assert.match(route,/!runtimeConfig\.serviceKey/);
+ assert.match(challenge,/!runtimeConfig\.serviceKey/);
+ assert.match(ui,/setChallenge\(''\);setInstructions\(\[\]\);setFrameIndex\(0\);setFrames\(\[\]\);setStep\(3\)/);
+ assert.match(ui,/data\.code/);
+ assert.match(ui,/MAX_IDENTITY_REQUEST_BYTES=4_000_000/);
+ assert.match(ui,/images\.reduce/);
+ assert.match(route,/maxDuration=300/);
+ assert.match(ui,/response\.status===401/);
+});
+
+test('Human server analyses independent images sequentially without reusing video frame caches',()=>{
+ const route=read('src/app/api/identity/free-document/verify/route.ts');
+ assert.match(route,/cacheSensitivity:0/);
+ assert.match(route,/skipAllowed:false/);
+ assert.match(route,/detector:\{rotation:true,return:false,maxDetected:4,skipFrames:0,skipTime:0\}/);
+ assert.match(route,/description:\{enabled:true,skipFrames:0,skipTime:0\}/);
+ assert.match(route,/antispoof:\{enabled:true,skipFrames:0,skipTime:0\}/);
+ assert.match(route,/liveness:\{enabled:true,skipFrames:0,skipTime:0\}/);
+ assert.match(route,/const docResult=await instance\.detect\(documentTensor\)/);
+ assert.match(route,/const selfieResult=await instance\.detect\(selfieTensor\)/);
+ assert.match(route,/const portraitDetection=await instance\.detect\(portraitTensor\)/);
+ assert.match(route,/const selfiePortraitDetection=await instance\.detect\(selfiePortraitTensor\)/);
+ assert.doesNotMatch(route,/Promise\.all\(\[instance\.detect/);
+ assert.match(route,/for\(const frame of livenessPixels\)/);
+ assert.match(route,/const neutralFaces=\[livenessResults\[0\]/);
+ assert.match(route,/neutralSimilarity<0\.55/);
+ assert.match(route,/O rosto capturado ao vivo não corresponde à selfie/);
+});
+
+test('guided capture is single-flight, respects the one-use expiry, and uses server TTL',()=>{
+ const ui=read('src/components/free-document-verification.tsx');
+ assert.match(ui,/captureBusyRef\.current/);
+ assert.match(ui,/cameraSessionRef\.current/);
+ assert.match(ui,/setCaptureBusy\(true\)/);
+ assert.match(ui,/challengeExpiresAt<=Date\.now\(\)/);
+ assert.match(ui,/const validFor=Date\.parse\(data\.expiresAt/);
+ assert.match(ui,/setChallengeExpiresAt\(expiresAt\)/);
+ assert.match(ui,/O desafio de 90 segundos expirou/);
+ assert.match(ui,/Tempo restante:/);
+ assert.match(ui,/loadLocalMediaPipe/);
+ assert.match(ui,/mediaPipeRef\.current\.detect\(video\)/);
+ assert.match(ui,/faceLandmarks/);
+ assert.match(ui,/minFaceDetectionConfidence:0\.5/);
+ assert.match(ui,/mediaPipeStatus==='active'/);
+ const setup=read('scripts/prepare-mediapipe.cjs');
+ assert.match(setup,/bundleVersion='1\.1\.1'/);
+ assert.match(setup,/face_landmarker\.task/);
+ assert.match(setup,/vision_wasm_nosimd_internal\.wasm/);
+ const pkg=read('package.json');
+ assert.match(pkg,/prepare-mediapipe\.cjs/);
+ const camera=read('src/components/human-camera-check.tsx');
+ assert.match(camera,/modelBasePath:'\/vendor\/human-models\//);
+ assert.match(camera,/cacheSensitivity:0/);
+ assert.match(camera,/iris:\{enabled:false\}/);
+ assert.doesNotMatch(camera,/https:\/\/vladmandic\.github\.io\/human-models/);
 });
 
 test('the free path never accepts browser-supplied descriptors or writes raw document evidence',()=>{

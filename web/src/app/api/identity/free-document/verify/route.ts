@@ -6,14 +6,14 @@ import {NextRequest,NextResponse} from 'next/server';
 import {createWorker,PSM} from 'tesseract.js';
 import sharp from 'sharp';
 import {BinaryBitmap,HybridBinarizer,QRCodeReader,RGBLuminanceSource} from '@zxing/library';
-import {identityContext} from '@/lib/identity-server';
+import {identityContext,runtimeConfig} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {inspectCinToken} from '@/lib/cin-qr';
 import {extractBirthDateFromOcr} from '@/lib/legacy-rg-ocr';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
-export const maxDuration=60;
+export const maxDuration=300;
 
 const headers={'Cache-Control':'private, no-store, max-age=0','Pragma':'no-cache'};
 type VerificationFailureCode =
@@ -139,6 +139,8 @@ function ageBandFromCin(value:string):string|null{
 
 export async function POST(request:NextRequest){
   if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))return fail('Origem inválida.',403);
+  if(!runtimeConfig.supabaseUrl||!runtimeConfig.publicKey||!runtimeConfig.serviceKey)
+    return fail('O serviço Conecta ID não está configurado no servidor. A validação não pode ser concluída.',503);
   const context=await identityContext(request);
   if(!context)return fail('Entre na sua conta para continuar.',401);
   let attemptId:number|null=null;
@@ -253,53 +255,57 @@ export async function POST(request:NextRequest){
   try{
     const [docPixels,selfiePix]=await Promise.all([pixels(document),pixels(selfie)]);
     documentPixels=docPixels.data;selfiePixels=selfiePix.data;
-    worker=await createWorker('por',1,{
-      // Pin the worker entrypoint to the external package path. Vercel's bundler
-      // cannot always infer Tesseract's relative worker lookup from __dirname.
-      workerPath:path.join(process.cwd(),'node_modules','tesseract.js','src','worker-script','node','index.js'),
-      cacheMethod:'write'
-    });
-    // First pass: high-resolution contrast-normalized images with sparse-text
-    // segmentation, suitable for labels distributed across an older ID card.
+    // Prepare high-quality images for Tesseract's multiple OCR passes.
+    // If its worker fails, verification must fail safely, never approve.
     ocrImages.push(await prepareOcrImage(document));
     ocrImages.push(await prepareOcrImage(back));
-    await worker.setParameters({
-      tessedit_pageseg_mode:PSM.SPARSE_TEXT,
-      preserve_interword_spaces:'1',
-      user_defined_dpi:'300'
-    });
-    const ocrResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
-    const parseDates=(results:typeof ocrResults)=>
-      results.map(result=>dobFromText(typeof result.data.text==='string'?result.data.text:''))
-        .filter((value):value is string=>Boolean(value));
-    let detectedDates=parseDates(ocrResults);
-    // Run a second segmentation pass on the cropped, deskewed/enlarged document
-    // rather than on the full tabletop photo.
-    if(detectedDates.length===0){
+    let detectedDates:string[]=[];
+    try{
+      worker=await createWorker('por',1,{
+        // Pin the worker entrypoint to the external package path. Vercel's bundler
+        // cannot always infer Tesseract's relative worker lookup from __dirname.
+        workerPath:path.join(process.cwd(),'node_modules','tesseract.js','src','worker-script','node','index.js'),
+        cacheMethod:'write'
+      });
+      // First pass: high-resolution, sparse text on both sides of the ID.
       await worker.setParameters({
-        tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
+        tessedit_pageseg_mode:PSM.SPARSE_TEXT,
         preserve_interword_spaces:'1',
         user_defined_dpi:'300'
       });
-      const fallbackResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
-      detectedDates=parseDates(fallbackResults);
-    }
-    // If still unreadable, test the opposite landscape orientation. This covers
-    // cards physically rotated 90 degrees in phone photos.
-    if(detectedDates.length===0){
-      const reversedImages:Buffer[]=[];
-      try{
-        for(const image of ocrImages)reversedImages.push(await rotateOcrImage180(image));
+      const ocrResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
+      const parseDates=(results:typeof ocrResults)=>
+        results.map(result=>dobFromText(typeof result.data.text==='string'?result.data.text:''))
+          .filter((value):value is string=>Boolean(value));
+      detectedDates=parseDates(ocrResults);
+      if(detectedDates.length===0){
         await worker.setParameters({
-          tessedit_pageseg_mode:PSM.SPARSE_TEXT,
+          tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
           preserve_interword_spaces:'1',
           user_defined_dpi:'300'
         });
-        const reversedResults=await Promise.all(reversedImages.map(image=>worker!.recognize(image)));
-        detectedDates=parseDates(reversedResults);
-      }finally{
-        for(const image of reversedImages)image.fill(0);
+        const fallbackResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
+        detectedDates=parseDates(fallbackResults);
       }
+      if(detectedDates.length===0){
+        const reversedImages:Buffer[]=[];
+        try{
+          for(const image of ocrImages)reversedImages.push(await rotateOcrImage180(image));
+          await worker.setParameters({
+            tessedit_pageseg_mode:PSM.SPARSE_TEXT,
+            preserve_interword_spaces:'1',
+            user_defined_dpi:'300'
+          });
+          const reversedResults=await Promise.all(reversedImages.map(image=>worker!.recognize(image)));
+          detectedDates=parseDates(reversedResults);
+        }finally{
+          for(const image of reversedImages)image.fill(0);
+        }
+      }
+    }catch{
+      // A Tesseract runtime failure is a temporary service failure, not
+      // evidence that the document is fraudulent or verified.
+      throw new Error('O leitor Tesseract está temporariamente indisponível. Tente novamente mais tarde.');
     }
     const uniqueDates=[...new Set(detectedDates)];
     if(uniqueDates.length>1)
@@ -333,16 +339,22 @@ export async function POST(request:NextRequest){
     const instance:any=new HumanClass({
       modelBasePath:pathToFileURL(path.join(process.cwd(),'public','vendor','human-models')+path.sep).href,
       debug:false,
+      // Every document, selfie and challenge frame is an independent image.
+      // Human caches detector/descriptors across video frames by default. Reusing
+      // those cached results here can make distinct head turns look identical.
+      cacheSensitivity:0,
+      skipAllowed:false,
+      async:false,
       face:{
-        enabled:true,
-        detector:{rotation:true,return:true,maxDetected:4},
-        mesh:{enabled:true},
+        enabled:true,skipFrames:0,skipTime:0,
+        detector:{rotation:true,return:false,maxDetected:4,skipFrames:0,skipTime:0},
+        mesh:{enabled:true,skipFrames:0,skipTime:0},
         attention:{enabled:false},
         iris:{enabled:false},
-        description:{enabled:true},
+        description:{enabled:true,skipFrames:0,skipTime:0},
         emotion:{enabled:false},
-        antispoof:{enabled:true},
-        liveness:{enabled:true},
+        antispoof:{enabled:true,skipFrames:0,skipTime:0},
+        liveness:{enabled:true,skipFrames:0,skipTime:0},
         gear:{enabled:false}
       },
       body:{enabled:false},hand:{enabled:false},object:{enabled:false},gesture:{enabled:false}
@@ -351,7 +363,10 @@ export async function POST(request:NextRequest){
     documentTensorData=new Int32Array(docPixels.data);selfieTensorData=new Int32Array(selfiePix.data);
     documentTensor=instance.tf.tensor4d(documentTensorData,[1,docPixels.height,docPixels.width,3],'int32');
     selfieTensor=instance.tf.tensor4d(selfieTensorData,[1,selfiePix.height,selfiePix.width,3],'int32');
-    const [docResult,selfieResult]=await Promise.all([instance.detect(documentTensor),instance.detect(selfieTensor)]);
+    // A Human instance owns mutable model and detector state: NEVER infer two
+    // unrelated images concurrently on the same instance.
+    const docResult=await instance.detect(documentTensor);
+    const selfieResult=await instance.detect(selfieTensor);
     documentFaceResults=docResult as FaceResult;selfieFaceResults=selfieResult as FaceResult;
     const docFaces=docResult.face||[],selfieFaces=selfieResult.face||[];
     if(docFaces.length!==1||selfieFaces.length!==1)
@@ -430,10 +445,9 @@ export async function POST(request:NextRequest){
       selfiePortraitTensorData=new Int32Array(selfiePortraitData);
       portraitTensor=instance.tf.tensor4d(portraitTensorData,[1,512,512,3],'int32');
       selfiePortraitTensor=instance.tf.tensor4d(selfiePortraitTensorData,[1,512,512,3],'int32');
-      const [portraitDetection,selfiePortraitDetection]=await Promise.all([
-        instance.detect(portraitTensor),
-        instance.detect(selfiePortraitTensor)
-      ]);
+      // Independent face crops must not race within the same Human instance.
+      const portraitDetection=await instance.detect(portraitTensor);
+      const selfiePortraitDetection=await instance.detect(selfiePortraitTensor);
       portraitResult=portraitDetection as FaceResult;
       selfiePortraitResult=selfiePortraitDetection as FaceResult;
       const portraitFaces=portraitDetection.face||[];
@@ -477,6 +491,8 @@ export async function POST(request:NextRequest){
         const detected=await instance.detect(tensor);
         livenessResults.push(detected as FaceResult);
       }
+      // The four challenge images must always receive fresh detections rather
+      // than the cached face box/rotation of a previous frame.
       const yaw=livenessResults.map(result=>{
         const faces=result.face||[];
         return faces.length===1&&typeof faces[0].rotation?.angle?.yaw==='number'
@@ -484,6 +500,22 @@ export async function POST(request:NextRequest){
       });
       if(yaw.some(value=>value===null))
         return await failAttempt('A captura guiada precisa mostrar exatamente um rosto em todos os quadros. Nenhum acesso foi liberado.',422);
+      // The person performing the head turns must ALSO be the person in the
+      // uploaded selfie that matched the document. Otherwise somebody could
+      // upload a third party selfie and use their own live face for the challenge.
+      // Compare neutral frames (front-facing) only; rotated faces have less
+      // reliable descriptors. Preserve the calibrated 0.55 similarity gate.
+      const neutralFaces=[livenessResults[0]?.face?.[0],livenessResults[3]?.face?.[0]];
+      const neutralMatchOptions={order:2,multiplier:25,min:0.2,max:0.8};
+      for(const neutralFace of neutralFaces){
+        if(!neutralFace?.embedding?.length)
+          return await failAttempt('Não foi possível identificar o rosto na captura ao vivo. Posicione-se de frente para a câmera.',422,'face_quality_low');
+        const neutralSimilarity=instance.match.similarity(
+          selfieFace.embedding,neutralFace.embedding,neutralMatchOptions
+        );
+        if(!Number.isFinite(neutralSimilarity)||neutralSimilarity<0.55)
+          return await failAttempt('O rosto capturado ao vivo não corresponde à selfie do documento. Refaça a captura com a própria pessoa titular.',422,'face_match_failed');
+      }
       const angles=yaw as number[];
       const baseline=Math.abs(angles[0]);
       const firstTurn=angles[1],secondTurn=angles[2],returned=Math.abs(angles[3]);

@@ -102,18 +102,23 @@ export function HumanCameraCheck(){
       if(run!==currentRun.current)return;
       const human=new Human({
         backend:'webgl',
-        modelBasePath:'https://vladmandic.github.io/human-models/models/',
-        cacheSensitivity:0.01,
+        // Local, pinned Human models: no third-party CDN requests for face data.
+        modelBasePath:'/vendor/human-models/',
+        cacheSensitivity:0,
+        skipAllowed:false,
         debug:false,
         face:{
-          enabled:true,
-          detector:{rotation:true,return:false},
-          mesh:{enabled:true},
-          iris:{enabled:true},
+          enabled:true,skipFrames:0,skipTime:0,
+          detector:{rotation:true,return:false,maxDetected:4,skipFrames:0,skipTime:0},
+          mesh:{enabled:true,skipFrames:0,skipTime:0},
+          // This deployment does not ship the optional iris model.
+          iris:{enabled:false},
+          attention:{enabled:false},
           description:{enabled:false},
-          antispoof:{enabled:true},
-          liveness:{enabled:true},
-          emotion:{enabled:false}
+          antispoof:{enabled:true,skipFrames:0,skipTime:0},
+          liveness:{enabled:true,skipFrames:0,skipTime:0},
+          emotion:{enabled:false},
+          gear:{enabled:false}
         },
         body:{enabled:false},hand:{enabled:false},object:{enabled:false},
         gesture:{enabled:true}

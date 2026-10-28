@@ -27,8 +27,8 @@ test('document upload requires explicit consent and sends all evidence to the se
  assert.match(upload,/sem exigir leitura de QR Code/);
  assert.match(upload,/Frente e verso do documento/);
  assert.match(upload,/capture="environment"/);
- assert.match(upload,/captura automaticamente quatro quadros/i);
- assert.match(upload,/setTimeout\(\(\)=>\{void captureFrame\(\);\},5000\)/);
+ assert.match(upload,/A captura é automática após cinco segundos/i);
+ assert.match(upload,/setInterval\(\(\)=>\{void captureFrame\(\);\},5000\)/);
  assert.match(upload,/consent/);
  assert.ok(upload.includes('/api/identity/free-document/verify'));
  assert.match(upload,/não há consulta automática a uma base oficial/i);
