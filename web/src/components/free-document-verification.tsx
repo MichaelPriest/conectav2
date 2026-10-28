@@ -501,7 +501,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         fontSize:13,marginTop:8,color:faceGuide.ready?'#059669':'inherit'
       }}>{mediaPipeStatus==='active'?faceGuide.message:
         mediaPipeStatus==='fallback'?'Não foi possível iniciar o enquadramento automático; use Capturar agora.':
-        'Preparando enquadramento automático…'}</p>
+        'Preparando enquadramento automático…'}</p>}
       {!challenge?<button type="button" className="btn btn-outline" onClick={()=>void startGuidedCapture()} disabled={busy||challengeBusy}>
         <Camera size={17}/>{challengeBusy?'Preparando câmera…':'Iniciar captura guiada'}</button>:
         <div>
