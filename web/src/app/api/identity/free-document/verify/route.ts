@@ -496,6 +496,22 @@ export async function POST(request:NextRequest){
       });
       if(yaw.some(value=>value===null))
         return await failAttempt('A captura guiada precisa mostrar exatamente um rosto em todos os quadros. Nenhum acesso foi liberado.',422);
+      // The person performing the head turns must ALSO be the person in the
+      // uploaded selfie that matched the document. Otherwise somebody could
+      // upload a third party selfie and use their own live face for the challenge.
+      // Compare neutral frames (front-facing) only; rotated faces have less
+      // reliable descriptors. Preserve the calibrated 0.55 similarity gate.
+      const neutralFaces=[livenessResults[0]?.face?.[0],livenessResults[3]?.face?.[0]];
+      const neutralMatchOptions={order:2,multiplier:25,min:0.2,max:0.8};
+      for(const neutralFace of neutralFaces){
+        if(!neutralFace?.embedding?.length)
+          return await failAttempt('Não foi possível identificar o rosto na captura ao vivo. Posicione-se de frente para a câmera.',422,'face_quality_low');
+        const neutralSimilarity=instance.match.similarity(
+          selfieFace.embedding,neutralFace.embedding,neutralMatchOptions
+        );
+        if(!Number.isFinite(neutralSimilarity)||neutralSimilarity<0.55)
+          return await failAttempt('O rosto capturado ao vivo não corresponde à selfie do documento. Refaça a captura com a própria pessoa titular.',422,'face_match_failed');
+      }
       const angles=yaw as number[];
       const baseline=Math.abs(angles[0]);
       const firstTurn=angles[1],secondTurn=angles[2],returned=Math.abs(angles[3]);
