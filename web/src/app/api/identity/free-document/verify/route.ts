@@ -116,6 +116,35 @@ async function rotateOcrImage180(buffer:Buffer):Promise<Buffer>{
 function dobFromText(raw:string):string|null{
   return extractBirthDateFromOcr(raw);
 }
+/**
+ * Legacy RG data fields can be several columns apart. When whole-card OCR
+ * cannot associate NASCIMENTO with its value, analyze overlapping halves at
+ * higher relative resolution. Keep the label requirement in dobFromText.
+ */
+async function prepareBirthDateOcrRegions(image:Buffer):Promise<Buffer[]>{
+  const metadata=await sharp(image,{limitInputPixels:20_000_000}).metadata();
+  const width=metadata.width||0,height=metadata.height||0;
+  if(width<400||height<250)return [];
+  const mid=Math.floor(width*0.35);
+  const regions=[
+    {left:0,top:0,width:width-mid,height},
+    {left:mid,top:0,width:width-mid,height}
+  ];
+  const results:Buffer[]=[];
+  try{
+    for(const region of regions){
+      const normalized=await sharp(image,{limitInputPixels:20_000_000})
+        .extract(region)
+        .resize({width:2200,height:1800,fit:'inside'})
+        .greyscale().normalize().sharpen().png().toBuffer();
+      results.push(normalized);
+    }
+    return results;
+  }catch(error){
+    for(const item of results)item.fill(0);
+    throw error;
+  }
+}
 function bandForDate(iso:string):'13_15'|'16_17'|'18_plus'|'0_12'|null{
   const [year,month,day]=iso.split('-').map(Number);
   const now=new Date();
