@@ -335,16 +335,22 @@ export async function POST(request:NextRequest){
     const instance:any=new HumanClass({
       modelBasePath:pathToFileURL(path.join(process.cwd(),'public','vendor','human-models')+path.sep).href,
       debug:false,
+      // Every document, selfie and challenge frame is an independent image.
+      // Human caches detector/descriptors across video frames by default. Reusing
+      // those cached results here can make distinct head turns look identical.
+      cacheSensitivity:0,
+      skipAllowed:false,
+      async:false,
       face:{
-        enabled:true,
-        detector:{rotation:true,return:true,maxDetected:4},
-        mesh:{enabled:true},
+        enabled:true,skipFrames:0,skipTime:0,
+        detector:{rotation:true,return:false,maxDetected:4,skipFrames:0,skipTime:0},
+        mesh:{enabled:true,skipFrames:0,skipTime:0},
         attention:{enabled:false},
         iris:{enabled:false},
-        description:{enabled:true},
+        description:{enabled:true,skipFrames:0,skipTime:0},
         emotion:{enabled:false},
-        antispoof:{enabled:true},
-        liveness:{enabled:true},
+        antispoof:{enabled:true,skipFrames:0,skipTime:0},
+        liveness:{enabled:true,skipFrames:0,skipTime:0},
         gear:{enabled:false}
       },
       body:{enabled:false},hand:{enabled:false},object:{enabled:false},gesture:{enabled:false}
@@ -353,7 +359,10 @@ export async function POST(request:NextRequest){
     documentTensorData=new Int32Array(docPixels.data);selfieTensorData=new Int32Array(selfiePix.data);
     documentTensor=instance.tf.tensor4d(documentTensorData,[1,docPixels.height,docPixels.width,3],'int32');
     selfieTensor=instance.tf.tensor4d(selfieTensorData,[1,selfiePix.height,selfiePix.width,3],'int32');
-    const [docResult,selfieResult]=await Promise.all([instance.detect(documentTensor),instance.detect(selfieTensor)]);
+    // A Human instance owns mutable model and detector state: NEVER infer two
+    // unrelated images concurrently on the same instance.
+    const docResult=await instance.detect(documentTensor);
+    const selfieResult=await instance.detect(selfieTensor);
     documentFaceResults=docResult as FaceResult;selfieFaceResults=selfieResult as FaceResult;
     const docFaces=docResult.face||[],selfieFaces=selfieResult.face||[];
     if(docFaces.length!==1||selfieFaces.length!==1)
@@ -432,10 +441,9 @@ export async function POST(request:NextRequest){
       selfiePortraitTensorData=new Int32Array(selfiePortraitData);
       portraitTensor=instance.tf.tensor4d(portraitTensorData,[1,512,512,3],'int32');
       selfiePortraitTensor=instance.tf.tensor4d(selfiePortraitTensorData,[1,512,512,3],'int32');
-      const [portraitDetection,selfiePortraitDetection]=await Promise.all([
-        instance.detect(portraitTensor),
-        instance.detect(selfiePortraitTensor)
-      ]);
+      // Independent face crops must not race within the same Human instance.
+      const portraitDetection=await instance.detect(portraitTensor);
+      const selfiePortraitDetection=await instance.detect(selfiePortraitTensor);
       portraitResult=portraitDetection as FaceResult;
       selfiePortraitResult=selfiePortraitDetection as FaceResult;
       const portraitFaces=portraitDetection.face||[];
@@ -479,6 +487,8 @@ export async function POST(request:NextRequest){
         const detected=await instance.detect(tensor);
         livenessResults.push(detected as FaceResult);
       }
+      // The four challenge images must always receive fresh detections rather
+      // than the cached face box/rotation of a previous frame.
       const yaw=livenessResults.map(result=>{
         const faces=result.face||[];
         return faces.length===1&&typeof faces[0].rotation?.angle?.yaw==='number'
