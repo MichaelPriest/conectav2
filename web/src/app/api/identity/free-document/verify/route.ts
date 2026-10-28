@@ -395,14 +395,6 @@ export async function POST(request:NextRequest){
     const faceBox=detectedDocumentFace.box;
     if(!Array.isArray(faceBox)||faceBox.length<4||faceBox.some(value=>!Number.isFinite(value)))
       return await failAttempt('Não foi possível localizar com segurança a foto do documento. Reposicione o documento e tente novamente.',422);
-    const [faceX,faceY,faceW,faceH]=faceBox;
-    const padX=Math.round(faceW*0.35),padY=Math.round(faceH*0.35);
-    const cropLeft=Math.max(0,Math.floor(faceX-padX));
-    const cropTop=Math.max(0,Math.floor(faceY-padY));
-    const cropRight=Math.min(docPixels.width,Math.ceil(faceX+faceW+padX));
-    const cropBottom=Math.min(docPixels.height,Math.ceil(faceY+faceH+padY));
-    if(cropRight-cropLeft<24||cropBottom-cropTop<24)
-      return await failAttempt('A foto do documento está pequena ou desfocada demais para comparar. Tente uma imagem mais nítida.',422);
     let portraitPixels:Buffer|undefined;
     let portraitTensor:any=null;
     let portraitTensorData:Int32Array|undefined;
