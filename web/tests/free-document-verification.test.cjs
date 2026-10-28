@@ -82,8 +82,8 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/iris:\{enabled:false\}/);
  assert.match(route,/emotion:\{enabled:false\}/);
  assert.match(route,/gear:\{enabled:false\}/);
- assert.match(route,/antispoof:\{enabled:true\}/);
- assert.match(route,/liveness:\{enabled:true\}/);
+ assert.match(route,/antispoof:\{enabled:true,skipFrames:0,skipTime:0\}/);
+ assert.match(route,/liveness:\{enabled:true,skipFrames:0,skipTime:0\}/);
  assert.match(route,/selfieFace\.real/);
  assert.match(route,/consume_identity_liveness_challenge/);
  assert.match(route,/livenessFrame/);
