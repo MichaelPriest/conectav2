@@ -328,8 +328,48 @@ export async function POST(request:NextRequest){
           });
           const reversedResults=await Promise.all(reversedImages.map(image=>worker!.recognize(image)));
           detectedDates=parseDates(reversedResults);
+          if(detectedDates.length===0){
+            // A sideways RG may read only when both orientation and page
+            // segmentation change. Earlier, this direction was sparse-only.
+            await worker.setParameters({
+              tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
+              preserve_interword_spaces:'1',user_defined_dpi:'300'
+            });
+            const reversedBlockResults=await Promise.all(reversedImages.map(image=>worker!.recognize(image)));
+            detectedDates=parseDates(reversedBlockResults);
+          }
         }finally{
           for(const image of reversedImages)image.fill(0);
+        }
+      }
+      // Finally, older São Paulo RGs may have NASCIMENTO and the printed date
+      // in different columns. The original full-card OCR can miss the association
+      // even when both are legible. Re-run Tesseract on overlapping halves of
+      // the DATA SIDE at both 90-degree orientations. The same strict
+      // labelled-date parser still decides the result (never the nearest date).
+      if(detectedDates.length===0&&documentType==='old-rg'){
+        const regionImages=await prepareBirthDateOcrRegions(ocrImages[1]);
+        const oppositeRegions:Buffer[]=[];
+        try{
+          for(const image of regionImages)oppositeRegions.push(await rotateOcrImage180(image));
+          const candidates=[...regionImages,...oppositeRegions];
+          await worker.setParameters({
+            tessedit_pageseg_mode:PSM.SPARSE_TEXT,
+            preserve_interword_spaces:'1',user_defined_dpi:'300'
+          });
+          const regionalResults=await Promise.all(candidates.map(image=>worker!.recognize(image)));
+          detectedDates=parseDates(regionalResults);
+          if(detectedDates.length===0){
+            await worker.setParameters({
+              tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
+              preserve_interword_spaces:'1',user_defined_dpi:'300'
+            });
+            const blockResults=await Promise.all(candidates.map(image=>worker!.recognize(image)));
+            detectedDates=parseDates(blockResults);
+          }
+        }finally{
+          for(const image of regionImages)image.fill(0);
+          for(const image of oppositeRegions)image.fill(0);
         }
       }
     }catch{
