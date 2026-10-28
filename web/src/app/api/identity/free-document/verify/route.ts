@@ -10,6 +10,7 @@ import {identityContext,runtimeConfig} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {inspectCinToken} from '@/lib/cin-qr';
 import {extractBirthDateFromOcr} from '@/lib/legacy-rg-ocr';
+import {recognizeWithPaddleOcr} from '@/lib/identity-paddle-ocr';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -302,6 +303,14 @@ export async function POST(request:NextRequest){
       }finally{
         for(const image of reversedImages)image.fill(0);
       }
+    }
+    // Fallback: use private PaddleOCR only if all Tesseract attempts failed.
+    // No dates are inferred or accepted from client fields; both OCR engines
+    // pass through the same strict Portuguese DOB parser and mismatch policy.
+    if(detectedDates.length===0){
+      const paddleTexts=await recognizeWithPaddleOcr(ocrImages);
+      if(paddleTexts)detectedDates=paddleTexts.map(text=>dobFromText(text))
+        .filter((value):value is string=>Boolean(value));
     }
     const uniqueDates=[...new Set(detectedDates)];
     if(uniqueDates.length>1)
