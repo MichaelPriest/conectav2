@@ -139,33 +139,33 @@ test('Human server analyses independent images sequentially without reusing vide
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  assert.match(route,/cacheSensitivity:0/);
  assert.match(route,/skipAllowed:false/);
- assert.match(route,/detector:\\{rotation:true,return:false,maxDetected:4,skipFrames:0,skipTime:0\\}/);
- assert.match(route,/description:\\{enabled:true,skipFrames:0,skipTime:0\\}/);
- assert.match(route,/antispoof:\\{enabled:true,skipFrames:0,skipTime:0\\}/);
- assert.match(route,/liveness:\\{enabled:true,skipFrames:0,skipTime:0\\}/);
- assert.match(route,/const docResult=await instance\\.detect\\(documentTensor\\)/);
- assert.match(route,/const selfieResult=await instance\\.detect\\(selfieTensor\\)/);
- assert.match(route,/const portraitDetection=await instance\\.detect\\(portraitTensor\\)/);
- assert.match(route,/const selfiePortraitDetection=await instance\\.detect\\(selfiePortraitTensor\\)/);
- assert.doesNotMatch(route,/Promise\\.all\\(\\[instance\\.detect/);
- assert.match(route,/for\\(const frame of livenessPixels\\)/);
+ assert.match(route,/detector:\{rotation:true,return:false,maxDetected:4,skipFrames:0,skipTime:0\}/);
+ assert.match(route,/description:\{enabled:true,skipFrames:0,skipTime:0\}/);
+ assert.match(route,/antispoof:\{enabled:true,skipFrames:0,skipTime:0\}/);
+ assert.match(route,/liveness:\{enabled:true,skipFrames:0,skipTime:0\}/);
+ assert.match(route,/const docResult=await instance\.detect\(documentTensor\)/);
+ assert.match(route,/const selfieResult=await instance\.detect\(selfieTensor\)/);
+ assert.match(route,/const portraitDetection=await instance\.detect\(portraitTensor\)/);
+ assert.match(route,/const selfiePortraitDetection=await instance\.detect\(selfiePortraitTensor\)/);
+ assert.doesNotMatch(route,/Promise\.all\(\[instance\.detect/);
+ assert.match(route,/for\(const frame of livenessPixels\)/);
 });
 
 test('guided capture is single-flight, respects the one-use expiry, and uses server TTL',()=>{
  const ui=read('src/components/free-document-verification.tsx');
- assert.match(ui,/captureBusyRef\\.current/);
- assert.match(ui,/cameraSessionRef\\.current/);
- assert.match(ui,/setCaptureBusy\\(true\\)/);
- assert.match(ui,/challengeExpiresAt<=Date\\.now\\(\\)/);
- assert.match(ui,/const validFor=Date\\.parse\\(data\\.expiresAt/);
- assert.match(ui,/setChallengeExpiresAt\\(expiresAt\\)/);
+ assert.match(ui,/captureBusyRef\.current/);
+ assert.match(ui,/cameraSessionRef\.current/);
+ assert.match(ui,/setCaptureBusy\(true\)/);
+ assert.match(ui,/challengeExpiresAt<=Date\.now\(\)/);
+ assert.match(ui,/const validFor=Date\.parse\(data\.expiresAt/);
+ assert.match(ui,/setChallengeExpiresAt\(expiresAt\)/);
  assert.match(ui,/O desafio de 90 segundos expirou/);
  assert.match(ui,/Tempo restante:/);
  const camera=read('src/components/human-camera-check.tsx');
- assert.match(camera,/modelBasePath:'\\/vendor\\/human-models\\//);
+ assert.match(camera,/modelBasePath:'\/vendor\/human-models\//);
  assert.match(camera,/cacheSensitivity:0/);
- assert.match(camera,/iris:\\{enabled:false\\}/);
- assert.doesNotMatch(camera,/https:\\/\\/vladmandic\\.github\\.io\\/human-models/);
+ assert.match(camera,/iris:\{enabled:false\}/);
+ assert.doesNotMatch(camera,/https:\/\/vladmandic\.github\.io\/human-models/);
 });
 
 test('the free path never accepts browser-supplied descriptors or writes raw document evidence',()=>{
