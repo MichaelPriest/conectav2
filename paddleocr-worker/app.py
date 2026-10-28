@@ -23,7 +23,7 @@ class OcrInput(BaseModel):
 
 
 def _authenticated(token: str | None) -> bool:
-    secret = os.environ.get("CON ECTA_OCR_SECRET".replace(" ", ""), "")
+    secret = os.environ.get("CONECTA_OCR_SECRET", "")
     return bool(secret and token and hmac.compare_digest(token, secret))
 
 
@@ -50,7 +50,7 @@ def _decode_image(value: str) -> np.ndarray:
             if image.width * image.height > 20_000_000:
                 raise ValueError("pixels")
             rgb = image.convert("RGB")
-            return np.asarray(rgb)
+            return np.array(rgb, copy=True)
     except (binascii.Error, UnidentifiedImageError, OSError, ValueError) as exc:
         raise HTTPException(status_code=400, detail="Imagem inválida.") from None
 
@@ -77,7 +77,7 @@ def recognize(payload: OcrInput, x_conecta_ocr_key: str | None = Header(default=
                 for value in content:
                     if isinstance(value, str) and value:
                         lines.append(value[:256])
-            texts.append("\\n".join(lines)[:16000])
+            texts.append("\n".join(lines)[:16000])
         return {"texts": texts}
     except Exception:
         # Do not leak model paths, payloads or personal data into the API.
