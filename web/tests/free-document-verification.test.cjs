@@ -178,7 +178,7 @@ test('guided capture is single-flight, respects the one-use expiry, and uses ser
  const setup=read('scripts/prepare-mediapipe.cjs');
  assert.match(setup,/bundleVersion='1\.1\.1'/);
  assert.match(setup,/face_landmarker\.task/);
- assert.match(setup,/vision_wasm_internal_simd\.wasm/);
+ assert.match(setup,/vision_wasm_nosimd_internal\.wasm/);
  const pkg=read('package.json');
  assert.match(pkg,/prepare-mediapipe\.cjs/);
  const camera=read('src/components/human-camera-check.tsx');
