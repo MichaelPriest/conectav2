@@ -17,7 +17,7 @@
     "test:moderation": "node --test tests/oss-moderation-safety.test.cjs",
     "test:automod": "node --test tests/automatic-moderation.test.cjs",
     "test:cin-server": "node --test tests/cin-server-inspect.test.cjs",
-    "test:free-document": "node --test tests/free-document-verification.test.cjs",
+    "test:free-document": "node --test tests/free-document-verification.test.cjs tests/identity-frame-guidance.test.cjs",
     "test:identity-methods": "node --test tests/identity-methods.test.cjs",
     "test:age-policy": "node --test tests/age-assurance-policy.test.cjs",
     "test:conecta-id": "node --test tests/conecta-id-verdict.test.cjs",
