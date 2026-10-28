@@ -129,6 +129,9 @@ test('failed identity submissions require a fresh one-use liveness challenge and
  assert.match(challenge,/!runtimeConfig\.serviceKey/);
  assert.match(ui,/setChallenge\(''\);setInstructions\(\[\]\);setFrameIndex\(0\);setFrames\(\[\]\);setStep\(3\)/);
  assert.match(ui,/data\.code/);
+ assert.match(ui,/MAX_IDENTITY_REQUEST_BYTES=4_000_000/);
+ assert.match(ui,/images\.reduce/);
+ assert.match(route,/maxDuration=300/);
  assert.match(ui,/response\.status===401/);
 });
 
