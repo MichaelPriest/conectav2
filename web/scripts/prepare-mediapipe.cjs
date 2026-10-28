@@ -8,8 +8,8 @@ const urls=[
  ['vision_bundle.mjs','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@'+bundleVersion+'/vision_bundle.mjs',100000],
  ['wasm/vision_wasm_internal.js','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@'+bundleVersion+'/wasm/vision_wasm_internal.js',1000],
  ['wasm/vision_wasm_internal.wasm','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@'+bundleVersion+'/wasm/vision_wasm_internal.wasm',100000],
- ['wasm/vision_wasm_internal_simd.js','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@'+bundleVersion+'/wasm/vision_wasm_internal_simd.js',1000],
- ['wasm/vision_wasm_internal_simd.wasm','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@'+bundleVersion+'/wasm/vision_wasm_internal_simd.wasm',100000],
+ ['wasm/vision_wasm_nosimd_internal.js','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@'+bundleVersion+'/wasm/vision_wasm_nosimd_internal.js',1000],
+ ['wasm/vision_wasm_nosimd_internal.wasm','https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@'+bundleVersion+'/wasm/vision_wasm_nosimd_internal.wasm',100000],
  ['face_landmarker.task','https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',100000]
 ];
 async function prepareMediaPipe(baseDir=path.resolve(__dirname,'..')){
