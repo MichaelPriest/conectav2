@@ -256,53 +256,58 @@ export async function POST(request:NextRequest){
   try{
     const [docPixels,selfiePix]=await Promise.all([pixels(document),pixels(selfie)]);
     documentPixels=docPixels.data;selfiePixels=selfiePix.data;
-    worker=await createWorker('por',1,{
-      // Pin the worker entrypoint to the external package path. Vercel's bundler
-      // cannot always infer Tesseract's relative worker lookup from __dirname.
-      workerPath:path.join(process.cwd(),'node_modules','tesseract.js','src','worker-script','node','index.js'),
-      cacheMethod:'write'
-    });
-    // First pass: high-resolution contrast-normalized images with sparse-text
-    // segmentation, suitable for labels distributed across an older ID card.
+    // Prepare the same high-quality images for both engines. Tesseract is the
+    // free first pass; a worker failure must not prevent the private PaddleOCR
+    // fallback from reading the documents.
     ocrImages.push(await prepareOcrImage(document));
     ocrImages.push(await prepareOcrImage(back));
-    await worker.setParameters({
-      tessedit_pageseg_mode:PSM.SPARSE_TEXT,
-      preserve_interword_spaces:'1',
-      user_defined_dpi:'300'
-    });
-    const ocrResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
-    const parseDates=(results:typeof ocrResults)=>
-      results.map(result=>dobFromText(typeof result.data.text==='string'?result.data.text:''))
-        .filter((value):value is string=>Boolean(value));
-    let detectedDates=parseDates(ocrResults);
-    // Run a second segmentation pass on the cropped, deskewed/enlarged document
-    // rather than on the full tabletop photo.
-    if(detectedDates.length===0){
+    let detectedDates:string[]=[];
+    try{
+      worker=await createWorker('por',1,{
+        // Pin the worker entrypoint to the external package path. Vercel's bundler
+        // cannot always infer Tesseract's relative worker lookup from __dirname.
+        workerPath:path.join(process.cwd(),'node_modules','tesseract.js','src','worker-script','node','index.js'),
+        cacheMethod:'write'
+      });
+      // First pass: high-resolution, sparse text on both sides of the ID.
       await worker.setParameters({
-        tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
+        tessedit_pageseg_mode:PSM.SPARSE_TEXT,
         preserve_interword_spaces:'1',
         user_defined_dpi:'300'
       });
-      const fallbackResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
-      detectedDates=parseDates(fallbackResults);
-    }
-    // If still unreadable, test the opposite landscape orientation. This covers
-    // cards physically rotated 90 degrees in phone photos.
-    if(detectedDates.length===0){
-      const reversedImages:Buffer[]=[];
-      try{
-        for(const image of ocrImages)reversedImages.push(await rotateOcrImage180(image));
+      const ocrResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
+      const parseDates=(results:typeof ocrResults)=>
+        results.map(result=>dobFromText(typeof result.data.text==='string'?result.data.text:''))
+          .filter((value):value is string=>Boolean(value));
+      detectedDates=parseDates(ocrResults);
+      if(detectedDates.length===0){
         await worker.setParameters({
-          tessedit_pageseg_mode:PSM.SPARSE_TEXT,
+          tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
           preserve_interword_spaces:'1',
           user_defined_dpi:'300'
         });
-        const reversedResults=await Promise.all(reversedImages.map(image=>worker!.recognize(image)));
-        detectedDates=parseDates(reversedResults);
-      }finally{
-        for(const image of reversedImages)image.fill(0);
+        const fallbackResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
+        detectedDates=parseDates(fallbackResults);
       }
+      if(detectedDates.length===0){
+        const reversedImages:Buffer[]=[];
+        try{
+          for(const image of ocrImages)reversedImages.push(await rotateOcrImage180(image));
+          await worker.setParameters({
+            tessedit_pageseg_mode:PSM.SPARSE_TEXT,
+            preserve_interword_spaces:'1',
+            user_defined_dpi:'300'
+          });
+          const reversedResults=await Promise.all(reversedImages.map(image=>worker!.recognize(image)));
+          detectedDates=parseDates(reversedResults);
+        }finally{
+          for(const image of reversedImages)image.fill(0);
+        }
+      }
+    }catch{
+      // Do not approve an unreadable document; only a configured PaddleOCR
+      // service can produce a fallback date from the uploaded document image.
+      detectedDates=[];
     }
     // Fallback: use private PaddleOCR only if all Tesseract attempts failed.
     // No dates are inferred or accepted from client fields; both OCR engines
