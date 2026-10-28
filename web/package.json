@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-pdfjs.cjs && next dev",
-    "build": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-pdfjs.cjs && next build",
+    "dev": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-pdfjs.cjs && node scripts/prepare-mediapipe.cjs && next dev",
+    "build": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-pdfjs.cjs && node scripts/prepare-mediapipe.cjs && next build",
     "start": "node scripts/check-chat-push-startup.cjs && next start",
     "typecheck": "tsc --noEmit",
     "test:profile": "node --test tests/profile-details.test.cjs",
