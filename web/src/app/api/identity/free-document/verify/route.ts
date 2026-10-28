@@ -6,7 +6,7 @@ import {NextRequest,NextResponse} from 'next/server';
 import {createWorker,PSM} from 'tesseract.js';
 import sharp from 'sharp';
 import {BinaryBitmap,HybridBinarizer,QRCodeReader,RGBLuminanceSource} from '@zxing/library';
-import {identityContext} from '@/lib/identity-server';
+import {identityContext,runtimeConfig} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {inspectCinToken} from '@/lib/cin-qr';
 import {extractBirthDateFromOcr} from '@/lib/legacy-rg-ocr';
@@ -139,6 +139,8 @@ function ageBandFromCin(value:string):string|null{
 
 export async function POST(request:NextRequest){
   if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))return fail('Origem inválida.',403);
+  if(!runtimeConfig.supabaseUrl||!runtimeConfig.publicKey||!runtimeConfig.serviceKey)
+    return fail('O serviço Conecta ID não está configurado no servidor. A validação não pode ser concluída.',503);
   const context=await identityContext(request);
   if(!context)return fail('Entre na sua conta para continuar.',401);
   let attemptId:number|null=null;
