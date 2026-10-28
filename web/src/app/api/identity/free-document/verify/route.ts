@@ -10,6 +10,7 @@ import {identityContext,runtimeConfig} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {inspectCinToken} from '@/lib/cin-qr';
 import {extractBirthDateFromOcr} from '@/lib/legacy-rg-ocr';
+import {cropFaceAtOriginalResolution} from '@/lib/identity-face-crop';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
