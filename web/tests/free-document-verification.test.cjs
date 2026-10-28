@@ -149,6 +149,9 @@ test('Human server analyses independent images sequentially without reusing vide
  assert.match(route,/const selfiePortraitDetection=await instance\.detect\(selfiePortraitTensor\)/);
  assert.doesNotMatch(route,/Promise\.all\(\[instance\.detect/);
  assert.match(route,/for\(const frame of livenessPixels\)/);
+ assert.match(route,/const neutralFaces=\[livenessResults\[0\]/);
+ assert.match(route,/neutralSimilarity<0\.55/);
+ assert.match(route,/O rosto capturado ao vivo não corresponde à selfie/);
 });
 
 test('guided capture is single-flight, respects the one-use expiry, and uses server TTL',()=>{
