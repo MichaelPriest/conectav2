@@ -15,9 +15,9 @@ const compiled=ts.transpileModule(source,{compilerOptions:{
  module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,
  esModuleInterop:true
 }}).outputText;
-const exports={};
-vm.runInNewContext(compiled,{exports,require,Buffer,Error,Number,Math},{filename:file});
-const {originalFaceCropBounds,cropFaceAtOriginalResolution}=exports;
+const localExports={};
+vm.runInNewContext(compiled,{exports:localExports,require,Buffer,Error,Number,Math},{filename:file});
+const {originalFaceCropBounds,cropFaceAtOriginalResolution}=localExports;
 
 test('RG face coordinates map from 1200px detector preview to native 2048px upload',()=>{
  const box=[205,360,90,125];
