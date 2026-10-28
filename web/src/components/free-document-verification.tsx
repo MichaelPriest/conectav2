@@ -49,7 +49,9 @@ async function readJsonResponse<T>(response:Response):Promise<T>{
   }
 }
 
-async function compressForUpload(file:File,maxDimension=1600):Promise<File>{
+const MAX_IDENTITY_REQUEST_BYTES=4_000_000; // Vercel Function request-body limit is 4.5 MB including multipart overhead.
+
+async function compressForUpload(file:File,maxDimension=1600,quality=0.86):Promise<File>{
   const bitmap=await createImageBitmap(file);
   try{
     const scale=Math.min(1,maxDimension/Math.max(bitmap.width,bitmap.height));
@@ -61,7 +63,7 @@ async function compressForUpload(file:File,maxDimension=1600):Promise<File>{
     context.drawImage(bitmap,0,0,canvas.width,canvas.height);
     const blob=await new Promise<Blob>((resolve,reject)=>canvas.toBlob(
       value=>value?resolve(value):reject(new Error('Não foi possível comprimir uma imagem.')),
-      'image/jpeg',0.86
+      'image/jpeg',quality
     ));
     return new File([blob],file.name.replace(/\.[^.]+$/,'')+'-otimizada.jpg',{type:'image/jpeg',lastModified:Date.now()});
   }finally{bitmap.close();}
@@ -194,9 +196,20 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         session=refreshed.data.session;
       }
       if(!session?.access_token)throw new Error('Sua sessão expirou. Entre novamente antes de validar a identidade.');
-      const [optimizedFront,optimizedBack,optimizedSelfie]=await Promise.all([
-        compressForUpload(front),compressForUpload(back),compressForUpload(selfie)
-      ]);
+      // Keep uploads below Vercel's 4.5 MB body limit without storing images.
+      // Retain full document detail when possible for OCR, and reduce JPEG
+      // quality before reducing resolution.
+      const originals=[front,back,selfie];
+      const frameBytes=frames.reduce((total,frame)=>total+frame.size,0);
+      let images:File[]=[];
+      for(const [size,quality] of [[1600,0.86],[1600,0.76],[1400,0.78],[1200,0.74]]){
+        images=await Promise.all(originals.map(file=>compressForUpload(file,size,quality)));
+        const estimatedBytes=images.reduce((total,file)=>total+file.size,frameBytes)+32_768;
+        if(estimatedBytes<=MAX_IDENTITY_REQUEST_BYTES)break;
+      }
+      if(images.reduce((total,file)=>total+file.size,frameBytes)+32_768>MAX_IDENTITY_REQUEST_BYTES)
+        throw new Error('As fotos ultrapassam o limite de envio seguro (4 MB). Use imagens mais leves, bem enquadradas e nítidas, e tente novamente.');
+      const [optimizedFront,optimizedBack,optimizedSelfie]=images;
       const form=new FormData();
       form.set('documentType',documentType);form.set('documentFront',optimizedFront);form.set('documentBack',optimizedBack);
       form.set('selfie',optimizedSelfie);form.set('consent','true');form.set('livenessChallenge',challenge);
