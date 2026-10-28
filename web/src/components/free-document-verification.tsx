@@ -187,7 +187,13 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     }
     setBusy(true);setError('');setMessage('Preparando o envio seguro para validação…');
     try{
-      const {data:{session}}=await supabaseBrowser().auth.getSession();
+      const auth=supabaseBrowser();
+      let {data:{session}}=await auth.auth.getSession();
+      if(!session?.access_token){
+        const refreshed=await auth.auth.refreshSession();
+        session=refreshed.data.session;
+      }
+      if(!session?.access_token)throw new Error('Sua sessão expirou. Entre novamente antes de validar a identidade.');
       const [optimizedFront,optimizedBack,optimizedSelfie]=await Promise.all([
         compressForUpload(front),compressForUpload(back),compressForUpload(selfie)
       ]);
@@ -196,16 +202,29 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       form.set('selfie',optimizedSelfie);form.set('consent','true');form.set('livenessChallenge',challenge);
       frames.forEach((frame,index)=>form.set('livenessFrame'+index,frame));
       setMessage('Validando documento, rosto e captura ao vivo no servidor…');
-      const response=await fetch('/api/identity/free-document/verify',{
-        method:'POST',headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},credentials:'same-origin',body:form,cache:'no-store'
+      const requestVerification=(accessToken:string)=>fetch('/api/identity/free-document/verify',{
+        method:'POST',headers:{Authorization:'Bearer '+accessToken},credentials:'same-origin',body:form,cache:'no-store'
       });
-      const data=await readJsonResponse<{ok?:boolean;approved?:boolean;message?:string;error?:string}>(response);
-      if(!response.ok||data.ok!==true)throw new Error(data.message||data.error||'A validação não foi concluída.');
+      let response=await requestVerification(session.access_token);
+      if(response.status===401){
+        const refreshed=await auth.auth.refreshSession();
+        if(refreshed.data.session?.access_token)
+          response=await requestVerification(refreshed.data.session.access_token);
+      }
+      const data=await readJsonResponse<{ok?:boolean;approved?:boolean;message?:string;error?:string;code?:string}>(response);
+      if(!response.ok||data.ok!==true){
+        const message=data.message||data.error||'A validação não foi concluída.';
+        throw new Error(data.code?message+' (código: '+data.code+')':message);
+      }
       setCompleted(data.approved===true);setStep(5);setMessage(data.message||'Validação concluída.');
       setFront(null);setBack(null);setSelfie(null);setFrames([]);setChallenge('');setInstructions([]);
       await onComplete();
     }catch(err){
-      setError(err instanceof Error?err.message:'Não foi possível concluir a validação.');setMessage('');
+      // The server consumes a challenge on the first well-formed submission.
+      // Never silently re-send the same liveness frames after a failed attempt.
+      setChallenge('');setInstructions([]);setFrameIndex(0);setFrames([]);setStep(3);
+      setError((err instanceof Error?err.message:'Não foi possível concluir a validação.')+
+        ' Para uma nova tentativa, inicie outra captura guiada.');setMessage('');
     }finally{stopCamera();setBusy(false);}
   }
 
