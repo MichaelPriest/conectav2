@@ -170,6 +170,17 @@ test('guided capture is single-flight, respects the one-use expiry, and uses ser
  assert.match(ui,/setChallengeExpiresAt\(expiresAt\)/);
  assert.match(ui,/O desafio de 90 segundos expirou/);
  assert.match(ui,/Tempo restante:/);
+ assert.match(ui,/loadLocalMediaPipe/);
+ assert.match(ui,/mediaPipeRef\.current\.detect\(video\)/);
+ assert.match(ui,/faceLandmarks/);
+ assert.match(ui,/minFaceDetectionConfidence:0\.5/);
+ assert.match(ui,/mediaPipeStatus==='active'/);
+ const setup=read('scripts/prepare-mediapipe.cjs');
+ assert.match(setup,/bundleVersion='1\.1\.1'/);
+ assert.match(setup,/face_landmarker\.task/);
+ assert.match(setup,/vision_wasm_internal_simd\.wasm/);
+ const pkg=read('package.json');
+ assert.match(pkg,/prepare-mediapipe\.cjs/);
  const camera=read('src/components/human-camera-check.tsx');
  assert.match(camera,/modelBasePath:'\/vendor\/human-models\//);
  assert.match(camera,/cacheSensitivity:0/);
