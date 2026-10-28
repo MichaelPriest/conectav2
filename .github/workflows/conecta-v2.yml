@@ -8,12 +8,14 @@ on:
       - 'web/**'
       - 'supabase/**'
       - 'moderation-worker/**'
+      - 'paddleocr-worker/**'
       - '.github/workflows/conecta-v2.yml'
   pull_request:
     paths:
       - 'web/**'
       - 'supabase/**'
       - 'moderation-worker/**'
+      - 'paddleocr-worker/**'
       - '.github/workflows/conecta-v2.yml'
   workflow_dispatch:
 
@@ -42,6 +44,8 @@ jobs:
         run: npm install --no-audit --no-fund --no-package-lock
       - name: Compile open-source moderation worker
         run: python3 -m py_compile ../moderation-worker/server.py
+      - name: Check private PaddleOCR worker syntax
+        run: python3 -m py_compile ../paddleocr-worker/app.py
       - name: Run real local NSFWJS moderation model (no API key)
         run: npm run test:moderation
       - name: Real automatic text/video moderation tests
