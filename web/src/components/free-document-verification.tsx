@@ -77,6 +77,9 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [busy,setBusy]=useState(false);
   const [challengeBusy,setChallengeBusy]=useState(false);
   const [challenge,setChallenge]=useState('');
+  const [challengeExpiresAt,setChallengeExpiresAt]=useState(0);
+  const [secondsRemaining,setSecondsRemaining]=useState(0);
+  const [captureBusy,setCaptureBusy]=useState(false);
   const [instructions,setInstructions]=useState<string[]>([]);
   const [frameIndex,setFrameIndex]=useState(0);
   const [frames,setFrames]=useState<File[]>([]);
@@ -86,8 +89,11 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [error,setError]=useState('');
   const videoRef=useRef<HTMLVideoElement>(null);
   const streamRef=useRef<MediaStream|null>(null);
+  const captureBusyRef=useRef(false);
+  const cameraSessionRef=useRef(0);
 
   function stopCamera(){
+    cameraSessionRef.current++;
     streamRef.current?.getTracks().forEach(track=>track.stop());
     streamRef.current=null;
     if(videoRef.current){videoRef.current.pause();videoRef.current.srcObject=null;}
@@ -96,9 +102,30 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
 
   function clear(){
     stopCamera();setFront(null);setBack(null);setSelfie(null);setConsent(false);
-    setChallenge('');setInstructions([]);setFrameIndex(0);setFrames([]);
+    setChallenge('');setChallengeExpiresAt(0);setSecondsRemaining(0);
+    setInstructions([]);setFrameIndex(0);setFrames([]);
     setMessage('Arquivos removidos desta tela.');setError('');setCompleted(false);setStep(1);
   }
+
+  // Server challenges are single-use and expire after 90s. Track the remaining
+  // capture window locally; expiration never changes the server's verdict.
+  useEffect(()=>{
+    if(!challenge||!challengeExpiresAt)return;
+    const tick=()=>{
+      const seconds=Math.max(0,Math.ceil((challengeExpiresAt-Date.now())/1000));
+      setSecondsRemaining(seconds);
+      if(seconds===0){
+        stopCamera();
+        setChallenge('');setChallengeExpiresAt(0);
+        setInstructions([]);setFrameIndex(0);setFrames([]);
+        setError('O desafio de 90 segundos expirou. Inicie uma nova captura ao vivo.');
+        setMessage('');
+      }
+    };
+    tick();
+    const timer=window.setInterval(tick,1000);
+    return ()=>window.clearInterval(timer);
+  },[challenge,challengeExpiresAt]);
 
   async function startGuidedCapture(){
     if(challengeBusy||busy)return;
@@ -138,13 +165,19 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         if(refreshed.data.session?.access_token)
           response=await requestChallenge(refreshed.data.session.access_token);
       }
-      const data=await readJsonResponse<{challenge?:string;instructions?:string[];error?:string}>(response);
+      const data=await readJsonResponse<{challenge?:string;instructions?:string[];error?:string;createdAt?:number;expiresAt?:string}>(response);
       if(!response.ok||!data.challenge||!Array.isArray(data.instructions)||data.instructions.length!==4)
         throw new Error(data.error||(response.status===401?'Sua sessão não foi reconhecida pelo servidor. Saia da conta, entre novamente e tente outra vez.':'Não foi possível iniciar o desafio guiado.'));
+      const validFor=Date.parse(data.expiresAt||'')-Number(data.createdAt);
+      if(!Number.isFinite(validFor)||validFor<15000||validFor>90000)
+        throw new Error('O desafio de câmera chegou com validade inválida. Reinicie a captura.');
+      // Use server-provided TTL rather than comparing clocks from different devices.
+      const expiresAt=Date.now()+validFor-3000;
+      setChallengeExpiresAt(expiresAt);setSecondsRemaining(Math.ceil((expiresAt-Date.now())/1000));
       setChallenge(data.challenge);setInstructions(data.instructions);setFrames([]);setFrameIndex(0);
       setMessage('Câmera ativa. Siga cada instrução e capture um quadro por etapa.');
     }catch(err){
-      stopCamera();setChallenge('');setInstructions([]);
+      stopCamera();setChallenge('');setChallengeExpiresAt(0);setSecondsRemaining(0);setInstructions([]);
       setError(err instanceof Error?err.message:'Não foi possível iniciar a captura guiada.');
       setMessage('');
     }finally{setChallengeBusy(false);}
@@ -152,8 +185,11 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
 
   const captureFrame=useCallback(async()=>{
     const video=videoRef.current;
-    if(!video||!challenge||!video.videoWidth||!video.videoHeight||frameIndex>=4)return;
-    setError('');
+    if(!video||!challenge||!video.videoWidth||!video.videoHeight||frameIndex>=4||
+       challengeExpiresAt<=Date.now()||captureBusyRef.current)return;
+    captureBusyRef.current=true;
+    setCaptureBusy(true);setError('');
+    const sessionId=cameraSessionRef.current;
     try{
       const canvas=document.createElement('canvas');
       canvas.width=video.videoWidth;canvas.height=video.videoHeight;
@@ -164,13 +200,15 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         value=>value?resolve(value):reject(new Error('Falha ao capturar imagem da câmera.')),
         'image/jpeg',0.88
       ));
+      if(sessionId!==cameraSessionRef.current||challengeExpiresAt<=Date.now())return;
       const file=new File([blob],'liveness-'+frameIndex+'.jpg',{type:'image/jpeg'});
       setFrames(previous=>[...previous,file]);
       setFrameIndex(previous=>previous+1);
       setMessage(frameIndex===3?'Captura guiada concluída. Envie os documentos para validação no servidor.':'Quadro capturado. Continue seguindo a próxima instrução.');
       if(frameIndex===3)stopCamera();
     }catch(err){setError(err instanceof Error?err.message:'Falha na captura.');}
-  },[challenge,frameIndex]);
+    finally{captureBusyRef.current=false;setCaptureBusy(false);}
+  },[challenge,challengeExpiresAt,frameIndex]);
 
   // Capture each guided liveness step automatically, with a manual fallback.
   useEffect(()=>{
@@ -186,6 +224,11 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     }
     if(!challenge||frames.length!==4){
       setError('Conclua os quatro quadros da captura guiada antes de enviar.');return;
+    }
+    if(challengeExpiresAt<=Date.now()+5000){
+      stopCamera();setChallenge('');setChallengeExpiresAt(0);
+      setInstructions([]);setFrameIndex(0);setFrames([]);setStep(3);
+      setError('O desafio expirou ou está próximo de expirar. Refaça a captura ao vivo antes de validar.');return;
     }
     setBusy(true);setError('');setMessage('Preparando o envio seguro para validação…');
     try{
@@ -230,12 +273,13 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         throw new Error(data.code?message+' (código: '+data.code+')':message);
       }
       setCompleted(data.approved===true);setStep(5);setMessage(data.message||'Validação concluída.');
-      setFront(null);setBack(null);setSelfie(null);setFrames([]);setChallenge('');setInstructions([]);
+      setFront(null);setBack(null);setSelfie(null);setFrames([]);setChallenge('');setChallengeExpiresAt(0);setInstructions([]);
       await onComplete();
     }catch(err){
       // The server consumes a challenge on the first well-formed submission.
       // Never silently re-send the same liveness frames after a failed attempt.
       setChallenge('');setInstructions([]);setFrameIndex(0);setFrames([]);setStep(3);
+      setChallengeExpiresAt(0);setSecondsRemaining(0);
       setError((err instanceof Error?err.message:'Não foi possível concluir a validação.')+
         ' Para uma nova tentativa, inicie outra captura guiada.');setMessage('');
     }finally{stopCamera();setBusy(false);}
@@ -247,7 +291,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     {number:3,label:'Captura ao vivo',done:frames.length===4},
     {number:4,label:'Validar',done:completed}
   ];
-  const canContinue=step===1?Boolean(front&&back):step===2?Boolean(selfie&&consent):step===3?Boolean(challenge&&frames.length===4):true;
+  const canContinue=step===1?Boolean(front&&back):step===2?Boolean(selfie&&consent):step===3?Boolean(challenge&&frames.length===4&&secondsRemaining>5):true;
 
   return <div style={{marginTop:20}}>
     <div className="feed-title">
@@ -302,7 +346,8 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </section>}
     {step===3&&<section className="panel" aria-labelledby="identity-step-live">
       <h3 id="identity-step-live">3. Confirme que está presente</h3>
-      <p className="small-note">Permita o acesso à câmera. O sistema orienta cada etapa e captura automaticamente quatro quadros após cinco segundos, com opção de capturar antes. As instruções aleatórias são válidas por 90 segundos.</p>
+      <p className="small-note">Permita o acesso à câmera. Siga as quatro etapas com boa iluminação, sem filtros e com apenas uma pessoa na imagem. A captura é automática após cinco segundos em cada etapa, mas você pode antecipá-la. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
+      {challenge&&<p role="timer" aria-live="off" className="small-note"><strong>Tempo restante: {secondsRemaining}s</strong>. Envie a validação antes de terminar o prazo de 90 segundos.</p>}
       <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
         style={{display:challenge?'block':'none',width:'100%',maxWidth:420,aspectRatio:'4 / 3',objectFit:'cover',transform:'scaleX(-1)',borderRadius:12,background:'#111'}}/>
       {!challenge?<button type="button" className="btn btn-outline" onClick={()=>void startGuidedCapture()} disabled={busy||challengeBusy}>
@@ -311,9 +356,9 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
           <p><strong>Etapa {Math.min(frameIndex+1,4)} de 4:</strong> {instructions[frameIndex]||'Captura concluída.'}</p>
           <progress value={frames.length} max={4} aria-label="Quadros capturados" style={{width:'100%',height:10,accentColor:'var(--accent,#6d5dfc)'}}/>
           <p className="small-note">Quadros capturados: {frames.length}/4</p>
-          {frameIndex<4&&<button type="button" className="btn btn-outline" onClick={()=>void captureFrame()} disabled={busy}>
+          {frameIndex<4&&<button type="button" className="btn btn-outline" onClick={()=>void captureFrame()} disabled={busy||captureBusy||secondsRemaining===0}>
             <Camera size={17}/> Capturar agora</button>}
-          <button type="button" className="btn btn-outline" style={{marginLeft:8}} onClick={()=>{stopCamera();setChallenge('');setInstructions([]);setFrames([]);setFrameIndex(0);setMessage('Captura cancelada.');}} disabled={busy}>
+          <button type="button" className="btn btn-outline" style={{marginLeft:8}} onClick={()=>{stopCamera();setChallenge('');setChallengeExpiresAt(0);setInstructions([]);setFrames([]);setFrameIndex(0);setMessage('Captura cancelada.');}} disabled={busy}>
             <CameraOff size={17}/> Reiniciar captura</button>
         </div>}
     </section>}
@@ -326,7 +371,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         <li>{frames.length===4?'✓':'○'} Captura guiada concluída</li>
       </ul>
       <p>Ao selecionar “Validar minha identidade”, o servidor verifica os arquivos e registra o resultado apenas quando todas as verificações obrigatórias passam. Não há aprovação simulada nem liberação por resultado inconclusivo.</p>
-      <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||challengeBusy||!front||!back||!selfie||!consent||!challenge||frames.length!==4}>
+      <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||challengeBusy||!front||!back||!selfie||!consent||!challenge||frames.length!==4||secondsRemaining<=5}>
         <ShieldCheck size={17}/>{busy?'Validando no servidor…':'Validar minha identidade'}</button>
     </section>}
     {step===5&&<section className="panel" aria-live="polite">
@@ -335,7 +380,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       <button type="button" className="btn btn-outline" onClick={clear}><Trash2 size={16}/> Iniciar novamente</button>
     </section>}
     {step<4&&<div className="row" style={{gap:10,flexWrap:'wrap',marginTop:16}}>
-      {step>1&&<button type="button" className="btn btn-outline" onClick={()=>{if(step===3){stopCamera();setChallenge('');setInstructions([]);setFrames([]);setFrameIndex(0);}setStep(step-1);}} disabled={busy||challengeBusy}>Voltar</button>}
+      {step>1&&<button type="button" className="btn btn-outline" onClick={()=>{if(step===3){stopCamera();setChallenge('');setChallengeExpiresAt(0);setInstructions([]);setFrames([]);setFrameIndex(0);}setStep(step-1);}} disabled={busy||challengeBusy}>Voltar</button>}
       <button type="button" className="btn btn-primary" onClick={()=>{setError('');setStep(step+1);}} disabled={!canContinue||busy||challengeBusy}>
         Continuar <span aria-hidden="true">→</span>
       </button>
