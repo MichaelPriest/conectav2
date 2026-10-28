@@ -47,12 +47,7 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/user_defined_dpi:'300'/);
  assert.match(route,/for\(const image of ocrImages\)image\.fill\(0\)/);
  assert.match(route,/workerPath:path\.join\(process\.cwd\(\),'node_modules','tesseract\.js','src','worker-script','node','index\.js'\)/);
- assert.match(route,/recognizeWithPaddleOcr\(ocrImages\)/);
- assert.match(route,/const paddleTexts=await recognizeWithPaddleOcr/);
- const paddle=read('src/lib/identity-paddle-ocr.ts');
- assert.match(paddle,/CONECTA_PADDLE_OCR_URL/);
- assert.match(paddle,/CONECTA_PADDLE_OCR_SECRET/);
- assert.match(paddle,/X-Conecta-OCR-Key/);
+ assert.doesNotMatch(route,/PaddleOCR|recognizeWithPaddleOcr/i);
  assert.match(route,/dobFromText/);
  assert.match(route,/ocrImages\.push\(await prepareOcrImage\(document\)\)/);
  assert.match(route,/ocrImages\.push\(await prepareOcrImage\(back\)\)/);
