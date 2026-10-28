@@ -3,6 +3,8 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {Camera,ShieldCheck,Trash2,CameraOff} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
+import {inspectGuidedFace} from '@/lib/identity-frame-guidance';
+import type {FaceGuide} from '@/lib/identity-frame-guidance';
 
 type DocumentKind='cin'|'old-rg'|'cnh';
 type Props={documentType:DocumentKind;onComplete:()=>Promise<void>|void};
@@ -114,6 +116,10 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [secondsRemaining,setSecondsRemaining]=useState(0);
   const [captureBusy,setCaptureBusy]=useState(false);
   const [mediaPipeStatus,setMediaPipeStatus]=useState<'loading'|'active'|'fallback'>('loading');
+  const [faceGuide,setFaceGuide]=useState<FaceGuide>({
+    status:'missing',ready:false,message:'Centralize o rosto dentro da moldura.',turnOffset:null
+  });
+  const [guideStableCount,setGuideStableCount]=useState(0);
   const [instructions,setInstructions]=useState<string[]>([]);
   const [frameIndex,setFrameIndex]=useState(0);
   const [frames,setFrames]=useState<File[]>([]);
@@ -230,7 +236,8 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       const expiresAt=Date.now()+validFor-3000;
       setChallengeExpiresAt(expiresAt);setSecondsRemaining(Math.ceil((expiresAt-Date.now())/1000));
       setChallenge(data.challenge);setInstructions(data.instructions);setFrames([]);setFrameIndex(0);
-      setMessage('Câmera ativa. Siga cada instrução e capture um quadro por etapa.');
+      setGuideStableCount(0);
+      setMessage('Câmera ativa. Os quadros serão capturados automaticamente após posicionamento estável.');
     }catch(err){
       stopCamera();setChallenge('');setChallengeExpiresAt(0);setSecondsRemaining(0);setInstructions([]);
       setError(err instanceof Error?err.message:'Não foi possível iniciar a captura guiada.');
@@ -247,31 +254,9 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     const sessionId=cameraSessionRef.current;
     try{
       if(mediaPipeRef.current){
-        const result=mediaPipeRef.current.detect(video);
-        const faces=result.faceLandmarks||[];
-        if(faces.length!==1)throw new Error(
-          faces.length>1?'Mantenha apenas uma pessoa na câmera.':'Posicione o rosto inteiro no centro da câmera.'
-        );
-        const landmarks=faces[0];
-        const bounds=landmarks.reduce((v,p)=>({
-          minX:Math.min(v.minX,p.x),maxX:Math.max(v.maxX,p.x),
-          minY:Math.min(v.minY,p.y),maxY:Math.max(v.maxY,p.y)
-        }),{minX:1,maxX:0,minY:1,maxY:0});
-        if(bounds.maxX-bounds.minX<0.21||bounds.maxY-bounds.minY<0.23||
-           bounds.minX<0.01||bounds.maxX>0.99||bounds.minY<0.01||bounds.maxY>0.99)
-          throw new Error('Aproxime o rosto, mantenha-o inteiro na imagem e evite cortes nas bordas.');
-        // Device-only head-position guidance; definitive challenge validation
-        // runs on the server using Human's independent yaw/anti-spoof signals.
-        const eyeA=landmarks[33],eyeB=landmarks[263],nose=landmarks[1];
-        if(eyeA&&eyeB&&nose){
-          const eyeDistance=Math.abs(eyeA.x-eyeB.x);
-          if(eyeDistance<0.05)throw new Error('Olhe para a câmera com o rosto mais visível.');
-          const turn=Math.abs((nose.x-(eyeA.x+eyeB.x)/2)/eyeDistance);
-          if((frameIndex===0||frameIndex===3)&&turn>0.31)
-            throw new Error('Olhe diretamente para a câmera nesta etapa.');
-          if((frameIndex===1||frameIndex===2)&&turn<0.07)
-            throw new Error('Vire um pouco mais a cabeça para o lado indicado, sem mover o celular.');
-        }
+        const guide=inspectGuidedFace(mediaPipeRef.current.detect(video).faceLandmarks||[],frameIndex);
+        setFaceGuide(guide);
+        if(!guide.ready)throw new Error(guide.message);
       }
       const canvas=document.createElement('canvas');
       canvas.width=video.videoWidth;canvas.height=video.videoHeight;
@@ -285,20 +270,56 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       if(sessionId!==cameraSessionRef.current||challengeExpiresAt<=Date.now())return;
       const file=new File([blob],'liveness-'+frameIndex+'.jpg',{type:'image/jpeg'});
       setFrames(previous=>[...previous,file]);
-      setFrameIndex(previous=>previous+1);
-      setMessage(frameIndex===3?'Captura guiada concluída. Envie os documentos para validação no servidor.':'Quadro capturado. Continue seguindo a próxima instrução.');
+      setFrameIndex(previous=>previous+1);setGuideStableCount(0);
+      setMessage(frameIndex===3?'Captura automática concluída. Envie os documentos para validação no servidor.':'Quadro registrado. Siga a próxima instrução.');
       if(frameIndex===3)stopCamera();
     }catch(err){setError(err instanceof Error?err.message:'Falha na captura.');}
     finally{captureBusyRef.current=false;setCaptureBusy(false);}
   },[challenge,challengeExpiresAt,frameIndex]);
 
-  // Capture each guided liveness step automatically, with a manual fallback.
+  // MediaPipe continuously checks framing and stability. No blind auto-timer.
+  // Only the server can validate identity, head-turn order and anti-spoof.
   useEffect(()=>{
-    if(!challenge||frameIndex>=4||!streamRef.current)return;
-    setMessage('Siga a instrução na tela. A captura desta etapa será feita automaticamente em 5 segundos; você também pode capturar antes.');
-    const timer=window.setInterval(()=>{void captureFrame();},5000);
-    return ()=>window.clearInterval(timer);
-  },[challenge,frameIndex,captureFrame]);
+    if(!challenge||frameIndex>=4||!streamRef.current||mediaPipeStatus!=='active')return;
+    const video=videoRef.current;
+    if(!video)return;
+    let cancelled=false,timer:number|undefined;
+    let stable=0,firstReadyAt=0,lastSeenAt=0,lastTurn:number|null=null;
+    const inspect=()=>{
+      if(cancelled)return;
+      try{
+        if(busy||captureBusyRef.current||challengeExpiresAt<=Date.now()||video.readyState<2)return;
+        const engine=mediaPipeRef.current;
+        if(!engine)return;
+        const guide=inspectGuidedFace(engine.detect(video).faceLandmarks||[],frameIndex);
+        setFaceGuide(guide);
+        const now=Date.now();
+        if(!guide.ready){
+          stable=0;firstReadyAt=0;lastTurn=null;setGuideStableCount(0);
+          return;
+        }
+        const moved=(frameIndex===1||frameIndex===2)&&lastTurn!==null&&
+          guide.turnOffset!==null&&Math.abs(guide.turnOffset-lastTurn)>0.16;
+        if(stable===0||now-lastSeenAt>900||moved){
+          stable=1;firstReadyAt=now;
+        }else stable++;
+        lastSeenAt=now;lastTurn=guide.turnOffset;
+        setGuideStableCount(Math.min(stable,3));
+        if(stable>=3&&now-firstReadyAt>=650){
+          stable=0;setGuideStableCount(0);
+          void captureFrame();
+        }
+      }catch{
+        stable=0;firstReadyAt=0;lastTurn=null;setGuideStableCount(0);
+        setFaceGuide({status:'incomplete',ready:false,
+          message:'Não foi possível analisar o rosto. Ajuste a iluminação ou capture manualmente.',turnOffset:null});
+      }finally{
+        if(!cancelled)timer=window.setTimeout(inspect,360);
+      }
+    };
+    timer=window.setTimeout(inspect,250);
+    return ()=>{cancelled=true;if(timer!==undefined)window.clearTimeout(timer);};
+  },[challenge,frameIndex,captureFrame,busy,challengeExpiresAt,mediaPipeStatus]);
 
   async function submit(){
     if(!front||!back||!selfie||!consent){
@@ -374,6 +395,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     {number:4,label:'Validar',done:completed}
   ];
   const canContinue=step===1?Boolean(front&&back):step===2?Boolean(selfie&&consent):step===3?Boolean(challenge&&frames.length===4&&secondsRemaining>5):true;
+  const guideColor=mediaPipeStatus!=='active'?'#60a5fa':faceGuide.ready?'#34d399':'#fbbf24';
 
   return <div style={{marginTop:20}}>
     <div className="feed-title">
