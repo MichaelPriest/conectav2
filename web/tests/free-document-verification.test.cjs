@@ -66,7 +66,7 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/faceFocusVariance/);
  assert.match(route,/documentFocus<4\|\|selfieFocus<4/);
  assert.match(route,/originalSimilarity/);
- assert.match(route,/cropSimilarity<0\\.55/);
+ assert.match(route,/cropSimilarity<0\.55/);
  assert.match(route,/selfiePortraitDetection/);
  assert.match(route,/firstDirection!==challengeTurnOrder\[0\]/);
  assert.match(route,/secondDirection!==challengeTurnOrder\[1\]/);
@@ -119,6 +119,17 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(migration,/enable row level security/i);
  assert.match(migration,/consume_identity_liveness_challenge/);
  assert.match(migration,/consumed_at is null/);
+});
+
+test('failed identity submissions require a fresh one-use liveness challenge and report a cause',()=>{
+ const route=read('src/app/api/identity/free-document/verify/route.ts');
+ const challenge=read('src/app/api/identity/free-document/liveness-challenge/route.ts');
+ const ui=read('src/components/free-document-verification.tsx');
+ assert.match(route,/!runtimeConfig\.serviceKey/);
+ assert.match(challenge,/!runtimeConfig\.serviceKey/);
+ assert.match(ui,/setChallenge\(''\);setInstructions\(\[\]\);setFrameIndex\(0\);setFrames\(\[\]\);setStep\(3\)/);
+ assert.match(ui,/data\.code/);
+ assert.match(ui,/response\.status===401/);
 });
 
 test('the free path never accepts browser-supplied descriptors or writes raw document evidence',()=>{
