@@ -272,7 +272,12 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       setFrames(previous=>[...previous,file]);
       setFrameIndex(previous=>previous+1);setGuideStableCount(0);
       setMessage(frameIndex===3?'Captura automática concluída. Envie os documentos para validação no servidor.':'Quadro registrado. Siga a próxima instrução.');
-      if(frameIndex===3)stopCamera();
+      if(frameIndex===3){
+        stopCamera();
+        // Advance to the explicit review/consent step automatically. Only the
+        // user can trigger the final server verification.
+        setStep(4);
+      }
     }catch(err){setError(err instanceof Error?err.message:'Falha na captura.');}
     finally{captureBusyRef.current=false;setCaptureBusy(false);}
   },[challenge,challengeExpiresAt,frameIndex]);
