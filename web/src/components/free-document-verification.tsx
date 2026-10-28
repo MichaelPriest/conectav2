@@ -450,14 +450,53 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </section>}
     {step===3&&<section className="panel" aria-labelledby="identity-step-live">
       <h3 id="identity-step-live">3. Confirme que está presente</h3>
-      <p className="small-note">Permita o acesso à câmera. Siga as quatro etapas com boa iluminação, sem filtros e com apenas uma pessoa na imagem. A captura é automática após cinco segundos em cada etapa, mas você pode antecipá-la. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
+      <p className="small-note">Posicione seu rosto na moldura e siga as quatro orientações. O MediaPipe acompanha o enquadramento e captura cada quadro automaticamente quando a posição estiver estável. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
       {challenge&&<p className="small-note" role="status">{mediaPipeStatus==='active'?
         'MediaPipe ativo: enquadramento e posição do rosto são conferidos no aparelho. O Human valida no servidor.':
         mediaPipeStatus==='fallback'?'Orientação MediaPipe indisponível neste dispositivo. A validação obrigatória pelo Human permanece ativa.':
         'Inicializando análise de posição facial…'}</p>}
       {challenge&&<p role="timer" aria-live="off" className="small-note"><strong>Tempo restante: {secondsRemaining}s</strong>. Envie a validação antes de terminar o prazo de 90 segundos.</p>}
-      <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
-        style={{display:challenge?'block':'none',width:'100%',maxWidth:420,aspectRatio:'4 / 3',objectFit:'cover',transform:'scaleX(-1)',borderRadius:12,background:'#111'}}/>
+      {/* Visual guidance is never burned into the biometric frames. */}
+      <div style={{position:'relative',display:challenge?'block':'none',width:'100%',maxWidth:480,
+        aspectRatio:'4 / 3',overflow:'hidden',borderRadius:18,background:'#101625',
+        border:'1px solid rgba(148,163,184,.5)'}}>
+        <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
+          style={{width:'100%',height:'100%',objectFit:'cover',transform:'scaleX(-1)',display:'block'}}/>
+        <div aria-hidden="true" data-testid="conecta-face-guide-frame" style={{
+          position:'absolute',left:'22%',top:'8%',width:'56%',height:'82%',
+          border:'3px solid '+guideColor,borderRadius:'48% / 48%',
+          boxShadow:'0 0 0 100vmax rgba(8,15,30,.17), 0 0 24px '+guideColor,
+          transition:'border-color 180ms ease, box-shadow 180ms ease',pointerEvents:'none'
+        }}/>
+        <div aria-hidden="true" style={{position:'absolute',top:10,left:10,right:10,display:'flex',
+          justifyContent:'space-between',alignItems:'center',gap:8,color:'white',pointerEvents:'none',
+          fontSize:12,fontWeight:700,textShadow:'0 1px 4px rgba(0,0,0,.85)'}}>
+          <span style={{background:'rgba(3,10,24,.65)',padding:'5px 9px',borderRadius:20}}>
+            Etapa {Math.min(frameIndex+1,4)}/4
+          </span>
+          <span style={{background:'rgba(3,10,24,.65)',padding:'5px 9px',borderRadius:20}}>
+            {mediaPipeStatus==='active'?faceGuide.ready?'● Bem enquadrado':'● Ajustar posição':'● Câmera ativa'}
+          </span>
+        </div>
+        <div aria-hidden="true" style={{position:'absolute',left:12,right:12,bottom:12,
+          background:'rgba(3,10,24,.78)',borderRadius:12,padding:'9px 11px',
+          color:'white',fontSize:13,textAlign:'center',pointerEvents:'none'}}>
+          {mediaPipeStatus==='active'?faceGuide.message:
+            mediaPipeStatus==='loading'?'Inicializando reconhecimento do rosto…':
+            'MediaPipe indisponível: use a captura manual.'}
+          {mediaPipeStatus==='active'&&faceGuide.ready&&
+            <div style={{height:4,marginTop:7,background:'rgba(255,255,255,.3)',
+              borderRadius:4,overflow:'hidden'}}>
+              <div style={{height:'100%',width:(guideStableCount/3*100)+'%',background:'#34d399',
+                transition:'width 200ms ease'}}/>
+            </div>}
+        </div>
+      </div>
+      {challenge&&<p role="status" aria-live="polite" style={{
+        fontSize:13,marginTop:8,color:faceGuide.ready?'#059669':'inherit'
+      }}>{mediaPipeStatus==='active'?faceGuide.message:
+        mediaPipeStatus==='fallback'?'Não foi possível iniciar o enquadramento automático; use Capturar agora.':
+        'Preparando enquadramento automático…'}</p>
       {!challenge?<button type="button" className="btn btn-outline" onClick={()=>void startGuidedCapture()} disabled={busy||challengeBusy}>
         <Camera size={17}/>{challengeBusy?'Preparando câmera…':'Iniciar captura guiada'}</button>:
         <div>
@@ -465,7 +504,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
           <progress value={frames.length} max={4} aria-label="Quadros capturados" style={{width:'100%',height:10,accentColor:'var(--accent,#6d5dfc)'}}/>
           <p className="small-note">Quadros capturados: {frames.length}/4</p>
           {frameIndex<4&&<button type="button" className="btn btn-outline" onClick={()=>void captureFrame()} disabled={busy||captureBusy||secondsRemaining===0}>
-            <Camera size={17}/> Capturar agora</button>}
+            <Camera size={17}/> Capturar agora (opcional)</button>}
           <button type="button" className="btn btn-outline" style={{marginLeft:8}} onClick={()=>{stopCamera();setChallenge('');setChallengeExpiresAt(0);setInstructions([]);setFrames([]);setFrameIndex(0);setMessage('Captura cancelada.');}} disabled={busy}>
             <CameraOff size={17}/> Reiniciar captura</button>
         </div>}
