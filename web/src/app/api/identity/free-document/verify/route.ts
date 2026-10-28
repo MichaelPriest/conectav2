@@ -10,7 +10,6 @@ import {identityContext,runtimeConfig} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {inspectCinToken} from '@/lib/cin-qr';
 import {extractBirthDateFromOcr} from '@/lib/legacy-rg-ocr';
-import {recognizeWithPaddleOcr} from '@/lib/identity-paddle-ocr';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -256,9 +255,8 @@ export async function POST(request:NextRequest){
   try{
     const [docPixels,selfiePix]=await Promise.all([pixels(document),pixels(selfie)]);
     documentPixels=docPixels.data;selfiePixels=selfiePix.data;
-    // Prepare the same high-quality images for both engines. Tesseract is the
-    // free first pass; a worker failure must not prevent the private PaddleOCR
-    // fallback from reading the documents.
+    // Prepare high-quality images for Tesseract's multiple OCR passes.
+    // If its worker fails, verification must fail safely, never approve.
     ocrImages.push(await prepareOcrImage(document));
     ocrImages.push(await prepareOcrImage(back));
     let detectedDates:string[]=[];
@@ -305,17 +303,9 @@ export async function POST(request:NextRequest){
         }
       }
     }catch{
-      // Do not approve an unreadable document; only a configured PaddleOCR
-      // service can produce a fallback date from the uploaded document image.
-      detectedDates=[];
-    }
-    // Fallback: use private PaddleOCR only if all Tesseract attempts failed.
-    // No dates are inferred or accepted from client fields; both OCR engines
-    // pass through the same strict Portuguese DOB parser and mismatch policy.
-    if(detectedDates.length===0){
-      const paddleTexts=await recognizeWithPaddleOcr(ocrImages);
-      if(paddleTexts)detectedDates=paddleTexts.map(text=>dobFromText(text))
-        .filter((value):value is string=>Boolean(value));
+      // A Tesseract runtime failure is a temporary service failure, not
+      // evidence that the document is fraudulent or verified.
+      throw new Error('O leitor Tesseract está temporariamente indisponível. Tente novamente mais tarde.');
     }
     const uniqueDates=[...new Set(detectedDates)];
     if(uniqueDates.length>1)
