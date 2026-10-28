@@ -353,7 +353,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       const originals=[front,back,selfie];
       const frameBytes=frames.reduce((total,frame)=>total+frame.size,0);
       let images:File[]=[];
-      for(const [size,quality] of [[1600,0.86],[1600,0.76],[1400,0.78],[1200,0.74]]){
+      for(const [size,quality] of [[2200,0.90],[2000,0.86],[1800,0.82],[1600,0.78],[1400,0.76],[1200,0.74]]){
         images=await Promise.all(originals.map(file=>compressForUpload(file,size,quality)));
         const estimatedBytes=images.reduce((total,file)=>total+file.size,frameBytes)+32_768;
         if(estimatedBytes<=MAX_IDENTITY_REQUEST_BYTES)break;
