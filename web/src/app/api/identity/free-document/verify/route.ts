@@ -409,29 +409,20 @@ export async function POST(request:NextRequest){
       if(!Array.isArray(faceBox)||faceBox.length<4||faceBox.some(value=>!Number.isFinite(value))||
          !Array.isArray(selfieFaceBox)||selfieFaceBox.length<4||selfieFaceBox.some(value=>!Number.isFinite(value)))
         return await failAttempt('Não foi possível localizar com segurança os rostos para comparar. Reposicione o documento e enquadre a selfie novamente.',422,'face_quality_low');
-      const makeCropBounds=(box:number[],width:number,height:number)=>{
-        const [x,y,w,h]=box;
-        const padX=Math.round(w*0.35),padY=Math.round(h*0.35);
-        const left=Math.max(0,Math.floor(x-padX));
-        const top=Math.max(0,Math.floor(y-padY));
-        const right=Math.min(width,Math.ceil(x+w+padX));
-        const bottom=Math.min(height,Math.ceil(y+h+padY));
-        return {left,top,width:right-left,height:bottom-top};
-      };
-      const docBounds=makeCropBounds(faceBox,docPixels.width,docPixels.height);
-      const selfieBounds=makeCropBounds(selfieFaceBox,selfiePix.width,selfiePix.height);
-      if(docBounds.width<24||docBounds.height<24||selfieBounds.width<24||selfieBounds.height<24)
-        return await failAttempt('A foto do documento ou a selfie está pequena demais para comparar. Tente imagens mais nítidas e enquadre o rosto de frente.',422,'face_quality_low');
-      // Normalize both sides the same way. A face embedding taken from a whole
-      // document/selfie can be dominated by surrounding pixels or lose detail;
-      // compare the portrait crop against a matching crop of the live selfie.
-      const cropOptions={width:512,height:512,fit:'contain' as const,background:{r:255,g:255,b:255}};
-      portraitPixels=await sharp(Buffer.from(docPixels.data),{
-        raw:{width:docPixels.width,height:docPixels.height,channels:3}
-      }).extract(docBounds).resize(cropOptions).normalize().sharpen().raw().toBuffer();
-      selfiePortraitPixels=await sharp(Buffer.from(selfiePix.data),{
-        raw:{width:selfiePix.width,height:selfiePix.height,channels:3}
-      }).extract(selfieBounds).resize(cropOptions).normalize().sharpen().raw().toBuffer();
+      // The detector uses a reduced preview, but matching uses the native
+      // uploaded pixels before either portrait is enlarged to 512x512.
+      const documentCrop=await cropFaceAtOriginalResolution(
+        document,faceBox,{width:docPixels.width,height:docPixels.height}
+      );
+      portraitPixels=documentCrop.pixels;
+      const selfieCrop=await cropFaceAtOriginalResolution(
+        selfie,selfieFaceBox,{width:selfiePix.width,height:selfiePix.height}
+      );
+      selfiePortraitPixels=selfieCrop.pixels;
+      if(documentCrop.nativeFaceWidth<112||documentCrop.nativeFaceHeight<112)
+        return await failAttempt('A fotografia no RG ficou pequena demais para uma comparação confiável. Fotografe o documento mais perto, preenchendo o quadro, sem reflexos.',422,'face_quality_low');
+      if(selfieCrop.nativeFaceWidth<160||selfieCrop.nativeFaceHeight<160)
+        return await failAttempt('A selfie ficou pequena demais para comparação. Aproxime o rosto e tente novamente.',422,'face_quality_low');
       const portraitData=new Uint8Array(portraitPixels);
       const selfiePortraitData=new Uint8Array(selfiePortraitPixels);
       portraitTensorData=new Int32Array(portraitData);
