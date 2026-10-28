@@ -6,6 +6,39 @@ import {supabaseBrowser} from '@/lib/supabase/browser';
 
 type DocumentKind='cin'|'old-rg'|'cnh';
 type Props={documentType:DocumentKind;onComplete:()=>Promise<void>|void};
+type FacePoint={x:number;y:number;z:number};
+type LocalFaceLandmarker={
+ detect:(video:HTMLVideoElement)=>{faceLandmarks?:FacePoint[][]};
+ close:()=>void;
+};
+type LocalMediaPipe={
+ FaceLandmarker:{createFromOptions:(vision:unknown,options:Record<string,unknown>)=>Promise<LocalFaceLandmarker>};
+ FilesetResolver:{forVisionTasks:(path:string)=>Promise<unknown>};
+};
+declare global{interface Window{ConectaMediaPipe?:LocalMediaPipe;}}
+let mediaPipeLoader:Promise<LocalMediaPipe>|null=null;
+function loadLocalMediaPipe():Promise<LocalMediaPipe>{
+ if(window.ConectaMediaPipe)return Promise.resolve(window.ConectaMediaPipe);
+ if(!mediaPipeLoader){
+  mediaPipeLoader=new Promise<LocalMediaPipe>((resolve,reject)=>{
+   const script=document.createElement('script');
+   script.type='module';script.src='/vendor/mediapipe/identity-guide.mjs';
+   script.referrerPolicy='no-referrer';script.dataset.conectaMediaPipe='true';
+   script.onload=()=>{
+    if(window.ConectaMediaPipe)resolve(window.ConectaMediaPipe);
+    else reject(new Error('O MediaPipe não foi inicializado.'));
+   };
+   script.onerror=()=>reject(new Error('O MediaPipe local está indisponível.'));
+   document.head.appendChild(script);
+  }).catch(error=>{
+   mediaPipeLoader=null;
+   document.querySelector('script[data-conecta-media-pipe]')?.remove();
+   throw error;
+  });
+ }
+ return mediaPipeLoader;
+}
+
 const labels:Record<DocumentKind,string>={cin:'CIN (Carteira de Identidade Nacional)', 'old-rg':'RG antigo (frente e verso)',cnh:'CNH com QR Code'};
 
 async function renderCnhPdf(file:File):Promise<{front:File;back:File}>{
@@ -80,6 +113,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [challengeExpiresAt,setChallengeExpiresAt]=useState(0);
   const [secondsRemaining,setSecondsRemaining]=useState(0);
   const [captureBusy,setCaptureBusy]=useState(false);
+  const [mediaPipeStatus,setMediaPipeStatus]=useState<'loading'|'active'|'fallback'>('loading');
   const [instructions,setInstructions]=useState<string[]>([]);
   const [frameIndex,setFrameIndex]=useState(0);
   const [frames,setFrames]=useState<File[]>([]);
@@ -89,16 +123,18 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [error,setError]=useState('');
   const videoRef=useRef<HTMLVideoElement>(null);
   const streamRef=useRef<MediaStream|null>(null);
+  const mediaPipeRef=useRef<LocalFaceLandmarker|null>(null);
   const captureBusyRef=useRef(false);
   const cameraSessionRef=useRef(0);
 
   function stopCamera(){
     cameraSessionRef.current++;
+    mediaPipeRef.current?.close();mediaPipeRef.current=null;
     streamRef.current?.getTracks().forEach(track=>track.stop());
     streamRef.current=null;
     if(videoRef.current){videoRef.current.pause();videoRef.current.srcObject=null;}
   }
-  useEffect(()=>()=>{streamRef.current?.getTracks().forEach(track=>track.stop());},[]);
+  useEffect(()=>()=>{mediaPipeRef.current?.close();streamRef.current?.getTracks().forEach(track=>track.stop());},[]);
 
   function clear(){
     stopCamera();setFront(null);setBack(null);setSelfie(null);setConsent(false);
@@ -112,6 +148,8 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   useEffect(()=>{
     if(!challenge||!challengeExpiresAt)return;
     const tick=()=>{
+      // The server may still be processing an already-submitted valid request.
+      if(busy)return;
       const seconds=Math.max(0,Math.ceil((challengeExpiresAt-Date.now())/1000));
       setSecondsRemaining(seconds);
       if(seconds===0){
@@ -125,7 +163,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     tick();
     const timer=window.setInterval(tick,1000);
     return ()=>window.clearInterval(timer);
-  },[challenge,challengeExpiresAt]);
+  },[challenge,challengeExpiresAt,busy]);
 
   async function startGuidedCapture(){
     if(challengeBusy||busy)return;
@@ -155,6 +193,23 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       const video=videoRef.current;
       if(!video)throw new Error('Prévia da câmera indisponível.');
       video.srcObject=stream;await video.play();
+      setMediaPipeStatus('loading');
+      try{
+        const mp=await loadLocalMediaPipe();
+        const vision=await mp.FilesetResolver.forVisionTasks('/vendor/mediapipe/wasm');
+        mediaPipeRef.current=await mp.FaceLandmarker.createFromOptions(vision,{
+          baseOptions:{modelAssetPath:'/vendor/mediapipe/face_landmarker.task',delegate:'CPU'},
+          runningMode:'IMAGE',
+          numFaces:2,
+          minFaceDetectionConfidence:0.5,
+          minFacePresenceConfidence:0.5
+        });
+        setMediaPipeStatus('active');
+      }catch{
+        // Client-side MediaPipe guides image quality; it never grants identity.
+        // If this optional check fails, server-side Human still gates approval.
+        setMediaPipeStatus('fallback');
+      }
       const requestChallenge=(accessToken:string)=>fetch('/api/identity/free-document/liveness-challenge',{
         method:'POST',headers:{Authorization:'Bearer '+accessToken},
         credentials:'same-origin',cache:'no-store'
@@ -191,6 +246,33 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     setCaptureBusy(true);setError('');
     const sessionId=cameraSessionRef.current;
     try{
+      if(mediaPipeRef.current){
+        const result=mediaPipeRef.current.detect(video);
+        const faces=result.faceLandmarks||[];
+        if(faces.length!==1)throw new Error(
+          faces.length>1?'Mantenha apenas uma pessoa na câmera.':'Posicione o rosto inteiro no centro da câmera.'
+        );
+        const landmarks=faces[0];
+        const bounds=landmarks.reduce((v,p)=>({
+          minX:Math.min(v.minX,p.x),maxX:Math.max(v.maxX,p.x),
+          minY:Math.min(v.minY,p.y),maxY:Math.max(v.maxY,p.y)
+        }),{minX:1,maxX:0,minY:1,maxY:0});
+        if(bounds.maxX-bounds.minX<0.21||bounds.maxY-bounds.minY<0.23||
+           bounds.minX<0.01||bounds.maxX>0.99||bounds.minY<0.01||bounds.maxY>0.99)
+          throw new Error('Aproxime o rosto, mantenha-o inteiro na imagem e evite cortes nas bordas.');
+        // Device-only head-position guidance; definitive challenge validation
+        // runs on the server using Human's independent yaw/anti-spoof signals.
+        const eyeA=landmarks[33],eyeB=landmarks[263],nose=landmarks[1];
+        if(eyeA&&eyeB&&nose){
+          const eyeDistance=Math.abs(eyeA.x-eyeB.x);
+          if(eyeDistance<0.05)throw new Error('Olhe para a câmera com o rosto mais visível.');
+          const turn=Math.abs((nose.x-(eyeA.x+eyeB.x)/2)/eyeDistance);
+          if((frameIndex===0||frameIndex===3)&&turn>0.31)
+            throw new Error('Olhe diretamente para a câmera nesta etapa.');
+          if((frameIndex===1||frameIndex===2)&&turn<0.07)
+            throw new Error('Vire um pouco mais a cabeça para o lado indicado, sem mover o celular.');
+        }
+      }
       const canvas=document.createElement('canvas');
       canvas.width=video.videoWidth;canvas.height=video.videoHeight;
       const context=canvas.getContext('2d');
@@ -214,8 +296,8 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   useEffect(()=>{
     if(!challenge||frameIndex>=4||!streamRef.current)return;
     setMessage('Siga a instrução na tela. A captura desta etapa será feita automaticamente em 5 segundos; você também pode capturar antes.');
-    const timer=window.setTimeout(()=>{void captureFrame();},5000);
-    return ()=>window.clearTimeout(timer);
+    const timer=window.setInterval(()=>{void captureFrame();},5000);
+    return ()=>window.clearInterval(timer);
   },[challenge,frameIndex,captureFrame]);
 
   async function submit(){
@@ -347,6 +429,10 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     {step===3&&<section className="panel" aria-labelledby="identity-step-live">
       <h3 id="identity-step-live">3. Confirme que está presente</h3>
       <p className="small-note">Permita o acesso à câmera. Siga as quatro etapas com boa iluminação, sem filtros e com apenas uma pessoa na imagem. A captura é automática após cinco segundos em cada etapa, mas você pode antecipá-la. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
+      {challenge&&<p className="small-note" role="status">{mediaPipeStatus==='active'?
+        'MediaPipe ativo: enquadramento e posição do rosto são conferidos no aparelho. O Human valida no servidor.':
+        mediaPipeStatus==='fallback'?'Orientação MediaPipe indisponível neste dispositivo. A validação obrigatória pelo Human permanece ativa.':
+        'Inicializando análise de posição facial…'}</p>}
       {challenge&&<p role="timer" aria-live="off" className="small-note"><strong>Tempo restante: {secondsRemaining}s</strong>. Envie a validação antes de terminar o prazo de 90 segundos.</p>}
       <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
         style={{display:challenge?'block':'none',width:'100%',maxWidth:420,aspectRatio:'4 / 3',objectFit:'cover',transform:'scaleX(-1)',borderRadius:12,background:'#111'}}/>
