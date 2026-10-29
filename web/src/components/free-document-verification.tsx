@@ -379,12 +379,12 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         if(refreshed.data.session?.access_token)
           response=await requestVerification(refreshed.data.session.access_token);
       }
-      const data=await readJsonResponse<{ok?:boolean;approved?:boolean;message?:string;error?:string;code?:string}>(response);
+      const data=await readJsonResponse<{ok?:boolean;approved?:boolean;ageAssured?:boolean;message?:string;error?:string;code?:string}>(response);
       if(!response.ok||data.ok!==true){
         const message=data.message||data.error||'A validação não foi concluída.';
         throw new Error(data.code?message+' (código: '+data.code+')':message);
       }
-      setCompleted(data.approved===true);setStep(5);setMessage(data.message||'Validação concluída.');
+      setCompleted(data.ageAssured===true||data.approved===true);setStep(5);setMessage(data.message||'Validação concluída.');
       setFront(null);setBack(null);setSelfie(null);setFrames([]);setChallenge('');setChallengeExpiresAt(0);setInstructions([]);
       await onComplete();
     }catch(err){
