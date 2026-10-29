@@ -106,6 +106,10 @@ async function compressForUpload(file:File,maxDimension=1600,quality=0.86):Promi
 
 export function FreeDocumentVerification({documentType,onComplete}:Props){
   const [front,setFront]=useState<File|null>(null);
+  const frontCameraRef=useRef<HTMLInputElement>(null);
+  const frontFileRef=useRef<HTMLInputElement>(null);
+  const backCameraRef=useRef<HTMLInputElement>(null);
+  const backFileRef=useRef<HTMLInputElement>(null);
   const [back,setBack]=useState<File|null>(null);
   const [selfie,setSelfie]=useState<File|null>(null);
   const [consent,setConsent]=useState(false);
@@ -418,10 +422,16 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       <h3 id="identity-step-document">1. Envie seu documento</h3>
       <p className="small-note">Selecione imagens do armazenamento, tire fotos com a câmera do dispositivo ou anexe arquivos compatíveis. Para CNH, também pode selecionar o PDF digital; ele será convertido em imagens temporárias no navegador. Envie frente e verso legíveis. No RG antigo, não é necessário enviar as partes internas nem localizar QR Codes.</p>
       <div style={{display:'grid',gap:14}}>
-        <label className="form-label">Frente do documento com foto
-          <input type="file" capture="environment" accept={documentType==='cnh'?'image/jpeg,image/png,image/webp,application/pdf':'image/jpeg,image/png,image/webp'} disabled={busy||challengeBusy} onChange={async e=>{
-            const file=e.target.files?.[0]||null;
-            if(!file){setFront(null);return;}
+        <div className="form-label">
+          <strong>Frente do documento com foto</strong>
+          <div style={{display:'flex',gap:10,flexWrap:'wrap',marginTop:8}}>
+            <button type="button" className="btn btn-primary" disabled={busy||challengeBusy} onClick={()=>frontCameraRef.current?.click()}><Camera size={17}/> Tirar foto</button>
+            <button type="button" className="btn btn-secondary" disabled={busy||challengeBusy} onClick={()=>frontFileRef.current?.click()}>📁 Escolher arquivo</button>
+          </div>
+          <input ref={frontCameraRef} type="file" capture="environment" accept="image/jpeg,image/png,image/webp" aria-label="Tirar foto da frente do documento" style={{display:'none'}} disabled={busy||challengeBusy} onChange={e=>{const file=e.target.files?.[0];if(file){setFront(file);setBack(null);setError('');setMessage('');}e.target.value='';}}/>
+          <input ref={frontFileRef} type="file" accept={documentType==='cnh'?'image/jpeg,image/png,image/webp,application/pdf':'image/jpeg,image/png,image/webp'} aria-label="Escolher arquivo da frente do documento" style={{display:'none'}} disabled={busy||challengeBusy} onChange={async e=>{
+            const file=e.target.files?.[0];e.target.value='';
+            if(!file)return;
             setError('');
             try{
               if(file.type==='application/pdf'){
@@ -432,12 +442,18 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
               }else{setFront(file);setBack(null);setMessage('');}
             }catch(err){setFront(null);setError(err instanceof Error?err.message:'Não foi possível abrir o arquivo.');setMessage('');}
           }}/>
-          <span className="small-note">{front?front.name:(documentType==='cnh'?'JPG, PNG ou WebP · até 8 MB · PDF da CNH até 12 MB':'JPG, PNG ou WebP · até 8 MB')}</span>
-        </label>
-        <label className="form-label">Verso do documento
-          <input type="file" capture="environment" accept="image/jpeg,image/png,image/webp" disabled={busy||challengeBusy} onChange={e=>setBack(e.target.files?.[0]||null)}/>
-          <span className="small-note">{back?back.name:'Envie o verso com todas as informações legíveis. Para CIN e CNH, o QR Code deve estar na frente ou no verso; para RG antigo, não é exigido.'}</span>
-        </label>
+          <span className="small-note">{front?'Selecionado: '+front.name:(documentType==='cnh'?'JPG, PNG ou WebP · até 8 MB · PDF da CNH até 12 MB':'JPG, PNG ou WebP · até 8 MB')}</span>
+        </div>
+        <div className="form-label">
+          <strong>Verso do documento</strong>
+          <div style={{display:'flex',gap:10,flexWrap:'wrap',marginTop:8}}>
+            <button type="button" className="btn btn-primary" disabled={busy||challengeBusy} onClick={()=>backCameraRef.current?.click()}><Camera size={17}/> Tirar foto</button>
+            <button type="button" className="btn btn-secondary" disabled={busy||challengeBusy} onClick={()=>backFileRef.current?.click()}>📁 Escolher arquivo</button>
+          </div>
+          <input ref={backCameraRef} type="file" capture="environment" accept="image/jpeg,image/png,image/webp" aria-label="Tirar foto do verso do documento" style={{display:'none'}} disabled={busy||challengeBusy} onChange={e=>{const file=e.target.files?.[0];if(file){setBack(file);setError('');}e.target.value='';}}/>
+          <input ref={backFileRef} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Escolher arquivo do verso do documento" style={{display:'none'}} disabled={busy||challengeBusy} onChange={e=>{const file=e.target.files?.[0];if(file){setBack(file);setError('');}e.target.value='';}}/>
+          <span className="small-note">{back?'Selecionado: '+back.name:'Envie o verso legível. O QR Code é exigido para CIN/CNH, mas não para RG antigo.'}</span>
+        </div>
         </div>
       <label className="human-agree" style={{marginTop:16}}>
         <input type="checkbox" checked={consent} disabled={busy||challengeBusy} onChange={e=>setConsent(e.target.checked)}/>
