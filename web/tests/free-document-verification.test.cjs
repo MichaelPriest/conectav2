@@ -6,7 +6,7 @@ const test=require('node:test');
 const root=path.join(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 
-test('free document verification skips QR and internal panels for legacy RG but keeps OCR and server-side face matching',()=>{
+test('free document verification skips QR and internal panels for legacy RG but keeps OCR and selfie liveness',()=>{
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  const ui=read('src/components/free-document-verification.tsx');
  assert.match(ui,/Validação gratuita de identidade e rosto/);
@@ -64,11 +64,10 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/instance\.detect\(documentTensor\)/);
  assert.match(route,/instance\.detect\(selfieTensor\)/);
  assert.match(route,/instance\.match\.similarity/);
+ assert.match(route,/complete_conecta_document_age_assurance/);
+ assert.match(route,/ageAssured:true/);
+ assert.match(route,/identityVerified:false/);
  assert.match(route,/faceFocusVariance/);
- assert.match(route,/documentFocus<4\|\|selfieFocus<4/);
- assert.match(route,/originalSimilarity/);
- assert.match(route,/cropSimilarity<0\.55/);
- assert.match(route,/selfiePortraitDetection/);
  assert.match(route,/firstDirection!==challengeTurnOrder\[0\]/);
  assert.match(route,/secondDirection!==challengeTurnOrder\[1\]/);
  assert.match(route,/liveness_sequence_invalid/);
@@ -102,13 +101,7 @@ test('free document verification skips QR and internal panels for legacy RG but 
  const auth=read('src/lib/identity-server.ts');
  assert.match(auth,/createServerClient/);
  assert.match(auth,/request\.cookies\.getAll\(\)/);
- assert.match(route,/status:'approved'/);
- assert.match(route,/approved:true/);
- assert.match(route,/complete_conecta_free_identity_verification/);
- assert.match(route,/complete_conecta_free_identity_verification/);
  assert.match(route,/officialIssuerVerified:false/);
- assert.match(route,/Validação Conecta ID concluída/);
- assert.match(route,/status:'approved'/);
   assert.match(route,/documentStored:false/);
  const challenge=read('src/app/api/identity/free-document/liveness-challenge/route.ts');
  const migration=read('../supabase/migrations/20261015120000_identity_liveness_challenges.sql');
@@ -146,8 +139,6 @@ test('Human server analyses independent images sequentially without reusing vide
  assert.match(route,/liveness:\{enabled:true,skipFrames:0,skipTime:0\}/);
  assert.match(route,/const docResult=await instance\.detect\(documentTensor\)/);
  assert.match(route,/const selfieResult=await instance\.detect\(selfieTensor\)/);
- assert.match(route,/const portraitDetection=await instance\.detect\(portraitTensor\)/);
- assert.match(route,/const selfiePortraitDetection=await instance\.detect\(selfiePortraitTensor\)/);
  assert.doesNotMatch(route,/Promise\.all\(\[instance\.detect/);
  assert.match(route,/for\(const frame of livenessPixels\)/);
  assert.match(route,/const neutralFaces=\[livenessResults\[0\]/);
