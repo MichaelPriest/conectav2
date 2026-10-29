@@ -27,7 +27,7 @@ test('document upload requires explicit consent and sends all evidence to the se
  assert.match(upload,/sem exigir leitura de QR Code/);
  assert.match(upload,/Frente e verso do documento/);
  assert.match(upload,/capture="environment"/);
- assert.match(upload,/captura cada quadro automaticamente quando a posição estiver estável/i);
+ assert.match(upload,/captura cada quadro automaticamente após manter a posição estável por pelo menos 2,2 segundos/i);
  assert.match(upload,/stable>=3&&now-firstReadyAt>=650/);
  assert.match(upload,/data-testid="conecta-face-guide-frame"/);
  assert.match(upload,/consent/);
