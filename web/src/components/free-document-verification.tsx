@@ -241,7 +241,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       setChallengeExpiresAt(expiresAt);setSecondsRemaining(Math.ceil((expiresAt-Date.now())/1000));
       setChallenge(data.challenge);setInstructions(data.instructions);setFrames([]);setFrameIndex(0);
       setGuideStableCount(0);
-      setMessage('Câmera ativa. Os quadros serão capturados automaticamente após posicionamento estável.');
+      setMessage('Câmera ativa. A captura será feita após manter cada posição por pelo menos 2,2 segundos.');
     }catch(err){
       stopCamera();setChallenge('');setChallengeExpiresAt(0);setSecondsRemaining(0);setInstructions([]);
       setError(err instanceof Error?err.message:'Não foi possível iniciar a captura guiada.');
@@ -313,8 +313,8 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
           stable=1;firstReadyAt=now;
         }else stable++;
         lastSeenAt=now;lastTurn=guide.turnOffset;
-        setGuideStableCount(Math.min(stable,3));
-        if(stable>=3&&now-firstReadyAt>=650){
+        setGuideStableCount(Math.min(stable,6));
+        if(stable>=6&&now-firstReadyAt>=2200){
           stable=0;setGuideStableCount(0);
           void captureFrame();
         }
@@ -469,17 +469,17 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       </label>
       <p className="small-note">A comparação facial será feita no servidor após concluir as etapas. Enviar uma selfie, por si só, não aprova a identidade.</p>
     </section>}
-    {step===3&&<section className="panel" aria-labelledby="identity-step-live">
+    {step===3&&<section className="panel" aria-labelledby="identity-step-live" style={challenge?{position:'fixed',inset:0,zIndex:9999,background:'#0b1220',color:'#fff',overflowY:'auto',padding:'max(16px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom))',display:'flex',flexDirection:'column',alignItems:'center',gap:12}:undefined}>
       <h3 id="identity-step-live">3. Confirme que está presente</h3>
-      <p className="small-note">Posicione seu rosto na moldura e siga as quatro orientações. O MediaPipe acompanha o enquadramento e captura cada quadro automaticamente quando a posição estiver estável. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
+      <p className="small-note">Posicione seu rosto na moldura e siga as quatro orientações. O MediaPipe acompanha o enquadramento e captura cada quadro automaticamente após manter a posição estável por pelo menos 2,2 segundos. A câmera abre em tela inteira. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
       {challenge&&<p className="small-note" role="status">{mediaPipeStatus==='active'?
         'MediaPipe ativo: enquadramento e posição do rosto são conferidos no aparelho. O Human valida no servidor.':
         mediaPipeStatus==='fallback'?'Orientação MediaPipe indisponível neste dispositivo. A validação obrigatória pelo Human permanece ativa.':
         'Inicializando análise de posição facial…'}</p>}
       {challenge&&<p role="timer" aria-live="off" className="small-note"><strong>Tempo restante: {secondsRemaining}s</strong>. Envie a validação antes de terminar o prazo de 90 segundos.</p>}
       {/* Visual guidance is never burned into the biometric frames. */}
-      <div style={{position:'relative',display:challenge?'block':'none',width:'100%',maxWidth:480,
-        aspectRatio:'4 / 3',overflow:'hidden',borderRadius:18,background:'#101625',
+      <div style={{position:'relative',display:challenge?'block':'none',width:'100%',maxWidth:challenge?'min(100%, 900px)':480,
+        maxHeight:challenge?'58dvh':undefined,aspectRatio:'4 / 3',overflow:'hidden',borderRadius:18,background:'#101625',
         border:'1px solid rgba(148,163,184,.5)'}}>
         <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
           style={{width:'100%',height:'100%',objectFit:'cover',transform:'scaleX(-1)',display:'block'}}/>
@@ -508,7 +508,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
           {mediaPipeStatus==='active'&&faceGuide.ready&&
             <div style={{height:4,marginTop:7,background:'rgba(255,255,255,.3)',
               borderRadius:4,overflow:'hidden'}}>
-              <div style={{height:'100%',width:(guideStableCount/3*100)+'%',background:'#34d399',
+              <div style={{height:'100%',width:(guideStableCount/6*100)+'%',background:'#34d399',
                 transition:'width 200ms ease'}}/>
             </div>}
         </div>
