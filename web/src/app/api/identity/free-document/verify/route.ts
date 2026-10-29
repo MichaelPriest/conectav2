@@ -10,7 +10,6 @@ import {identityContext,runtimeConfig} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {inspectCinToken} from '@/lib/cin-qr';
 import {extractBirthDateFromOcr} from '@/lib/legacy-rg-ocr';
-import {cropFaceAtOriginalResolution} from '@/lib/identity-face-crop';
 import {prepareBirthDateOcrRegions,prepareBirthDateOcrFocusPanels} from '@/lib/identity-rg-ocr-regions';
 
 export const runtime='nodejs';
@@ -438,14 +437,12 @@ export async function POST(request:NextRequest){
       body:{enabled:false},hand:{enabled:false},object:{enabled:false},gesture:{enabled:false}
     });
     await instance.load();
-    documentTensorData=new Int32Array(docPixels.data);selfieTensorData=new Int32Array(selfiePix.data);
-    documentTensor=instance.tf.tensor4d(documentTensorData,[1,docPixels.height,docPixels.width,3],'int32');
+    selfieTensorData=new Int32Array(selfiePix.data);
     selfieTensor=instance.tf.tensor4d(selfieTensorData,[1,selfiePix.height,selfiePix.width,3],'int32');
     // A Human instance owns mutable model and detector state: NEVER infer two
     // unrelated images concurrently on the same instance.
-    const docResult=await instance.detect(documentTensor);
     const selfieResult=await instance.detect(selfieTensor);
-    documentFaceResults=docResult as FaceResult;selfieFaceResults=selfieResult as FaceResult;
+    selfieFaceResults=selfieResult as FaceResult;
     const selfieFaces=selfieResult.face||[];
     if(selfieFaces.length!==1)
       return await failAttempt('Precisamos detectar exatamente um rosto na selfie. Tente novamente com uma imagem nítida.',422,'face_count_invalid');
