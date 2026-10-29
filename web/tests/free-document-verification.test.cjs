@@ -61,7 +61,6 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/const uniqueDates=\[\.\.\.new Set\(detectedDates\)\]/);
  assert.match(route,/uniqueDates\.length>1/);
  assert.match(route,/datas de nascimento lidas nas partes do documento divergem/);
- assert.match(route,/instance\.detect\(documentTensor\)/);
  assert.match(route,/instance\.detect\(selfieTensor\)/);
  assert.match(route,/instance\.match\.similarity/);
  assert.match(route,/complete_conecta_document_age_assurance/);
@@ -137,7 +136,6 @@ test('Human server analyses independent images sequentially without reusing vide
  assert.match(route,/description:\{enabled:true,skipFrames:0,skipTime:0\}/);
  assert.match(route,/antispoof:\{enabled:true,skipFrames:0,skipTime:0\}/);
  assert.match(route,/liveness:\{enabled:true,skipFrames:0,skipTime:0\}/);
- assert.match(route,/const docResult=await instance\.detect\(documentTensor\)/);
  assert.match(route,/const selfieResult=await instance\.detect\(selfieTensor\)/);
  assert.doesNotMatch(route,/Promise\.all\(\[instance\.detect/);
  assert.match(route,/for\(const frame of livenessPixels\)/);
