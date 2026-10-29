@@ -11,7 +11,7 @@ import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {inspectCinToken} from '@/lib/cin-qr';
 import {extractBirthDateFromOcr} from '@/lib/legacy-rg-ocr';
 import {cropFaceAtOriginalResolution} from '@/lib/identity-face-crop';
-import {prepareBirthDateOcrRegions} from '@/lib/identity-rg-ocr-regions';
+import {prepareBirthDateOcrRegions,prepareBirthDateOcrFocusPanels} from '@/lib/identity-rg-ocr-regions';
 
 export const runtime='nodejs';
 export const dynamic='force-dynamic';
@@ -275,9 +275,19 @@ export async function POST(request:NextRequest){
         preserve_interword_spaces:'1',
         user_defined_dpi:'300'
       });
-      const ocrResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
-      const parseDates=(results:typeof ocrResults)=>
-        results.map(result=>dobFromText(typeof result.data.text==='string'?result.data.text:''))
+      // A single Tesseract worker processes one image at a time. Run each
+      // recognition sequentially instead of submitting concurrent jobs to it.
+      const recognizeImages=async(images:Buffer[]):Promise<string[]>=>{
+        const texts:string[]=[];
+        for(const image of images){
+          const {data}=await worker!.recognize(image);
+          texts.push(typeof data.text==='string'?data.text:'');
+        }
+        return texts;
+      };
+      const ocrResults=await recognizeImages(ocrImages);
+      const parseDates=(results:string[])=>
+        results.map(text=>dobFromText(text))
           .filter((value):value is string=>Boolean(value));
       detectedDates=parseDates(ocrResults);
       if(detectedDates.length===0){
@@ -286,8 +296,34 @@ export async function POST(request:NextRequest){
           preserve_interword_spaces:'1',
           user_defined_dpi:'300'
         });
-        const fallbackResults=await Promise.all(ocrImages.map(image=>worker!.recognize(image)));
+        const fallbackResults=await recognizeImages(ocrImages);
         detectedDates=parseDates(fallbackResults);
+      }
+      // Focus on the printed DATA DE NASCIMENTO field, which can be lost in
+      // full-card column ordering on sideways, old São Paulo RGs.
+      // Never accept a date without a birth label in the SAME OCR crop.
+      if(detectedDates.length===0&&documentType==='old-rg'){
+        const panels=await prepareBirthDateOcrFocusPanels(ocrImages[1]);
+        const rotatedPanels:Buffer[]=[];
+        try{
+          for(const panel of panels)rotatedPanels.push(await rotateOcrImage180(panel));
+          const candidates=[...panels,...rotatedPanels];
+          await worker.setParameters({
+            tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
+            preserve_interword_spaces:'1',user_defined_dpi:'300'
+          });
+          detectedDates=parseDates(await recognizeImages(candidates));
+          if(detectedDates.length===0){
+            await worker.setParameters({
+              tessedit_pageseg_mode:PSM.SPARSE_TEXT,
+              preserve_interword_spaces:'1',user_defined_dpi:'300'
+            });
+            detectedDates=parseDates(await recognizeImages(candidates));
+          }
+        }finally{
+          for(const panel of panels)panel.fill(0);
+          for(const panel of rotatedPanels)panel.fill(0);
+        }
       }
       if(detectedDates.length===0){
         const reversedImages:Buffer[]=[];
@@ -298,7 +334,7 @@ export async function POST(request:NextRequest){
             preserve_interword_spaces:'1',
             user_defined_dpi:'300'
           });
-          const reversedResults=await Promise.all(reversedImages.map(image=>worker!.recognize(image)));
+          const reversedResults=await recognizeImages(reversedImages);
           detectedDates=parseDates(reversedResults);
           if(detectedDates.length===0){
             // A sideways RG may read only when both orientation and page
@@ -307,7 +343,7 @@ export async function POST(request:NextRequest){
               tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
               preserve_interword_spaces:'1',user_defined_dpi:'300'
             });
-            const reversedBlockResults=await Promise.all(reversedImages.map(image=>worker!.recognize(image)));
+            const reversedBlockResults=await recognizeImages(reversedImages);
             detectedDates=parseDates(reversedBlockResults);
           }
         }finally{
@@ -329,14 +365,14 @@ export async function POST(request:NextRequest){
             tessedit_pageseg_mode:PSM.SPARSE_TEXT,
             preserve_interword_spaces:'1',user_defined_dpi:'300'
           });
-          const regionalResults=await Promise.all(candidates.map(image=>worker!.recognize(image)));
+          const regionalResults=await recognizeImages(candidates);
           detectedDates=parseDates(regionalResults);
           if(detectedDates.length===0){
             await worker.setParameters({
               tessedit_pageseg_mode:PSM.SINGLE_BLOCK,
               preserve_interword_spaces:'1',user_defined_dpi:'300'
             });
-            const blockResults=await Promise.all(candidates.map(image=>worker!.recognize(image)));
+            const blockResults=await recognizeImages(candidates);
             detectedDates=parseDates(blockResults);
           }
         }finally{
