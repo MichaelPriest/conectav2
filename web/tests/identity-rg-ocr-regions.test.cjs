@@ -14,7 +14,7 @@ const js=ts.transpileModule(fs.readFileSync(helperPath,'utf8'),{
 }).outputText;
 const localExports={};
 vm.runInNewContext(js,{exports:localExports,require,Buffer,Math,Error},{filename:helperPath});
-const {prepareBirthDateOcrRegions}=localExports;
+const {prepareBirthDateOcrRegions,prepareBirthDateOcrFocusPanels}=localExports;
 
 test('RG data-side OCR regions are real overlapping crops, with upscaling for small printed text',async()=>{
  const source=await sharp({create:{width:1100,height:700,channels:3,background:{r:120,g:140,b:160}}})
@@ -53,4 +53,36 @@ test('server attempts 180-degree + alternative segmentation and region OCR only 
  assert.match(route,/uniqueDates\.length>1/);
  assert.match(route,/if\(!dob\)return await failAttempt/);
  assert.doesNotMatch(route,/PaddleOCR|recognizeWithPaddleOcr/i);
+});
+
+test('legacy RG birth focus isolates two overlapping mid-card regions',async()=>{
+ const source=await sharp({create:{
+  width:2000,height:1340,channels:3,background:{r:170,g:180,b:190}
+ }}).png().toBuffer();
+ const panels=await prepareBirthDateOcrFocusPanels(source);
+ assert.equal(panels.length,2);
+ for(const panel of panels){
+  const info=await sharp(panel).metadata();
+  assert.equal(info.format,'png');
+  assert.ok(info.width>=800);
+  assert.ok(info.height>=500);
+  panel.fill(0);
+ }
+ source.fill(0);
+ const small=await sharp({create:{
+  width:150,height:200,channels:3,background:'#fff'
+ }}).png().toBuffer();
+ assert.equal((await prepareBirthDateOcrFocusPanels(small)).length,0);
+ small.fill(0);
+});
+
+test('OCR tries labelled birth regions and serializes recognition jobs on one worker',()=>{
+ const route=fs.readFileSync(path.join(root,'src/app/api/identity/free-document/verify/route.ts'),'utf8');
+ assert.match(route,/prepareBirthDateOcrFocusPanels\(ocrImages\[1\]\)/);
+ assert.match(route,/detectedDates\.length===0&&documentType==='old-rg'/);
+ assert.match(route,/for\(const panel of rotatedPanels\)panel\.fill\(0\)/);
+ assert.match(route,/const recognizeImages=async\(images:Buffer\[\]\)/);
+ assert.match(route,/for\(const image of images\)/);
+ assert.doesNotMatch(route,/Promise\.all\(.*worker!\.recognize/);
+ assert.match(route,/return extractBirthDateFromOcr\(raw\)/);
 });
