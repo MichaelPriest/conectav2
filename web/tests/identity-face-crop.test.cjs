@@ -51,16 +51,16 @@ test('face is cropped from the original upload and returned as a 512px RGB tenso
  sourceImage.fill(0);
 });
 
-test('server compares original-resolution portrait crops and retains the strict match gate',()=>{
+test('age-only flow does not claim document ownership or unlock identity-gated access',()=>{
  const route=fs.readFileSync(path.join(root,'src/app/api/identity/free-document/verify/route.ts'),'utf8');
- const ui=fs.readFileSync(path.join(root,'src/components/free-document-verification.tsx'),'utf8');
- assert.match(route,/cropFaceAtOriginalResolution\(\s*document,faceBox/);
- assert.match(route,/cropFaceAtOriginalResolution\(\s*selfie,selfieFaceBox/);
- assert.match(route,/documentCrop\.nativeFaceWidth<112/);
- assert.match(route,/face_quality_low/);
- assert.match(route,/cropSimilarity<0\.55/);
- assert.doesNotMatch(route,/sharp\(Buffer\.from\(docPixels\.data\)/);
- assert.match(ui,/\[\[2200,0\.90\]/);
- assert.match(route,/instance\.match\.similarity/);
+ const access=fs.readFileSync(path.join(root,'src/app/api/identity/access/route.ts'),'utf8');
+ assert.doesNotMatch(route,/cropSimilarity<0\\.55/);
+ assert.doesNotMatch(route,/cropFaceAtOriginalResolution\\(\\s*document,faceBox/);
+ assert.match(route,/complete_conecta_document_age_assurance/);
+ assert.match(route,/identityVerified:false/);
+ assert.match(route,/ageAssured:true/);
  assert.match(route,/liveness_sequence_invalid/);
+ assert.match(route,/neutralSimilarity<0\\.55/);
+ assert.match(access,/basicAccess:true,accessLevel:'basic'/);
+ assert.match(access,/networkAccess:false,basicAccess:true/);
 });
