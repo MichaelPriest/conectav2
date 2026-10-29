@@ -22,16 +22,18 @@ export async function GET(request:NextRequest){
  if(!context)return NextResponse.json({networkAccess:false,reason:'session_required'},{status:401,headers});
  if(!runtimeConfig.supabaseUrl||!runtimeConfig.serviceKey)return fail(503,'O Conecta ID não está configurado no servidor. O acesso à rede continua bloqueado.');
  const admin=createClient(runtimeConfig.supabaseUrl,runtimeConfig.serviceKey,{auth:{persistSession:false,autoRefreshToken:false}});
- const [profile,age,identity,decision,moderator]=await Promise.all([
+ const [profile,age,identity,decision,moderator,exemption]=await Promise.all([
   context.db.from('profiles').select('id').eq('id',context.user.id).maybeSingle(),
   context.db.from('registration_age_declarations').select('declared_band').eq('user_id',context.user.id).maybeSingle(),
   admin.from('identity_verifications').select('status,verified_at').eq('user_id',context.user.id).maybeSingle(),
   admin.from('age_assurance_decisions').select('age_band,method,verified_at').eq('user_id',context.user.id).maybeSingle(),
-  admin.from('platform_moderators').select('role').eq('user_id',context.user.id).maybeSingle()
+  admin.from('platform_moderators').select('role').eq('user_id',context.user.id).maybeSingle(),
+  admin.from('admin_verification_exemptions').select('scope,revoked_at').eq('user_id',context.user.id).maybeSingle()
  ]);
- if(profile.error||age.error||identity.error||decision.error||moderator.error)return fail(503,'Não foi possível consultar as verificações com segurança. Nenhum acesso foi liberado.');
+ if(profile.error||age.error||identity.error||decision.error||moderator.error||exemption.error)return fail(503,'Não foi possível consultar as verificações com segurança. Nenhum acesso foi liberado.');
  const steps={profile:Boolean(profile.data),ageDeclaration:Boolean(age.data),identity:false,age:false,guardian:false};
  if(moderator.data?.role==='admin')return NextResponse.json({networkAccess:true,basicAccess:true,accessLevel:'full',reason:'admin',steps,message:'Acesso administrativo autorizado.'},{headers});
+ if(exemption.data?.scope==='basic_unverified'&&!exemption.data.revoked_at&&profile.data&&age.data)return NextResponse.json({networkAccess:false,basicAccess:true,accessLevel:'basic',reason:'admin_basic_exemption',steps,message:'Acesso básico autorizado administrativamente. Recursos sociais exigem verificação de identidade e idade.'},{headers});
  const basicAccess=Boolean(decision.data?.method==='conecta_document_age_only'&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
  if(!profile.data)return NextResponse.json({networkAccess:false,reason:'profile_required',steps,message:'Complete seu perfil para iniciar o Conecta ID.'},{headers});
  if(!age.data)return NextResponse.json({networkAccess:false,reason:'age_declaration_required',steps,message:'Informe sua faixa etária para iniciar a verificação.'},{headers});
