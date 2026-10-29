@@ -41,7 +41,7 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/prepared=prepared\.rotate\(270\)/);
  assert.match(route,/rotateOcrImage180/);
  assert.match(route,/reversedImages\.push\(await rotateOcrImage180\(image\)\)/);
- assert.match(route,/reversedResults=await Promise\.all\(reversedImages\.map/);
+ assert.match(route,/reversedResults=await recognizeImages\(reversedImages\)/);
  assert.match(route,/PSM\.SPARSE_TEXT/);
  assert.match(route,/PSM\.SINGLE_BLOCK/);
  assert.match(route,/user_defined_dpi:'300'/);
@@ -51,11 +51,11 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/dobFromText/);
  assert.match(route,/ocrImages\.push\(await prepareOcrImage\(document\)\)/);
  assert.match(route,/ocrImages\.push\(await prepareOcrImage\(back\)\)/);
- assert.match(route,/ocrImages\.map\(image=>worker!\.recognize\(image\)\)/);
- assert.match(route,/const parseDates=\(results:typeof ocrResults\)/);
+ assert.match(route,/for\(const image of images\)\)/);
+ assert.match(route,/const parseDates=\(results:string\[\]\)/);
  assert.match(route,/detectedDates=parseDates\(ocrResults\)/);
  assert.match(route,/if\(detectedDates\.length===0\)/);
- assert.match(route,/fallbackResults=await Promise\.all\(ocrImages\.map/);
+ assert.match(route,/fallbackResults=await recognizeImages\(ocrImages\)/);
  assert.match(route,/const reversedImages:Buffer\[\]=\[\]/);
  assert.match(route,/for\(const image of reversedImages\)image\.fill\(0\)/);
  assert.match(route,/const uniqueDates=\[\.\.\.new Set\(detectedDates\)\]/);
