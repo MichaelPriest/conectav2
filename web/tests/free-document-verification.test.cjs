@@ -51,7 +51,7 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/dobFromText/);
  assert.match(route,/ocrImages\.push\(await prepareOcrImage\(document\)\)/);
  assert.match(route,/ocrImages\.push\(await prepareOcrImage\(back\)\)/);
- assert.match(route,/for\(const image of images\)\)/);
+ assert.match(route,/for\(const image of images\)/);
  assert.match(route,/const parseDates=\(results:string\[\]\)/);
  assert.match(route,/detectedDates=parseDates\(ocrResults\)/);
  assert.match(route,/if\(detectedDates\.length===0\)/);
