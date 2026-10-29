@@ -41,12 +41,12 @@ test('regions are not generated from malformed/small documents',async()=>{
 
 test('server attempts 180-degree + alternative segmentation and region OCR only for legacy RG',()=>{
  const route=fs.readFileSync(path.join(root,'src/app/api/identity/free-document/verify/route.ts'),'utf8');
- assert.match(route,/reversedBlockResults=await Promise\.all\(reversedImages\.map/);
+ assert.match(route,/reversedBlockResults=await recognizeImages\(reversedImages\)/);
  assert.match(route,/detectedDates\.length===0&&documentType==='old-rg'/);
  assert.match(route,/prepareBirthDateOcrRegions\(ocrImages\[1\]\)/);
  assert.match(route,/oppositeRegions\.push\(await rotateOcrImage180\(image\)\)/);
- assert.match(route,/regionalResults=await Promise\.all\(candidates\.map/);
- assert.match(route,/blockResults=await Promise\.all\(candidates\.map/);
+ assert.match(route,/regionalResults=await recognizeImages\(candidates\)/);
+ assert.match(route,/blockResults=await recognizeImages\(candidates\)/);
  assert.match(route,/for\(const image of regionImages\)image\.fill\(0\)/);
  assert.match(route,/for\(const image of oppositeRegions\)image\.fill\(0\)/);
  assert.match(route,/const uniqueDates=\[\.\.\.new Set\(detectedDates\)\]/);
