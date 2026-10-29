@@ -30,10 +30,12 @@ export async function GET(request:NextRequest){
  ]);
  if(profile.error||age.error||identity.error||decision.error)return fail(503,'Não foi possível consultar as verificações com segurança. Nenhum acesso foi liberado.');
  const steps={profile:Boolean(profile.data),ageDeclaration:Boolean(age.data),identity:false,age:false,guardian:false};
+ const basicAccess=Boolean(decision.data?.method==='conecta_document_age_only'&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
  if(!profile.data)return NextResponse.json({networkAccess:false,reason:'profile_required',steps,message:'Complete seu perfil para iniciar o Conecta ID.'},{headers});
  if(!age.data)return NextResponse.json({networkAccess:false,reason:'age_declaration_required',steps,message:'Informe sua faixa etária para iniciar a verificação.'},{headers});
  steps.identity=identity.data?.status==='approved'&&recent(identity.data.verified_at);
  steps.age=Boolean(decision.data&&trustedMethod(decision.data.method)&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
+ if(!steps.identity&&basicAccess)return NextResponse.json({networkAccess:false,basicAccess:true,accessLevel:'basic',reason:'identity_required',steps,message:'Faixa etária classificada. Seu perfil e configurações estão disponíveis; publicações, mensagens e interações exigem identidade verificada.'},{headers});
  if(!steps.identity)return NextResponse.json({networkAccess:false,reason:identity.data?.status==='approved'?'verification_expired':'identity_required',steps,message:'A identidade ainda não foi confirmada por uma fonte confiável. A validação gratuita integrada exige QR legível, OCR, comparação facial e análise antifraude no servidor.'},{headers});
  if(!steps.age)return NextResponse.json({networkAccess:false,reason:decision.data?'verification_expired':'age_verification_required',steps,message:'A faixa etária ainda não foi confirmada por uma credencial confiável. A autodeclaração e as pré-triagens locais não são suficientes.'},{headers});
  if(age.data.declared_band!=='18_plus'||decision.data?.age_band!=='18_plus'){
@@ -50,5 +52,5 @@ export async function GET(request:NextRequest){
   steps.guardian=(guardians.data||[]).some(g=>recent(g.verified_at)&&(guardianAge.data||[]).some(a=>a.user_id===g.user_id&&trustedMethod(a.method)&&recent(a.verified_at)));
   if(!steps.guardian)return NextResponse.json({networkAccess:false,reason:'guardian_required',steps,message:'O responsável precisa aceitar o vínculo e concluir a verificação confiável de identidade e maioridade.'},{headers});
  }
- return NextResponse.json({networkAccess:true,reason:'verified',steps,message:'Conecta ID concluído. Acesso à rede liberado conforme as proteções da faixa etária.'},{headers});
+ return NextResponse.json({networkAccess:true,basicAccess:true,accessLevel:'full',reason:'verified',steps,message:'Conecta ID concluído. Acesso à rede liberado conforme as proteções da faixa etária.'},{headers});
 }
