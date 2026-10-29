@@ -54,11 +54,12 @@ test('invalid and cut-off landmarks are never considered ready',()=>{
 test('the real Conecta ID camera uses automatic stable detection, a visible frame and safe manual fallback',()=>{
  const ui=fs.readFileSync(path.join(root,'src/components/free-document-verification.tsx'),'utf8');
  assert.match(ui,/inspectGuidedFace\(engine\.detect\(video\)\.faceLandmarks\|\|\[\],frameIndex\)/);
- assert.match(ui,/stable>=3&&now-firstReadyAt>=650/);
+ assert.match(ui,/stable>=6&&now-firstReadyAt>=2200/);
  assert.match(ui,/void captureFrame\(\)/);
  assert.match(ui,/data-testid="conecta-face-guide-frame"/);
  assert.match(ui,/guideColor/);
  assert.match(ui,/guideStableCount/);
+ assert.match(ui,/position:'fixed',inset:0,zIndex:9999/);
  assert.match(ui,/Capturar agora \(opcional\)/);
  assert.match(ui,/setStep\(4\)/);
  assert.doesNotMatch(ui,/setInterval\(\(\)=>\{void captureFrame\(\);\},5000\)/);
