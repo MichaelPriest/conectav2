@@ -413,7 +413,7 @@ export async function POST(request:NextRequest){
     // are never accepted. Uploaded originals stay in memory and are never logged.
     const module:any=await import('@vladmandic/human');
     const HumanClass=module.Human||module.default?.Human||module.default;
-    if(typeof HumanClass!=='function')throw new Error('O mecanismo de comparação facial não está disponível no servidor.');
+    if(typeof HumanClass!=='function')throw new Error('O mecanismo de análise facial não está disponível no servidor.');
     const instance:any=new HumanClass({
       modelBasePath:pathToFileURL(path.join(process.cwd(),'public','vendor','human-models')+path.sep).href,
       debug:false,
@@ -446,97 +446,20 @@ export async function POST(request:NextRequest){
     const docResult=await instance.detect(documentTensor);
     const selfieResult=await instance.detect(selfieTensor);
     documentFaceResults=docResult as FaceResult;selfieFaceResults=selfieResult as FaceResult;
-    const docFaces=docResult.face||[],selfieFaces=selfieResult.face||[];
-    if(docFaces.length!==1||selfieFaces.length!==1)
-      return await failAttempt('Precisamos detectar exatamente um rosto na foto do documento e na selfie. Tente novamente com imagens nítidas.',422,'face_count_invalid');
-    const detectedDocumentFace=docFaces[0],selfieFace=selfieFaces[0];
-    if(!detectedDocumentFace.embedding?.length||!selfieFace.embedding?.length)
-      return await failAttempt('Não foi possível calcular a comparação facial. Tente com uma foto mais nítida.',422,'face_quality_low');
-    const documentBox=detectedDocumentFace.box;
+    const selfieFaces=selfieResult.face||[];
+    if(selfieFaces.length!==1)
+      return await failAttempt('Precisamos detectar exatamente um rosto na selfie. Tente novamente com uma imagem nítida.',422,'face_count_invalid');
+    const selfieFace=selfieFaces[0];
+    if(!selfieFace.embedding?.length)
+      return await failAttempt('Não foi possível analisar o rosto da selfie. Tente novamente com boa iluminação.',422,'face_quality_low');
     const selfieBox=selfieFace.box;
-    if(!Array.isArray(documentBox)||documentBox.length<4||!Array.isArray(selfieBox)||selfieBox.length<4||
-       documentBox[2]<28||documentBox[3]<28||selfieBox[2]<64||selfieBox[3]<64)
-      return await failAttempt('O rosto está pequeno na imagem. Aproxime o documento e enquadre a selfie de frente, com boa iluminação.',422,'face_quality_low');
-    const [documentFocus,selfieFocus]=await Promise.all([
-      faceFocusVariance(docPixels.data,docPixels.width,docPixels.height,documentBox),
-      faceFocusVariance(selfiePix.data,selfiePix.width,selfiePix.height,selfieBox)
-    ]);
-    if(documentFocus<4||selfieFocus<4)
-      return await failAttempt('A foto do documento ou a selfie está desfocada. Limpe a câmera, evite reflexos e tente novamente com mais luz.',422,'face_quality_low');
-
-    // The portrait on an ID card may occupy only a small fraction of the full
-    // document image. Re-detect it from a padded, enlarged crop so its embedding
-    // is computed from portrait pixels rather than the whole card at low scale.
-    // This is a preprocessing improvement only: the same single-face and match
-    // thresholds remain in force, and no client-provided scores are trusted.
-    const faceBox=detectedDocumentFace.box;
-    if(!Array.isArray(faceBox)||faceBox.length<4||faceBox.some(value=>!Number.isFinite(value)))
-      return await failAttempt('Não foi possível localizar com segurança a foto do documento. Reposicione o documento e tente novamente.',422);
-    let portraitPixels:Buffer|undefined;
-    let portraitTensor:any=null;
-    let portraitTensorData:Int32Array|undefined;
-    let portraitResult:FaceResult|undefined;
-    let selfiePortraitPixels:Buffer|undefined;
-    let selfiePortraitTensor:any=null;
-    let selfiePortraitTensorData:Int32Array|undefined;
-    let selfiePortraitResult:FaceResult|undefined;
-    try{
-      const faceBox=detectedDocumentFace.box;
-      const selfieFaceBox=selfieBox;
-      if(!Array.isArray(faceBox)||faceBox.length<4||faceBox.some(value=>!Number.isFinite(value))||
-         !Array.isArray(selfieFaceBox)||selfieFaceBox.length<4||selfieFaceBox.some(value=>!Number.isFinite(value)))
-        return await failAttempt('Não foi possível localizar com segurança os rostos para comparar. Reposicione o documento e enquadre a selfie novamente.',422,'face_quality_low');
-      // The detector uses a reduced preview, but matching uses the native
-      // uploaded pixels before either portrait is enlarged to 512x512.
-      const documentCrop=await cropFaceAtOriginalResolution(
-        document,faceBox,{width:docPixels.width,height:docPixels.height}
-      );
-      portraitPixels=documentCrop.pixels;
-      const selfieCrop=await cropFaceAtOriginalResolution(
-        selfie,selfieFaceBox,{width:selfiePix.width,height:selfiePix.height}
-      );
-      selfiePortraitPixels=selfieCrop.pixels;
-      if(documentCrop.nativeFaceWidth<112||documentCrop.nativeFaceHeight<112)
-        return await failAttempt('A fotografia no RG ficou pequena demais para uma comparação confiável. Fotografe o documento mais perto, preenchendo o quadro, sem reflexos.',422,'face_quality_low');
-      if(selfieCrop.nativeFaceWidth<160||selfieCrop.nativeFaceHeight<160)
-        return await failAttempt('A selfie ficou pequena demais para comparação. Aproxime o rosto e tente novamente.',422,'face_quality_low');
-      const portraitData=new Uint8Array(portraitPixels);
-      const selfiePortraitData=new Uint8Array(selfiePortraitPixels);
-      portraitTensorData=new Int32Array(portraitData);
-      selfiePortraitTensorData=new Int32Array(selfiePortraitData);
-      portraitTensor=instance.tf.tensor4d(portraitTensorData,[1,512,512,3],'int32');
-      selfiePortraitTensor=instance.tf.tensor4d(selfiePortraitTensorData,[1,512,512,3],'int32');
-      // Independent face crops must not race within the same Human instance.
-      const portraitDetection=await instance.detect(portraitTensor);
-      const selfiePortraitDetection=await instance.detect(selfiePortraitTensor);
-      portraitResult=portraitDetection as FaceResult;
-      selfiePortraitResult=selfiePortraitDetection as FaceResult;
-      const portraitFaces=portraitDetection.face||[];
-      const selfiePortraitFaces=selfiePortraitDetection.face||[];
-      if(portraitFaces.length!==1||selfiePortraitFaces.length!==1||
-         !portraitFaces[0].embedding?.length||!selfiePortraitFaces[0].embedding?.length)
-        return await failAttempt('Não foi possível extrair os rostos com qualidade suficiente nas duas imagens. Enquadre o documento inteiro e tire uma selfie nítida, de frente e sem filtros.',422,'face_quality_low');
-      const matchOptions={order:2,multiplier:25,min:0.2,max:0.8};
-      const originalSimilarity=instance.match.similarity(
-        detectedDocumentFace.embedding,selfieFace.embedding,matchOptions
-      );
-      const cropSimilarity=instance.match.similarity(
-        portraitFaces[0].embedding,selfiePortraitFaces[0].embedding,matchOptions
-      );
-      // Keep the same decision threshold; crop-to-crop matching is more
-      // comparable because both descriptors were generated from equivalent crops.
-      if(!Number.isFinite(originalSimilarity)||!Number.isFinite(cropSimilarity)||cropSimilarity<0.55)
-        return await failAttempt('A comparação facial não atingiu o nível mínimo. Confira se a selfie corresponde à foto do documento e use imagens nítidas.',422,'face_match_failed');
-    }finally{
-      portraitTensor?.dispose?.();
-      selfiePortraitTensor?.dispose?.();
-      portraitTensorData?.fill(0);
-      selfiePortraitTensorData?.fill(0);
-      portraitPixels?.fill(0);
-      selfiePortraitPixels?.fill(0);
-      for(const result of [portraitResult,selfiePortraitResult])
-        for(const face of result?.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
-    }
+    if(!Array.isArray(selfieBox)||selfieBox.length<4||selfieBox[2]<64||selfieBox[3]<64)
+      return await failAttempt('O rosto está pequeno na selfie. Aproxime-se da câmera.',422,'face_quality_low');
+    const selfieFocus=await faceFocusVariance(selfiePix.data,selfiePix.width,selfiePix.height,selfieBox);
+    if(selfieFocus<4)
+      return await failAttempt('A selfie está desfocada. Ajuste a iluminação e tente novamente.',422,'face_quality_low');
+    // Age assurance does not compare the ID portrait to the selfie. This
+    // deliberately cannot establish ownership of the submitted document.
     if(typeof selfieFace.real!=='number'||selfieFace.real<0.55)
       return await failAttempt('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422,'selfie_liveness_uncertain');
 
@@ -603,7 +526,7 @@ export async function POST(request:NextRequest){
       .update(livenessChallenge,'utf8').update(':','utf8')
       .update(ageBand,'utf8').update(':','utf8')
       .update(verifiedAt,'utf8').digest('hex');
-    const {error:verdictError}=await context.admin.rpc('complete_conecta_free_identity_verification',{
+    const {error:verdictError}=await context.admin.rpc('complete_conecta_document_age_assurance',{
       p_user_id:context.user.id,
       p_age_band:ageBand,
       p_evidence_reference_hash:evidenceReferenceHash,
@@ -614,13 +537,15 @@ export async function POST(request:NextRequest){
     await completeAttempt();
     return NextResponse.json({
       ok:true,
-      status:'approved',
-      approved:true,
+      status:'age_assured',
+      approved:false,
+      ageAssured:true,
+      identityVerified:false,
       ageBand,
       verifiedAt,
       documentStored:false,
       officialIssuerVerified:false,
-      message:'Validação Conecta ID concluída. Documento, comparação facial e captura guiada passaram nas verificações automáticas disponíveis. O Conecta registrou a identidade e apenas a faixa etária; não armazenou as imagens nem a data de nascimento. Isto não é uma certificação oficial do emissor. As regras de responsável e proteção da faixa etária continuam valendo.'
+      message:'Faixa etária classificada pela data de nascimento do documento e captura guiada. A titularidade do documento não foi confirmada: o acesso que exige identidade verificada permanece bloqueado. Nenhuma imagem ou data de nascimento foi armazenada.'
     },{status:200,headers});
   }catch(error){
     return await failAttempt(error instanceof Error?error.message:'Não foi possível concluir a análise. Nenhum acesso foi liberado.',503);
