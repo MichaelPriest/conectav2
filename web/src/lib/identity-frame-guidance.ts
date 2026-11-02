@@ -15,7 +15,7 @@ const hint=(status:FaceGuide['status'],message:string,turnOffset:number|null=nul
   status,ready:status==='ready',message,turnOffset
 });
 
-export function inspectGuidedFace(faces:readonly (readonly GuidePoint[])[],step:number):FaceGuide{
+export function inspectGuidedFace(faces:readonly (readonly GuidePoint[])[],step:number,turnOrder:readonly ('left'|'right')[]=[]):FaceGuide{
   if(faces.length===0)return hint('missing','Posicione seu rosto dentro da moldura.');
   if(faces.length!==1)return hint('multiple','Apenas uma pessoa pode aparecer na câmera.');
   const points=faces[0];
@@ -46,7 +46,16 @@ export function inspectGuidedFace(faces:readonly (readonly GuidePoint[])[],step:
     return hint('incomplete','Mantenha olhos e nariz visíveis.');
   if((step===0||step===3)&&Math.abs(turnOffset)>0.24)
     return hint('pose','Olhe diretamente para a câmera, de frente.',turnOffset);
-  if((step===1||step===2)&&Math.abs(turnOffset)<0.12)
-    return hint('pose','Vire um pouco mais a cabeça para o lado solicitado.',turnOffset);
+  if(step===1||step===2){
+    const side=turnOrder[step-1];
+    // Unmirrored camera landmarks: nose shifts right in the image when the user turns left.
+    // The CSS mirrored preview does not alter MediaPipe's raw coordinates.
+    if(side==='left'&&turnOffset<0.12)
+      return hint('pose','Vire o rosto para a sua esquerda.',turnOffset);
+    if(side==='right'&&turnOffset> -0.12)
+      return hint('pose','Vire o rosto para a sua direita.',turnOffset);
+    if(!side&&Math.abs(turnOffset)<0.12)
+      return hint('pose','Vire um pouco mais a cabeça para o lado solicitado.',turnOffset);
+  }
   return hint('ready','Rosto bem enquadrado. Mantenha a posição por um instante.',turnOffset);
 }
