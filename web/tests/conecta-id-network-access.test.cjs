@@ -39,15 +39,16 @@ test('app navigation redirects every unverified account to Conecta ID',()=>{
  const shell=read('src/components/app-shell.tsx');
  assert.match(shell,/fetch\('\/api\/identity\/access'/);
  assert.match(shell,/access\.networkAccess!==true/);
- assert.match(shell,/pathname!=='\/verificar-identidade'/);
+ assert.match(shell,/pathname!=='\/conecta-id'/);
  assert.doesNotMatch(shell,/declared_band!=='18_plus'/);
 });
 
-test('free local preflights cannot offer a link that bypasses Conecta ID',()=>{
- const page=read('src/app/verificar-identidade/page.tsx');
+test('legacy route redirects to Conecta ID 2.0 without bypassing server access gate',()=>{
+ const legacy=read('src/app/verificar-identidade/page.tsx');
+ const next=read('src/app/conecta-id/page.tsx');
  const govbr=read('src/components/govbr-signature-flow.tsx');
- assert.match(page,/Acesso à rede bloqueado até concluir o Conecta ID/);
- assert.match(page,/FamilyRelationships/);
- assert.doesNotMatch(page,/href="\/feed"/);
- assert.doesNotMatch(govbr,/href="\/feed"/);
+ assert.ok(legacy.includes("redirect('/conecta-id')"));
+ assert.match(next,/não confirma sua identidade nem maioridade/);
+ assert.doesNotMatch(next,/href="\\/feed"/);
+ assert.doesNotMatch(govbr,/href="\\/feed"/);
 });
