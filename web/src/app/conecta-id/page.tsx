@@ -48,7 +48,7 @@ export default function ConectaIdPage(){
  },[router]);
  useEffect(()=>{void refresh();},[refresh]);
  const steps=access?.steps;
- return <main className="center-screen"><section className="onboarding-card" style={{maxWidth:650}}>
+ return <main className="center-screen"><section className="onboarding-card" style={{width:showCapture?'min(100%, 1040px)':'min(100%, 650px)',maxWidth:'calc(100vw - 24px)',boxSizing:'border-box',overflowWrap:'anywhere'}}>
   <span className="brand"><span className="brand-mark">c.</span> conecta<span className="brand-dot">.</span></span>
   <div className="eyebrow">CONECTA ID 2.0</div>
   <h1>Situação da sua conta</h1>

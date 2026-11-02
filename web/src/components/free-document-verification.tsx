@@ -406,7 +406,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   const canContinue=step===1?Boolean(front&&back):step===2?Boolean(selfie&&consent):step===3?Boolean(challenge&&frames.length===4&&secondsRemaining>5):true;
   const guideColor=mediaPipeStatus!=='active'?'#60a5fa':faceGuide.ready?'#34d399':'#fbbf24';
 
-  return <div style={{marginTop:20}}>
+  return <div style={{marginTop:20,width:'100%',minWidth:0,maxWidth:'100%',boxSizing:'border-box',overflowWrap:'anywhere'}}>
     <div className="feed-title">
       <h2><ShieldCheck size={21} style={{verticalAlign:'middle'}}/> Validação gratuita de identidade e rosto</h2>
       <span className="small-note">Sem fornecedor pago</span>
@@ -471,20 +471,20 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </section>}
     {step===3&&<section className="panel" aria-labelledby="identity-step-live" style={challenge?{position:'fixed',inset:0,zIndex:9999,background:'#0b1220',color:'#fff',overflowY:'auto',padding:'max(16px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom))',display:'flex',flexDirection:'column',alignItems:'center',gap:12}:undefined}>
       <h3 id="identity-step-live">3. Confirme que está presente</h3>
-      <p className="small-note">Posicione seu rosto na moldura e siga as quatro orientações. O MediaPipe acompanha o enquadramento e captura cada quadro automaticamente após manter a posição estável por pelo menos 2,2 segundos. A câmera abre em tela inteira. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
+      <p className="small-note">Posicione seu rosto na moldura e siga as quatro orientações. O MediaPipe acompanha o enquadramento e captura cada quadro automaticamente após manter a posição estável por pelo menos 2,2 segundos. A câmera ocupa a área disponível na tela. Afaste-se até que a testa, o queixo e as laterais do rosto estejam completamente visíveis. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
       {challenge&&<p className="small-note" role="status">{mediaPipeStatus==='active'?
         'MediaPipe ativo: enquadramento e posição do rosto são conferidos no aparelho. O Human valida no servidor.':
         mediaPipeStatus==='fallback'?'Orientação MediaPipe indisponível neste dispositivo. A validação obrigatória pelo Human permanece ativa.':
         'Inicializando análise de posição facial…'}</p>}
       {challenge&&<p role="timer" aria-live="off" className="small-note"><strong>Tempo restante: {secondsRemaining}s</strong>. Envie a validação antes de terminar o prazo de 90 segundos.</p>}
       {/* Visual guidance is never burned into the biometric frames. */}
-      <div style={{position:'relative',display:challenge?'block':'none',width:'100%',maxWidth:challenge?'min(100%, 900px)':480,
-        maxHeight:challenge?'58dvh':undefined,aspectRatio:'4 / 3',overflow:'hidden',borderRadius:18,background:'#101625',
+      <div style={{position:'relative',display:challenge?'block':'none',width:'100%',maxWidth:480,margin:'0 auto',
+        aspectRatio:'3 / 4',overflow:'hidden',borderRadius:18,background:'#101625',
         border:'1px solid rgba(148,163,184,.5)'}}>
         <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
           style={{width:'100%',height:'100%',objectFit:'cover',transform:'scaleX(-1)',display:'block'}}/>
         <div aria-hidden="true" data-testid="conecta-face-guide-frame" style={{
-          position:'absolute',left:'22%',top:'8%',width:'56%',height:'82%',
+          position:'absolute',left:'12%',top:'9%',width:'76%',height:'78%',
           border:'3px solid '+guideColor,borderRadius:'48% / 48%',
           boxShadow:'0 0 0 100vmax rgba(8,15,30,.17), 0 0 24px '+guideColor,
           transition:'border-color 180ms ease, box-shadow 180ms ease',pointerEvents:'none'
