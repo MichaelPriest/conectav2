@@ -484,7 +484,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
           style={{width:'100%',height:'100%',objectFit:'cover',transform:'scaleX(-1)',display:'block'}}/>
         <div aria-hidden="true" data-testid="conecta-face-guide-frame" style={{
-          position:'absolute',left:'22%',top:'8%',width:'56%',height:'82%',
+          position:'absolute',left:'22%',top:'3%',width:'56%',height:'82%',
           border:'3px solid '+guideColor,borderRadius:'48% / 48%',
           boxShadow:'0 0 0 100vmax rgba(8,15,30,.17), 0 0 24px '+guideColor,
           transition:'border-color 180ms ease, box-shadow 180ms ease',pointerEvents:'none'
