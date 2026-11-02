@@ -10,18 +10,22 @@ export async function POST(request:NextRequest){
   return NextResponse.json({error:'Origem inválida.'},{status:403,headers});
  const ctx=await identityContext(request);
  if(!ctx)return NextResponse.json({error:'Faça login.'},{status:401,headers});
- const [profile,age,existing]=await Promise.all([
+ const [profile,age,existing,identity]=await Promise.all([
   ctx.admin.from('profiles').select('id').eq('id',ctx.user.id).maybeSingle(),
   ctx.admin.from('registration_age_declarations').select('declared_band').eq('user_id',ctx.user.id).maybeSingle(),
-  ctx.admin.from('registration_triage').select('status,reasons').eq('user_id',ctx.user.id).maybeSingle()
+  ctx.admin.from('registration_triage').select('status,reasons').eq('user_id',ctx.user.id).maybeSingle(),
+  ctx.admin.from('identity_verifications').select('status').eq('user_id',ctx.user.id).maybeSingle()
  ]);
- if(profile.error||age.error||existing.error)return NextResponse.json({error:'Triagem indisponível.'},{status:503,headers});
+ if(profile.error||age.error||existing.error||identity.error)return NextResponse.json({error:'Triagem indisponível.'},{status:503,headers});
  const declared=age.data?.declared_band;
  const band=declared==='under_13'||declared==='13_15'||declared==='16_17'||declared==='18_plus'?declared:null;
+ const signals: Array<'age_inconsistency'|'document_mismatch'>=[];
+ // Only server-owned verification outcomes are used as adverse signals.
+ if(identity.data?.status==='rejected')signals.push('document_mismatch');
  const result=assessRegistrationRisk({
   contactConfirmed:Boolean(ctx.user.email_confirmed_at),
   profileComplete:Boolean(profile.data),
-  declaredAgeBand:band,signals:[]
+  declaredAgeBand:band,signals
  });
  // Never overwrite a manual outcome or a previously flagged risk.
  if(existing.data&&['pending_review','approved','rejected','ineligible'].includes(existing.data.status))
