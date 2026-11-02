@@ -124,6 +124,24 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     status:'missing',ready:false,message:'Centralize o rosto dentro da moldura.',turnOffset:null
   });
   const [guideStableCount,setGuideStableCount]=useState(0);
+  const [voiceEnabled,setVoiceEnabled]=useState(true);
+  const [turnOrder,setTurnOrder]=useState<Array<'left'|'right'>>([]);
+  const spokenRef=useRef('');
+  const speak=useCallback((message:string)=>{
+    if(!voiceEnabled||typeof window==='undefined'||!('speechSynthesis' in window))return;
+    window.speechSynthesis.cancel();
+    const utterance=new SpeechSynthesisUtterance(message);
+    utterance.lang='pt-BR';utterance.rate=0.9;utterance.volume=1;
+    window.speechSynthesis.speak(utterance);
+  },[voiceEnabled]);
+  useEffect(()=>{
+    if(!challenge||frameIndex>=4)return;
+    const instruction=instructions[frameIndex];
+    if(!instruction||spokenRef.current===challenge+':'+frameIndex)return;
+    spokenRef.current=challenge+':'+frameIndex;
+    speak(instruction);
+  },[challenge,frameIndex,instructions,speak]);
+  useEffect(()=>()=>{if(typeof window!=='undefined'&&'speechSynthesis' in window)window.speechSynthesis.cancel();},[]);
   const [instructions,setInstructions]=useState<string[]>([]);
   const [frameIndex,setFrameIndex]=useState(0);
   const [frames,setFrames]=useState<File[]>([]);
@@ -197,7 +215,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       }
       if(!session?.access_token)throw new Error('Não foi possível renovar sua sessão. Atualize a página e entre novamente.');
       const stream=await navigator.mediaDevices.getUserMedia({
-        video:{facingMode:'user',width:{ideal:640},height:{ideal:480}},audio:false
+        video:{facingMode:'user',width:{ideal:720},height:{ideal:960}},audio:false
       });
       streamRef.current=stream;
       const video=videoRef.current;
@@ -230,7 +248,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         if(refreshed.data.session?.access_token)
           response=await requestChallenge(refreshed.data.session.access_token);
       }
-      const data=await readJsonResponse<{challenge?:string;instructions?:string[];error?:string;createdAt?:number;expiresAt?:string}>(response);
+      const data=await readJsonResponse<{challenge?:string;instructions?:string[];turnOrder?:Array<'left'|'right'>;error?:string;createdAt?:number;expiresAt?:string}>(response);
       if(!response.ok||!data.challenge||!Array.isArray(data.instructions)||data.instructions.length!==4)
         throw new Error(data.error||(response.status===401?'Sua sessão não foi reconhecida pelo servidor. Saia da conta, entre novamente e tente outra vez.':'Não foi possível iniciar o desafio guiado.'));
       const validFor=Date.parse(data.expiresAt||'')-Number(data.createdAt);
@@ -239,7 +257,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       // Use server-provided TTL rather than comparing clocks from different devices.
       const expiresAt=Date.now()+validFor-3000;
       setChallengeExpiresAt(expiresAt);setSecondsRemaining(Math.ceil((expiresAt-Date.now())/1000));
-      setChallenge(data.challenge);setInstructions(data.instructions);setFrames([]);setFrameIndex(0);
+      setChallenge(data.challenge);setInstructions(data.instructions);setTurnOrder(data.turnOrder||[]);spokenRef.current='';setFrames([]);setFrameIndex(0);
       setGuideStableCount(0);
       setMessage('Câmera ativa. A captura será feita após manter cada posição por pelo menos 2,2 segundos.');
     }catch(err){
@@ -258,7 +276,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     const sessionId=cameraSessionRef.current;
     try{
       if(mediaPipeRef.current){
-        const guide=inspectGuidedFace(mediaPipeRef.current.detect(video).faceLandmarks||[],frameIndex);
+        const guide=inspectGuidedFace(mediaPipeRef.current.detect(video).faceLandmarks||[],frameIndex,turnOrder);
         setFaceGuide(guide);
         if(!guide.ready)throw new Error(guide.message);
       }
@@ -284,7 +302,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       }
     }catch(err){setError(err instanceof Error?err.message:'Falha na captura.');}
     finally{captureBusyRef.current=false;setCaptureBusy(false);}
-  },[challenge,challengeExpiresAt,frameIndex]);
+  },[challenge,challengeExpiresAt,frameIndex,turnOrder]);
 
   // MediaPipe continuously checks framing and stability. No blind auto-timer.
   // Only the server can validate identity, head-turn order and anti-spoof.
@@ -300,7 +318,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         if(busy||captureBusyRef.current||challengeExpiresAt<=Date.now()||video.readyState<2)return;
         const engine=mediaPipeRef.current;
         if(!engine)return;
-        const guide=inspectGuidedFace(engine.detect(video).faceLandmarks||[],frameIndex);
+        const guide=inspectGuidedFace(engine.detect(video).faceLandmarks||[],frameIndex,turnOrder);
         setFaceGuide(guide);
         const now=Date.now();
         if(!guide.ready){
@@ -328,7 +346,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     };
     timer=window.setTimeout(inspect,250);
     return ()=>{cancelled=true;if(timer!==undefined)window.clearTimeout(timer);};
-  },[challenge,frameIndex,captureFrame,busy,challengeExpiresAt,mediaPipeStatus]);
+  },[challenge,frameIndex,captureFrame,busy,challengeExpiresAt,mediaPipeStatus,turnOrder]);
 
   async function submit(){
     if(!front||!back||!selfie||!consent){
@@ -469,17 +487,17 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       </label>
       <p className="small-note">A comparação facial será feita no servidor após concluir as etapas. Enviar uma selfie, por si só, não aprova a identidade.</p>
     </section>}
-    {step===3&&<section className="panel" aria-labelledby="identity-step-live" style={challenge?{position:'fixed',inset:0,zIndex:9999,background:'#0b1220',color:'#fff',overflowY:'auto',padding:'max(16px, env(safe-area-inset-top)) 18px max(24px, env(safe-area-inset-bottom))',display:'flex',flexDirection:'column',alignItems:'center',gap:12}:undefined}>
-      <h3 id="identity-step-live">3. Confirme que está presente</h3>
-      <p className="small-note">Posicione seu rosto na moldura e siga as quatro orientações. O MediaPipe acompanha o enquadramento e captura cada quadro automaticamente após manter a posição estável por pelo menos 2,2 segundos. A câmera ocupa a área disponível na tela. Afaste-se até que a testa, o queixo e as laterais do rosto estejam completamente visíveis. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
-      {challenge&&<p className="small-note" role="status">{mediaPipeStatus==='active'?
+    {step===3&&<section className="panel" aria-labelledby="identity-step-live" style={challenge?{position:'fixed',inset:0,zIndex:9999,background:'#0b1220',color:'#fff',overflowY:'auto',padding:'max(8px, env(safe-area-inset-top)) 8px max(12px, env(safe-area-inset-bottom))',display:'flex',flexDirection:'column',alignItems:'center',gap:8}:undefined}>
+      <h3 id="identity-step-live" style={challenge?{fontSize:18,margin:0}:undefined}>3. Confirme que está presente</h3>
+      <p className="small-note" style={challenge?{display:'none'}:undefined}>Posicione seu rosto na moldura e siga as quatro orientações. O MediaPipe acompanha o enquadramento e captura cada quadro automaticamente após manter a posição estável por pelo menos 2,2 segundos. A câmera ocupa a área disponível na tela. Afaste-se até que a testa, o queixo e as laterais do rosto estejam completamente visíveis. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
+      {challenge&&<p className="small-note" role="status" style={{display:'none'}}>{mediaPipeStatus==='active'?
         'MediaPipe ativo: enquadramento e posição do rosto são conferidos no aparelho. O Human valida no servidor.':
         mediaPipeStatus==='fallback'?'Orientação MediaPipe indisponível neste dispositivo. A validação obrigatória pelo Human permanece ativa.':
         'Inicializando análise de posição facial…'}</p>}
-      {challenge&&<p role="timer" aria-live="off" className="small-note"><strong>Tempo restante: {secondsRemaining}s</strong>. Envie a validação antes de terminar o prazo de 90 segundos.</p>}
+      {challenge&&<p role="timer" aria-live="off" className="small-note" style={{margin:0,fontSize:14}}><strong>Tempo restante: {secondsRemaining}s</strong>. Envie a validação antes de terminar o prazo de 90 segundos.</p>}
       {/* Visual guidance is never burned into the biometric frames. */}
-      <div style={{position:'relative',display:challenge?'block':'none',width:'100%',maxWidth:480,margin:'0 auto',
-        aspectRatio:'3 / 4',overflow:'hidden',borderRadius:18,background:'#101625',
+      <div style={{position:'relative',display:challenge?'block':'none',width:'min(100%, 56dvh)',maxWidth:'100%',margin:'0 auto',
+        height:'min(72dvh, 760px)',aspectRatio:'3 / 4',overflow:'hidden',borderRadius:18,background:'#101625',
         border:'1px solid rgba(148,163,184,.5)'}}>
         <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
           style={{width:'100%',height:'100%',objectFit:'cover',transform:'scaleX(-1)',display:'block'}}/>
@@ -501,7 +519,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         </div>
         <div aria-hidden="true" style={{position:'absolute',left:12,right:12,bottom:12,
           background:'rgba(3,10,24,.78)',borderRadius:12,padding:'9px 11px',
-          color:'white',fontSize:13,textAlign:'center',pointerEvents:'none'}}>
+          color:'white',fontSize:'clamp(18px, 4.8vw, 24px)',fontWeight:700,lineHeight:1.3,textAlign:'center',pointerEvents:'none'}}>
           {mediaPipeStatus==='active'?faceGuide.message:
             mediaPipeStatus==='loading'?'Inicializando reconhecimento do rosto…':
             'MediaPipe indisponível: use a captura manual.'}
@@ -514,14 +532,15 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         </div>
       </div>
       {challenge&&<p role="status" aria-live="polite" style={{
-        fontSize:13,marginTop:8,color:faceGuide.ready?'#059669':'inherit'
+        fontSize:18,fontWeight:700,textAlign:'center',marginTop:4,color:faceGuide.ready?'#34d399':'inherit'
       }}>{mediaPipeStatus==='active'?faceGuide.message:
         mediaPipeStatus==='fallback'?'Não foi possível iniciar o enquadramento automático; use Capturar agora.':
         'Preparando enquadramento automático…'}</p>}
       {!challenge?<button type="button" className="btn btn-outline" onClick={()=>void startGuidedCapture()} disabled={busy||challengeBusy}>
         <Camera size={17}/>{challengeBusy?'Preparando câmera…':'Iniciar captura guiada'}</button>:
-        <div>
-          <p><strong>Etapa {Math.min(frameIndex+1,4)} de 4:</strong> {instructions[frameIndex]||'Captura concluída.'}</p>
+        <div style={{width:'100%',maxWidth:480,textAlign:'center'}}>
+          <button type="button" className="btn btn-outline" style={{marginBottom:8}} onClick={()=>{setVoiceEnabled(v=>!v);if('speechSynthesis' in window)window.speechSynthesis.cancel();}}>{voiceEnabled?'Desativar voz':'Ativar voz'}</button>
+          <p style={{fontSize:18,fontWeight:700}}><strong>Etapa {Math.min(frameIndex+1,4)} de 4:</strong> {instructions[frameIndex]||'Captura concluída.'}</p>
           <progress value={frames.length} max={4} aria-label="Quadros capturados" style={{width:'100%',height:10,accentColor:'var(--accent,#6d5dfc)'}}/>
           <p className="small-note">Quadros capturados: {frames.length}/4</p>
           {frameIndex<4&&<button type="button" className="btn btn-outline" onClick={()=>void captureFrame()} disabled={busy||captureBusy||secondsRemaining===0}>
