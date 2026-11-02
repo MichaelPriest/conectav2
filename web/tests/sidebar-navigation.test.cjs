@@ -8,7 +8,7 @@ const read=relative=>fs.readFileSync(path.resolve(__dirname,'../src',relative),'
 test('sidebar keeps everyday destinations and makes Conecta ID directly visible',()=>{
  const shell=read('components/app-shell.tsx');
  const block=shell.slice(shell.indexOf('const navItems = ['),shell.indexOf('const moreNavItems = ['));
- for(const href of ['/feed','/explorar','/comunidades','/mensagens','/notificacoes','/verificar-identidade']) assert.ok(block.includes(href),href);
+ for(const href of ['/feed','/explorar','/comunidades','/mensagens','/notificacoes','/conecta-id']) assert.ok(block.includes(href),href);
  for(const href of ['/reels','/salvos','/acolhimento','/conexoes','/apps','/apoiar','/perfil']) assert.ok(!block.includes(href),href+' should not be a primary shortcut');
 });
 
@@ -20,7 +20,7 @@ test('secondary destinations are grouped behind an accessible More toggle',()=>{
  assert.match(shell,/id="conecta-more-nav"[^>]*hidden=\{!moreNavOpen\}/);
  assert.match(shell,/moreNavItems\.some\(item => pathname === item\.href\)/);
  assert.match(shell,/platformRole==='admin'&&<Link href="\/gestao-monetizacao"/);
- assert.match(shell,/label: 'Conecta ID · Validar identidade', href: '\/verificar-identidade'/);
+ assert.match(shell,/label: 'Conecta ID 2.0 · Situação da conta', href: '\/conecta-id'/);
  assert.match(shell,/{platformRole&&<Link href="\/moderacao"/);
 });
 
