@@ -8,7 +8,7 @@ const page=fs.readFileSync(path.join(__dirname,'../src/app/verificar-identidade/
 const upload=fs.readFileSync(path.join(__dirname,'../src/components/free-document-verification.tsx'),'utf8');
 
 test('legacy Conecta ID screen redirects to the new route',()=>{
- assert.match(page,/redirect\('\\/conecta-id'\)/);
+ assert.ok(page.includes("redirect('/conecta-id')"));
  assert.doesNotMatch(page,/FreeDocumentVerification/);
 });
 
@@ -31,5 +31,5 @@ test('document upload requires explicit consent and sends all evidence to the se
 test('new Conecta ID explicitly does not claim verified age or identity',()=>{
  const current=fs.readFileSync(path.join(__dirname,'../src/app/conecta-id/page.tsx'),'utf8');
  assert.match(current,/não confirma sua identidade nem maioridade/);
- assert.doesNotMatch(current,/href="\\/verificar-identidade"/);
+ assert.ok(!current.includes('href="/verificar-identidade"'));
 });
