@@ -35,7 +35,7 @@ export default function OnboardingPage() {
           .select('declared_band').eq('user_id',user.id).maybeSingle();
         if(ageError)throw ageError;
         if(profile && age?.declared_band){
-          router.replace('/verificar-identidade');
+          router.replace('/conecta-id');
           return;
         }
         setExistingProfile(Boolean(profile));
@@ -75,10 +75,15 @@ export default function OnboardingPage() {
       const {error:ageError}=await db.from('registration_age_declarations')
         .insert({user_id:user.id,declared_band:band});
       if(ageError){
-        if(ageError.code==='23505'){router.replace('/verificar-identidade');router.refresh();return;}
+        if(ageError.code==='23505'){router.replace('/conecta-id');router.refresh();return;}
         throw ageError;
       }
-      router.replace('/verificar-identidade');router.refresh();
+      const {data:{session}}=await db.auth.getSession();
+      if(session){
+        const triage=await fetch('/api/identity/triage/sync',{method:'POST',headers:{Authorization:'Bearer '+session.access_token}});
+        if(!triage.ok)throw Error('Cadastro salvo, mas a triagem está indisponível. Tente novamente.');
+      }
+      router.replace('/conecta-id');router.refresh();
     } catch (err) {setError(err instanceof Error ? err.message : 'Não foi possível salvar o perfil.');}
     finally {setSaving(false);}
   }
@@ -99,10 +104,10 @@ export default function OnboardingPage() {
             onChange={e=>setBirthDate(e.target.value)} disabled={!ready} required/></label>}
       <label className="human-agree"><input type="checkbox" checked={confirmed}
         onChange={e=>setConfirmed(e.target.checked)} required disabled={!ready}/>
-        Confirmo a faixa etária informada e entendo que o Conecta ID precisará de validação documental adicional.
+        Confirmo a faixa etária informada e entendo que o Conecta ID poderá solicitar validação adicional quando necessário.
         Contas adolescentes permanecem com proteções e responsável pendente de verificação.</label>
       <p className="small-note">Apenas a faixa etária declarada será registrada, sem guardar data de nascimento, selfie ou documentos neste cadastro.</p>
       {error && <p role="alert" className="form-error">{error}</p>}
-      <button className="btn btn-primary btn-lg btn-block" disabled={!ready||saving} type="submit">{saving?'Salvando...':'Continuar para Conecta ID'} <ArrowRight size={18}/></button>
+      <button className="btn btn-primary btn-lg btn-block" disabled={!ready||saving} type="submit">{saving?'Salvando...':'Continuar para Conecta ID 2.0'} <ArrowRight size={18}/></button>
     </form></section></main>;
 }
