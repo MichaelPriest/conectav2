@@ -22,7 +22,7 @@ const navItems = [
   { label: 'Comunidades', href: '/comunidades', icon: Users },
   { label: 'Mensagens', href: '/mensagens', icon: MessageCircle },
   { label: 'Notificações', href: '/notificacoes', icon: Bell },
-  { label: 'Conecta ID · Validar identidade', href: '/verificar-identidade', icon: ShieldCheck },
+  { label: 'Conecta ID 2.0 · Situação da conta', href: '/conecta-id', icon: ShieldCheck },
 ];
 const moreNavItems = [
   { label: 'Reels', href: '/reels', icon: Clapperboard },
@@ -93,14 +93,14 @@ export function useAuthProfile() {
         // Conecta ID is mandatory for every account before any social-network route.
         // This is only the navigation gate; restrictive database RLS enforces the same
         // decision so direct Supabase requests cannot bypass the requirement.
-        if(pathname!=='/verificar-identidade'){
+        if(pathname!=='/conecta-id'&&pathname!=='/verificar-identidade'){
           const {data:{session}}=await client.auth.getSession();
           const accessResponse=await fetch('/api/identity/access',{
             headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},
             cache:'no-store'
           });
           const access=await accessResponse.json().catch(()=>({networkAccess:false})) as {networkAccess?:boolean};
-          if(!accessResponse.ok||access.networkAccess!==true){router.replace('/verificar-identidade');return;}
+          if(!accessResponse.ok||access.networkAccess!==true){router.replace('/conecta-id');return;}
         }
         setUser(authUser);
         setProfile(profileData as UserProfile);
