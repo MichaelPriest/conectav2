@@ -72,7 +72,9 @@ export default function ConectaIdPage(){
   <p className="muted">A triagem de risco não confirma sua identidade nem maioridade. O acesso protegido depende das regras do servidor.</p>
   <div className="stack">
    <button className="btn btn-outline" type="button" onClick={()=>void refresh()} disabled={loading}>Atualizar situação</button>
-   <Link className="btn btn-primary" href="/">Ir para o Conecta</Link>
+   {access?.networkAccess
+    ? <Link className="btn btn-primary" href="/feed">Ir para o Conecta</Link>
+    : <p role="status" className="muted">O feed será liberado quando a verificação obrigatória estiver concluída. O botão de acesso permanece indisponível para evitar redirecionamentos repetidos.</p>}
   </div>
  </section></main>;
 }
