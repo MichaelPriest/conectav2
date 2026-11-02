@@ -478,13 +478,13 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         'Inicializando análise de posição facial…'}</p>}
       {challenge&&<p role="timer" aria-live="off" className="small-note"><strong>Tempo restante: {secondsRemaining}s</strong>. Envie a validação antes de terminar o prazo de 90 segundos.</p>}
       {/* Visual guidance is never burned into the biometric frames. */}
-      <div style={{position:'relative',display:challenge?'block':'none',width:'100%',maxWidth:'100%',margin:'0 auto',
-        maxHeight:challenge?'58dvh':undefined,aspectRatio:'4 / 3',overflow:'hidden',borderRadius:18,background:'#101625',
+      <div style={{position:'relative',display:challenge?'block':'none',width:'100%',maxWidth:480,margin:'0 auto',
+        aspectRatio:'3 / 4',overflow:'hidden',borderRadius:18,background:'#101625',
         border:'1px solid rgba(148,163,184,.5)'}}>
         <video ref={videoRef} autoPlay muted playsInline aria-label="Prévia da câmera para captura guiada"
           style={{width:'100%',height:'100%',objectFit:'cover',transform:'scaleX(-1)',display:'block'}}/>
         <div aria-hidden="true" data-testid="conecta-face-guide-frame" style={{
-          position:'absolute',left:'22%',top:'3%',width:'56%',height:'82%',
+          position:'absolute',left:'12%',top:'9%',width:'76%',height:'78%',
           border:'3px solid '+guideColor,borderRadius:'48% / 48%',
           boxShadow:'0 0 0 100vmax rgba(8,15,30,.17), 0 0 24px '+guideColor,
           transition:'border-color 180ms ease, box-shadow 180ms ease',pointerEvents:'none'
