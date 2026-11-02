@@ -7,16 +7,9 @@ const test=require('node:test');
 const page=fs.readFileSync(path.join(__dirname,'../src/app/verificar-identidade/page.tsx'),'utf8');
 const upload=fs.readFileSync(path.join(__dirname,'../src/components/free-document-verification.tsx'),'utf8');
 
-test('Conecta ID exposes one unified free document and selfie validation flow',()=>{
- assert.match(page,/Validar minha identidade/);
- assert.match(page,/Um único processo gratuito/);
- assert.match(page,/FreeDocumentVerification/);
- assert.match(page,/identity-document-type/);
- assert.match(page,/useState<DocumentMode>\('old-rg'\)/);
- assert.match(page,/RG antigo \(frente e verso, sem QR Code\)/);
- assert.match(page,/Para RG antigo, envie frente e verso: não é necessário localizar QR Code/);
- assert.doesNotMatch(page,/IdentityMethodsPanel|GovBrSignatureFlow|HumanCameraCheck|CinQrScanner|LegacyRgScanner/);
- assert.doesNotMatch(page,/Métodos do Conecta ID|Validação oficial gratuita da CIN/);
+test('legacy Conecta ID screen redirects to the new route',()=>{
+ assert.match(page,/redirect\('\\/conecta-id'\)/);
+ assert.doesNotMatch(page,/FreeDocumentVerification/);
 });
 
 test('document upload requires explicit consent and sends all evidence to the server',()=>{
@@ -35,8 +28,8 @@ test('document upload requires explicit consent and sends all evidence to the se
  assert.match(upload,/não há consulta automática a uma base oficial/i);
 });
 
-test('no local preflight can be represented as official identity or age approval',()=>{
- assert.match(page,/não é prova de idade/);
- assert.match(page,/não uma certificação governamental/);
- assert.match(page,/não equivale à confirmação oficial do emissor/);
+test('new Conecta ID explicitly does not claim verified age or identity',()=>{
+ const current=fs.readFileSync(path.join(__dirname,'../src/app/conecta-id/page.tsx'),'utf8');
+ assert.match(current,/não confirma sua identidade nem maioridade/);
+ assert.doesNotMatch(current,/href="\\/verificar-identidade"/);
 });
