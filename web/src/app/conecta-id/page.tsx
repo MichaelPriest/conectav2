@@ -37,7 +37,7 @@ export default function ConectaIdPage(){
   <p className="muted">A triagem inicial não confirma sua identidade nem maioridade. Recursos restritos continuam sujeitos às regras de segurança e proteção de adolescentes.</p>
   <div className="stack">
    <Link className="btn btn-primary" href="/">Ir para o Conecta</Link>
-   <Link className="btn btn-outline" href="/verificar-identidade">Verificação adicional de identidade e idade</Link>
+   <p className="muted">A verificação antiga foi desativada. Quando houver necessidade de documentação adicional, a Central de Triagem orientará o próximo passo.</p>
   </div>
  </section></main>;
 }
