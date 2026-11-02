@@ -69,7 +69,7 @@ export default function ConectaIdPage(){
    {triage.status==='pending_contact'&&<p className="muted">Confirme o endereço de e-mail utilizado no cadastro e atualize esta página.</p>}
    {!access?.networkAccess&&<p className="muted">A antiga tela de envio de documentos foi desativada. A nova captura ainda não está disponível; nenhuma verificação será aprovada automaticamente.</p>}
   </>}
-  <p className="muted">A triagem de risco não confirma identidade nem maioridade. O acesso protegido depende das regras do servidor.</p>
+  <p className="muted">A triagem de risco não confirma sua identidade nem maioridade. O acesso protegido depende das regras do servidor.</p>
   <div className="stack">
    <button className="btn btn-outline" type="button" onClick={()=>void refresh()} disabled={loading}>Atualizar situação</button>
    <Link className="btn btn-primary" href="/">Ir para o Conecta</Link>
