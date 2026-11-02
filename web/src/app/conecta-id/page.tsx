@@ -3,6 +3,7 @@ import {useCallback,useEffect,useState} from 'react';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {supabaseBrowser} from '@/lib/supabase/browser';
+import {FreeDocumentVerification} from '@/components/free-document-verification';
 
 type Triage={status?:string;error?:string;reasons?:string[]};
 type Access={networkAccess?:boolean;basicAccess?:boolean;accessLevel?:string;reason?:string;message?:string;steps?:{profile:boolean;ageDeclaration:boolean;identity:boolean;age:boolean;guardian:boolean}};
@@ -21,6 +22,8 @@ export default function ConectaIdPage(){
  const [verification,setVerification]=useState<Verification|null>(null);
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
+ const [showCapture,setShowCapture]=useState(false);
+ const [documentType,setDocumentType]=useState<'cin'|'old-rg'|'cnh'>('cin');
  const refresh=useCallback(async()=>{
   setLoading(true);setError('');
   try{
@@ -67,7 +70,8 @@ export default function ConectaIdPage(){
    </ul>
    {triage.status==='pending_review'&&<p className="muted">Aguarde a decisão de um administrador. Não envie documentos por mensagens ou canais não oficiais.</p>}
    {triage.status==='pending_contact'&&<p className="muted">Confirme o endereço de e-mail utilizado no cadastro e atualize esta página.</p>}
-   {!access?.networkAccess&&<p className="muted">A antiga tela de envio de documentos foi desativada. A nova captura ainda não está disponível; nenhuma verificação será aprovada automaticamente.</p>}
+   {!access?.networkAccess&&<p className="muted">A verificação gratuita de documento e selfie pode confirmar a faixa etária, mas não comprova a titularidade perante uma fonte oficial. Mesmo após concluir esta etapa, o feed poderá continuar restrito até a validação confiável da identidade.</p>}
+   {!access?.networkAccess&&<div className="stack"><button type="button" className="btn btn-primary" onClick={()=>setShowCapture(v=>!v)}>{showCapture?'Ocultar verificação':'Iniciar verificação de documento e selfie'}</button>{showCapture&&<><label htmlFor="conecta-document-kind">Tipo de documento</label><select id="conecta-document-kind" value={documentType} onChange={e=>setDocumentType(e.target.value as 'cin'|'old-rg'|'cnh')}><option value="cin">CIN</option><option value="old-rg">RG antigo</option><option value="cnh">CNH</option></select><FreeDocumentVerification key={documentType} documentType={documentType} onComplete={refresh}/></>}</div>}
   </>}
   <p className="muted">A triagem de risco não confirma sua identidade nem maioridade. O acesso protegido depende das regras do servidor.</p>
   <div className="stack">

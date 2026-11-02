@@ -49,6 +49,8 @@ test('legacy route redirects to Conecta ID 2.0 without bypassing server access g
  const govbr=read('src/components/govbr-signature-flow.tsx');
  assert.ok(legacy.includes("redirect('/conecta-id')"));
  assert.match(next,/não confirma sua identidade nem maioridade/);
- assert.ok(!next.includes('href="/feed"'));
+ assert.match(next,/access\?\.networkAccess/);
+ assert.match(next,/<Link className="btn btn-primary" href="\/feed">/);
+ assert.match(next,/O feed será liberado quando a verificação obrigatória estiver concluída/);
  assert.ok(!govbr.includes('href="/feed"'));
 });
