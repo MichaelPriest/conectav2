@@ -28,13 +28,13 @@ export async function POST(request:NextRequest){
   declaredAgeBand:band,signals
  });
  // Never overwrite a manual outcome or a previously flagged risk.
- if(existing.data&&['approved','rejected','ineligible'].includes(existing.data.status))
+ if(existing.data&&['pending_review','approved','rejected','ineligible'].includes(existing.data.status))
   return NextResponse.json({status:existing.data.status,reasons:existing.data.reasons,preserved:true},{headers});
  const status=result.decision;
  if(existing.data){
   const {data:updated,error}=await ctx.admin.from('registration_triage')
    .update({status,reasons:result.reasons,updated_at:new Date().toISOString()})
-   .eq('user_id',ctx.user.id).in('status',['pending_contact','eligible_basic','pending_review'])
+   .eq('user_id',ctx.user.id).in('status',['pending_contact','eligible_basic'])
    .select('status').maybeSingle();
   if(error)return NextResponse.json({error:'Não foi possível atualizar a triagem.'},{status:503,headers});
   if(!updated)return NextResponse.json({status:'pending_review',preserved:true,notice:'A classificação foi alterada por outro processo. Atualize para consultar a situação.'},{headers});
