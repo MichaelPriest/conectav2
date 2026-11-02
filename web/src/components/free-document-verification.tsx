@@ -134,6 +134,9 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     utterance.lang='pt-BR';utterance.rate=0.9;utterance.volume=1;
     window.speechSynthesis.speak(utterance);
   },[voiceEnabled]);
+  useEffect(()=>()=>{if(typeof window!=='undefined'&&'speechSynthesis' in window)window.speechSynthesis.cancel();},[]);
+  const [instructions,setInstructions]=useState<string[]>([]);
+  const [frameIndex,setFrameIndex]=useState(0);
   useEffect(()=>{
     if(!challenge||frameIndex>=4)return;
     const instruction=instructions[frameIndex];
@@ -141,9 +144,6 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     spokenRef.current=challenge+':'+frameIndex;
     speak(instruction);
   },[challenge,frameIndex,instructions,speak]);
-  useEffect(()=>()=>{if(typeof window!=='undefined'&&'speechSynthesis' in window)window.speechSynthesis.cancel();},[]);
-  const [instructions,setInstructions]=useState<string[]>([]);
-  const [frameIndex,setFrameIndex]=useState(0);
   const [frames,setFrames]=useState<File[]>([]);
   const [message,setMessage]=useState('');
   const [completed,setCompleted]=useState(false);
