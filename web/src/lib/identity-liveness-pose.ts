@@ -29,7 +29,7 @@ export function humanMeshTurnOffset(mesh:readonly (readonly number[])[]|undefine
   if(![left[0],left[1],right[0],right[1],nose[0],nose[1]].every(Number.isFinite))return null;
   const eyeDistance=Math.abs(left[0]-right[0]);
   if(eyeDistance<10)return null;
-  return (nose[0]-(left[0]+right[0])/2)/eyeDistance;
+  return noseEyeTurnOffset(left[0],right[0],nose[0]);
 }
 
 export function assessGuidedHeadTurns(
