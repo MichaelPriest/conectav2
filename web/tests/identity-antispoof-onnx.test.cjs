@@ -38,6 +38,35 @@ test('ONNX scoring does not confuse high fake scores with real faces or accept m
  assert.equal(score([1,1,1]).status,'inconclusive');
 });
 
+test('ONNX uses the original 0..255 BGR tensor and upstream aspect-preserving 2.7x crop',()=>{
+ const source=read('src/lib/identity-antispoof-onnx.ts');
+ assert.match(source,/tensorValues\[i\]=crop\[i\*3\+2\];/);
+ assert.match(source,/tensorValues\[SIZE\*SIZE\+i\]=crop\[i\*3\+1\];/);
+ assert.match(source,/tensorValues\[2\*SIZE\*SIZE\+i\]=crop\[i\*3\];/);
+ assert.doesNotMatch(source,/tensorValues\[i\]=crop\[i\*3\+2\]\/255/);
+ const javascript=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
+ const exports={};
+ vm.runInNewContext(javascript,{exports,process:{cwd:()=>'/tmp/conecta'},require:(id)=>{
+   if(id==='node:path')return require('node:path');
+   if(id==='sharp')return ()=>({});
+   if(id==='onnxruntime-node')return {};
+   throw Error('Unexpected dependency '+id);
+ }},{filename:'identity-antispoof-onnx.ts'});
+ const bounds=exports.antiSpoofCropBounds;
+ assert.equal(typeof bounds,'function');
+ const centered=bounds(640,640,[250,250,100,140]);
+ assert.equal(centered.left,165);
+ assert.equal(centered.top,131);
+ assert.equal(centered.width,271);
+ assert.equal(centered.height,379);
+ assert.notEqual(centered.width,centered.height,'crop should preserve face proportions');
+ const edge=bounds(640,480,[0,10,160,160]);
+ assert.equal(edge.left,0);
+ assert.equal(edge.top,0);
+ assert.ok(edge.left+edge.width<=640&&edge.top+edge.height<=480);
+ assert.equal(bounds(640,480,[100,100,10,10]),null);
+});
+
 test('Vercel delegates only identity routes to the dedicated fixed Render origin, without browser cookies',()=>{
  const code=read('src/lib/identity-validation-delegate.ts');
  const verify=read('src/app/api/identity/free-document/verify/route.ts');
