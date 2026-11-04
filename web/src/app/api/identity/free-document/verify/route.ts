@@ -8,6 +8,8 @@ import sharp from 'sharp';
 import {BinaryBitmap,HybridBinarizer,QRCodeReader,RGBLuminanceSource} from '@zxing/library';
 import {identityContext,runtimeConfig} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
+import {delegateIdentityValidation} from '@/lib/identity-validation-delegate';
+import {inspectFacePresentation} from '@/lib/identity-antispoof-onnx';
 import {inspectCinToken} from '@/lib/cin-qr';
 import {extractBirthDateFromOcr} from '@/lib/legacy-rg-ocr';
 import {prepareBirthDateOcrRegions,prepareBirthDateOcrFocusPanels} from '@/lib/identity-rg-ocr-regions';
@@ -140,6 +142,8 @@ function ageBandFromCin(value:string):string|null{
 
 export async function POST(request:NextRequest){
   if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))return fail('Origem inválida.',403);
+  const delegated=await delegateIdentityValidation(request);
+  if(delegated)return delegated;
   if(!runtimeConfig.supabaseUrl||!runtimeConfig.publicKey||!runtimeConfig.serviceKey)
     return fail('O serviço Conecta ID não está configurado no servidor. A validação não pode ser concluída.',503);
   const context=await identityContext(request);
@@ -430,8 +434,9 @@ export async function POST(request:NextRequest){
         iris:{enabled:false},
         description:{enabled:true,skipFrames:0,skipTime:0},
         emotion:{enabled:false},
-        antispoof:{enabled:true,skipFrames:0,skipTime:0},
-        liveness:{enabled:true,skipFrames:0,skipTime:0},
+        // Face geometry and descriptors only. PAD is handled by pinned ONNX.
+        antispoof:{enabled:false},
+        liveness:{enabled:false},
         gear:{enabled:false}
       },
       body:{enabled:false},hand:{enabled:false},object:{enabled:false},gesture:{enabled:false}
@@ -457,8 +462,12 @@ export async function POST(request:NextRequest){
       return await failAttempt('A selfie está desfocada. Ajuste a iluminação e tente novamente.',422,'face_quality_low');
     // Age assurance does not compare the ID portrait to the selfie. This
     // deliberately cannot establish ownership of the submitted document.
-    if(typeof selfieFace.real!=='number'||selfieFace.real<0.55)
-      return await failAttempt('A análise antifraude da selfie ficou inconclusiva. Faça uma nova captura ao vivo, sem filtros.',422,'selfie_liveness_uncertain');
+    const presentation=await inspectFacePresentation(selfiePix.data,selfiePix.width,selfiePix.height,selfieBox);
+    if(presentation.status!=='live'){
+      if(presentation.reason==='model_unavailable')
+        return await failAttempt('O motor antifraude do Conecta ID está indisponível no servidor de validação. Nenhuma verificação foi aprovada; solicite revisão técnica.',503,'selfie_liveness_uncertain');
+      return await failAttempt('A prova de vida por ONNX não obteve confiança suficiente. Use iluminação frontal uniforme, câmera limpa e sem filtros. Se persistir, solicite revisão manual em vez de repetir indefinidamente.',422,'selfie_liveness_uncertain');
+    }
 
     // Challenge was consumed before OCR/model work; client booleans and scores are ignored.
     const livenessPixels=await Promise.all(livenessFrames.map(frame=>pixels(frame)));
