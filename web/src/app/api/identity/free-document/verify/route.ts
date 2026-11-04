@@ -31,6 +31,10 @@ const fail=(message:string,status:number,code:VerificationFailureCode='verificat
 const MAX_IMAGE_BYTES=8*1024*1024;
 const MAX_REQUEST_BYTES=25*1024*1024;
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp']);
+// A Free Render instance has a fixed 512 MiB hard limit; parallel OCR/model
+// requests can crash the entire service. This single-process admission gate
+// fails closed with 503 before consuming a liveness challenge or rate limit.
+let identityVerificationBusy=false;
 
 type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;box?:number[];real?:number;rotation?:{angle?:{yaw?:number}};mesh?:number[][];tensor?:{dispose?:()=>void}}>};
 async function imageBuffer(value:FormDataEntryValue|null,label:string):Promise<Buffer>{
@@ -150,6 +154,10 @@ export async function POST(request:NextRequest){
     return fail('O serviço Conecta ID não está configurado no servidor. A validação não pode ser concluída.',503);
   const context=await identityContext(request);
   if(!context)return fail('Entre na sua conta para continuar.',401);
+  if(identityVerificationBusy)
+    return fail('O servidor está realizando outra validação de identidade. Tente novamente mais tarde.',503);
+  identityVerificationBusy=true;
+  try{
   let attemptId:number|null=null;
   const completeAttempt=async(failureCode:VerificationFailureCode|null=null)=>{
     if(attemptId===null)return;
@@ -598,5 +606,8 @@ export async function POST(request:NextRequest){
     if(worker)await worker.terminate().catch(()=>undefined);
     // Best-effort release of in-memory references; no raw image is persisted.
     document.fill(0);back.fill(0);rgDataSide.fill(0);rgPhotoSide.fill(0);selfie.fill(0);for(const frame of livenessFrames)frame.fill(0);documentPixels?.fill(0);selfiePixels?.fill(0);documentTensorData?.fill(0);selfieTensorData?.fill(0);qr='';
+  }
+  }finally{
+    identityVerificationBusy=false;
   }
 }
