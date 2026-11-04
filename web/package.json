@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-pdfjs.cjs && node scripts/prepare-mediapipe.cjs && next dev",
-    "build": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-pdfjs.cjs && node scripts/prepare-mediapipe.cjs && next build",
+    "dev": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-antispoof.cjs && node scripts/prepare-pdfjs.cjs && node scripts/prepare-mediapipe.cjs && next dev",
+    "build": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-antispoof.cjs && node scripts/prepare-pdfjs.cjs && node scripts/prepare-mediapipe.cjs && next build",
     "start": "node scripts/check-chat-push-startup.cjs && next start",
     "typecheck": "tsc --noEmit",
     "test:profile": "node --test tests/profile-details.test.cjs",
@@ -17,7 +17,7 @@
     "test:moderation": "node --test tests/oss-moderation-safety.test.cjs",
     "test:automod": "node --test tests/automatic-moderation.test.cjs",
     "test:cin-server": "node --test tests/cin-server-inspect.test.cjs",
-    "test:free-document": "node --test tests/free-document-verification.test.cjs tests/identity-frame-guidance.test.cjs tests/identity-face-crop.test.cjs",
+    "test:free-document": "node --test tests/free-document-verification.test.cjs tests/identity-frame-guidance.test.cjs tests/identity-face-crop.test.cjs tests/identity-antispoof-onnx.test.cjs",
     "test:identity-methods": "node --test tests/identity-methods.test.cjs",
     "test:age-policy": "node --test tests/age-assurance-policy.test.cjs",
     "test:conecta-id": "node --test tests/conecta-id-verdict.test.cjs",
@@ -26,7 +26,8 @@
     "test:age-signal-integrity": "node --test tests/age-signal-integrity.test.cjs",
     "test:identity-methods-ui": "node --test tests/identity-methods-ui.test.cjs",
     "test:identity-start-paid-gate": "node --test tests/identity-start-paid-gate.test.cjs",
-    "test:network-access": "node --test tests/conecta-id-network-access.test.cjs"
+    "test:network-access": "node --test tests/conecta-id-network-access.test.cjs",
+    "test:anti-spoof": "node --test tests/identity-antispoof-onnx.test.cjs"
   },
   "dependencies": {
     "@huggingface/transformers": "3.8.1",
@@ -49,7 +50,8 @@
     "sharp": "0.34.4",
     "tesseract.js": "6.0.1",
     "web-push": "3.6.7",
-    "pdfjs-dist": "5.4.394"
+    "pdfjs-dist": "5.4.394",
+    "onnxruntime-node": "1.30.0"
   },
   "devDependencies": {
     "@types/node": "22.18.6",

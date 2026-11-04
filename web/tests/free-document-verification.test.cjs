@@ -75,15 +75,16 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(failureCodes,/add column if not exists failure_code text/i);
  assert.match(failureCodes,/failure_code is null or failure_code in/i);
  assert.match(route,/document_qr_unreadable/);
- // The pinned model bundle does not contain Human's optional iris/emotion/attention/gear assets.
- // Explicitly disable them so Human never tries to run an unloaded GraphModel.
+ // Human handles facial geometry and matching; pinned ONNX performs presentation-attack detection.
+ // Disable optional Human assets so unavailable graph models cannot gate valid selfies.
  assert.match(route,/attention:\{enabled:false\}/);
  assert.match(route,/iris:\{enabled:false\}/);
  assert.match(route,/emotion:\{enabled:false\}/);
  assert.match(route,/gear:\{enabled:false\}/);
- assert.match(route,/antispoof:\{enabled:true,skipFrames:0,skipTime:0\}/);
- assert.match(route,/liveness:\{enabled:true,skipFrames:0,skipTime:0\}/);
- assert.match(route,/selfieFace\.real/);
+ assert.match(route,/antispoof:\{enabled:false\}/);
+ assert.match(route,/liveness:\{enabled:false\}/);
+ assert.match(route,/inspectFacePresentation\(selfiePix\.data,selfiePix\.width,selfiePix\.height,selfieBox\)/);
+ assert.doesNotMatch(route,/selfieFace\.real/);
  assert.match(route,/consume_identity_liveness_challenge/);
  assert.match(route,/livenessFrame/);
  assert.match(route,/firstDirection!==challengeTurnOrder\[0\]/);
@@ -128,14 +129,14 @@ test('failed identity submissions require a fresh one-use liveness challenge and
  assert.match(ui,/response\.status===401/);
 });
 
-test('Human server analyses independent images sequentially without reusing video frame caches',()=>{
+test('Human face geometry remains fresh while ONNX replaces Human PAD scoring',()=>{
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  assert.match(route,/cacheSensitivity:0/);
  assert.match(route,/skipAllowed:false/);
  assert.match(route,/detector:\{rotation:true,return:false,maxDetected:4,skipFrames:0,skipTime:0\}/);
  assert.match(route,/description:\{enabled:true,skipFrames:0,skipTime:0\}/);
- assert.match(route,/antispoof:\{enabled:true,skipFrames:0,skipTime:0\}/);
- assert.match(route,/liveness:\{enabled:true,skipFrames:0,skipTime:0\}/);
+ assert.match(route,/antispoof:\{enabled:false\}/);
+ assert.match(route,/liveness:\{enabled:false\}/);
  assert.match(route,/const selfieResult=await instance\.detect\(selfieTensor\)/);
  assert.doesNotMatch(route,/Promise\.all\(\[instance\.detect/);
  assert.match(route,/for\(const frame of livenessPixels\)/);
@@ -195,7 +196,8 @@ test('Vercel traces Tesseract runtime dependencies and pins the Node worker entr
  const config=read('next.config.ts');
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  const ui=read('src/components/free-document-verification.tsx');
- assert.ok(config.includes("serverExternalPackages: ['@tensorflow/tfjs-node', '@vladmandic/human', 'tesseract.js']"));
+ assert.ok(config.includes("serverExternalPackages: ['@tensorflow/tfjs-node', '@vladmandic/human', 'onnxruntime-node', 'tesseract.js']"));
+ assert.ok(config.includes("'./public/vendor/antispoof/**/*'"));
  for(const dependency of ['tesseract.js','tesseract.js-core','bmp-js','idb-keyval','is-url','node-fetch','regenerator-runtime','wasm-feature-detect','zlibjs','whatwg-url','tr46','webidl-conversions']){
   assert.ok(config.includes('./node_modules/'+dependency+'/**/*'),'missing traced dependency '+dependency);
  }

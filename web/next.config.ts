@@ -3,13 +3,16 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Native TensorFlow bindings and OCR runtime must remain Node externals.
-  serverExternalPackages: ['@tensorflow/tfjs-node', '@vladmandic/human', 'tesseract.js'],
+  serverExternalPackages: ['@tensorflow/tfjs-node', '@vladmandic/human', 'onnxruntime-node', 'tesseract.js'],
   // Vercel must trace the Node worker and every runtime-loaded Tesseract dependency.
   // The worker uses dynamic/relative requires which are not all inferred by tracing.
   outputFileTracingIncludes: {
     '/api/moderation/review': ['./node_modules/ffmpeg-static/ffmpeg'],
     '/api/identity/free-document/verify': [
       './public/vendor/human-models/**/*',
+      './public/vendor/antispoof/**/*',
+      './node_modules/onnxruntime-node/**/*',
+      './node_modules/onnxruntime-common/**/*',
       './node_modules/tesseract.js/**/*',
       './node_modules/tesseract.js-core/**/*',
       './node_modules/bmp-js/**/*',
