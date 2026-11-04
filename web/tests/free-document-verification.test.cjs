@@ -122,6 +122,8 @@ test('failed identity submissions require a fresh one-use liveness challenge and
  assert.match(route,/!runtimeConfig\.serviceKey/);
  assert.match(challenge,/!runtimeConfig\.serviceKey/);
  assert.match(ui,/setChallenge\(''\);setInstructions\(\[\]\);setFrameIndex\(0\);setFrames\(\[\]\);setStep\(3\)/);
+ assert.match(ui,/text\.includes\('face_match_failed'\)/);
+ assert.match(ui,/if\(retrySelfie\)\{setSelfie\(null\);setStep\(2\);\}/);
  assert.match(ui,/data\.code/);
  assert.match(ui,/MAX_IDENTITY_REQUEST_BYTES=4_000_000/);
  assert.match(ui,/images\.reduce/);
@@ -141,8 +143,10 @@ test('Human face geometry remains fresh while ONNX replaces Human PAD scoring',(
  assert.doesNotMatch(route,/Promise\.all\(\[instance\.detect/);
  assert.match(route,/for\(const frame of livenessPixels\)/);
  assert.match(route,/const neutralFaces=\[livenessResults\[0\]/);
- assert.match(route,/neutralSimilarity<0\.55/);
- assert.match(route,/A comparação entre a selfie enviada e os quadros frontais da captura ficou inconclusiva/);
+ assert.match(route,/faceMatchConsistency\(selfieToFirst,selfieToLast,firstToLast\)/);
+ assert.match(route,/firstNeutral\.embedding,lastNeutral\.embedding,neutralMatchOptions/);
+ assert.match(route,/A selfie enviada não atingiu a similaridade mínima/);
+ assert.match(route,/Os dois quadros frontais da captura não apresentaram concordância facial suficiente/);
  assert.match(route,/faceFocusVariance\(frame\.data,frame\.width,frame\.height,box\)/);
  assert.match(route,/const poseVerdict=assessGuidedHeadTurns\(poseOffsets,orderedTurns\)/);
  assert.ok(route.indexOf('const poseVerdict=assessGuidedHeadTurns(poseOffsets,orderedTurns)')<route.indexOf('const neutralFaces='),
@@ -150,7 +154,8 @@ test('Human face geometry remains fresh while ONNX replaces Human PAD scoring',(
  assert.doesNotMatch(route,/firstTurn>0\?'left':'right'/);
  assert.ok(route.indexOf('const focus=await faceFocusVariance(frame.data,frame.width,frame.height,box)')<route.indexOf('const neutralFaces='),
   'neutral image quality must be checked before a biometric mismatch verdict');
- assert.match(route,/neutralSimilarity<0\.55/);
+ assert.match(route,/faceMatchConsistency\(selfieToFirst,selfieToLast,firstToLast\)/);
+ assert.match(route,/firstNeutral\.embedding,lastNeutral\.embedding,neutralMatchOptions/);
 });
 
 test('guided capture is single-flight, respects the one-use expiry, and uses server TTL',()=>{
