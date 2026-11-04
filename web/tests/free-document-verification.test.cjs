@@ -6,6 +6,19 @@ const test=require('node:test');
 const root=path.join(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 
+test('after successful identity validation account refresh keeps result panel mounted',()=>{
+ const page=read('src/app/conecta-id/page.tsx');
+ const ui=read('src/components/free-document-verification.tsx');
+ assert.match(page,/const refresh=useCallback\(async\(background=false\)=>\{/);
+ assert.match(page,/if\(!background\)\{setLoading\(true\);setError\(''\);\}/);
+ assert.match(page,/finally\{if\(!background\)setLoading\(false\);\}/);
+ assert.match(page,/onComplete=\{\(\)=>refresh\(true\)\}/);
+ assert.doesNotMatch(page,/onComplete=\{refresh\}/);
+ assert.match(page,/if\(background\)setRefreshNotice\(/);
+ assert.match(ui,/setCompleted\(data\.ageAssured===true\|\|data\.approved===true\);setStep\(5\)/);
+ assert.match(ui,/await onComplete\(\)/);
+});
+
 test('free document verification skips QR and internal panels for legacy RG but keeps OCR and selfie liveness',()=>{
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  const ui=read('src/components/free-document-verification.tsx');
