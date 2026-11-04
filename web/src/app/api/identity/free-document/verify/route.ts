@@ -190,6 +190,55 @@ function getIdentityHumanEngine():Promise<any>{
   return identityHumanEnginePromise;
 }
 
+// Historical ID photographs can be decades older than current live captures.
+// This is an *advisory* comparison, never an identity-approval or denial gate.
+// Do not infer photo age from the user's current age or lower the liveness
+// threshold: low scores can represent ageing, printing, glare or another face.
+// All images/embeddings stay in memory and are destroyed after each side.
+type DocumentPortraitSignal='compatible'|'inconclusive'|'unavailable';
+async function compareDocumentPortraits(
+  instance:any,selfieEmbedding:number[],sides:Buffer[]
+):Promise<DocumentPortraitSignal>{
+  let inconclusive=false;
+  for(const side of sides){
+    let raw:Awaited<ReturnType<typeof pixels>>|undefined;
+    let tensorData:Int32Array|undefined,tensor:any=null,result:FaceResult|undefined;
+    try{
+      raw=await pixels(side);
+      tensorData=new Int32Array(raw.data);
+      tensor=instance.tf.tensor4d(tensorData,[1,raw.height,raw.width,3],'int32');
+      result=await instance.detect(tensor) as FaceResult;
+      const faces=result.face||[];
+      // A valid document portrait needs exactly one resolved face; a small,
+      // unclear or duplicated portrait is not proof of identity mismatch.
+      if(faces.length!==1)continue;
+      const face=faces[0],box=face.box;
+      if(!face.embedding?.length||!Array.isArray(box)||box.length<4||
+         box.some(v=>!Number.isFinite(v))||box[2]<64||box[3]<64)continue;
+      const similarity=instance.match.similarity(selfieEmbedding,face.embedding,{
+        order:2,multiplier:25,min:0.2,max:0.8
+      });
+      if(!Number.isFinite(similarity)||similarity<0||similarity>1)continue;
+      // Same algorithm as selfie/liveness matching, but *not calibrated* for
+      // old printed photographs; it is only a supporting positive signal.
+      if(similarity>=0.55)return 'compatible';
+      inconclusive=true;
+    }catch{
+      // The optional portrait analysis must never approve a failed mandatory
+      // check, nor penalize an age-assurance pass for old or damaged photos.
+    }finally{
+      for(const face of result?.face||[]){
+        face.embedding?.fill(0);
+        face.tensor?.dispose?.();
+      }
+      tensor?.dispose?.();
+      tensorData?.fill(0);
+      raw?.data.fill(0);
+    }
+  }
+  return inconclusive?'inconclusive':'unavailable';
+}
+
 export async function POST(request:NextRequest){
   if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))return fail('Origem inválida.',403);
   if(!runtimeConfig.supabaseUrl||!runtimeConfig.publicKey||!runtimeConfig.serviceKey)
@@ -582,6 +631,18 @@ export async function POST(request:NextRequest){
       for(const result of livenessResults)for(const face of result.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
       for(const frame of livenessPixels)frame.data.fill(0);
     }
+    // Only after mandatory live selfie, anti-spoof and pose checks passed,
+    // inspect any available printed document portrait. This advisory signal
+    // cannot reject an older document photo or authorize protected access.
+    const selfieEmbedding=selfieFaceResults?.face?.[0]?.embedding;
+    const documentPortraitComparison=selfieEmbedding?.length
+      ?await compareDocumentPortraits(instance,selfieEmbedding,[document,back])
+      :'unavailable';
+    const documentPortraitMessage=documentPortraitComparison==='compatible'
+      ?'O retrato do documento apresentou compatibilidade facial indicativa com a selfie; isso não certifica autenticidade nem titularidade.'
+      :documentPortraitComparison==='inconclusive'
+        ?'A comparação com o retrato do documento ficou inconclusiva. Fotografias antigas podem apresentar diferenças; este resultado, isoladamente, não é reprovação.'
+        :'Não foi possível comparar o retrato impresso do documento com confiabilidade.';
     // Persist only the platform's final verdict and a coarse age band. Never
     // persist the date of birth, source images, QR payload, face embeddings, or OCR.
     // This is Conecta's own automated validation, not issuer/government certification.
@@ -610,7 +671,8 @@ export async function POST(request:NextRequest){
       verifiedAt,
       documentStored:false,
       officialIssuerVerified:false,
-      message:'Faixa etária classificada pela data de nascimento do documento e captura guiada. A titularidade do documento não foi confirmada: o acesso que exige identidade verificada permanece bloqueado. Nenhuma imagem ou data de nascimento foi armazenada.'
+      documentPortraitComparison,
+      message:'Faixa etária classificada pela data de nascimento do documento e captura guiada. '+documentPortraitMessage+' A titularidade do documento não foi confirmada: o acesso que exige identidade verificada permanece bloqueado. Nenhuma imagem ou data de nascimento foi armazenada.'
     },{status:200,headers});
   }catch(error){
     return await failAttempt(error instanceof Error?error.message:'Não foi possível concluir a análise. Nenhum acesso foi liberado.',503);
