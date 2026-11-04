@@ -429,7 +429,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       <h2><ShieldCheck size={21} style={{verticalAlign:'middle'}}/> Validação gratuita de identidade e rosto</h2>
       <span className="small-note">Sem fornecedor pago</span>
     </div>
-    <p>Documento selecionado: <strong>{labels[documentType]}</strong>. Para RG antigo, o Conecta usa OCR da frente e do verso, comparação facial com a selfie e captura guiada, sem exigir leitura de QR Code. CIN e CNH continuam exigindo QR Code. As imagens são processadas temporariamente e não são armazenadas. Esta validação própria não equivale à confirmação oficial do emissor.</p>
+    <p>Documento selecionado: <strong>{labels[documentType]}</strong>. Para RG antigo, o Conecta usa OCR da frente e do verso e compara a selfie enviada com os quadros frontais da captura guiada, sem exigir QR Code. Este método ainda não confirma a titularidade pela fotografia impressa no documento. CIN e CNH continuam exigindo QR Code. As imagens são processadas temporariamente e não são armazenadas. Esta validação própria não equivale à confirmação oficial do emissor.</p>
     <div aria-label="Etapas da validação" style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:6,margin:'16px 0 20px'}}>
       {steps.map(item=><div key={item.number} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:6,textAlign:'center',padding:'9px 4px',borderRadius:12,border:'1px solid var(--border,#dedee7)',background:step===item.number?'var(--surface,#fff)':item.done?'var(--surface-success,rgba(34,197,94,.08))':'transparent',boxShadow:step===item.number?'0 0 0 2px var(--accent,#6d5dfc)':'none',minWidth:0}}>
         <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:28,height:28,borderRadius:99,fontWeight:700,background:item.done?'var(--success,#16a34a)':'var(--muted-surface,#f1f1f5)',color:item.done?'white':'inherit'}}>{item.done?'✓':item.number}</span>
@@ -480,7 +480,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </section>}
     {step===2&&<section className="panel" aria-labelledby="identity-step-face">
       <h3 id="identity-step-face">2. Confirme seu rosto</h3>
-      <p>Agora envie uma selfie atual do titular do documento. Mantenha o rosto inteiro visível, em ambiente iluminado, sem filtros, óculos escuros ou outras pessoas na imagem.</p>
+      <p>Agora envie uma selfie atual do titular do documento. Para melhorar a comparação com a captura guiada, use a câmera frontal, luz uniforme e rosto centralizado. Evite filtros, óculos escuros, contraluz ou outras pessoas na imagem.</p>
       <label className="form-label">Selfie atual
         <input type="file" accept="image/jpeg,image/png,image/webp" capture="user" disabled={busy||challengeBusy} onChange={e=>setSelfie(e.target.files?.[0]||null)}/>
         <span className="small-note">{selfie?selfie.name:'A seleção pode permitir escolher da galeria, ou tirar uma foto agora.'}</span>
@@ -489,7 +489,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     </section>}
     {step===3&&<section className="panel" aria-labelledby="identity-step-live" style={challenge?{position:'fixed',inset:0,zIndex:9999,background:'#0b1220',color:'#fff',overflowY:'auto',padding:'max(8px, env(safe-area-inset-top)) 8px max(12px, env(safe-area-inset-bottom))',display:'flex',flexDirection:'column',alignItems:'center',gap:8}:undefined}>
       <h3 id="identity-step-live" style={challenge?{fontSize:18,margin:0}:undefined}>3. Confirme que está presente</h3>
-      <p className="small-note" style={challenge?{display:'none'}:undefined}>Posicione seu rosto na moldura e siga as quatro orientações. O MediaPipe acompanha o enquadramento e captura cada quadro automaticamente após manter a posição estável por pelo menos 2,2 segundos. A câmera ocupa a área disponível na tela. Afaste-se até que a testa, o queixo e as laterais do rosto estejam completamente visíveis. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
+      <p className="small-note" style={challenge?{display:'none'}:undefined}>Posicione seu rosto na moldura e siga as quatro orientações. Nas etapas 1 e 4, olhe diretamente para a câmera e mantenha o celular imóvel. O MediaPipe acompanha o enquadramento e captura cada quadro automaticamente após manter a posição estável por pelo menos 2,2 segundos. A câmera ocupa a área disponível na tela. Afaste-se até que a testa, o queixo e as laterais do rosto estejam completamente visíveis. Esquerda e direita indicam os lados do seu próprio corpo, mesmo com a prévia espelhada.</p>
       {challenge&&<p className="small-note" role="status" style={{display:'none'}}>{mediaPipeStatus==='active'?
         'MediaPipe ativo: enquadramento e posição do rosto são conferidos no aparelho. O Human valida no servidor.':
         mediaPipeStatus==='fallback'?'Orientação MediaPipe indisponível neste dispositivo. A validação obrigatória pelo Human permanece ativa.':
