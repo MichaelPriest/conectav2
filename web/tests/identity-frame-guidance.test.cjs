@@ -11,8 +11,19 @@ const helperFile=path.join(root,'src/lib/identity-frame-guidance.ts');
 const output=ts.transpileModule(fs.readFileSync(helperFile,'utf8'),{
  compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
 }).outputText;
+const poseFile=path.join(root,'src/lib/identity-liveness-pose.ts');
+const poseOutput=ts.transpileModule(fs.readFileSync(poseFile,'utf8'),{
+ compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}
+}).outputText;
+const pose={};
+vm.runInNewContext(poseOutput,{exports:pose},{filename:poseFile});
 const mod={};
-vm.runInNewContext(output,{exports:mod},{filename:helperFile});
+vm.runInNewContext(output,{
+ exports:mod,require:(name)=>{
+   if(name==='./identity-liveness-pose')return pose;
+   throw Error('Unexpected module '+name);
+ }
+},{filename:helperFile});
 const {inspectGuidedFace}=mod;
 
 function face({cx=.5,cy=.5,width=.42,height=.54,offset=0}={}){
@@ -44,6 +55,20 @@ test('the four guided steps require neutral, turn, turn, neutral positions',()=>
  assert.equal(inspectGuidedFace([turned],3).status,'pose');
  assert.equal(inspectGuidedFace([center],3).ready,true);
 });
+test('front camera only marks a deliberate turn as ready, with a margin above the server threshold',()=>{
+ const neutral=face();
+ const barelyTurned=face({offset:.015}); // 0.015/0.14 = 0.107, too weak
+ const clearLeft=face({offset:.035});
+ const clearRight=face({offset:-.035});
+ assert.equal(inspectGuidedFace([neutral],1,['left','right']).ready,false);
+ assert.equal(inspectGuidedFace([barelyTurned],1,['left','right']).ready,false);
+ assert.equal(inspectGuidedFace([clearLeft],1,['left','right']).ready,true);
+ assert.equal(inspectGuidedFace([clearRight],1,['left','right']).ready,false);
+ assert.equal(inspectGuidedFace([clearRight],1,['right','left']).ready,true);
+ assert.equal(inspectGuidedFace([clearLeft],2,['left','right']).ready,false);
+ assert.equal(inspectGuidedFace([clearRight],2,['left','right']).ready,true);
+});
+
 test('invalid and cut-off landmarks are never considered ready',()=>{
  assert.equal(inspectGuidedFace([[{x:0,y:0}]],0).ready,false);
  assert.equal(inspectGuidedFace([face({cx:.93})],0).ready,false);
