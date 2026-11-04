@@ -196,7 +196,8 @@ test('Vercel traces Tesseract runtime dependencies and pins the Node worker entr
  const config=read('next.config.ts');
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  const ui=read('src/components/free-document-verification.tsx');
- assert.ok(config.includes("serverExternalPackages: ['@tensorflow/tfjs-node', '@vladmandic/human', 'tesseract.js']"));
+ assert.ok(config.includes("serverExternalPackages: ['@tensorflow/tfjs-node', '@vladmandic/human', 'onnxruntime-node', 'tesseract.js']"));
+ assert.ok(config.includes("'./public/vendor/antispoof/**/*'"));
  for(const dependency of ['tesseract.js','tesseract.js-core','bmp-js','idb-keyval','is-url','node-fetch','regenerator-runtime','wasm-feature-detect','zlibjs','whatwg-url','tr46','webidl-conversions']){
   assert.ok(config.includes('./node_modules/'+dependency+'/**/*'),'missing traced dependency '+dependency);
  }
