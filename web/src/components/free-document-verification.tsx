@@ -112,6 +112,8 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   const backFileRef=useRef<HTMLInputElement>(null);
   const [back,setBack]=useState<File|null>(null);
   const [selfie,setSelfie]=useState<File|null>(null);
+  const selfieCameraRef=useRef<HTMLInputElement>(null);
+  const selfieFileRef=useRef<HTMLInputElement>(null);
   const [consent,setConsent]=useState(false);
   const [busy,setBusy]=useState(false);
   const [challengeBusy,setChallengeBusy]=useState(false);
@@ -488,10 +490,16 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
     {step===2&&<section className="panel" aria-labelledby="identity-step-face">
       <h3 id="identity-step-face">2. Confirme seu rosto</h3>
       <p>Agora envie uma selfie atual do titular do documento. Para melhorar a comparação com a captura guiada, use a câmera frontal, luz uniforme e rosto centralizado. Evite filtros, óculos escuros, contraluz ou outras pessoas na imagem.</p>
-      <label className="form-label">Selfie atual
-        <input type="file" accept="image/jpeg,image/png,image/webp" capture="user" disabled={busy||challengeBusy} onChange={e=>setSelfie(e.target.files?.[0]||null)}/>
-        <span className="small-note">{selfie?selfie.name:'A seleção pode permitir escolher da galeria, ou tirar uma foto agora.'}</span>
-      </label>
+      <div className="form-label">
+        <strong>Selfie atual</strong>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap',marginTop:8}}>
+          <button type="button" className="btn btn-primary" disabled={busy||challengeBusy} onClick={()=>selfieCameraRef.current?.click()}><Camera size={17}/> Tirar foto</button>
+          <button type="button" className="btn btn-secondary" disabled={busy||challengeBusy} onClick={()=>selfieFileRef.current?.click()}>📁 Escolher foto</button>
+        </div>
+        <input ref={selfieCameraRef} type="file" capture="user" accept="image/jpeg,image/png,image/webp" aria-label="Tirar selfie com a câmera frontal" style={{display:'none'}} disabled={busy||challengeBusy} onChange={e=>{const file=e.target.files?.[0];if(file){setSelfie(file);setError('');}e.target.value='';}}/>
+        <input ref={selfieFileRef} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Escolher selfie da galeria ou dos arquivos" style={{display:'none'}} disabled={busy||challengeBusy} onChange={e=>{const file=e.target.files?.[0];if(file){setSelfie(file);setError('');}e.target.value='';}}/>
+        <span className="small-note" role="status">{selfie?'Selecionado: '+selfie.name:'Tire uma selfie usando a câmera frontal ou escolha uma imagem JPG, PNG ou WebP do dispositivo.'}</span>
+      </div>
       <p className="small-note">A comparação facial será feita no servidor após concluir as etapas. Enviar uma selfie, por si só, não aprova a identidade.</p>
     </section>}
     {step===3&&<section className="panel" aria-labelledby="identity-step-live" style={challenge?{position:'fixed',inset:0,zIndex:9999,background:'#0b1220',color:'#fff',overflowY:'auto',padding:'max(8px, env(safe-area-inset-top)) 8px max(12px, env(safe-area-inset-bottom))',display:'flex',flexDirection:'column',alignItems:'center',gap:8}:undefined}>
