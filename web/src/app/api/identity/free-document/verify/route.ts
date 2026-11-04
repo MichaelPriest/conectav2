@@ -10,6 +10,7 @@ import {identityContext,runtimeConfig} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {delegateIdentityValidation} from '@/lib/identity-validation-delegate';
 import {inspectFacePresentation} from '@/lib/identity-antispoof-onnx';
+import {assessGuidedHeadTurns,humanMeshTurnOffset} from '@/lib/identity-liveness-pose';
 import {inspectCinToken} from '@/lib/cin-qr';
 import {extractBirthDateFromOcr} from '@/lib/legacy-rg-ocr';
 import {prepareBirthDateOcrRegions,prepareBirthDateOcrFocusPanels} from '@/lib/identity-rg-ocr-regions';
@@ -30,7 +31,7 @@ const MAX_IMAGE_BYTES=8*1024*1024;
 const MAX_REQUEST_BYTES=25*1024*1024;
 const allowedTypes=new Set(['image/jpeg','image/png','image/webp']);
 
-type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;box?:number[];real?:number;rotation?:{angle?:{yaw?:number}};tensor?:{dispose?:()=>void}}>};
+type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;box?:number[];real?:number;rotation?:{angle?:{yaw?:number}};mesh?:number[][];tensor?:{dispose?:()=>void}}>};
 async function imageBuffer(value:FormDataEntryValue|null,label:string):Promise<Buffer>{
   if(!(value instanceof File))throw new Error('Envie '+label+'.');
   if(!allowedTypes.has(value.type)||value.size<1||value.size>MAX_IMAGE_BYTES)
@@ -481,26 +482,21 @@ export async function POST(request:NextRequest){
         const detected=await instance.detect(tensor);
         livenessResults.push(detected as FaceResult);
       }
-      // The four challenge images must always receive fresh detections rather
-      // than the cached face box/rotation of a previous frame.
-      const yaw=livenessResults.map(result=>{
+      // Re-evaluate every frame using server-derived Human mesh landmarks.
+      // MediaPipe's client preview and Human's 3-D Euler yaw do not use the
+      // same scale or axis convention. Comparing their yaw thresholds caused
+      // false liveness_sequence_invalid decisions on apparently valid captures.
+      // The shared normalized nose/eye geometry is used on BOTH sides.
+      const poseOffsets=livenessResults.map(result=>{
         const faces=result.face||[];
-        return faces.length===1&&typeof faces[0].rotation?.angle?.yaw==='number'
-          ?faces[0].rotation!.angle!.yaw!:null;
+        return faces.length===1?humanMeshTurnOffset(faces[0].mesh):null;
       });
-      if(yaw.some(value=>value===null||!Number.isFinite(value)))
-        return await failAttempt('A captura guiada precisa mostrar exatamente um rosto em todos os quadros. Nenhum acesso foi liberado.',422);
-      // Validate neutral poses and the randomized turn sequence BEFORE facial
-      // similarity. A turned or drifting neutral frame can produce a false
-      // face_match_failed even though the real issue is capture geometry.
-      const angles=yaw as number[];
-      const baseline=Math.abs(angles[0]);
-      const firstTurn=angles[1],secondTurn=angles[2],returned=Math.abs(angles[3]);
-      const firstDirection=firstTurn>0?'left':'right';
-      const secondDirection=secondTurn>0?'left':'right';
-      if(baseline>0.28||returned>0.28||Math.abs(firstTurn)<0.18||Math.abs(secondTurn)<0.18||
-         firstDirection!==challengeTurnOrder[0]||secondDirection!==challengeTurnOrder[1])
-        return await failAttempt('A captura guiada ficou fora da posição solicitada. Olhe de frente nos quadros 1 e 4 e siga a direção indicada nos quadros 2 e 3.',422,'liveness_sequence_invalid');
+      const orderedTurns=challengeTurnOrder as Array<'left'|'right'>;
+      const poseVerdict=assessGuidedHeadTurns(poseOffsets,orderedTurns);
+      if(poseVerdict==='invalid_face')
+        return await failAttempt('Não foi possível medir a posição do rosto em todos os quadros. Refaça a captura mantendo os olhos e o nariz visíveis.',422,'face_quality_low');
+      if(poseVerdict==='invalid_sequence')
+        return await failAttempt('A captura não confirmou os dois movimentos na ordem solicitada. Mantenha o rosto de frente nas etapas 1 e 4 e vire a cabeça claramente para os lados indicados nas etapas 2 e 3.',422,'liveness_sequence_invalid');
       // Check that both neutral captures are sufficiently sharp before matching
       // descriptors, to report a retake rather than falsely accusing a mismatch.
       for(const i of [0,3]){
