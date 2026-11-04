@@ -34,34 +34,52 @@ export function classifyLiveScore(values:readonly number[]):AntiSpoofResult{
     confidence>probabilities[0]/total&&confidence>probabilities[2]/total;
   return {status:live?'live':'inconclusive',confidence,reason:live?'ok':'low_confidence'};
 }
+/**
+ * Match upstream src/generate_patches.py CropImage._get_new_box.
+ * Keep the original face aspect ratio, fit the 2.7x crop inside the image,
+ * and shift it at frame edges instead of truncating one side.
+ */
+export function antiSpoofCropBounds(
+  width:number,height:number,box:readonly number[]
+):{left:number;top:number;width:number;height:number}|null{
+  if(!Number.isInteger(width)||!Number.isInteger(height)||width<80||height<80||
+     box.length<4||box.some(value=>!Number.isFinite(value)))return null;
+  const [x,y,w,h]=box;
+  if(w<64||h<64||x<0||y<0||x+w>width+2||y+h>height+2)return null;
+  const scale=Math.min((height-1)/h,(width-1)/w,2.7);
+  if(!Number.isFinite(scale)||scale<=0)return null;
+  const expandedW=w*scale,expandedH=h*scale;
+  let left=x+w/2-expandedW/2,top=y+h/2-expandedH/2;
+  let right=left+expandedW,bottom=top+expandedH;
+  if(left<0){right-=left;left=0;}
+  if(top<0){bottom-=top;top=0;}
+  if(right>width-1){left-=right-width+1;right=width-1;}
+  if(bottom>height-1){top-=bottom-height+1;bottom=height-1;}
+  const l=Math.max(0,Math.trunc(left)),t=Math.max(0,Math.trunc(top));
+  const r=Math.min(width-1,Math.trunc(right)),b=Math.min(height-1,Math.trunc(bottom));
+  if(r-l+1<70||b-t+1<70)return null;
+  return {left:l,top:t,width:r-l+1,height:b-t+1};
+}
 export async function inspectFacePresentation(
   rgb:Uint8Array,width:number,height:number,box:readonly number[]
 ):Promise<AntiSpoofResult>{
-  if(rgb.length!==width*height*3||width<80||height<80||box.length<4||
-     box.some(value=>!Number.isFinite(value)))
+  if(rgb.length!==width*height*3)
     return {status:'inconclusive',confidence:null,reason:'invalid_face'};
-  const [x,y,w,h]=box;
-  if(w<64||h<64||x<0||y<0||x+w>width+2||y+h>height+2)
-    return {status:'inconclusive',confidence:null,reason:'invalid_face'};
-  // Upstream 2.7_80x80 model expects BGR face with surrounding image context.
-  // The 2.7x crop is centered on the detected face and clamped to image bounds.
-  const side=Math.max(w,h)*2.7;
-  const left=Math.max(0,Math.floor(x+w/2-side/2));
-  const top=Math.max(0,Math.floor(y+h/2-side/2));
-  const right=Math.min(width,Math.ceil(x+w/2+side/2));
-  const bottom=Math.min(height,Math.ceil(y+h/2+side/2));
-  if(right-left<70||bottom-top<70)
-    return {status:'inconclusive',confidence:null,reason:'invalid_face'};
+  const bounds=antiSpoofCropBounds(width,height,box);
+  if(!bounds)return {status:'inconclusive',confidence:null,reason:'invalid_face'};
   let crop:Buffer|undefined;
   const tensorValues=new Float32Array(3*SIZE*SIZE);
   try{
     crop=await sharp(Buffer.from(rgb),{raw:{width,height,channels:3}})
-      .extract({left,top,width:right-left,height:bottom-top})
+      .extract(bounds)
       .resize(SIZE,SIZE,{fit:'fill'}).raw().toBuffer();
+    // The upstream model's modified ToTensor passes BGR values as float32
+    // in the original 0..255 range (no /255). Normalizing here changes the
+    // input distribution learned by its weights and can cause false rejects.
     for(let i=0;i<SIZE*SIZE;i++){
-      tensorValues[i]=crop[i*3+2]/255;                // B
-      tensorValues[SIZE*SIZE+i]=crop[i*3+1]/255;     // G
-      tensorValues[2*SIZE*SIZE+i]=crop[i*3]/255;     // R
+      tensorValues[i]=crop[i*3+2];                // B
+      tensorValues[SIZE*SIZE+i]=crop[i*3+1];     // G
+      tensorValues[2*SIZE*SIZE+i]=crop[i*3];     // R
     }
     const session=await getSession();
     if(session.inputNames.length!==1||session.outputNames.length!==1)
