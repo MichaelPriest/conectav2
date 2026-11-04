@@ -532,7 +532,7 @@ export async function POST(request:NextRequest){
       if(comparison==='unavailable')
         return await failAttempt('Não foi possível calcular uma comparação facial confiável. Solicite revisão manual se persistir.',422,'face_quality_low');
       if(comparison==='capture_inconsistent')
-        return await failAttempt('Os dois quadros frontais da captura não apresentaram concordância suficiente com a selfie entre si. Refaça a captura com luz frontal uniforme e mantenha o rosto imóvel nas etapas 1 e 4. Se persistir, solicite revisão manual.',422,'face_quality_low');
+        return await failAttempt('Os dois quadros frontais da captura não apresentaram concordância facial suficiente entre si. Refaça a captura com luz frontal uniforme e mantenha o rosto imóvel nas etapas 1 e 4. Se persistir, solicite revisão manual.',422,'face_quality_low');
       if(comparison==='selfie_inconclusive')
         return await failAttempt('A selfie enviada não atingiu a similaridade mínima com os dois quadros da captura ao vivo. Tire uma nova selfie atual, diretamente pela câmera, antes de iniciar uma nova captura guiada. Se persistir, solicite revisão manual.',422,'face_match_failed');
       // Three independent, server-computed comparisons met the same 0.55
