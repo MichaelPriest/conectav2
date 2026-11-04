@@ -17,7 +17,7 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/if\(documentType!=='old-rg'\)/);
  assert.doesNotMatch(route,/form\.get\(['"]rgDataSide['"]\)/);
  assert.doesNotMatch(route,/form\.get\(['"]rgPhotoSide['"]\)/);
- assert.match(ui,/sem exigir leitura de QR Code/);
+ assert.match(ui,/sem exigir QR Code/);
  assert.doesNotMatch(ui,/rgDataSide|rgPhotoSide|Parte interna atrás/);
  assert.match(ui,/Frente e verso do documento/);
  assert.match(route,/QRCodeReader/);
