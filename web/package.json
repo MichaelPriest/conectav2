@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-antispoof.cjs && node scripts/prepare-pdfjs.cjs && node scripts/prepare-mediapipe.cjs && next dev",
     "build": "node scripts/prepare-human.cjs && node scripts/prepare-human-models.cjs && node scripts/prepare-antispoof.cjs && node scripts/prepare-pdfjs.cjs && node scripts/prepare-mediapipe.cjs && next build",
-    "start": "node scripts/check-chat-push-startup.cjs && next start",
+    "start": "next start",
+    "diagnose:chat-push": "node scripts/check-chat-push-startup.cjs",
     "typecheck": "tsc --noEmit",
     "test:profile": "node --test tests/profile-details.test.cjs",
     "test:human": "node --test tests/human-browser.test.cjs tests/liveness-challenge.test.cjs",
