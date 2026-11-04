@@ -131,6 +131,31 @@ test('failed identity submissions require a fresh one-use liveness challenge and
  assert.match(ui,/response\.status===401/);
 });
 
+test('Render 512 MiB memory defenses release OCR before Human and prevent concurrent verifications',()=>{
+ const route=read('src/app/api/identity/free-document/verify/route.ts');
+ assert.match(route,/let identityVerificationBusy=false/);
+ assert.match(route,/if\(identityVerificationBusy\)/);
+ assert.match(route,/identityVerificationBusy=true/);
+ assert.match(route,/finally\{\s*identityVerificationBusy=false/);
+ assert.ok(route.indexOf('identityVerificationBusy=true')<route.indexOf("start_conecta_identity_verification_attempt"),
+  'busy gate must reject before consuming a challenge or reserving an attempt');
+ const tesseractTermination=route.indexOf('await worker.terminate();');
+ const faceModelUse=route.indexOf('const instance:any=await getIdentityHumanEngine()');
+ assert.ok(tesseractTermination>=0&&faceModelUse>tesseractTermination,
+  'OCR worker must terminate before native TensorFlow/Human inference');
+ assert.match(route,/for\(const image of ocrImages\)image\.fill\(0\);\s*ocrImages=\[\]/);
+ assert.match(route,/let identityHumanEnginePromise:Promise<any>\|undefined/);
+ assert.match(route,/return identityHumanEnginePromise;/);
+ assert.match(route,/const selfiePix=await pixels\(selfie\)/);
+ assert.doesNotMatch(route,/Promise\.all\(\[pixels\(document\),pixels\(selfie\)\]\)/);
+ assert.match(route,/selfieTensor\?\.dispose\?\.\(\);selfieTensor=null/);
+ assert.match(route,/for\(const frame of livenessPixels\)/);
+ assert.match(route,/tensor\?\.dispose\?\.\(\);\s*tensorData\.fill\(0\)/);
+ assert.doesNotMatch(route,/livenessTensors\.push/);
+ assert.match(route,/faceMatchConsistency\(selfieToFirst,selfieToLast,firstToLast\)/);
+ assert.match(route,/presentation\.status!=='live'/);
+});
+
 test('Human face geometry remains fresh while ONNX replaces Human PAD scoring',()=>{
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  assert.match(route,/cacheSensitivity:0/);
