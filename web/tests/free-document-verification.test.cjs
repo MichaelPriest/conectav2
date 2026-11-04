@@ -158,6 +158,22 @@ test('Human face geometry remains fresh while ONNX replaces Human PAD scoring',(
  assert.match(route,/firstNeutral\.embedding,lastNeutral\.embedding,neutralMatchOptions/);
 });
 
+test('selfie offers separate camera and gallery actions without forcing capture on gallery',()=>{
+ const ui=read('src/components/free-document-verification.tsx');
+ assert.match(ui,/const selfieCameraRef=useRef<HTMLInputElement>\(null\)/);
+ assert.match(ui,/const selfieFileRef=useRef<HTMLInputElement>\(null\)/);
+ assert.match(ui,/selfieCameraRef\.current\?\.click\(\)/);
+ assert.match(ui,/selfieFileRef\.current\?\.click\(\)/);
+ assert.match(ui,/<button[^>]*onClick=\{\(\)=>selfieCameraRef\.current\?\.click\(\)\}[^>]*>/);
+ assert.match(ui,/<button[^>]*onClick=\{\(\)=>selfieFileRef\.current\?\.click\(\)\}[^>]*>/);
+ assert.match(ui,/<input ref=\{selfieCameraRef\} type="file" capture="user" accept="image\/jpeg,image\/png,image\/webp"/);
+ assert.match(ui,/<input ref=\{selfieFileRef\} type="file" accept="image\/jpeg,image\/png,image\/webp"/);
+ assert.doesNotMatch(ui,/<input ref=\{selfieFileRef\}[^>]*capture=/);
+ assert.match(ui,/aria-label="Tirar selfie com a câmera frontal"/);
+ assert.match(ui,/aria-label="Escolher selfie da galeria ou dos arquivos"/);
+ assert.match(ui,/if\(file\)\{setSelfie\(file\);setError\(''\);\}/);
+});
+
 test('guided capture is single-flight, respects the one-use expiry, and uses server TTL',()=>{
  const ui=read('src/components/free-document-verification.tsx');
  assert.match(ui,/captureBusyRef\.current/);
