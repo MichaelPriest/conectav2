@@ -410,8 +410,15 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       // Never silently re-send the same liveness frames after a failed attempt.
       setChallenge('');setInstructions([]);setFrameIndex(0);setFrames([]);setStep(3);
       setChallengeExpiresAt(0);setSecondsRemaining(0);
-      setError((err instanceof Error?err.message:'Não foi possível concluir a validação.')+
-        ' Para uma nova tentativa, inicie outra captura guiada.');setMessage('');
+      const text=err instanceof Error?err.message:'Não foi possível concluir a validação.';
+      // Avoid the repeated-failure loop caused by retaining the same uploaded
+      // selfie. Reacquire a current reference image before a fresh challenge.
+      const retrySelfie=text.includes('face_match_failed');
+      if(retrySelfie){setSelfie(null);setStep(2);}
+      setError(text+(retrySelfie
+        ?' Antes de tentar novamente, tire uma nova selfie e depois inicie outra captura guiada.'
+        :' Para uma nova tentativa, inicie outra captura guiada.'));
+      setMessage('');
     }finally{stopCamera();setBusy(false);}
   }
 
