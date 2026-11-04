@@ -10,7 +10,7 @@ test('free document verification skips QR and internal panels for legacy RG but 
  const route=read('src/app/api/identity/free-document/verify/route.ts');
  const ui=read('src/components/free-document-verification.tsx');
  assert.match(ui,/Validação gratuita de identidade e rosto/);
- assert.match(ui,/pode permitir escolher da galeria/);
+ assert.match(ui,/Tire uma selfie usando a câmera frontal ou escolha uma imagem/);
  assert.match(route,/form\.get\('consent'\)!=='true'/);
  assert.match(route,/form\.get\('documentBack'\)/);
  assert.match(route,/decodeQrFromImage\(back\)/);
