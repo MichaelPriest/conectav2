@@ -23,7 +23,7 @@ test('ONNX scoring does not confuse high fake scores with real faces or accept m
  const source=read('src/lib/identity-antispoof-onnx.ts');
  const javascript=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;
  const exports={};
- vm.runInNewContext(javascript,{exports,require:(id)=>{
+ vm.runInNewContext(javascript,{exports,process:{cwd:()=>'/tmp/conecta'},require:(id)=>{
    if(id==='node:path')return require('node:path');
    if(id==='sharp')return ()=>({});
    if(id==='onnxruntime-node')return {};
