@@ -146,6 +146,51 @@ function ageBandFromCin(value:string):string|null{
   return bandForDate(match[1]);
 }
 
+// Human's models are also module-cached by the upstream library. Creating a
+// fresh Human object per request reinitializes detector tensors and can leave
+// extra native TensorFlow allocations behind. The local admission gate ensures
+// that a single cached instance processes one request/frame at a time.
+let identityHumanEnginePromise:Promise<any>|undefined;
+function getIdentityHumanEngine():Promise<any>{
+  if(!identityHumanEnginePromise){
+    identityHumanEnginePromise=(async()=>{
+      const module:any=await import('@vladmandic/human');
+      const HumanClass=module.Human||module.default?.Human||module.default;
+      if(typeof HumanClass!=='function')throw new Error('O mecanismo de análise facial não está disponível no servidor.');
+      const instance:any=new HumanClass({
+        modelBasePath:pathToFileURL(path.join(process.cwd(),'public','vendor','human-models')+path.sep).href,
+        debug:false,
+        // Every document, selfie and challenge frame is an independent image.
+        // Human caches detector/descriptors across video frames by default. Reusing
+        // those cached results here can make distinct head turns look identical.
+        cacheSensitivity:0,
+        skipAllowed:false,
+        async:false,
+        face:{
+          enabled:true,skipFrames:0,skipTime:0,
+          detector:{rotation:true,return:false,maxDetected:4,skipFrames:0,skipTime:0},
+          mesh:{enabled:true,skipFrames:0,skipTime:0},
+          attention:{enabled:false},
+          iris:{enabled:false},
+          description:{enabled:true,skipFrames:0,skipTime:0},
+          emotion:{enabled:false},
+          // Face geometry and descriptors only. PAD is handled by pinned ONNX.
+          antispoof:{enabled:false},
+          liveness:{enabled:false},
+          gear:{enabled:false}
+        },
+        body:{enabled:false},hand:{enabled:false},object:{enabled:false},gesture:{enabled:false}
+      });
+      await instance.load();
+      return instance;
+    })().catch(error=>{
+      identityHumanEnginePromise=undefined;
+      throw error;
+    });
+  }
+  return identityHumanEnginePromise;
+}
+
 export async function POST(request:NextRequest){
   if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))return fail('Origem inválida.',403);
   const delegated=await delegateIdentityValidation(request);
@@ -435,34 +480,7 @@ export async function POST(request:NextRequest){
 
     // Human is executed on the server; browser-supplied face scores/descriptors
     // are never accepted. Uploaded originals stay in memory and are never logged.
-    const module:any=await import('@vladmandic/human');
-    const HumanClass=module.Human||module.default?.Human||module.default;
-    if(typeof HumanClass!=='function')throw new Error('O mecanismo de análise facial não está disponível no servidor.');
-    const instance:any=new HumanClass({
-      modelBasePath:pathToFileURL(path.join(process.cwd(),'public','vendor','human-models')+path.sep).href,
-      debug:false,
-      // Every document, selfie and challenge frame is an independent image.
-      // Human caches detector/descriptors across video frames by default. Reusing
-      // those cached results here can make distinct head turns look identical.
-      cacheSensitivity:0,
-      skipAllowed:false,
-      async:false,
-      face:{
-        enabled:true,skipFrames:0,skipTime:0,
-        detector:{rotation:true,return:false,maxDetected:4,skipFrames:0,skipTime:0},
-        mesh:{enabled:true,skipFrames:0,skipTime:0},
-        attention:{enabled:false},
-        iris:{enabled:false},
-        description:{enabled:true,skipFrames:0,skipTime:0},
-        emotion:{enabled:false},
-        // Face geometry and descriptors only. PAD is handled by pinned ONNX.
-        antispoof:{enabled:false},
-        liveness:{enabled:false},
-        gear:{enabled:false}
-      },
-      body:{enabled:false},hand:{enabled:false},object:{enabled:false},gesture:{enabled:false}
-    });
-    await instance.load();
+    const instance:any=await getIdentityHumanEngine();
     selfieTensorData=new Int32Array(selfiePix.data);
     selfieTensor=instance.tf.tensor4d(selfieTensorData,[1,selfiePix.height,selfiePix.width,3],'int32');
     // A Human instance owns mutable model and detector state: NEVER infer two
