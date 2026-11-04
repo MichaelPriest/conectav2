@@ -22,10 +22,12 @@ export default function ConectaIdPage(){
  const [verification,setVerification]=useState<Verification|null>(null);
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState('');
+ const [refreshNotice,setRefreshNotice]=useState('');
  const [showCapture,setShowCapture]=useState(false);
  const [documentType,setDocumentType]=useState<'cin'|'old-rg'|'cnh'>('cin');
- const refresh=useCallback(async()=>{
-  setLoading(true);setError('');
+ const refresh=useCallback(async(background=false)=>{
+  if(!background){setLoading(true);setError('');}
+  setRefreshNotice('');
   try{
    const {data:{session}}=await supabaseBrowser().auth.getSession();
    if(!session){router.replace('/auth');return;}
@@ -43,8 +45,12 @@ export default function ConectaIdPage(){
    if(!a.ok)throw Error(accessData.error||'Não foi possível consultar as permissões.');
    if(!v.ok)throw Error(verificationData.error||'Não foi possível consultar a verificação.');
    setAccess(accessData);setVerification(verificationData);
-  }catch(e){setError(e instanceof Error?e.message:'Falha ao consultar o cadastro.');}
-  finally{setLoading(false);}
+  }catch(e){
+   const reason=e instanceof Error?e.message:'Falha ao consultar o cadastro.';
+   if(background)setRefreshNotice('A validação terminou, mas não foi possível atualizar a situação da conta: '+reason);
+   else setError(reason);
+  }
+  finally{if(!background)setLoading(false);}
  },[router]);
  useEffect(()=>{void refresh();},[refresh]);
  const steps=access?.steps;
@@ -54,6 +60,7 @@ export default function ConectaIdPage(){
   <h1>Situação da sua conta</h1>
   {loading?<p role="status">Consultando a triagem e as verificações…</p>:null}
   {error?<p role="alert" className="form-error">{error}</p>:null}
+  {refreshNotice?<p role="alert" className="small-note">{refreshNotice}</p>:null}
   {!loading&&!error&&<>
    <h2>Triagem cadastral</h2>
    <p role="status">{labels[triage.status||'']||'Triagem ainda não concluída.'}</p>
@@ -71,7 +78,7 @@ export default function ConectaIdPage(){
    {triage.status==='pending_review'&&<p className="muted">Aguarde a decisão de um administrador. Não envie documentos por mensagens ou canais não oficiais.</p>}
    {triage.status==='pending_contact'&&<p className="muted">Confirme o endereço de e-mail utilizado no cadastro e atualize esta página.</p>}
    {!access?.networkAccess&&<p className="muted">A verificação gratuita de documento e selfie pode confirmar a faixa etária, mas não comprova a titularidade perante uma fonte oficial. Mesmo após concluir esta etapa, o feed poderá continuar restrito até a validação confiável da identidade.</p>}
-   {!access?.networkAccess&&<div className="stack"><button type="button" className="btn btn-primary" onClick={()=>setShowCapture(v=>!v)}>{showCapture?'Ocultar verificação':'Iniciar verificação de documento e selfie'}</button>{showCapture&&<><label htmlFor="conecta-document-kind">Tipo de documento</label><select id="conecta-document-kind" value={documentType} onChange={e=>setDocumentType(e.target.value as 'cin'|'old-rg'|'cnh')}><option value="cin">CIN</option><option value="old-rg">RG antigo</option><option value="cnh">CNH</option></select><FreeDocumentVerification key={documentType} documentType={documentType} onComplete={refresh}/></>}</div>}
+   {!access?.networkAccess&&<div className="stack"><button type="button" className="btn btn-primary" onClick={()=>setShowCapture(v=>!v)}>{showCapture?'Ocultar verificação':'Iniciar verificação de documento e selfie'}</button>{showCapture&&<><label htmlFor="conecta-document-kind">Tipo de documento</label><select id="conecta-document-kind" value={documentType} onChange={e=>setDocumentType(e.target.value as 'cin'|'old-rg'|'cnh')}><option value="cin">CIN</option><option value="old-rg">RG antigo</option><option value="cnh">CNH</option></select><FreeDocumentVerification key={documentType} documentType={documentType} onComplete={()=>refresh(true)}/></>}</div>}
   </>}
   <p className="muted">A triagem de risco não confirma sua identidade nem maioridade. O acesso protegido depende das regras do servidor.</p>
   <div className="stack">
