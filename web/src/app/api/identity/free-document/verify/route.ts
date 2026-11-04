@@ -11,6 +11,7 @@ import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
 import {delegateIdentityValidation} from '@/lib/identity-validation-delegate';
 import {inspectFacePresentation} from '@/lib/identity-antispoof-onnx';
 import {assessGuidedHeadTurns,humanMeshTurnOffset} from '@/lib/identity-liveness-pose';
+import {faceMatchConsistency} from '@/lib/identity-face-match-consistency';
 import {inspectCinToken} from '@/lib/cin-qr';
 import {extractBirthDateFromOcr} from '@/lib/legacy-rg-ocr';
 import {prepareBirthDateOcrRegions,prepareBirthDateOcrFocusPanels} from '@/lib/identity-rg-ocr-regions';
@@ -509,24 +510,33 @@ export async function POST(request:NextRequest){
         if(!Number.isFinite(focus)||focus<4)
           return await failAttempt('Um dos quadros frontais da captura guiada ficou desfocado. Limpe a câmera, mantenha o celular imóvel e capture novamente.',422,'face_quality_low');
       }
-      // The person performing the head turns must ALSO be the person in the
-      // uploaded selfie that matched the document. Otherwise somebody could
-      // upload a third party selfie and use their own live face for the challenge.
-      // Compare neutral frames (front-facing) only; rotated faces have less
-      // reliable descriptors. Preserve the calibrated 0.55 similarity gate.
+      // Both independently detected frontal frames must agree with one another
+      // BEFORE the uploaded selfie is assessed. Otherwise a single blurry frame
+      // may be mistaken for a selfie mismatch. Do not trust client descriptors,
+      // average scores, pick a best frame or lower the 0.55 safety threshold.
       const neutralFaces=[livenessResults[0]?.face?.[0],livenessResults[3]?.face?.[0]];
+      const [firstNeutral,lastNeutral]=neutralFaces;
       const neutralMatchOptions={order:2,multiplier:25,min:0.2,max:0.8};
-      for(const neutralFace of neutralFaces){
-        if(!neutralFace?.embedding?.length)
-          return await failAttempt('Não foi possível identificar o rosto na captura ao vivo. Posicione-se de frente para a câmera.',422,'face_quality_low');
-        const neutralSimilarity=instance.match.similarity(
-          selfieFace.embedding,neutralFace.embedding,neutralMatchOptions
-        );
-        if(!Number.isFinite(neutralSimilarity)||neutralSimilarity<0.55)
-          return await failAttempt('A comparação entre a selfie enviada e os quadros frontais da captura ficou inconclusiva. Use luz frontal uniforme, tire uma selfie atual e mantenha o rosto de frente nas etapas 1 e 4. Se persistir, solicite revisão manual.',422,'face_match_failed');
-      }
-      // The challenge order and pose were validated before face comparison.
-      // None of these signals alone establishes identity or issuer authenticity.
+      if(!firstNeutral?.embedding?.length||!lastNeutral?.embedding?.length)
+        return await failAttempt('Não foi possível extrair os dados faciais dos quadros frontais. Refaça a captura com iluminação uniforme.',422,'face_quality_low');
+      const firstToLast=instance.match.similarity(
+        firstNeutral.embedding,lastNeutral.embedding,neutralMatchOptions
+      );
+      const selfieToFirst=instance.match.similarity(
+        selfieFace.embedding,firstNeutral.embedding,neutralMatchOptions
+      );
+      const selfieToLast=instance.match.similarity(
+        selfieFace.embedding,lastNeutral.embedding,neutralMatchOptions
+      );
+      const comparison=faceMatchConsistency(selfieToFirst,selfieToLast,firstToLast);
+      if(comparison==='unavailable')
+        return await failAttempt('Não foi possível calcular uma comparação facial confiável. Solicite revisão manual se persistir.',422,'face_quality_low');
+      if(comparison==='capture_inconsistent')
+        return await failAttempt('Os dois quadros frontais da captura não apresentaram concordância suficiente com a selfie entre si. Refaça a captura com luz frontal uniforme e mantenha o rosto imóvel nas etapas 1 e 4. Se persistir, solicite revisão manual.',422,'face_quality_low');
+      if(comparison==='selfie_inconclusive')
+        return await failAttempt('A selfie enviada não atingiu a similaridade mínima com os dois quadros da captura ao vivo. Tire uma nova selfie atual, diretamente pela câmera, antes de iniciar uma nova captura guiada. Se persistir, solicite revisão manual.',422,'face_match_failed');
+      // Three independent, server-computed comparisons met the same 0.55
+      // threshold. Matching these images is not official identity assurance.
     }finally{
       for(const item of livenessTensors){item.tensor?.dispose?.();item.data?.fill(0);item.pixels?.fill(0);}
       for(const result of livenessResults)for(const face of result.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
