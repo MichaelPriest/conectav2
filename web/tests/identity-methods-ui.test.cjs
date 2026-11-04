@@ -17,7 +17,7 @@ test('document upload requires explicit consent and sends all evidence to the se
  assert.match(upload,/documentBack/);
  assert.match(upload,/selfie/);
  assert.doesNotMatch(upload,/rgDataSide|rgPhotoSide|Parte interna atrás/);
- assert.match(upload,/sem exigir leitura de QR Code/);
+ assert.match(upload,/sem exigir QR Code/);
  assert.match(upload,/Frente e verso do documento/);
  assert.match(upload,/capture="environment"/);
  assert.match(upload,/captura cada quadro automaticamente após manter a posição estável por pelo menos 2,2 segundos/i);
