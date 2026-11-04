@@ -67,22 +67,24 @@ test('ONNX uses the original 0..255 BGR tensor and upstream aspect-preserving 2.
  assert.equal(bounds(640,480,[100,100,10,10]),null);
 });
 
-test('Vercel delegates only identity routes to the dedicated fixed Render origin, without browser cookies',()=>{
- const code=read('src/lib/identity-validation-delegate.ts');
+test('Vercel runs identity and guided challenges locally; Render is not a production dependency',()=>{
  const verify=read('src/app/api/identity/free-document/verify/route.ts');
  const challenge=read('src/app/api/identity/free-document/liveness-challenge/route.ts');
- assert.match(code,/https:\/\/conectav2-validacao\.onrender\.com/);
- assert.match(code,/allowedPaths=new Set/);
- assert.match(code,/env\.VERCEL==='1'/);
- assert.match(code,/hostname!=='conectav2-validacao\.onrender\.com'/);
- assert.match(code,/redirect:'manual'/);
- assert.match(code,/authorization/);
- assert.doesNotMatch(code,/request\.headers\.get\('cookie'\)/);
- assert.match(code,/bytes\.byteLength>4_400_000/);
- assert.match(code,/new Uint8Array\(bytes\)\.fill\(0\)/);
- assert.match(verify,/const delegated=await delegateIdentityValidation\(request\)/);
- assert.match(challenge,/const delegated=await delegateIdentityValidation\(request\)/);
+ for(const route of [verify,challenge]){
+  assert.doesNotMatch(route,/delegateIdentityValidation|identity-validation-delegate|onrender\\.com/);
+  assert.match(route,/identityContext\\(request\\)/);
+  assert.match(route,/runtimeConfig\\.serviceKey/);
+ }
+ assert.match(verify,/getIdentityHumanEngine\\(\\)/);
+ assert.match(verify,/inspectFacePresentation\\(/);
+ assert.match(verify,/complete_conecta_document_age_assurance/);
+ assert.match(challenge,/consume_identity_liveness_challenge|identity_liveness_challenges/);
+ // The dedicated validation endpoint must work without any Render URL or
+ // server-side forwarding; third-party verification cannot approve it.
+ assert.doesNotMatch(verify,/await fetch\\(.*onrender/);
+ assert.doesNotMatch(challenge,/await fetch\\(.*onrender/);
 });
+
 
 test('ONNX uncertainty never approves identity or automatically retries one-use challenges',()=>{
  const route=read('src/app/api/identity/free-document/verify/route.ts');
