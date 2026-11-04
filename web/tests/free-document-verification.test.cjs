@@ -174,6 +174,25 @@ test('selfie offers separate camera and gallery actions without forcing capture 
  assert.match(ui,/if\(file\)\{setSelfie\(file\);setError\(''\);\}/);
 });
 
+test('real identity verification shows an accessible animated loading overlay for the whole request',()=>{
+ const ui=read('src/components/free-document-verification.tsx');
+ const css=read('src/app/globals.css');
+ assert.match(ui,/validationSubmittingRef\.current\|\|busy/);
+ assert.match(ui,/validationSubmittingRef\.current=true/);
+ assert.match(ui,/finally\{stopCamera\(\);validationSubmittingRef\.current=false;setBusy\(false\);\}/);
+ assert.match(ui,/setValidationPhase\('preparing'\)/);
+ assert.match(ui,/setValidationPhase\('verifying'\)/);
+ assert.match(ui,/setValidationPhase\('finishing'\)/);
+ assert.match(ui,/\{busy&&<div className="conecta-id-validation-overlay" data-testid="identity-validation-loader" role="status" aria-live="polite"/);
+ assert.match(ui,/\{validationText\.title\}/);
+ assert.match(ui,/\{validationText\.detail\}/);
+ assert.match(ui,/aria-busy=\{busy\}/);
+ assert.match(ui,/disabled=\{busy\|\|challengeBusy\|\|!front\|\|!back\|\|!selfie/);
+ assert.match(css,/\.conecta-id-validation-ring\{/);
+ assert.match(css,/@keyframes conecta-id-spin/);
+ assert.match(css,/@media \(prefers-reduced-motion:reduce\)/);
+});
+
 test('guided capture is single-flight, respects the one-use expiry, and uses server TTL',()=>{
  const ui=read('src/components/free-document-verification.tsx');
  assert.match(ui,/captureBusyRef\.current/);
