@@ -8,7 +8,6 @@ import sharp from 'sharp';
 import {BinaryBitmap,HybridBinarizer,QRCodeReader,RGBLuminanceSource} from '@zxing/library';
 import {identityContext,runtimeConfig} from '@/lib/identity-server';
 import {isTrustedIdentityOrigin} from '@/lib/identity-origin';
-import {delegateIdentityValidation} from '@/lib/identity-validation-delegate';
 import {inspectFacePresentation} from '@/lib/identity-antispoof-onnx';
 import {assessGuidedHeadTurns,humanMeshTurnOffset} from '@/lib/identity-liveness-pose';
 import {faceMatchConsistency} from '@/lib/identity-face-match-consistency';
@@ -193,8 +192,6 @@ function getIdentityHumanEngine():Promise<any>{
 
 export async function POST(request:NextRequest){
   if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))return fail('Origem inválida.',403);
-  const delegated=await delegateIdentityValidation(request);
-  if(delegated)return delegated;
   if(!runtimeConfig.supabaseUrl||!runtimeConfig.publicKey||!runtimeConfig.serviceKey)
     return fail('O serviço Conecta ID não está configurado no servidor. A validação não pode ser concluída.',503);
   const context=await identityContext(request);

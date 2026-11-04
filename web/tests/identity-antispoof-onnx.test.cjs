@@ -67,22 +67,24 @@ test('ONNX uses the original 0..255 BGR tensor and upstream aspect-preserving 2.
  assert.equal(bounds(640,480,[100,100,10,10]),null);
 });
 
-test('Vercel delegates only identity routes to the dedicated fixed Render origin, without browser cookies',()=>{
- const code=read('src/lib/identity-validation-delegate.ts');
+test('Vercel runs identity and guided challenges locally; Render is not a production dependency',()=>{
  const verify=read('src/app/api/identity/free-document/verify/route.ts');
  const challenge=read('src/app/api/identity/free-document/liveness-challenge/route.ts');
- assert.match(code,/https:\/\/conectav2-validacao\.onrender\.com/);
- assert.match(code,/allowedPaths=new Set/);
- assert.match(code,/env\.VERCEL==='1'/);
- assert.match(code,/hostname!=='conectav2-validacao\.onrender\.com'/);
- assert.match(code,/redirect:'manual'/);
- assert.match(code,/authorization/);
- assert.doesNotMatch(code,/request\.headers\.get\('cookie'\)/);
- assert.match(code,/bytes\.byteLength>4_400_000/);
- assert.match(code,/new Uint8Array\(bytes\)\.fill\(0\)/);
- assert.match(verify,/const delegated=await delegateIdentityValidation\(request\)/);
- assert.match(challenge,/const delegated=await delegateIdentityValidation\(request\)/);
+ for(const route of [verify,challenge]){
+  assert.ok(!route.includes('delegateIdentityValidation'));
+  assert.ok(!route.includes('identity-validation-delegate'));
+  assert.ok(!route.includes('onrender.com'));
+  assert.ok(route.includes('identityContext(request)'));
+  assert.ok(route.includes('runtimeConfig.serviceKey'));
+ }
+ assert.ok(verify.includes('getIdentityHumanEngine()'));
+ assert.ok(verify.includes('inspectFacePresentation('));
+ assert.ok(verify.includes('complete_conecta_document_age_assurance'));
+ assert.ok(challenge.includes('identity_liveness_challenges'));
+ assert.ok(!verify.includes('await fetch('));
+ assert.ok(!challenge.includes('await fetch('));
 });
+
 
 test('ONNX uncertainty never approves identity or automatically retries one-use challenges',()=>{
  const route=read('src/app/api/identity/free-document/verify/route.ts');
