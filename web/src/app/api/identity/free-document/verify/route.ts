@@ -260,8 +260,10 @@ export async function POST(request:NextRequest){
   let documentPixels:Uint8Array|undefined,selfiePixels:Uint8Array|undefined;
   let documentTensorData:Int32Array|undefined,selfieTensorData:Int32Array|undefined;
   try{
-    const [docPixels,selfiePix]=await Promise.all([pixels(document),pixels(selfie)]);
-    documentPixels=docPixels.data;selfiePixels=selfiePix.data;
+    // The document portrait is not used for identity matching. Avoid decoding
+    // another full-sized RGB tensor that is never inspected.
+    const selfiePix=await pixels(selfie);
+    selfiePixels=selfiePix.data;
     // Prepare high-quality images for Tesseract's multiple OCR passes.
     // If its worker fails, verification must fail safely, never approve.
     ocrImages.push(await prepareOcrImage(document));
@@ -390,6 +392,15 @@ export async function POST(request:NextRequest){
       // evidence that the document is fraudulent or verified.
       throw new Error('O leitor Tesseract está temporariamente indisponível. Tente novamente mais tarde.');
     }
+    // OCR uses a WASM worker with its own substantial heap. Stop it BEFORE
+    // loading TensorFlow/Human and ONNX, so their native allocations cannot
+    // overlap with the Tesseract runtime on a 512 MiB Render instance.
+    if(worker){
+      await worker.terminate();
+      worker=null;
+    }
+    for(const image of ocrImages)image.fill(0);
+    ocrImages=[];
     const uniqueDates=[...new Set(detectedDates)];
     if(uniqueDates.length>1)
       return await failAttempt('As datas de nascimento lidas nas partes do documento divergem. Confira a frente e o verso do documento e tente novamente.',422,'document_data_mismatch');
@@ -449,6 +460,8 @@ export async function POST(request:NextRequest){
     // A Human instance owns mutable model and detector state: NEVER infer two
     // unrelated images concurrently on the same instance.
     const selfieResult=await instance.detect(selfieTensor);
+    selfieTensor?.dispose?.();selfieTensor=null;
+    selfieTensorData?.fill(0);selfieTensorData=undefined;
     selfieFaceResults=selfieResult as FaceResult;
     const selfieFaces=selfieResult.face||[];
     if(selfieFaces.length!==1)
@@ -472,16 +485,21 @@ export async function POST(request:NextRequest){
     }
 
     // Challenge was consumed before OCR/model work; client booleans and scores are ignored.
+    // Only one frame's expanded int32 tensor is alive at once. With four
+    // frames, keeping all their tensors until the end can exceed free-tier RAM.
     const livenessPixels=await Promise.all(livenessFrames.map(frame=>pixels(frame)));
-    const livenessTensors:any[]=[];
     const livenessResults:FaceResult[]=[];
     try{
       for(const frame of livenessPixels){
         const tensorData=new Int32Array(frame.data);
         const tensor=instance.tf.tensor4d(tensorData,[1,frame.height,frame.width,3],'int32');
-        livenessTensors.push({tensor,data:tensorData,pixels:frame.data});
-        const detected=await instance.detect(tensor);
-        livenessResults.push(detected as FaceResult);
+        try{
+          const detected=await instance.detect(tensor);
+          livenessResults.push(detected as FaceResult);
+        }finally{
+          tensor?.dispose?.();
+          tensorData.fill(0);
+        }
       }
       // Re-evaluate every frame using server-derived Human mesh landmarks.
       // MediaPipe's client preview and Human's 3-D Euler yaw do not use the
@@ -538,7 +556,6 @@ export async function POST(request:NextRequest){
       // Three independent, server-computed comparisons met the same 0.55
       // threshold. Matching these images is not official identity assurance.
     }finally{
-      for(const item of livenessTensors){item.tensor?.dispose?.();item.data?.fill(0);item.pixels?.fill(0);}
       for(const result of livenessResults)for(const face of result.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
       for(const frame of livenessPixels)frame.data.fill(0);
     }
