@@ -94,3 +94,25 @@ jobs:
         run: npm run test:completion
       - name: Build Next.js
         run: npm run build
+      - name: Verify Render startup binds directly and serves HTTP
+        run: |
+          set -euo pipefail
+          node --test tests/render-startup.test.cjs
+          npm run start -- -H 127.0.0.1 -p 32107 > /tmp/conecta-render-smoke.log 2>&1 &
+          pid=$!
+          trap 'kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in $(seq 1 45); do
+            if curl --silent --show-error --location --fail --max-time 2 http://127.0.0.1:32107/ >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [ "$ready" -ne 1 ]; then
+            tail -n 60 /tmp/conecta-render-smoke.log
+            echo "Render-style startup failed to bind HTTP within 45 seconds."
+            exit 1
+          fi
+          echo "Render-style startup bound HTTP successfully."
