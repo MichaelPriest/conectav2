@@ -142,7 +142,14 @@ test('Human face geometry remains fresh while ONNX replaces Human PAD scoring',(
  assert.match(route,/for\(const frame of livenessPixels\)/);
  assert.match(route,/const neutralFaces=\[livenessResults\[0\]/);
  assert.match(route,/neutralSimilarity<0\.55/);
- assert.match(route,/O rosto capturado ao vivo não corresponde à selfie/);
+ assert.match(route,/A comparação entre a selfie enviada e os quadros frontais da captura ficou inconclusiva/);
+ assert.match(route,/faceFocusVariance\(frame\.data,frame\.width,frame\.height,box\)/);
+ assert.match(route,/const angles=yaw as number\[\]/);
+ assert.ok(route.indexOf('const angles=yaw as number[]')<route.indexOf('const neutralFaces='),
+  'pose and randomized turn order must be validated before face comparison');
+ assert.ok(route.indexOf('const focus=await faceFocusVariance(frame.data,frame.width,frame.height,box)')<route.indexOf('const neutralFaces='),
+  'neutral image quality must be checked before a biometric mismatch verdict');
+ assert.match(route,/neutralSimilarity<0\.55/);
 });
 
 test('guided capture is single-flight, respects the one-use expiry, and uses server TTL',()=>{
