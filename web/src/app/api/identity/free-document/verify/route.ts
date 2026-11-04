@@ -488,8 +488,31 @@ export async function POST(request:NextRequest){
         return faces.length===1&&typeof faces[0].rotation?.angle?.yaw==='number'
           ?faces[0].rotation!.angle!.yaw!:null;
       });
-      if(yaw.some(value=>value===null))
+      if(yaw.some(value=>value===null||!Number.isFinite(value)))
         return await failAttempt('A captura guiada precisa mostrar exatamente um rosto em todos os quadros. Nenhum acesso foi liberado.',422);
+      // Validate neutral poses and the randomized turn sequence BEFORE facial
+      // similarity. A turned or drifting neutral frame can produce a false
+      // face_match_failed even though the real issue is capture geometry.
+      const angles=yaw as number[];
+      const baseline=Math.abs(angles[0]);
+      const firstTurn=angles[1],secondTurn=angles[2],returned=Math.abs(angles[3]);
+      const firstDirection=firstTurn>0?'left':'right';
+      const secondDirection=secondTurn>0?'left':'right';
+      if(baseline>0.28||returned>0.28||Math.abs(firstTurn)<0.18||Math.abs(secondTurn)<0.18||
+         firstDirection!==challengeTurnOrder[0]||secondDirection!==challengeTurnOrder[1])
+        return await failAttempt('A captura guiada ficou fora da posição solicitada. Olhe de frente nos quadros 1 e 4 e siga a direção indicada nos quadros 2 e 3.',422,'liveness_sequence_invalid');
+      // Check that both neutral captures are sufficiently sharp before matching
+      // descriptors, to report a retake rather than falsely accusing a mismatch.
+      for(const i of [0,3]){
+        const frame=livenessPixels[i],face=livenessResults[i]?.face?.[0];
+        const box=face?.box;
+        if(!frame||!Array.isArray(box)||box.length<4||box.some(value=>!Number.isFinite(value))||
+           box[2]<64||box[3]<64)
+          return await failAttempt('A câmera não conseguiu enquadrar o rosto de frente nas etapas 1 e 4. Refaça a captura com boa iluminação.',422,'face_quality_low');
+        const focus=await faceFocusVariance(frame.data,frame.width,frame.height,box);
+        if(!Number.isFinite(focus)||focus<4)
+          return await failAttempt('Um dos quadros frontais da captura guiada ficou desfocado. Limpe a câmera, mantenha o celular imóvel e capture novamente.',422,'face_quality_low');
+      }
       // The person performing the head turns must ALSO be the person in the
       // uploaded selfie that matched the document. Otherwise somebody could
       // upload a third party selfie and use their own live face for the challenge.
@@ -504,20 +527,10 @@ export async function POST(request:NextRequest){
           selfieFace.embedding,neutralFace.embedding,neutralMatchOptions
         );
         if(!Number.isFinite(neutralSimilarity)||neutralSimilarity<0.55)
-          return await failAttempt('O rosto capturado ao vivo não corresponde à selfie do documento. Refaça a captura com a própria pessoa titular.',422,'face_match_failed');
+          return await failAttempt('A comparação entre a selfie enviada e os quadros frontais da captura ficou inconclusiva. Use luz frontal uniforme, tire uma selfie atual e mantenha o rosto de frente nas etapas 1 e 4. Se persistir, solicite revisão manual.',422,'face_match_failed');
       }
-      const angles=yaw as number[];
-      const baseline=Math.abs(angles[0]);
-      const firstTurn=angles[1],secondTurn=angles[2],returned=Math.abs(angles[3]);
-      const firstDirection=firstTurn>0?'left':'right';
-      const secondDirection=secondTurn>0?'left':'right';
-      if(baseline>0.28||returned>0.28||Math.abs(firstTurn)<0.18||Math.abs(secondTurn)<0.18||
-         firstDirection!==challengeTurnOrder[0]||secondDirection!==challengeTurnOrder[1])
-        return await failAttempt('Os movimentos não seguiram a sequência solicitada. Repita a captura guiada e vire a cabeça para cada lado indicado na tela.',422,'liveness_sequence_invalid');
-      // Human reports yaw in radians. In this model's camera coordinate system,
-      // positive yaw corresponds to turning left; the randomized order is checked
-      // against the server-stored, single-use challenge. This is a liveness signal,
-      // not proof of presentation-attack resistance or issuer authenticity.
+      // The challenge order and pose were validated before face comparison.
+      // None of these signals alone establishes identity or issuer authenticity.
     }finally{
       for(const item of livenessTensors){item.tensor?.dispose?.();item.data?.fill(0);item.pixels?.fill(0);}
       for(const result of livenessResults)for(const face of result.face||[]){face.embedding?.fill(0);face.tensor?.dispose?.();}
