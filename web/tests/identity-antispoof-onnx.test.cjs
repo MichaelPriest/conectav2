@@ -71,18 +71,18 @@ test('Vercel runs identity and guided challenges locally; Render is not a produc
  const verify=read('src/app/api/identity/free-document/verify/route.ts');
  const challenge=read('src/app/api/identity/free-document/liveness-challenge/route.ts');
  for(const route of [verify,challenge]){
-  assert.doesNotMatch(route,/delegateIdentityValidation|identity-validation-delegate|onrender\\.com/);
-  assert.match(route,/identityContext\\(request\\)/);
-  assert.match(route,/runtimeConfig\\.serviceKey/);
+  assert.ok(!route.includes('delegateIdentityValidation'));
+  assert.ok(!route.includes('identity-validation-delegate'));
+  assert.ok(!route.includes('onrender.com'));
+  assert.ok(route.includes('identityContext(request)'));
+  assert.ok(route.includes('runtimeConfig.serviceKey'));
  }
- assert.match(verify,/getIdentityHumanEngine\\(\\)/);
- assert.match(verify,/inspectFacePresentation\\(/);
- assert.match(verify,/complete_conecta_document_age_assurance/);
- assert.match(challenge,/consume_identity_liveness_challenge|identity_liveness_challenges/);
- // The dedicated validation endpoint must work without any Render URL or
- // server-side forwarding; third-party verification cannot approve it.
- assert.doesNotMatch(verify,/await fetch\\(.*onrender/);
- assert.doesNotMatch(challenge,/await fetch\\(.*onrender/);
+ assert.ok(verify.includes('getIdentityHumanEngine()'));
+ assert.ok(verify.includes('inspectFacePresentation('));
+ assert.ok(verify.includes('complete_conecta_document_age_assurance'));
+ assert.ok(challenge.includes('identity_liveness_challenges'));
+ assert.ok(!verify.includes('await fetch('));
+ assert.ok(!challenge.includes('await fetch('));
 });
 
 
