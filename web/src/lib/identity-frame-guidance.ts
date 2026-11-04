@@ -1,3 +1,5 @@
+import {noseEyeTurnOffset} from './identity-liveness-pose';
+
 /**
  * Lightweight, on-device preview guidance for MediaPipe Face Landmarker.
  * Untrusted UX hints only. Neither these landmarks nor the client-ready flag
@@ -38,23 +40,22 @@ export function inspectGuidedFace(faces:readonly (readonly GuidePoint[])[],step:
     return hint('off-center','Centralize o rosto dentro da moldura.');
 
   const eyeA=points[33],eyeB=points[263],nose=points[1];
-  const eyeDistance=Math.abs(eyeA.x-eyeB.x);
-  if(eyeDistance<0.05)return hint('incomplete','Mantenha os olhos e o nariz visíveis.');
-  // Signed nose-to-eye offset is only a heuristic, not a trusted yaw measure.
-  const turnOffset=(nose.x-(eyeA.x+eyeB.x)/2)/eyeDistance;
-  if(!Number.isFinite(turnOffset))
-    return hint('incomplete','Mantenha olhos e nariz visíveis.');
+  // The same dimensionless nose-eye measure is recomputed from the server's
+  // own Human mesh. The browser preview is only a guide, never evidence.
+  const turnOffset=noseEyeTurnOffset(eyeA.x,eyeB.x,nose.x);
+  if(turnOffset===null)
+    return hint('incomplete','Mantenha os olhos e o nariz visíveis.');
   if((step===0||step===3)&&Math.abs(turnOffset)>0.24)
     return hint('pose','Olhe diretamente para a câmera, de frente.',turnOffset);
   if(step===1||step===2){
     const side=turnOrder[step-1];
     // Unmirrored camera landmarks: nose shifts right in the image when the user turns left.
     // The CSS mirrored preview does not alter MediaPipe's raw coordinates.
-    if(side==='left'&&turnOffset<0.12)
+    if(side==='left'&&turnOffset<0.18)
       return hint('pose','Vire o rosto para a sua esquerda.',turnOffset);
-    if(side==='right'&&turnOffset> -0.12)
+    if(side==='right'&&turnOffset> -0.18)
       return hint('pose','Vire o rosto para a sua direita.',turnOffset);
-    if(!side&&Math.abs(turnOffset)<0.12)
+    if(!side&&Math.abs(turnOffset)<0.18)
       return hint('pose','Vire um pouco mais a cabeça para o lado solicitado.',turnOffset);
   }
   return hint('ready','Rosto bem enquadrado. Mantenha a posição por um instante.',turnOffset);
