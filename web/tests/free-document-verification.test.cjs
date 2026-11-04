@@ -67,8 +67,8 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.match(route,/ageAssured:true/);
  assert.match(route,/identityVerified:false/);
  assert.match(route,/faceFocusVariance/);
- assert.match(route,/firstDirection!==challengeTurnOrder\[0\]/);
- assert.match(route,/secondDirection!==challengeTurnOrder\[1\]/);
+ assert.match(route,/assessGuidedHeadTurns\(poseOffsets,orderedTurns\)/);
+ assert.match(route,/humanMeshTurnOffset\(faces\[0\]\.mesh\)/);
  assert.match(route,/liveness_sequence_invalid/);
  assert.match(route,/failure_code:failureCode/);
  const failureCodes=read('../supabase/migrations/20261015180000_identity_verification_failure_codes.sql');
@@ -87,8 +87,8 @@ test('free document verification skips QR and internal panels for legacy RG but 
  assert.doesNotMatch(route,/selfieFace\.real/);
  assert.match(route,/consume_identity_liveness_challenge/);
  assert.match(route,/livenessFrame/);
- assert.match(route,/firstDirection!==challengeTurnOrder\[0\]/);
- assert.match(route,/secondDirection!==challengeTurnOrder\[1\]/);
+ assert.match(route,/assessGuidedHeadTurns\(poseOffsets,orderedTurns\)/);
+ assert.match(route,/humanMeshTurnOffset\(faces\[0\]\.mesh\)/);
  assert.match(ui,/Iniciar captura guiada/);
  assert.match(ui,/Capturar agora/);
  assert.match(ui,/renderCnhPdf/);
@@ -144,9 +144,10 @@ test('Human face geometry remains fresh while ONNX replaces Human PAD scoring',(
  assert.match(route,/neutralSimilarity<0\.55/);
  assert.match(route,/A comparação entre a selfie enviada e os quadros frontais da captura ficou inconclusiva/);
  assert.match(route,/faceFocusVariance\(frame\.data,frame\.width,frame\.height,box\)/);
- assert.match(route,/const angles=yaw as number\[\]/);
- assert.ok(route.indexOf('const angles=yaw as number[]')<route.indexOf('const neutralFaces='),
+ assert.match(route,/const poseVerdict=assessGuidedHeadTurns\(poseOffsets,orderedTurns\)/);
+ assert.ok(route.indexOf('const poseVerdict=assessGuidedHeadTurns(poseOffsets,orderedTurns)')<route.indexOf('const neutralFaces='),
   'pose and randomized turn order must be validated before face comparison');
+ assert.doesNotMatch(route,/firstTurn>0\?'left':'right'/);
  assert.ok(route.indexOf('const focus=await faceFocusVariance(frame.data,frame.width,frame.height,box)')<route.indexOf('const neutralFaces='),
   'neutral image quality must be checked before a biometric mismatch verdict');
  assert.match(route,/neutralSimilarity<0\.55/);
