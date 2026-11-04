@@ -1,7 +1,7 @@
 'use client';
 
 import {useCallback,useEffect,useRef,useState} from 'react';
-import {Camera,ShieldCheck,Trash2,CameraOff} from 'lucide-react';
+import {Camera,ShieldCheck,Trash2,CameraOff,LoaderCircle} from 'lucide-react';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {inspectGuidedFace} from '@/lib/identity-frame-guidance';
 import type {FaceGuide} from '@/lib/identity-frame-guidance';
@@ -116,6 +116,8 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   const selfieFileRef=useRef<HTMLInputElement>(null);
   const [consent,setConsent]=useState(false);
   const [busy,setBusy]=useState(false);
+  const validationSubmittingRef=useRef(false);
+  const [validationPhase,setValidationPhase]=useState<'preparing'|'verifying'|'finishing'>('preparing');
   const [challengeBusy,setChallengeBusy]=useState(false);
   const [challenge,setChallenge]=useState('');
   const [challengeExpiresAt,setChallengeExpiresAt]=useState(0);
@@ -351,6 +353,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   },[challenge,frameIndex,captureFrame,busy,challengeExpiresAt,mediaPipeStatus,turnOrder]);
 
   async function submit(){
+    if(validationSubmittingRef.current||busy)return;
     if(!front||!back||!selfie||!consent){
       setError('Envie frente, verso e selfie, e marque o consentimento.');return;
     }
@@ -362,6 +365,8 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       setInstructions([]);setFrameIndex(0);setFrames([]);setStep(3);
       setError('O desafio expirou ou está próximo de expirar. Refaça a captura ao vivo antes de validar.');return;
     }
+    validationSubmittingRef.current=true;
+    setValidationPhase('preparing');
     setBusy(true);setError('');setMessage('Preparando o envio seguro para validação…');
     try{
       const auth=supabaseBrowser();
@@ -389,6 +394,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       form.set('documentType',documentType);form.set('documentFront',optimizedFront);form.set('documentBack',optimizedBack);
       form.set('selfie',optimizedSelfie);form.set('consent','true');form.set('livenessChallenge',challenge);
       frames.forEach((frame,index)=>form.set('livenessFrame'+index,frame));
+      setValidationPhase('verifying');
       setMessage('Validando documento, rosto e captura ao vivo no servidor…');
       const requestVerification=(accessToken:string)=>fetch('/api/identity/free-document/verify',{
         method:'POST',headers:{Authorization:'Bearer '+accessToken},credentials:'same-origin',body:form,cache:'no-store'
@@ -404,6 +410,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         const message=data.message||data.error||'A validação não foi concluída.';
         throw new Error(data.code?message+' (código: '+data.code+')':message);
       }
+      setValidationPhase('finishing');
       setCompleted(data.ageAssured===true||data.approved===true);setStep(5);setMessage(data.message||'Validação concluída.');
       setFront(null);setBack(null);setSelfie(null);setFrames([]);setChallenge('');setChallengeExpiresAt(0);setInstructions([]);
       await onComplete();
@@ -421,7 +428,7 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
         ?' Antes de tentar novamente, tire uma nova selfie e depois inicie outra captura guiada.'
         :' Para uma nova tentativa, inicie outra captura guiada.'));
       setMessage('');
-    }finally{stopCamera();setBusy(false);}
+    }finally{stopCamera();validationSubmittingRef.current=false;setBusy(false);}
   }
 
   const steps=[
@@ -432,8 +439,25 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
   ];
   const canContinue=step===1?Boolean(front&&back):step===2?Boolean(selfie&&consent):step===3?Boolean(challenge&&frames.length===4&&secondsRemaining>5):true;
   const guideColor=mediaPipeStatus!=='active'?'#60a5fa':faceGuide.ready?'#34d399':'#fbbf24';
+  const validationText={
+    preparing:{title:'Preparando sua validação',detail:'Otimizando as imagens para o envio seguro.'},
+    verifying:{title:'Validando sua identidade',detail:'Analisando documento, selfie e prova de vida no servidor.'},
+    finishing:{title:'Concluindo a verificação',detail:'Atualizando o resultado da sua solicitação.'}
+  }[validationPhase];
 
-  return <div style={{marginTop:20,width:'100%',minWidth:0,maxWidth:'100%',boxSizing:'border-box',overflowWrap:'anywhere'}}>
+  return <div aria-busy={busy} style={{marginTop:20,width:'100%',minWidth:0,maxWidth:'100%',boxSizing:'border-box',overflowWrap:'anywhere'}}>
+    {busy&&<div className="conecta-id-validation-overlay" data-testid="identity-validation-loader" role="status" aria-live="polite" aria-atomic="true">
+      <div className="conecta-id-validation-card">
+        <div className="conecta-id-validation-emblem" aria-hidden="true">
+          <span className="conecta-id-validation-ring"/>
+          <ShieldCheck size={30} strokeWidth={2.1}/>
+        </div>
+        <h3>{validationText.title}</h3>
+        <p>{validationText.detail}</p>
+        <div className="conecta-id-validation-dots" aria-hidden="true"><span/><span/><span/></div>
+        <p className="conecta-id-validation-note">Não feche esta página durante a validação. O resultado será exibido aqui.</p>
+      </div>
+    </div>}
     <div className="feed-title">
       <h2><ShieldCheck size={21} style={{verticalAlign:'middle'}}/> Validação gratuita de identidade e rosto</h2>
       <span className="small-note">Sem fornecedor pago</span>
@@ -574,7 +598,8 @@ export function FreeDocumentVerification({documentType,onComplete}:Props){
       </ul>
       <p>Ao selecionar “Validar minha identidade”, o servidor verifica os arquivos e registra o resultado apenas quando todas as verificações obrigatórias passam. Não há aprovação simulada nem liberação por resultado inconclusivo.</p>
       <button type="button" className="btn btn-primary" onClick={()=>void submit()} disabled={busy||challengeBusy||!front||!back||!selfie||!consent||!challenge||frames.length!==4||secondsRemaining<=5}>
-        <ShieldCheck size={17}/>{busy?'Validando no servidor…':'Validar minha identidade'}</button>
+        {busy?<LoaderCircle size={17} className="conecta-id-button-spinner"/>:<ShieldCheck size={17}/>}
+        {busy?'Validando no servidor…':'Validar minha identidade'}</button>
     </section>}
     {step===5&&<section className="panel" aria-live="polite">
       <h3>{completed?'Validação concluída':'Resultado da validação'}</h3>
