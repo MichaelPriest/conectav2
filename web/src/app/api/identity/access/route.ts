@@ -13,7 +13,7 @@ function recent(value:string|null|undefined){
  return Number.isFinite(time)&&time<=now+60_000&&now-time<=60*24*60*60*1000;
 }
 function trustedMethod(value:string|null|undefined){
- return value==='verified_age_credential'||value==='authorized_provider_callback'||value==='conecta_free_document_face'||value==='conecta_selfie_age_estimate';
+ return value==='verified_age_credential'||value==='authorized_provider_callback'||value==='conecta_free_document_face';
 }
 
 /** Server-authoritative gate used by app navigation; the database migration enforces the same rule on social tables. */
