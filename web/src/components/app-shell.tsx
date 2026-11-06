@@ -72,6 +72,7 @@ export function useAuthProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [accessLevel,setAccessLevel]=useState<'full'|'basic'|'restricted'>('restricted');
 
   useEffect(() => {
     let active = true;
@@ -99,8 +100,9 @@ export function useAuthProfile() {
             headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},
             cache:'no-store'
           });
-          const access=await accessResponse.json().catch(()=>({networkAccess:false})) as {networkAccess?:boolean};
+          const access=await accessResponse.json().catch(()=>({networkAccess:false})) as {networkAccess?:boolean;canBrowsePublicFeed?:boolean};
           if(!accessResponse.ok||(access.networkAccess!==true&&!(pathname==='/feed'&&access.canBrowsePublicFeed===true))){router.replace('/conecta-id');return;}
+          setAccessLevel(access.networkAccess===true?'full':'basic');
         }
         setUser(authUser);
         setProfile(profileData as UserProfile);
@@ -110,7 +112,7 @@ export function useAuthProfile() {
     void check();
     return () => { active = false; };
   }, [router,pathname]);
-  return { user, profile, loading, error, setProfile };
+  return { user, profile, loading, error, setProfile, accessLevel };
 }
 
 export function AppShell({ children, profile }: { children: React.ReactNode; profile: UserProfile }) {
