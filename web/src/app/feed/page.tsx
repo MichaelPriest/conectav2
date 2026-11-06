@@ -84,7 +84,7 @@ export default function FeedPage() {
     setLoadingFeed(false);
   },[user,feedFilter,accessLevel]);
 
-  useEffect(()=>{if(user&&accessLevel==='full')void fetchPosts();},[user,fetchPosts,accessLevel]);
+  useEffect(()=>{if(user&&(accessLevel==='full'||accessLevel==='social'))void fetchPosts();},[user,fetchPosts,accessLevel]);
 
   async function publish(e: FormEvent) {
     e.preventDefault();
@@ -145,6 +145,7 @@ export default function FeedPage() {
   return <GuardedPage profile={profile} loading={loading} error={error} accessLevel={accessLevel}>
     <div className="page-columns concept-feed-columns"><main className="content-column">
       <div className="page-heading concept-feed-heading"><div><span className="section-eyebrow">NOVAS HISTÓRIAS, NOVAS CONEXÕES</span><h1>Seu feed</h1><p>Novas histórias, pessoas e ideias para um mundo mais conectado.</p></div><span className="concept-feed-sparkle" aria-hidden="true">✦</span></div>
+      {user&&<DiscreetAdSlot format="desktop"/>}
       {user&&<StoryRail userId={user.id} profile={profile}/>}
       <section className="composer card concept-composer" id="composer">
         <div className="composer-top"><ProfileAvatar person={profile}/><div className="concept-composer-heading"><strong>{profile?.display_name ? 'Compartilhe um momento, '+profile.display_name.split(' ')[0] : 'O que você está pensando hoje?'}</strong><span>Uma boa história merece ser compartilhada.</span></div></div>
@@ -188,7 +189,7 @@ export default function FeedPage() {
       </div>
       <div className="feed-list">{posts.length===0&&!loadingFeed&&<div className="empty-state card concept-empty-feed"><span className="concept-empty-illustration"><Sparkles size={34}/></span><h3>Boas histórias começam aqui.</h3><p>O Conecta está esperando sua primeira publicação. Convide amigos, conte algo e faça parte desta comunidade.</p><a className="btn btn-primary" href="#composer">Criar primeira publicação</a></div>}{posts.map((p,i)=><div key={p.id}>
         <PostCard post={p} userId={user?.id||''} refresh={()=>fetchPosts()}/>
-        {i===5&&<DiscreetAdSlot format="mobile"/>}
+        {i===0&&<DiscreetAdSlot format="mobile"/>}
       </div>)}</div>
       {loadingFeed&&<div className="centered-loading"><Loader2 className="spin" size={23}/> Carregando publicações...</div>}
       {!loadingFeed&&hasMore&&<button type="button" className="btn btn-outline btn-block" onClick={()=>fetchPosts(offset,true)}>Carregar mais</button>}
