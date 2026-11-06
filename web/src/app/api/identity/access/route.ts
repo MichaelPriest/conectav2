@@ -38,8 +38,16 @@ export async function GET(request:NextRequest){
  if(!profile.data)return NextResponse.json({networkAccess:false,reason:'profile_required',steps,message:'Complete seu perfil para iniciar o Conecta ID.'},{headers});
  if(!age.data)return NextResponse.json({networkAccess:false,reason:'age_declaration_required',steps,message:'Informe sua faixa etária para iniciar a verificação.'},{headers});
  steps.identity=identity.data?.status==='approved'&&recent(identity.data.verified_at);
- steps.age=Boolean(decision.data&&trustedMethod(decision.data.method)&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
- if(!steps.identity&&basicAccess)return NextResponse.json({networkAccess:false,basicAccess:true,accessLevel:'basic',reason:'identity_required',steps,message:'Faixa etária classificada. Seu perfil e configurações estão disponíveis; publicações, mensagens e interações exigem identidade verificada.'},{headers});
+ steps.age=Boolean(decision.data&&(trustedMethod(decision.data.method)||decision.data.method==='conecta_document_age_only')&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
+ // Age-classified adults may only browse public posts, not interact. The
+ // database independently enforces a restrictive read-only public feed policy.
+ const adultReadOnly=Boolean(basicAccess&&decision.data?.age_band==='18_plus'&&age.data.declared_band==='18_plus');
+ if(adultReadOnly)return NextResponse.json({
+  networkAccess:false,basicAccess:true,canBrowsePublicFeed:true,accessLevel:'basic',
+  reason:'identity_pending',steps,
+  message:'Faixa etária adulta classificada. Você pode visualizar o feed público; publicar, comentar e enviar mensagens continuam exigindo identidade confirmada.'
+ },{headers});
+ if(!steps.identity&&basicAccess)return NextResponse.json({networkAccess:false,basicAccess:true,canBrowsePublicFeed:false,accessLevel:'basic',reason:'identity_required',steps,message:'Faixa etária classificada. Recursos sociais continuam protegidos até cumprir as exigências de identidade e supervisão.'},{headers});
  if(!steps.identity)return NextResponse.json({networkAccess:false,reason:identity.data?.status==='approved'?'verification_expired':'identity_required',steps,message:'A identidade ainda não foi confirmada por uma fonte confiável. A validação gratuita integrada exige QR legível, OCR, comparação facial e análise antifraude no servidor.'},{headers});
  if(!steps.age)return NextResponse.json({networkAccess:false,reason:decision.data?'verification_expired':'age_verification_required',steps,message:'A faixa etária ainda não foi confirmada por uma credencial confiável. A autodeclaração e as pré-triagens locais não são suficientes.'},{headers});
  if(age.data.declared_band!=='18_plus'||decision.data?.age_band!=='18_plus'){
