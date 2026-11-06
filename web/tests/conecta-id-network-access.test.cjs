@@ -38,7 +38,9 @@ test('restrictive database policies enforce the gate beyond client-side navigati
 test('app navigation redirects every unverified account to Conecta ID',()=>{
  const shell=read('src/components/app-shell.tsx');
  assert.match(shell,/fetch\('\/api\/identity\/access'/);
- assert.match(shell,/access\.networkAccess!==true/);
+ assert.match(shell,/access\.networkAccess===true/);
+ assert.match(shell,/access\.canUseSocialFeatures===true&&isSocialRoute\(pathname\)/);
+ assert.match(shell,/pathname==='\/feed'&&access\.canBrowsePublicFeed===true/);
  assert.match(shell,/pathname==='\/feed'&&access\.canBrowsePublicFeed===true/);
  assert.match(shell,/pathname!=='\/conecta-id'/);
  assert.doesNotMatch(shell,/declared_band!=='18_plus'/);
