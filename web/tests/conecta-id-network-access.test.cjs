@@ -39,6 +39,7 @@ test('app navigation redirects every unverified account to Conecta ID',()=>{
  const shell=read('src/components/app-shell.tsx');
  assert.match(shell,/fetch\('\/api\/identity\/access'/);
  assert.match(shell,/access\.networkAccess!==true/);
+ assert.match(shell,/pathname==='\/feed'&&access\.canBrowsePublicFeed===true/);
  assert.match(shell,/pathname!=='\/conecta-id'/);
  assert.doesNotMatch(shell,/declared_band!=='18_plus'/);
 });
@@ -51,6 +52,6 @@ test('legacy route redirects to Conecta ID 2.0 without bypassing server access g
  assert.match(next,/não confirma sua identidade nem maioridade/);
  assert.match(next,/access\?\.networkAccess/);
  assert.match(next,/<Link className="btn btn-primary" href="\/feed">/);
- assert.match(next,/O feed será liberado quando a verificação obrigatória estiver concluída/);
+ assert.match(next,/O feed completo depende da confirmação de identidade/);
  assert.ok(!govbr.includes('href="/feed"'));
 });

@@ -6,7 +6,7 @@ import {supabaseBrowser} from '@/lib/supabase/browser';
 import {FreeDocumentVerification} from '@/components/free-document-verification';
 
 type Triage={status?:string;error?:string;reasons?:string[]};
-type Access={networkAccess?:boolean;basicAccess?:boolean;accessLevel?:string;reason?:string;message?:string;steps?:{profile:boolean;ageDeclaration:boolean;identity:boolean;age:boolean;guardian:boolean}};
+type Access={networkAccess?:boolean;basicAccess?:boolean;canBrowsePublicFeed?:boolean;accessLevel?:string;reason?:string;message?:string;steps?:{profile:boolean;ageDeclaration:boolean;identity:boolean;age:boolean;guardian:boolean}};
 type Verification={status?:string;age_band?:string;guardian_status?:string;configured?:boolean};
 const labels:Record<string,string>={
  pending_contact:'Confirme seu e-mail para continuar.',
@@ -66,26 +66,26 @@ export default function ConectaIdPage(){
    <p role="status">{labels[triage.status||'']||'Triagem ainda não concluída.'}</p>
    <h2>Verificação de identidade e idade</h2>
    <p><strong>Identidade:</strong> {verification?.status==='approved'?'Aprovada':verification?.status==='pending'?'Em análise':'Não aprovada ou ainda não iniciada'}</p>
-   <p><strong>Acesso:</strong> {access?.networkAccess?'Liberado':access?.basicAccess?'Básico, com restrições':'Restrito'}</p>
+   <p><strong>Acesso:</strong> {access?.networkAccess?'Completo':access?.canBrowsePublicFeed?'Feed público (leitura)':access?.basicAccess?'Básico, com restrições':'Restrito'}</p>
    <p>{access?.message||'As verificações obrigatórias ainda estão sendo avaliadas.'}</p>
    <ul style={{textAlign:'left',lineHeight:1.8}}>
     <li>{steps?.profile?'✓':'○'} Perfil cadastrado</li>
     <li>{steps?.ageDeclaration?'✓':'○'} Declaração de faixa etária</li>
     <li>{steps?.identity?'✓':'○'} Identidade verificada</li>
-    <li>{steps?.age?'✓':'○'} Idade verificada</li>
+    <li>{steps?.age?'✓':'○'} Faixa etária classificada</li>
     <li>{steps?.guardian?'✓':'○'} Responsável verificado, quando necessário</li>
    </ul>
    {triage.status==='pending_review'&&<p className="muted">Aguarde a decisão de um administrador. Não envie documentos por mensagens ou canais não oficiais.</p>}
    {triage.status==='pending_contact'&&<p className="muted">Confirme o endereço de e-mail utilizado no cadastro e atualize esta página.</p>}
-   {!access?.networkAccess&&<p className="muted">A verificação gratuita de documento e selfie pode confirmar a faixa etária, mas não comprova a titularidade perante uma fonte oficial. Mesmo após concluir esta etapa, o feed poderá continuar restrito até a validação confiável da identidade.</p>}
+   {!access?.networkAccess&&<p className="muted">A verificação gratuita de documento e selfie pode confirmar a faixa etária, mas não comprova a titularidade perante uma fonte oficial. Após a classificação de adulto, o feed público pode ser liberado apenas para leitura, enquanto interações continuam exigindo identidade confirmada.</p>}
    {!access?.networkAccess&&<div className="stack"><button type="button" className="btn btn-primary" onClick={()=>setShowCapture(v=>!v)}>{showCapture?'Ocultar verificação':'Iniciar verificação de documento e selfie'}</button>{showCapture&&<><label htmlFor="conecta-document-kind">Tipo de documento</label><select id="conecta-document-kind" value={documentType} onChange={e=>setDocumentType(e.target.value as 'cin'|'old-rg'|'cnh')}><option value="cin">CIN</option><option value="old-rg">RG antigo</option><option value="cnh">CNH</option></select><FreeDocumentVerification key={documentType} documentType={documentType} onComplete={()=>refresh(true)}/></>}</div>}
   </>}
   <p className="muted">A triagem de risco não confirma sua identidade nem maioridade. O acesso protegido depende das regras do servidor.</p>
   <div className="stack">
    <button className="btn btn-outline" type="button" onClick={()=>void refresh()} disabled={loading}>Atualizar situação</button>
-   {access?.networkAccess
-    ? <Link className="btn btn-primary" href="/feed">Ir para o Conecta</Link>
-    : <p role="status" className="muted">O feed será liberado quando a verificação obrigatória estiver concluída. O botão de acesso permanece indisponível para evitar redirecionamentos repetidos.</p>}
+   {access?.networkAccess||access?.canBrowsePublicFeed
+    ? <Link className="btn btn-primary" href="/feed">{access?.networkAccess?'Ir para o Conecta':'Ver feed público'}</Link>
+    : <p role="status" className="muted">O feed completo depende da confirmação de identidade e das proteções exigidas para a faixa etária.</p>}
   </div>
  </section></main>;
 }

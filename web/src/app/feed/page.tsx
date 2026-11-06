@@ -11,6 +11,7 @@ import { optimizeImage } from '@/lib/media';
 import { hydratePostMedia } from '@/lib/post-media';
 import { FeaturedCommunities } from '@/components/featured-communities';
 import {DiscreetAdSlot} from '@/components/discreet-ad-slot';
+import {BasicAdultFeed} from '@/components/basic-adult-feed';
 import {requestContentModeration} from '@/lib/submit-moderation';
 import {StoryRail} from '@/components/story-rail';
 import {EmojiButton} from '@/components/emoji-button';
@@ -22,7 +23,7 @@ import {PostDrafts} from '@/components/post-drafts';
 const PAGE_SIZE=15;
 
 export default function FeedPage() {
-  const {user,profile,loading,error}=useAuthProfile();
+  const {user,profile,loading,error,accessLevel}=useAuthProfile();
   const [posts,setPosts]=useState<FeedPost[]>([]);
   const [loadingFeed,setLoadingFeed]=useState(true);
   const [busy,setBusy]=useState(false);
@@ -64,7 +65,7 @@ export default function FeedPage() {
   }
 
   const fetchPosts=useCallback(async (from=0,append=false) => {
-    if(!user)return;
+    if(!user||accessLevel==='basic')return;
     setLoadingFeed(true);setMessage('');
     const db=supabaseBrowser();
     let query=db.from('posts')
@@ -81,9 +82,9 @@ export default function FeedPage() {
     setOffset(from+rows.length);
     setHasMore(rows.length===PAGE_SIZE);
     setLoadingFeed(false);
-  },[user,feedFilter]);
+  },[user,feedFilter,accessLevel]);
 
-  useEffect(()=>{if(user)void fetchPosts();},[user,fetchPosts]);
+  useEffect(()=>{if(user&&accessLevel==='full')void fetchPosts();},[user,fetchPosts,accessLevel]);
 
   async function publish(e: FormEvent) {
     e.preventDefault();
@@ -138,7 +139,10 @@ export default function FeedPage() {
     }finally{setBusy(false);}
   }
 
-  return <GuardedPage profile={profile} loading={loading} error={error}>
+  if(accessLevel==='basic')return <GuardedPage profile={profile} loading={loading} error={error} accessLevel="basic">
+    <BasicAdultFeed/>
+  </GuardedPage>;
+  return <GuardedPage profile={profile} loading={loading} error={error} accessLevel={accessLevel}>
     <div className="page-columns concept-feed-columns"><main className="content-column">
       <div className="page-heading concept-feed-heading"><div><span className="section-eyebrow">NOVAS HISTÓRIAS, NOVAS CONEXÕES</span><h1>Seu feed</h1><p>Novas histórias, pessoas e ideias para um mundo mais conectado.</p></div><span className="concept-feed-sparkle" aria-hidden="true">✦</span></div>
       {user&&<StoryRail userId={user.id} profile={profile}/>}

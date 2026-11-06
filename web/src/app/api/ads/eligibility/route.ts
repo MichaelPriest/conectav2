@@ -42,7 +42,21 @@ export async function GET(request:NextRequest){
      verifiedAt:data.verified_at,
      evidenceReference:data.evidence_reference_hash
    });
-   if(policy.ageAssurance!=='verified_adult'||!policy.canAccessAdultRestrictedFeatures)return blocked();
+   // Document-derived adulthood is adequate for opt-in advertising but does
+   // not verify document ownership or enable identity-protected social actions.
+   const trustedAdult=policy.ageAssurance==='verified_adult'&&policy.canAccessAdultRestrictedFeatures;
+   const ageOnlyAdult=data.method==='conecta_document_age_only'
+     &&data.age_band==='18_plus'
+     &&typeof data.evidence_reference_hash==='string'
+     &&/^[a-f0-9]{64}$/.test(data.evidence_reference_hash)
+     &&typeof data.verified_at==='string'
+     &&Number.isFinite(Date.parse(data.verified_at))
+     &&Date.parse(data.verified_at)<=Date.now()+60_000
+     &&Date.now()-Date.parse(data.verified_at)<=60*24*60*60*1000;
+   if(!trustedAdult&&!ageOnlyAdult)return blocked();
+   const {data:declaration,error:declarationError}=await admin
+     .from('registration_age_declarations').select('declared_band').eq('user_id',user.id).maybeSingle();
+   if(declarationError||declaration?.declared_band!=='18_plus')return blocked();
 
    // The user must also opt in on the client before loading any third-party ad.
    return NextResponse.json({eligible:true},{headers});

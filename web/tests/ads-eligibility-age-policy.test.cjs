@@ -10,7 +10,9 @@ test('ad eligibility uses the service-role-only age assurance decision',()=>{
  assert.match(route,/runtimeConfig\.serviceKey/);
  assert.match(route,/from\('age_assurance_decisions'\)/);
  assert.match(route,/ageAssurancePolicy\(/);
- assert.match(route,/policy\.ageAssurance!=='verified_adult'/);
+ assert.match(route,/policy\.ageAssurance==='verified_adult'/);
+ assert.match(route,/data\.method==='conecta_document_age_only'/);
+ assert.match(route,/declaration\?\.declared_band!=='18_plus'/);
  assert.doesNotMatch(route,/from\('identity_verifications'\)/);
 });
 
