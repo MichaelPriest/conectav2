@@ -100,7 +100,7 @@ export function useAuthProfile() {
             cache:'no-store'
           });
           const access=await accessResponse.json().catch(()=>({networkAccess:false})) as {networkAccess?:boolean};
-          if(!accessResponse.ok||access.networkAccess!==true){router.replace('/conecta-id');return;}
+          if(!accessResponse.ok||(access.networkAccess!==true&&!(pathname==='/feed'&&access.canBrowsePublicFeed===true))){router.replace('/conecta-id');return;}
         }
         setUser(authUser);
         setProfile(profileData as UserProfile);
