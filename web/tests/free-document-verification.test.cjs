@@ -6,6 +6,31 @@ const test=require('node:test');
 const root=path.join(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 
+test('historical ID portrait comparison stays advisory and does not weaken selfie liveness',()=>{
+ const route=read('src/app/api/identity/free-document/verify/route.ts');
+ const ui=read('src/components/free-document-verification.tsx');
+ assert.match(route,/type DocumentPortraitSignal='compatible'\|'inconclusive'\|'unavailable'/);
+ assert.match(route,/compareDocumentPortraits\(instance,selfieEmbedding,\[document,back\]\)/);
+ assert.match(route,/return inconclusive\?'inconclusive':'unavailable'/);
+ assert.match(route,/documentPortraitComparison,/);
+ assert.match(route,/documentPortraitMessage/);
+ assert.match(route,/faceMatchConsistency\(selfieToFirst,selfieToLast,firstToLast\)/);
+ assert.match(route,/if\(presentation\.status!=='live'\)/);
+ assert.match(route,/identityVerified:false/);
+ assert.match(route,/officialIssuerVerified:false/);
+ assert.match(ui,/uma foto antiga pode ficar inconclusiva, sem reprovação automática/);
+ const liveGate=route.indexOf("const comparison=faceMatchConsistency(");
+ const portraitSignal=route.indexOf("const documentPortraitComparison=selfieEmbedding");
+ const persistence=route.indexOf("const {error:verdictError}=await context.admin.rpc('complete_conecta_document_age_assurance'");
+ assert.ok(liveGate>0&&portraitSignal>liveGate&&persistence>portraitSignal,
+  'portrait signal runs only after mandatory liveness and before age-band-only verdict');
+ const portraitBlock=route.slice(portraitSignal,persistence);
+ assert.doesNotMatch(portraitBlock,/return await failAttempt/);
+ assert.doesNotMatch(portraitBlock,/identityVerified:true|approved:true/);
+ assert.match(route,/tensorData\?\.fill\(0\)/);
+ assert.match(route,/raw\?\.data\.fill\(0\)/);
+});
+
 test('after successful identity validation account refresh keeps result panel mounted',()=>{
  const page=read('src/app/conecta-id/page.tsx');
  const ui=read('src/components/free-document-verification.tsx');
