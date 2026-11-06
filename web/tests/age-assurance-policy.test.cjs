@@ -34,6 +34,8 @@ test('unknown, self-declared, OCR and browser-only signals fail closed', () => {
     { ...adult, source: 'verified_platform_age_signal' },
     { ...adult, source: 'cin_local_preflight' },
     { ...adult, source: 'browser_liveness' },
+    // Facial age regression is not a high-assurance age credential for adult-restricted content.
+    { ...adult, source: 'conecta_selfie_age_estimate' },
     { ...adult, status: 'pending' },
     { ...adult, evidenceReference: 'x' },
     { ...adult, verifiedAt: 'not-a-date' },

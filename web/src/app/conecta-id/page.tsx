@@ -4,6 +4,7 @@ import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {supabaseBrowser} from '@/lib/supabase/browser';
 import {FreeDocumentVerification} from '@/components/free-document-verification';
+import {SelfieAgeVerification} from '@/components/selfie-age-verification';
 
 type Triage={status?:string;error?:string;reasons?:string[]};
 type Access={networkAccess?:boolean;basicAccess?:boolean;canBrowsePublicFeed?:boolean;canUseSocialFeatures?:boolean;accessLevel?:string;reason?:string;message?:string;steps?:{profile:boolean;ageDeclaration:boolean;identity:boolean;age:boolean;guardian:boolean}};
@@ -24,6 +25,7 @@ export default function ConectaIdPage(){
  const [error,setError]=useState('');
  const [refreshNotice,setRefreshNotice]=useState('');
  const [showCapture,setShowCapture]=useState(false);
+ const [verificationMode,setVerificationMode]=useState<'selfie'|'document'>('selfie');
  const [documentType,setDocumentType]=useState<'cin'|'old-rg'|'cnh'>('cin');
  const refresh=useCallback(async(background=false)=>{
   if(!background){setLoading(true);setError('');}
@@ -77,8 +79,8 @@ export default function ConectaIdPage(){
    </ul>
    {triage.status==='pending_review'&&<p className="muted">Aguarde a decisão de um administrador. Não envie documentos por mensagens ou canais não oficiais.</p>}
    {triage.status==='pending_contact'&&<p className="muted">Confirme o endereço de e-mail utilizado no cadastro e atualize esta página.</p>}
-   {!access?.networkAccess&&<p className="muted">A verificação gratuita de documento e selfie pode confirmar a faixa etária, mas não comprova a titularidade perante uma fonte oficial. Após a classificação de adulto, o uso normal de publicações e comunidades pode ser liberado. Mensagens privadas e outras funções sensíveis continuam exigindo identidade confirmada.</p>}
-   {!access?.networkAccess&&<div className="stack"><button type="button" className="btn btn-primary" onClick={()=>setShowCapture(v=>!v)}>{showCapture?'Ocultar verificação':'Iniciar verificação de documento e selfie'}</button>{showCapture&&<><label htmlFor="conecta-document-kind">Tipo de documento</label><select id="conecta-document-kind" value={documentType} onChange={e=>setDocumentType(e.target.value as 'cin'|'old-rg'|'cnh')}><option value="cin">CIN</option><option value="old-rg">RG antigo</option><option value="cnh">CNH</option></select><FreeDocumentVerification key={documentType} documentType={documentType} onComplete={()=>refresh(true)}/></>}</div>}
+   {!access?.networkAccess&&<p className="muted">Você pode iniciar pela selfie ao vivo, sem documento. Se a estimativa de maioridade ficar inconclusiva, utilize o documento. Ambos os métodos verificam idade, mas não comprovam titularidade oficial. Mensagens privadas e outras funções sensíveis continuam exigindo identidade confirmada.</p>}
+   {!access?.networkAccess&&<div className="stack"><button type="button" className="btn btn-primary" onClick={()=>setShowCapture(v=>!v)}>{showCapture?'Ocultar verificação':'Iniciar verificação de maioridade'}</button>{showCapture&&<><div style={{display:'flex',gap:8,flexWrap:'wrap'}}><button type="button" className={verificationMode==='selfie'?'btn btn-primary':'btn btn-outline'} onClick={()=>setVerificationMode('selfie')}>Selfie ao vivo</button><button type="button" className={verificationMode==='document'?'btn btn-primary':'btn btn-outline'} onClick={()=>setVerificationMode('document')}>Documento e selfie</button></div>{verificationMode==='selfie'?<SelfieAgeVerification onComplete={()=>refresh(true)} onNeedsDocument={()=>setVerificationMode('document')}/>:<><label htmlFor="conecta-document-kind">Tipo de documento</label><select id="conecta-document-kind" value={documentType} onChange={e=>setDocumentType(e.target.value as 'cin'|'old-rg'|'cnh')}><option value="cin">CIN</option><option value="old-rg">RG antigo</option><option value="cnh">CNH</option></select><FreeDocumentVerification key={documentType} documentType={documentType} onComplete={()=>refresh(true)}/></>}</>}</div>}
   </>}
   <p className="muted">A triagem de risco não confirma sua identidade nem maioridade. O acesso protegido depende das regras do servidor.</p>
   <div className="stack">

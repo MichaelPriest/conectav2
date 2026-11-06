@@ -24,7 +24,7 @@ type VerificationFailureCode =
   | 'payload_invalid' | 'document_qr_unreadable' | 'birth_date_unreadable'
   | 'face_count_invalid' | 'face_quality_low' | 'face_match_failed'
   | 'selfie_liveness_uncertain' | 'liveness_sequence_invalid'
-  | 'document_data_mismatch' | 'verification_failed';
+  | 'document_data_mismatch' | 'age_estimate_inconclusive' | 'verification_failed';
 const fail=(message:string,status:number,code:VerificationFailureCode='verification_failed')=>
   NextResponse.json({ok:false,message,code,documentStored:false},{status,headers});
 const MAX_IMAGE_BYTES=8*1024*1024;
@@ -35,7 +35,7 @@ const allowedTypes=new Set(['image/jpeg','image/png','image/webp']);
 // fails closed with 503 before consuming a liveness challenge or rate limit.
 let identityVerificationBusy=false;
 
-type FaceResult={face?:Array<{embedding?:number[];faceScore?:number;boxScore?:number;box?:number[];real?:number;rotation?:{angle?:{yaw?:number}};mesh?:number[][];tensor?:{dispose?:()=>void}}>};
+type FaceResult={face?:Array<{age?:number;embedding?:number[];faceScore?:number;boxScore?:number;box?:number[];real?:number;rotation?:{angle?:{yaw?:number}};mesh?:number[][];tensor?:{dispose?:()=>void}}>};
 async function imageBuffer(value:FormDataEntryValue|null,label:string):Promise<Buffer>{
   if(!(value instanceof File))throw new Error('Envie '+label+'.');
   if(!allowedTypes.has(value.type)||value.size<1||value.size>MAX_IMAGE_BYTES)
@@ -239,6 +239,132 @@ async function compareDocumentPortraits(
   return inconclusive?'inconclusive':'unavailable';
 }
 
+
+// Optional document-free majority estimate. It never writes identity_verifications
+// or accepts browser-provided model scores, liveness verdicts, ages or descriptors.
+// The existing single-process admission gate also protects this flow from
+// concurrent TensorFlow/ONNX inference on low-memory Render instances.
+async function verifyLiveSelfieMajority(
+  request:NextRequest,
+  context:NonNullable<Awaited<ReturnType<typeof identityContext>>>
+){
+  const size=Number(request.headers.get('content-length')||0);
+  if(Number.isFinite(size)&&size>MAX_REQUEST_BYTES)return fail('Envio de imagens muito grande.',413,'payload_invalid');
+  const buffers:Buffer[]=[];
+  const results:FaceResult[]=[];
+  try{
+    const form=await request.formData();
+    if(form.get('consent')!=='true')
+      return fail('Autorize o processamento temporário da selfie antes de continuar.',400,'payload_invalid');
+    const challenge=String(form.get('livenessChallenge')||'');
+    if(!/^[0-9a-f]{64}$/.test(challenge))
+      return fail('Inicie um novo desafio de captura ao vivo.',400,'payload_invalid');
+    const {data:declaration,error:declarationError}=await context.admin
+      .from('registration_age_declarations').select('declared_band')
+      .eq('user_id',context.user.id).maybeSingle();
+    if(declarationError)return fail('Não foi possível consultar a declaração etária.',503);
+    // A contradiction with a self-declared minor must not be upgraded by a
+    // probabilistic facial model. Document/guardian flows remain available.
+    if(declaration?.declared_band!=='18_plus')
+      return fail('Para esta faixa etária, prossiga pelo método de documento ou responsável.',422,'age_estimate_inconclusive');
+
+    for(let i=0;i<4;i++)buffers.push(await imageBuffer(form.get('livenessFrame'+i),'o quadro '+(i+1)));
+    const hash=createHash('sha256').update(challenge,'utf8').digest('hex');
+    const {data:challengeData,error:challengeError}=await context.admin
+      .rpc('consume_identity_liveness_challenge',{
+        p_user_id:context.user.id,p_challenge_hash:hash
+      });
+    if(challengeError)return fail('A prova de vida está indisponível.',503);
+    const order=challengeData?.turn_order;
+    if(!Array.isArray(order)||order.length!==2||
+       !((order[0]==='left'&&order[1]==='right')||
+         (order[0]==='right'&&order[1]==='left')))
+      return fail('O desafio expirou ou já foi utilizado. Inicie outra captura.',409,'liveness_sequence_invalid');
+
+    const human:any=await getIdentityHumanEngine();
+    const offsets:(number|null)[]=[];
+    const ageEstimates:number[]=[];
+    for(let i=0;i<buffers.length;i++){
+      const raw=await pixels(buffers[i]);
+      let data:Int32Array|undefined,tensor:any=null;
+      try{
+        data=new Int32Array(raw.data);
+        tensor=human.tf.tensor4d(data,[1,raw.height,raw.width,3],'int32');
+        const result=await human.detect(tensor) as FaceResult;
+        results.push(result);
+        const faces=result.face||[];
+        if(faces.length!==1)
+          return fail('A câmera deve mostrar exatamente um rosto em todos os quadros.',422,'face_count_invalid');
+        const face=faces[0],box=face.box;
+        if(!Array.isArray(box)||box.length<4||box.some(v=>!Number.isFinite(v))||
+           box[2]<64||box[3]<64||!face.embedding?.length)
+          return fail('O rosto não pôde ser analisado com nitidez. Refaça a captura.',422,'face_quality_low');
+        offsets.push(humanMeshTurnOffset(face.mesh));
+        if(i===0||i===3){
+          const focus=await faceFocusVariance(raw.data,raw.width,raw.height,box);
+          if(!Number.isFinite(focus)||focus<4)
+            return fail('A captura frontal ficou desfocada. Melhore a iluminação e tente novamente.',422,'face_quality_low');
+          const presentation=await inspectFacePresentation(raw.data,raw.width,raw.height,box);
+          if(presentation.reason==='model_unavailable')
+            return fail('O motor de prova de vida está indisponível. Nenhuma maioridade foi aprovada.',503,'selfie_liveness_uncertain');
+          if(presentation.status!=='live')
+            return fail('A prova de vida ficou inconclusiva. Use iluminação uniforme ou verifique por documento.',422,'selfie_liveness_uncertain');
+          const estimate=Number(face.age);
+          if(!Number.isFinite(estimate)||estimate<0||estimate>115)
+            return fail('Não foi possível estimar a maioridade. Use o método por documento.',422,'age_estimate_inconclusive');
+          ageEstimates.push(estimate);
+        }
+      }finally{
+        tensor?.dispose?.();data?.fill(0);raw.data.fill(0);
+        buffers[i].fill(0);
+      }
+    }
+    const pose=assessGuidedHeadTurns(offsets,order as Array<'left'|'right'>);
+    if(pose!=='valid')
+      return fail('Os movimentos de cabeça não foram confirmados na ordem solicitada. Refaça a captura.',422,
+        pose==='invalid_face'?'face_quality_low':'liveness_sequence_invalid');
+    const first=results[0]?.face?.[0],last=results[3]?.face?.[0];
+    if(!first?.embedding?.length||!last?.embedding?.length)
+      return fail('Não foi possível confirmar consistência entre os quadros.',422,'face_quality_low');
+    const similarity=human.match.similarity(first.embedding,last.embedding,{
+      order:2,multiplier:25,min:0.2,max:0.8
+    });
+    if(!Number.isFinite(similarity)||similarity<0.55)
+      return fail('Os dois quadros frontais não apresentaram consistência facial suficiente.',422,'face_match_failed');
+
+    // These are estimates, not a confidence score or a measured date of birth.
+    // Deliberately abstain near adulthood and for unstable model outputs.
+    // The minimum threshold must be calibrated against real-device datasets
+    // before relying on this method for high-assurance regulated decisions.
+    if(ageEstimates.length!==2||ageEstimates.some(age=>age<25)||
+       Math.abs(ageEstimates[0]-ageEstimates[1])>6)
+      return fail('A estimativa facial ficou próxima do limite ou inconsistente. Isso não indica menoridade: conclua por documento.',422,'age_estimate_inconclusive');
+
+    const verifiedAt=new Date().toISOString();
+    const evidence=createHash('sha256')
+      .update(context.user.id+':'+challenge+':'+verifiedAt+':selfie-age-v1','utf8')
+      .digest('hex');
+    const {data:saved,error:savedError}=await context.admin.rpc('complete_conecta_selfie_age_assurance',{
+      p_user_id:context.user.id,p_evidence_reference_hash:evidence,
+      p_verified_at:verifiedAt
+    });
+    if(savedError||saved!==true)
+      return fail('A análise foi concluída, mas não foi possível registrar o resultado com segurança.',503);
+    return NextResponse.json({
+      ok:true,status:'age_assured',ageAssured:true,approved:false,identityVerified:false,
+      ageBand:'18_plus',verifiedAt,documentStored:false,
+      message:'Maioridade estimada por selfie ao vivo. A identidade não foi verificada; recursos que exigem identidade confirmada permanecem restritos. Nenhuma imagem facial foi armazenada.'
+    },{headers});
+  }catch{
+    return fail('Não foi possível processar a captura. Refaça o desafio ou use um documento.',503);
+  }finally{
+    for(const buffer of buffers)buffer.fill(0);
+    for(const result of results)for(const face of result.face||[]){
+      face.embedding?.fill(0);face.tensor?.dispose?.();
+    }
+  }
+}
+
 export async function POST(request:NextRequest){
   if(!isTrustedIdentityOrigin(request.headers,request.url,process.env))return fail('Origem inválida.',403);
   if(!runtimeConfig.supabaseUrl||!runtimeConfig.publicKey||!runtimeConfig.serviceKey)
@@ -249,6 +375,8 @@ export async function POST(request:NextRequest){
     return fail('O servidor está realizando outra validação de identidade. Tente novamente mais tarde.',503);
   identityVerificationBusy=true;
   try{
+  if(request.headers.get('x-conecta-verification-flow')==='selfie_age')
+    return await verifyLiveSelfieMajority(request,context);
   let attemptId:number|null=null;
   const completeAttempt=async(failureCode:VerificationFailureCode|null=null)=>{
     if(attemptId===null)return;
