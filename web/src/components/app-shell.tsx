@@ -115,7 +115,7 @@ export function useAuthProfile() {
   return { user, profile, loading, error, setProfile, accessLevel };
 }
 
-export function AppShell({ children, profile }: { children: React.ReactNode; profile: UserProfile }) {
+export function AppShell({ children, profile, accessLevel='full' }: { children: React.ReactNode; profile: UserProfile; accessLevel?:'full'|'basic'|'restricted' }) {
   const pathname = usePathname();
   const router = useRouter();
   const {t}=useLocale();
@@ -270,6 +270,18 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
   }
 
   if(pathname==='/verificar-identidade') return <div className="identity-gate-shell">{children}</div>;
+  // The adult basic view never mounts private chat, calls or social actions.
+  if(accessLevel==='basic')return <div className="app-layout concept-app">
+    <div className="workspace" style={{width:'100%',maxWidth:1100,margin:'0 auto'}}>
+      <header className="desktop-topbar" style={{display:'flex',gap:16,alignItems:'center',padding:16,flexWrap:'wrap'}}>
+        <ConceptBrand href="/feed"/>
+        <Link href="/feed">Feed público</Link>
+        <Link href="/conecta-id">Conecta ID</Link>
+        <button type="button" className="btn btn-outline" onClick={logout}>Sair</button>
+      </header>
+      {children}
+    </div>
+  </div>;
 
   return <ChatPresenceProvider userId={profile.id}><ChatCallsProvider userId={profile.id}><div className={"app-layout concept-app "+(sidebarCollapsed?"conecta-sidebar-collapsed ":"")+(pathname==="/verificar-identidade"?"conecta-id-gate-layout":"")}>
     <aside className={'sidebar ' + (mobileNav ? 'sidebar-open' : '')}>
@@ -316,8 +328,8 @@ export function AppShell({ children, profile }: { children: React.ReactNode; pro
   </div></ChatCallsProvider></ChatPresenceProvider>;
 }
 
-export function GuardedPage({ children, profile, loading, error }: { children: React.ReactNode; profile: UserProfile | null; loading: boolean; error: string }) {
+export function GuardedPage({ children, profile, loading, error, accessLevel }: { children: React.ReactNode; profile: UserProfile | null; loading: boolean; error: string; accessLevel?:'full'|'basic'|'restricted' }) {
   if (error) return <div className="center-screen"><div className="status-card"><h2>Não conseguimos abrir a rede</h2><p>{error}</p><Link className="btn btn-primary" href="/">Voltar ao início</Link></div></div>;
   if (loading || !profile) return <div className="center-screen"><div className="loading-ring"/><p className="muted">Carregando sua conta...</p></div>;
-  return <AppShell profile={profile}>{children}</AppShell>;
+  return <AppShell profile={profile} accessLevel={accessLevel}>{children}</AppShell>;
 }
