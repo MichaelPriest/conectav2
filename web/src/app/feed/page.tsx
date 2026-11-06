@@ -84,7 +84,7 @@ export default function FeedPage() {
     setLoadingFeed(false);
   },[user,feedFilter,accessLevel]);
 
-  useEffect(()=>{if(user&&accessLevel==='full')void fetchPosts();},[user,fetchPosts,accessLevel]);
+  useEffect(()=>{if(user&&(accessLevel==='full'||accessLevel==='social'))void fetchPosts();},[user,fetchPosts,accessLevel]);
 
   async function publish(e: FormEvent) {
     e.preventDefault();
