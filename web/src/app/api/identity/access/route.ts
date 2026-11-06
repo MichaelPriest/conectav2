@@ -13,7 +13,7 @@ function recent(value:string|null|undefined){
  return Number.isFinite(time)&&time<=now+60_000&&now-time<=60*24*60*60*1000;
 }
 function trustedMethod(value:string|null|undefined){
- return value==='verified_age_credential'||value==='authorized_provider_callback'||value==='conecta_free_document_face';
+ return value==='verified_age_credential'||value==='authorized_provider_callback'||value==='conecta_free_document_face'||value==='conecta_selfie_age_estimate';
 }
 
 /** Server-authoritative gate used by app navigation; the database migration enforces the same rule on social tables. */
@@ -34,7 +34,7 @@ export async function GET(request:NextRequest){
  const steps={profile:Boolean(profile.data),ageDeclaration:Boolean(age.data),identity:false,age:false,guardian:false};
  if(moderator.data?.role==='admin')return NextResponse.json({networkAccess:true,basicAccess:true,accessLevel:'full',reason:'admin',steps,message:'Acesso administrativo autorizado.'},{headers});
  if(exemption.data?.scope==='basic_unverified'&&!exemption.data.revoked_at&&profile.data&&age.data)return NextResponse.json({networkAccess:false,basicAccess:true,accessLevel:'basic',reason:'admin_basic_exemption',steps,message:'Acesso básico autorizado administrativamente. Recursos sociais exigem verificação de identidade e idade.'},{headers});
- const basicAccess=Boolean(decision.data?.method==='conecta_document_age_only'&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
+ const basicAccess=Boolean(['conecta_document_age_only','conecta_selfie_age_estimate'].includes(decision.data?.method||'')&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
  if(!profile.data)return NextResponse.json({networkAccess:false,reason:'profile_required',steps,message:'Complete seu perfil para iniciar o Conecta ID.'},{headers});
  if(!age.data)return NextResponse.json({networkAccess:false,reason:'age_declaration_required',steps,message:'Informe sua faixa etária para iniciar a verificação.'},{headers});
  steps.identity=identity.data?.status==='approved'&&recent(identity.data.verified_at);
@@ -49,7 +49,7 @@ export async function GET(request:NextRequest){
   message:'Faixa etária adulta classificada. Feed, publicações e comunidades liberados. A identidade permanece pendente e mensagens privadas ainda exigem verificação adicional.'
  },{headers});
  if(!steps.identity&&basicAccess)return NextResponse.json({networkAccess:false,basicAccess:true,canBrowsePublicFeed:false,accessLevel:'basic',reason:'identity_required',steps,message:'Faixa etária classificada. Recursos sociais continuam protegidos até cumprir as exigências de identidade e supervisão.'},{headers});
- if(!steps.identity)return NextResponse.json({networkAccess:false,reason:identity.data?.status==='approved'?'verification_expired':'identity_required',steps,message:'A identidade ainda não foi confirmada por uma fonte confiável. A validação gratuita integrada exige QR legível, OCR, comparação facial e análise antifraude no servidor.'},{headers});
+ if(!steps.identity)return NextResponse.json({networkAccess:false,reason:identity.data?.status==='approved'?'verification_expired':'identity_required',steps,message:'A identidade ainda não foi confirmada. A verificação por selfie confirma apenas maioridade estimada, e a opção com documento classifica a idade sem atestar a titularidade oficial.'},{headers});
  if(!steps.age)return NextResponse.json({networkAccess:false,reason:decision.data?'verification_expired':'age_verification_required',steps,message:'A faixa etária ainda não foi confirmada por uma credencial confiável. A autodeclaração e as pré-triagens locais não são suficientes.'},{headers});
  if(age.data.declared_band!=='18_plus'||decision.data?.age_band!=='18_plus'){
   const {data:links,error:linksError}=await admin.from('conecta_guardian_links')

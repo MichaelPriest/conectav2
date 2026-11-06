@@ -29,6 +29,15 @@ export async function GET(request:NextRequest){
     grantsAdultPrivileges:false,
     methods:[
       {
+        id:'selfie-age-estimation',
+        label:'Maioridade estimada por selfie ao vivo',
+        cost:'free',
+        status:'free_server_verification',
+        verifiesIdentity:false,
+        verifiesAge:true,
+        details:'Estimativa conservadora de adulto por dois quadros frontais, com desafio de movimentos, antifraude e conferência no servidor. Resultados próximos aos 18 anos são inconclusivos e exigem documento. Não comprova identidade ou idade exata.'
+      },
+      {
         id:'free-document-face',
         label:'Validação gratuita do Conecta (QR + OCR + face)',
         cost:'free',

@@ -10,7 +10,8 @@ export type TrustedAgeSource =
   | 'verified_platform_age_signal'
   | 'verified_age_credential'
   | 'authorized_provider_callback'
-  | 'conecta_free_document_face';
+  | 'conecta_free_document_face'
+  | 'conecta_selfie_age_estimate';
 
 export type TrustedAgeDecision = {
   status: 'verified';
@@ -37,7 +38,8 @@ export type AgeAssurancePolicy = {
 const trustedSources = new Set<TrustedAgeSource>([
   'verified_age_credential',
   'authorized_provider_callback',
-  'conecta_free_document_face'
+  'conecta_free_document_face',
+  'conecta_selfie_age_estimate'
 ]);
 
 function isTrustedDecision(value: unknown): value is TrustedAgeDecision {
