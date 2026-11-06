@@ -88,7 +88,7 @@ test('feed filters query real posts and restart pagination when changed',()=>{
  assert.match(page,/aria-label="Filtrar publicações"/);
  assert.match(page,/Minhas publicações/);
  assert.match(page,/Fotos e vídeos/);
- assert.match(page,/\},\[user,feedFilter\]\)/);
+ assert.match(page,/\},\[user,feedFilter,accessLevel\]\)/);
 });
 
 
