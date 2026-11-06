@@ -65,6 +65,9 @@ const themeMobileOrder: Record<string, string[]> = {
   neo: ['/feed#composer', '/comunidades', '/feed', '/explorar', '/perfil'],
 };
 
+const socialPaths=new Set(['/feed','/explorar','/comunidades','/perfil','/reels','/salvos','/notificacoes','/configuracoes','/apps','/apoiar']);
+const isSocialRoute=(pathname:string)=>socialPaths.has(pathname)||['/comunidades/','/p/','/post/'].some(prefix=>pathname.startsWith(prefix));
+
 export function useAuthProfile() {
   const router = useRouter();
   const pathname = usePathname();
@@ -72,7 +75,7 @@ export function useAuthProfile() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [accessLevel,setAccessLevel]=useState<'full'|'basic'|'restricted'>('restricted');
+  const [accessLevel,setAccessLevel]=useState<'full'|'social'|'basic'|'restricted'>('restricted');
 
   useEffect(() => {
     let active = true;
@@ -100,9 +103,12 @@ export function useAuthProfile() {
             headers:session?.access_token?{Authorization:'Bearer '+session.access_token}:{},
             cache:'no-store'
           });
-          const access=await accessResponse.json().catch(()=>({networkAccess:false})) as {networkAccess?:boolean;canBrowsePublicFeed?:boolean};
-          if(!accessResponse.ok||(access.networkAccess!==true&&!(pathname==='/feed'&&access.canBrowsePublicFeed===true))){router.replace('/conecta-id');return;}
-          setAccessLevel(access.networkAccess===true?'full':'basic');
+          const access=await accessResponse.json().catch(()=>({networkAccess:false})) as {networkAccess?:boolean;canBrowsePublicFeed?:boolean;canUseSocialFeatures?:boolean};
+          const full=accessResponse.ok&&access.networkAccess===true;
+          const social=accessResponse.ok&&access.canUseSocialFeatures===true&&isSocialRoute(pathname);
+          const basic=accessResponse.ok&&pathname==='/feed'&&access.canBrowsePublicFeed===true;
+          if(!full&&!social&&!basic){router.replace('/conecta-id');return;}
+          setAccessLevel(full?'full':social?'social':'basic');
         }
         setUser(authUser);
         setProfile(profileData as UserProfile);
@@ -115,7 +121,7 @@ export function useAuthProfile() {
   return { user, profile, loading, error, setProfile, accessLevel };
 }
 
-export function AppShell({ children, profile, accessLevel='full' }: { children: React.ReactNode; profile: UserProfile; accessLevel?:'full'|'basic'|'restricted' }) {
+export function AppShell({ children, profile, accessLevel='full' }: { children: React.ReactNode; profile: UserProfile; accessLevel?:'full'|'social'|'basic'|'restricted' }) {
   const pathname = usePathname();
   const router = useRouter();
   const {t}=useLocale();
@@ -328,7 +334,7 @@ export function AppShell({ children, profile, accessLevel='full' }: { children: 
   </div></ChatCallsProvider></ChatPresenceProvider>;
 }
 
-export function GuardedPage({ children, profile, loading, error, accessLevel }: { children: React.ReactNode; profile: UserProfile | null; loading: boolean; error: string; accessLevel?:'full'|'basic'|'restricted' }) {
+export function GuardedPage({ children, profile, loading, error, accessLevel }: { children: React.ReactNode; profile: UserProfile | null; loading: boolean; error: string; accessLevel?:'full'|'social'|'basic'|'restricted' }) {
   if (error) return <div className="center-screen"><div className="status-card"><h2>Não conseguimos abrir a rede</h2><p>{error}</p><Link className="btn btn-primary" href="/">Voltar ao início</Link></div></div>;
   if (loading || !profile) return <div className="center-screen"><div className="loading-ring"/><p className="muted">Carregando sua conta...</p></div>;
   return <AppShell profile={profile} accessLevel={accessLevel}>{children}</AppShell>;
