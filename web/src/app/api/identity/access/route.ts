@@ -39,13 +39,14 @@ export async function GET(request:NextRequest){
  if(!age.data)return NextResponse.json({networkAccess:false,reason:'age_declaration_required',steps,message:'Informe sua faixa etária para iniciar a verificação.'},{headers});
  steps.identity=identity.data?.status==='approved'&&recent(identity.data.verified_at);
  steps.age=Boolean(decision.data&&(trustedMethod(decision.data.method)||decision.data.method==='conecta_document_age_only')&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
- // Age-classified adults may only browse public posts, not interact. The
- // database independently enforces a restrictive read-only public feed policy.
+ // The server-classified adult age band grants ordinary social interaction
+ // without falsely asserting document ownership. Private messages and other
+ // sensitive routes retain separate, strict identity authorization in RLS.
  const adultReadOnly=Boolean(basicAccess&&decision.data?.age_band==='18_plus'&&age.data.declared_band==='18_plus');
  if(adultReadOnly)return NextResponse.json({
-  networkAccess:false,basicAccess:true,canBrowsePublicFeed:true,accessLevel:'basic',
-  reason:'identity_pending',steps,
-  message:'Faixa etária adulta classificada. Você pode visualizar o feed público; publicar, comentar e enviar mensagens continuam exigindo identidade confirmada.'
+  networkAccess:false,basicAccess:true,canBrowsePublicFeed:true,canUseSocialFeatures:true,
+  accessLevel:'social',reason:'identity_pending',steps,
+  message:'Faixa etária adulta classificada. Feed, publicações e comunidades liberados. A identidade permanece pendente e mensagens privadas ainda exigem verificação adicional.'
  },{headers});
  if(!steps.identity&&basicAccess)return NextResponse.json({networkAccess:false,basicAccess:true,canBrowsePublicFeed:false,accessLevel:'basic',reason:'identity_required',steps,message:'Faixa etária classificada. Recursos sociais continuam protegidos até cumprir as exigências de identidade e supervisão.'},{headers});
  if(!steps.identity)return NextResponse.json({networkAccess:false,reason:identity.data?.status==='approved'?'verification_expired':'identity_required',steps,message:'A identidade ainda não foi confirmada por uma fonte confiável. A validação gratuita integrada exige QR legível, OCR, comparação facial e análise antifraude no servidor.'},{headers});
