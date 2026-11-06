@@ -40,6 +40,7 @@ test('database records age-only decisions with service role and preserves strong
 });
 
 test('app presents live capture first with document fallback without identity approval',()=>{
+  const api=read('web/src/app/api/identity/free-document/verify/route.ts');
   const ui=read('web/src/components/selfie-age-verification.tsx');
   const page=read('web/src/app/conecta-id/page.tsx');
   const policy=read('web/src/lib/age-assurance-policy.ts');
@@ -53,6 +54,10 @@ test('app presents live capture first with document fallback without identity ap
   assert.match(page,/verificationMode.*'selfie'/);
   assert.match(page,/<SelfieAgeVerification /);
   assert.match(page,/<FreeDocumentVerification /);
+  assert.match(page, /steps\?\.age\|\|access\?\.canUseSocialFeatures/);
+  assert.match(page, /!access\?\.networkAccess&&!access\?\.canUseSocialFeatures&&<div className="stack">/);
+  assert.match(page, /Maioridade aferida para acesso social/);
+  assert.match(api, /Maioridade estimada por selfie ao vivo e registrada para acesso social comum/);
   assert.match(policy,/conecta_selfie_age_estimate/);
   assert.match(access,/\['conecta_document_age_only','conecta_selfie_age_estimate'\]/);
   assert.match(access,/identity\.data\?\.status==='approved'/);

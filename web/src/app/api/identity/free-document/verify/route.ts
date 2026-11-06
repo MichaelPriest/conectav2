@@ -353,7 +353,7 @@ async function verifyLiveSelfieMajority(
     return NextResponse.json({
       ok:true,status:'age_assured',ageAssured:true,approved:false,identityVerified:false,
       ageBand:'18_plus',verifiedAt,documentStored:false,
-      message:'Maioridade estimada por selfie ao vivo. A identidade não foi verificada; recursos que exigem identidade confirmada permanecem restritos. Nenhuma imagem facial foi armazenada.'
+      message:'Maioridade estimada por selfie ao vivo e registrada para acesso social comum: feed, publicações e comunidades, conforme as permissões da conta. A identidade civil não foi confirmada; mensagens privadas e recursos que exigem identidade verificada permanecem restritos. Nenhuma imagem facial foi armazenada.'
     },{headers});
   }catch{
     return fail('Não foi possível processar a captura. Refaça o desafio ou use um documento.',503);
