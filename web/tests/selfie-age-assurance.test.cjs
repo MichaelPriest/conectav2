@@ -33,7 +33,10 @@ test('database records age-only decisions with service role and preserves strong
   assert.match(sql,/grant execute on function public\.complete_conecta_selfie_age_assurance\(uuid,text,timestamptz\)\s+to service_role/);
   assert.match(sql,/from public\.registration_age_declarations r/);
   assert.match(sql,/d\.method in \('conecta_document_age_only','conecta_selfie_age_estimate'\)/);
-  assert.doesNotMatch(sql,/identity_verifications|grant execute .* to authenticated/);
+  assert.doesNotMatch(sql,/identity_verifications/);
+  assert.doesNotMatch(sql,/grant execute on function public\.complete_conecta_selfie_age_assurance\(uuid,text,timestamptz\)\s+to authenticated/);
+  // Read-only social eligibility must remain callable by authenticated RLS users.
+  assert.match(sql,/grant execute on function app_private\.conecta_basic_feed_allowed\(uuid\) to authenticated,service_role/);
 });
 
 test('app presents live capture first with document fallback without identity approval',()=>{
