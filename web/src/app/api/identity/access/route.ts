@@ -34,7 +34,7 @@ export async function GET(request:NextRequest){
  const steps={profile:Boolean(profile.data),ageDeclaration:Boolean(age.data),identity:false,age:false,guardian:false};
  if(moderator.data?.role==='admin')return NextResponse.json({networkAccess:true,basicAccess:true,accessLevel:'full',reason:'admin',steps,message:'Acesso administrativo autorizado.'},{headers});
  if(exemption.data?.scope==='basic_unverified'&&!exemption.data.revoked_at&&profile.data&&age.data)return NextResponse.json({networkAccess:false,basicAccess:true,accessLevel:'basic',reason:'admin_basic_exemption',steps,message:'Acesso básico autorizado administrativamente. Recursos sociais exigem verificação de identidade e idade.'},{headers});
- const basicAccess=Boolean(['conecta_document_age_only','conecta_selfie_age_estimate'].includes(decision.data?.method||'')&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
+ const basicAccess=Boolean(decision.data&&['conecta_document_age_only','conecta_selfie_age_estimate'].includes(decision.data.method)&&recent(decision.data.verified_at)&&['13_15','16_17','18_plus'].includes(decision.data.age_band));
  if(!profile.data)return NextResponse.json({networkAccess:false,reason:'profile_required',steps,message:'Complete seu perfil para iniciar o Conecta ID.'},{headers});
  if(!age.data)return NextResponse.json({networkAccess:false,reason:'age_declaration_required',steps,message:'Informe sua faixa etária para iniciar a verificação.'},{headers});
  steps.identity=identity.data?.status==='approved'&&recent(identity.data.verified_at);
